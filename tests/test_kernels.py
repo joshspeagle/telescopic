@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
-from scipy import integrate, special, stats
+from scipy import integrate, stats
 
-from references import P_MIN, gaussian_log_prob, metropolis, reflection
+from references import P_MIN, Normal, gaussian_log_prob, metropolis, reflection
 from telescopic.kernels import (
     HMC,
     MALA,
@@ -25,22 +25,6 @@ NAMES = ["reflection", "maximal", "independence", "mixture", "mala", "hmc", "gib
 def state(points, grad=False):
     points = np.array(points, dtype=np.float64, ndmin=2)
     return State(points, gaussian_log_prob(points), -points if grad else None)
-
-
-class Normal:
-    """A univariate normal with the interface of a frozen SciPy one, and faster to build."""
-
-    def __init__(self, mean, sd):
-        self.mean, self.sd = mean, sd
-
-    def rvs(self, *, random_state):
-        return self.mean + self.sd * random_state.standard_normal()
-
-    def logpdf(self, value):
-        return -0.5 * ((value - self.mean) / self.sd) ** 2 - np.log(self.sd * np.sqrt(2 * np.pi))
-
-    def ppf(self, u):
-        return self.mean + self.sd * special.ndtri(u)
 
 
 def standard_normal(point, block):
@@ -183,8 +167,11 @@ def one_step_law(kernel, x):
     return max(0.0, 1 - cdf[-1]), lambda t: np.interp(t, grid, cdf / cdf[-1])
 
 
-@pytest.mark.parametrize("name", NAMES)
-@pytest.mark.parametrize("gap", [0.0, 0.1, 3.0])
+# One-dimensional Gibbs conditionals do not depend on the state, so one gap covers them.
+@pytest.mark.parametrize(
+    ("name", "gap"),
+    [(name, gap) for name in NAMES for gap in (0.0, 0.1, 3.0) if name != "gibbs" or gap == 0],
+)
 def test_each_chain_of_a_coupled_step_has_the_exact_one_step_law(name, gap):
     kernel = kernels(np.eye(1))[name]
     n = 20_000
@@ -502,12 +489,23 @@ def test_gradient_kernels_reject_proposals_without_a_finite_gradient():
         assert np.any(moved.x != 0)
 
 
-def test_gradient_kernels_refuse_starts_outside_the_support():
+def test_gradient_kernels_enter_the_support_from_a_start_outside_it():
+    # A half-normal whose gradient is NaN outside the support: a start there gets a zero
+    # gradient, so its proposal has no drift, and a proposal inside the support is
+    # accepted.
     target = Target(
-        lambda x: np.where(x[:, 0] > 0, 0.0, -np.inf), grad=np.zeros_like, vectorize=True
+        lambda x: np.where(x[:, 0] > 0, -0.5 * x[:, 0] ** 2, -np.inf),
+        grad=lambda x: np.where(x > 0, -x, np.nan),
+        vectorize=True,
     )
-    with pytest.raises(ValueError, match="gradient kernel cannot start"):
-        MALA(0.5, cov=np.eye(1)).init_state(target, np.array([[-1.0]]))
+    for kernel in (MALA(1.0, cov=np.eye(1)), HMC(1.0, 1, cov=np.eye(1))):
+        start = kernel.init_state(target, np.array([[-0.5], [-0.5]]))
+        np.testing.assert_array_equal(start.grad, 0.0)
+        # Momenta or normals of 1 and -1 propose 0.5 and -1.5; HMC's first uniform
+        # chooses its trajectory.
+        draws = fixed_draws([[1.0], [-1.0]], [[0.1, 0.5], [0.1, 0.5]])
+        moved, _ = kernel.step(target, start, draws)
+        np.testing.assert_array_equal(moved.x, [[0.5], [-0.5]])
 
 
 # Gibbs, on a bivariate Gaussian with correlation 0.8.
@@ -519,7 +517,8 @@ def conditional(point, block):
     return Normal(RHO * point[1 - block], np.sqrt(1 - RHO**2))
 
 
-def bivariate(points):
+def gibbs_state(points):
+    # Chains of a target without a log-density.
     points = np.array(points, dtype=np.float64, ndmin=2)
     return State(points, np.zeros(len(points)))
 
@@ -527,7 +526,7 @@ def bivariate(points):
 def test_maximal_gibbs_couplings_draw_each_chain_from_its_conditionals():
     n = 4000
     kernel = Gibbs(conditional, [[0], [1]], eta=0.7)
-    x, y = bivariate(np.tile([0.5, -1.0], (n, 1))), bivariate(np.tile([-0.5, 1.5], (n, 1)))
+    x, y = gibbs_state(np.tile([0.5, -1.0], (n, 1))), gibbs_state(np.tile([-0.5, 1.5], (n, 1)))
     new_x, new_y = kernel.coupled_step(Target(None), x, y, random_draws(n, 34))
     sd = np.sqrt(1 - RHO**2)
     for start, new in ((x, new_x), (y, new_y)):
@@ -541,7 +540,7 @@ def test_crn_gibbs_couplings_push_one_uniform_through_both_quantile_functions():
     x, y, u = np.array([0.5, -1.0]), np.array([-0.5, 1.5]), [0.3, 0.8]
     kernel = Gibbs(conditional, [[0], [1]], coupling="crn")
     new_x, new_y = kernel.coupled_step(
-        Target(None), bivariate(x), bivariate(y), fixed_draws(uniforms=[u])
+        Target(None), gibbs_state(x), gibbs_state(y), fixed_draws(uniforms=[u])
     )
     sd = np.sqrt(1 - RHO**2)
     for start, new in ((x, new_x), (y, new_y)):
@@ -549,12 +548,33 @@ def test_crn_gibbs_couplings_push_one_uniform_through_both_quantile_functions():
         np.testing.assert_allclose(new.x[0], [first, stats.norm(RHO * first, sd).ppf(u[1])])
 
 
+def test_crn_gibbs_couplings_give_multivariate_normal_conditionals_common_normals():
+    cov = np.array([[1.0, 0.4], [0.4, 2.0]])
+
+    def conditional_3d(point, block):
+        # Coordinates 0 and 1 given 2, then 2 given 0 and 1.
+        if block == 0:
+            return stats.multivariate_normal([0.5 * point[2], -0.3 * point[2]], cov)
+        return Normal(0.2 * (point[0] + point[1]), 1.0)
+
+    kernel = Gibbs(conditional_3d, [[0, 1], [2]], coupling="crn")
+    x, y, z, u = [0.1, 0.2, 1.0], [0.1, 0.2, -2.0], [0.7, -1.2], 0.6
+    new_x, new_y = kernel.coupled_step(
+        Target(None), gibbs_state(x), gibbs_state(y), fixed_draws([z], [[u]])
+    )
+    shift = np.linalg.cholesky(cov) @ z
+    for start, new in ((x, new_x), (y, new_y)):
+        first = np.array([0.5 * start[2], -0.3 * start[2]]) + shift
+        np.testing.assert_allclose(new.x[0, :2], first)
+        np.testing.assert_allclose(new.x[0, 2], 0.2 * first.sum() + stats.norm.ppf(u))
+
+
 def test_two_scale_gibbs_couplings_switch_at_the_threshold():
     kernel = Gibbs(conditional, [[0], [1]], coupling="two-scale", threshold=1.0)
     far, near = (np.array([[0.5, -1.0], [0.6, -1.1]]), np.array([[-0.5, 1.5], [0.6, -1.0]]))
     generators = [np.random.default_rng(35), np.random.default_rng(36)]
     draws = fixed_draws(uniforms=[[0.3, 0.8], [0.3, 0.8]], generators=generators)
-    new_x, _ = kernel.coupled_step(Target(None), bivariate(far), bivariate(near), draws)
+    new_x, _ = kernel.coupled_step(Target(None), gibbs_state(far), gibbs_state(near), draws)
     assert new_x.x[0, 0] == conditional(far[0], 0).ppf(0.3)  # far apart: common numbers
     assert new_x.x[1, 0] != conditional(far[1], 0).ppf(0.3)  # close: the maximal coupling
     with pytest.raises(ValueError, match="threshold is required"):
@@ -565,7 +585,7 @@ def test_identical_conditionals_give_both_chains_the_same_draw():
     # The chains agree outside block 0, so its conditionals are identical: both chains get
     # one draw, then agree outside block 1 too, and meet whatever eta is.
     kernel = Gibbs(conditional, [[0], [1]], eta=0.3)
-    x, y = bivariate(np.tile([0.5, -1.0], (50, 1))), bivariate(np.tile([2.0, -1.0], (50, 1)))
+    x, y = gibbs_state(np.tile([0.5, -1.0], (50, 1))), gibbs_state(np.tile([2.0, -1.0], (50, 1)))
     new_x, new_y = kernel.coupled_step(Target(None), x, y, random_draws(50, 37))
     np.testing.assert_array_equal(new_x.x, new_y.x)
 
@@ -579,6 +599,7 @@ def test_identical_conditionals_give_both_chains_the_same_draw():
         ({"coupling": "independent"}, "coupling must be one of"),
         ({"threshold": 1.0}, "threshold is required"),
         ({"eta": 0.0}, "eta must be in"),
+        ({"coupling": "crn", "eta": 0.5}, "eta applies to the maximal coupling"),
     ],
 )
 def test_gibbs_rejects_invalid_parameters(kwargs, message):

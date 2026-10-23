@@ -156,7 +156,7 @@ make_chunks(indices, chunk_size) -> list[array]
 
 ```text
 adaptive_metropolis(target, initial, rng, *, n_steps=None) -> PilotRun(samples, log_prob, acceptance, n_steps)   # 4 chains, pooled adaptation
-dual_averaging(kernel_at, target, starts, rng, target_acceptance, step_size, n_steps=1000) -> step_size
+dual_averaging(kernel_at, target, pilot, rng, target_acceptance, step_size) -> step_size   # 1000 steps from the pilot's last states
 choose_k(meeting_times, quantile=0.99) -> k    # spec R-TUNE-2; inverted-CDF quantile; censored = inf
 ```
 

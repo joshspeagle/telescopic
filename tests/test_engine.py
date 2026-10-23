@@ -89,7 +89,7 @@ class Tagged(RandomWalk):
 
     def step(self, target, state, draws):
         x = state.x + 1.0
-        return State(x, target.log_prob(x)), np.ones(len(x), dtype=bool)
+        return State(x, target.log_prob(x)), np.ones(len(x))
 
     def coupled_step(self, target, state_x, state_y, draws):
         y = state_y.x + 100.0

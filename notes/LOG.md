@@ -103,3 +103,12 @@ Append only. One entry per working session or milestone.
   mixture dropping its components' acceptance probabilities) now does too. Dual
   averaging gave stationary acceptance 0.572 to 0.608 for MALA (target 0.574) and 0.802
   to 0.811 for HMC (target 0.8). 287 fast tests in 23 s.
+- M6 `/simplify` (`notes/reviews/m6.md`): gradient kernels no longer refuse starts
+  outside the support, which failed runs by their seed (8 of 8 MALA runs on a
+  half-normal from N((3, 0), I)); such states carry a zero gradient (DECISIONS #14).
+  `Kernel.needs_log_prob` replaces the sampler's type check, which refused mixtures of
+  Gibbs kernels (#15); `"crn"` refuses `eta` (#16). A `GradientKernel` base holds the
+  shared tuning, and dual averaging rescales instead of rebuilding kernels: tuning the
+  step size at d = 10 takes 83 ms instead of 174 for MALA and 118 instead of 195 for
+  HMC. Engine cost per pair-step at one lane fell from 223 to 153 µs for HMC and from 135
+  to 114 µs for MALA, with identical meeting times. 289 fast tests in 22 s.

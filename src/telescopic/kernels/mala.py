@@ -8,12 +8,12 @@ from typing import cast
 import numpy as np
 import numpy.typing as npt
 
-from telescopic._linalg import covariance, inverse_lower, matvec
+from telescopic._linalg import inverse_lower, matvec
 from telescopic._random import Draws
-from telescopic._types import FloatArray, Seed
+from telescopic._types import FloatArray
 from telescopic.couplings import reflection_maximal
 from telescopic.kernels.base import (
-    Kernel,
+    GradientKernel,
     State,
     acceptance,
     evaluate_pair,
@@ -21,12 +21,9 @@ from telescopic.kernels.base import (
     select,
 )
 from telescopic.target import Target
-from telescopic.tuning import PilotRun, TuningReport, dual_averaging
-
-TARGET_ACCEPTANCE = 0.574
 
 
-class MALA(Kernel):
+class MALA(GradientKernel):
     r"""The Metropolis-adjusted Langevin algorithm (spec R-KER-MALA).
 
     The proposal is :math:`x' = x + \tfrac{\epsilon^2}{2}\Sigma\nabla\log\pi(x) + \epsilon Cz`,
@@ -41,9 +38,9 @@ class MALA(Kernel):
     Parameters
     ----------
     step_size : float, optional
-        :math:`\epsilon`. ``None`` leaves it to :meth:`tune`, which runs dual averaging
-        toward an acceptance rate of 0.574 from the last states of the pilot chains
-        (spec section 5.4).
+        :math:`\epsilon`. ``None`` leaves it to :meth:`tune`: dual averaging toward an
+        acceptance rate of 0.574 from :math:`\epsilon_0 = 1.65\,d^{-1/6}` (spec section
+        5.4; Roberts & Rosenthal 1998).
     cov : array_like, shape (d, d), optional
         :math:`\Sigma`, usually an estimate of the target covariance. ``None`` leaves it to
         :meth:`tune`, which takes the covariance of adaptive Metropolis pilot chains.
@@ -55,45 +52,14 @@ class MALA(Kernel):
     pair when the proposals coincide.
     """
 
+    target_acceptance = 0.574
+
     def __init__(
         self, step_size: float | None = None, *, cov: npt.ArrayLike | None = None
     ) -> None:
-        if step_size is not None and not step_size > 0:
-            raise ValueError(f"step_size must be positive, not {step_size}")
-        self.step_size = step_size
-        self.cov: FloatArray | None = None
-        self._factors: tuple[FloatArray, FloatArray] | None = None
-        if cov is not None:
-            self.cov, chol = covariance(cov, "cov")
-            if step_size is not None:
-                self._factors = step_size * chol, inverse_lower(step_size * chol)
-
-    @property
-    def needs_grad(self) -> bool:
-        return True
-
-    @property
-    def is_tuned(self) -> bool:
-        return self._factors is not None
-
-    @property
-    def ndim(self) -> int | None:
-        return None if self.cov is None else len(self.cov)
-
-    def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
-        cov = pilot.cov if self.cov is None else self.cov
-        step_size = self.step_size
-        if step_size is None:
-            # The optimal scale for a standard Gaussian, 1.65 d^(-1/6) (Roberts & Rosenthal 1998).
-            step_size = dual_averaging(
-                lambda epsilon: MALA(epsilon, cov=cov),
-                target,
-                pilot.samples[:, -1],
-                rng,
-                TARGET_ACCEPTANCE,
-                1.65 * len(cov) ** (-1 / 6),
-            )
-        return MALA(step_size, cov=cov), pilot.report()
+        super().__init__(step_size, cov)
+        self._inverse = None if self._chol is None else inverse_lower(self._chol)
+        self._factors = self._scaled()
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         chol, inverse = self._ready()
@@ -119,6 +85,24 @@ class MALA(Kernel):
         )
         return state_x, state_y
 
+    def with_step_size(self, step_size: float) -> MALA:
+        kernel = cast(MALA, super().with_step_size(step_size))
+        kernel._factors = kernel._scaled()
+        return kernel
+
+    def _with_cov(self, cov: FloatArray) -> MALA:
+        return MALA(self.step_size, cov=cov)
+
+    def _first_step_size(self, d: int) -> float:
+        return float(1.65 * d ** (-1 / 6))
+
+    def _scaled(self) -> tuple[FloatArray, FloatArray] | None:
+        # The factor of the proposal covariance epsilon^2 Sigma, and its inverse, computed
+        # once per step size: per step they would cost a third of a step at d = 200.
+        if self._chol is None or self._inverse is None or self.step_size is None:
+            return None
+        return self.step_size * self._chol, self._inverse / self.step_size
+
     def _ready(self) -> tuple[FloatArray, FloatArray]:
         if self._factors is None:
             raise ValueError(
@@ -142,10 +126,11 @@ def _log_alpha(
     current: State, proposal: State, forward: FloatArray, chol: FloatArray, inverse: FloatArray
 ) -> FloatArray:
     # log pi(x') - log pi(x) + log q(x | x') - log q(x' | x); the Gaussian constants cancel.
-    # A rejected proposal (log pi = -inf) may hold non-finite positions: no warnings.
+    # A rejected proposal (log pi = -inf) may hold non-finite positions: no warnings, and a
+    # NaN ratio rejects as -inf does.
     with np.errstate(over="ignore", invalid="ignore"):
         to = matvec(inverse, proposal.x - forward)
         back = matvec(inverse, current.x - _mean(proposal, chol))
         log_q = 0.5 * (np.einsum("ij,ij->i", to, to) - np.einsum("ij,ij->i", back, back))
         log_alpha: FloatArray = proposal.log_prob - current.log_prob + log_q
-    return np.where(np.isfinite(proposal.log_prob), log_alpha, -np.inf)
+    return log_alpha

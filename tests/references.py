@@ -1,11 +1,28 @@
 """Reference implementations, written independently of the package, for oracle tests."""
 
 import numpy as np
+from scipy import special
 
 # One-sample and frequency tests use this p-value threshold, which keeps each module's
 # family-wise false-positive rate below about 1e-3 (CLAUDE.md: tolerances from the Monte
 # Carlo error).
 P_MIN = 1e-5
+
+
+class Normal:
+    """A univariate normal with the methods of a frozen SciPy one, and faster to build."""
+
+    def __init__(self, mean, sd):
+        self.mean, self.sd = mean, sd
+
+    def rvs(self, *, random_state):
+        return self.mean + self.sd * random_state.standard_normal()
+
+    def logpdf(self, value):
+        return -0.5 * ((value - self.mean) / self.sd) ** 2 - np.log(self.sd * np.sqrt(2 * np.pi))
+
+    def ppf(self, u):
+        return self.mean + self.sd * special.ndtri(u)
 
 
 def gaussian_log_prob(x):

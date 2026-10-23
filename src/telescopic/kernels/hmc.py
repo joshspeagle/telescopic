@@ -8,16 +8,13 @@ from typing import cast
 import numpy as np
 import numpy.typing as npt
 
-from telescopic._linalg import covariance, matvec
+from telescopic._linalg import matvec
 from telescopic._random import Draws
-from telescopic._types import FloatArray, Seed
-from telescopic.kernels.base import Kernel, State, acceptance, evaluate_proposal, select
+from telescopic._types import FloatArray
+from telescopic.kernels.base import GradientKernel, State, acceptance, evaluate_proposal, select
 from telescopic.kernels.mixture import Mixture
 from telescopic.kernels.random_walk import RandomWalk
 from telescopic.target import Target
-from telescopic.tuning import PilotRun, TuningReport, dual_averaging
-
-TARGET_ACCEPTANCE = 0.8
 
 
 class HMC(Mixture):
@@ -45,9 +42,9 @@ class HMC(Mixture):
     Parameters
     ----------
     step_size : float, optional
-        :math:`\epsilon`. ``None`` leaves it to :meth:`tune`, which runs dual averaging
-        toward an acceptance rate of 0.8 for the trajectories, from the last states of the
-        pilot chains (spec section 5.5).
+        :math:`\epsilon`. ``None`` leaves it to :meth:`tune`: dual averaging of the
+        trajectories alone toward an acceptance rate of 0.8, from
+        :math:`\epsilon_0 = d^{-1/4}` (spec section 5.5; Beskos et al. 2013).
     n_steps : int, optional
         Leapfrog steps per trajectory; :math:`\lceil 1/\epsilon\rceil` by default, a
         trajectory of length about 1 in whitened coordinates.
@@ -77,6 +74,8 @@ class HMC(Mixture):
     ) -> None:
         if not 0 < meeting_weight < 1:
             raise ValueError(f"meeting_weight must be in (0, 1), not {meeting_weight}")
+        if not meeting_scale > 0:
+            raise ValueError(f"meeting_scale must be positive, not {meeting_scale}")
         leapfrog = _Leapfrog(step_size, n_steps, cov)
         walk = RandomWalk(leapfrog.cov, scale=meeting_scale)
         super().__init__([leapfrog, walk], [1 - meeting_weight, meeting_weight])
@@ -89,8 +88,8 @@ class HMC(Mixture):
 
     @property
     def n_steps(self) -> int | None:
-        """Leapfrog steps per trajectory, or ``None`` before the step size is known."""
-        return self._leapfrog.length
+        """Leapfrog steps per trajectory, or ``None`` while the step size is unknown."""
+        return self._leapfrog.n_steps
 
     @property
     def cov(self) -> FloatArray | None:
@@ -99,19 +98,8 @@ class HMC(Mixture):
 
     @property
     def _leapfrog(self) -> _Leapfrog:
+        # Read from the components, which tuning replaces in a copy (Mixture._tuned).
         return cast(_Leapfrog, self.kernels[0])
-
-    def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
-        leapfrog, report = self._leapfrog._tuned(target, pilot, rng)
-        tuned = cast(_Leapfrog, leapfrog)
-        kernel = HMC(
-            tuned.step_size,
-            tuned.n_steps,
-            cov=tuned.cov,
-            meeting_weight=self.meeting_weight,
-            meeting_scale=self.meeting_scale,
-        )
-        return kernel, report
 
     def __repr__(self) -> str:
         cov = "None" if self.cov is None else f"<{len(self.cov)}x{len(self.cov)}>"
@@ -121,54 +109,25 @@ class HMC(Mixture):
         )
 
 
-class _Leapfrog(Kernel):
+class _Leapfrog(GradientKernel):
     # The trajectory component of HMC. Coupled chains share the momentum and the uniform.
+    target_acceptance = 0.8
+
     def __init__(
         self, step_size: float | None, n_steps: int | None, cov: npt.ArrayLike | None
     ) -> None:
-        if step_size is not None and not step_size > 0:
-            raise ValueError(f"step_size must be positive, not {step_size}")
+        super().__init__(step_size, cov)
         if n_steps is not None and (not isinstance(n_steps, int | np.integer) or n_steps < 1):
             raise ValueError(f"n_steps must be a positive integer, not {n_steps!r}")
-        self.step_size, self.n_steps = step_size, n_steps
-        self.cov: FloatArray | None = None
-        self._chol: FloatArray | None = None
-        if cov is not None:
-            self.cov, self._chol = covariance(cov, "cov")
+        self._n_steps = n_steps
 
     @property
-    def needs_grad(self) -> bool:
-        return True
-
-    @property
-    def is_tuned(self) -> bool:
-        return self.step_size is not None and self.cov is not None
-
-    @property
-    def ndim(self) -> int | None:
-        return None if self.cov is None else len(self.cov)
-
-    @property
-    def length(self) -> int | None:
-        # Leapfrog steps per trajectory: n_steps, or ceil(1 / step_size) (spec section 5.5).
-        if self.n_steps is not None or self.step_size is None:
-            return self.n_steps
+    def n_steps(self) -> int | None:
+        # The given count, or ceil(1 / step_size): a trajectory of length about 1 in
+        # whitened coordinates (spec section 5.5).
+        if self._n_steps is not None or self.step_size is None:
+            return self._n_steps
         return math.ceil(1 / self.step_size)
-
-    def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
-        cov = pilot.cov if self.cov is None else self.cov
-        step_size = self.step_size
-        if step_size is None:
-            # Step sizes for a target acceptance of HMC scale as d^(-1/4) (Beskos et al. 2013).
-            step_size = dual_averaging(
-                lambda epsilon: _Leapfrog(epsilon, self.n_steps, cov),
-                target,
-                pilot.samples[:, -1],
-                rng,
-                TARGET_ACCEPTANCE,
-                len(cov) ** -0.25,
-            )
-        return _Leapfrog(step_size, self.n_steps, cov), pilot.report()
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         end, log_alpha = self._trajectory(target, state, draws.normal(state.x.shape[1]))
@@ -189,7 +148,15 @@ class _Leapfrog(Kernel):
         end, log_alpha = self._trajectory(target, both, np.concatenate([momentum, momentum]))
         log_u = draws.log_uniform()
         moved = select(np.concatenate([log_u, log_u]) < log_alpha, end, both)
-        return moved.take(slice(None, n)), moved.take(slice(n, None))
+        grad = cast(FloatArray, moved.grad)
+        first = State(moved.x[:n], moved.log_prob[:n], grad[:n])
+        return first, State(moved.x[n:], moved.log_prob[n:], grad[n:])
+
+    def _with_cov(self, cov: FloatArray) -> _Leapfrog:
+        return _Leapfrog(self.step_size, self._n_steps, cov)
+
+    def _first_step_size(self, d: int) -> float:
+        return float(d**-0.25)
 
     def _trajectory(
         self, target: Target, state: State, momentum: FloatArray
@@ -200,21 +167,19 @@ class _Leapfrog(Kernel):
             raise ValueError(
                 "HMC needs step_size and cov; give them, or tune the kernel on a pilot run"
             )
-        chol, epsilon, length = self._chol, self.step_size, cast(int, self.length)
-        x, log_prob, grad = state.x, state.log_prob, cast(FloatArray, state.grad)
-        start = log_prob - 0.5 * np.einsum("ij,ij->i", momentum, momentum)
+        chol, epsilon, length = self._chol, self.step_size, cast(int, self.n_steps)
+        x, grad = state.x, cast(FloatArray, state.grad)
         going = np.ones(len(x), dtype=bool)
         with np.errstate(over="ignore", invalid="ignore"):
+            start = state.log_prob - 0.5 * np.einsum("ij,ij->i", momentum, momentum)
             momentum = momentum + 0.5 * epsilon * matvec(chol.T, grad)
             for leap in range(length):
                 x = x + epsilon * matvec(chol, momentum)
-                log_prob, grad = np.full(len(x), -np.inf), np.zeros_like(x)
-                rows = going.nonzero()[0]
-                if len(rows):
-                    reached = evaluate_proposal(target, x[rows])
-                    log_prob[rows], grad[rows] = reached.log_prob, cast(FloatArray, reached.grad)
+                reached = evaluate_proposal(target, x, going)
+                log_prob, grad = reached.log_prob, cast(FloatArray, reached.grad)
                 going = np.isfinite(log_prob)
                 kick = epsilon if leap < length - 1 else 0.5 * epsilon
                 momentum = momentum + kick * matvec(chol.T, grad)
-            end = log_prob - 0.5 * np.einsum("ij,ij->i", momentum, momentum)
-        return State(x, log_prob, grad), np.where(going, end - start, -np.inf)
+            # From a start outside the support (log pi = -inf) any finite end is accepted.
+            log_alpha = log_prob - 0.5 * np.einsum("ij,ij->i", momentum, momentum) - start
+        return State(x, log_prob, grad), np.where(going, log_alpha, -np.inf)

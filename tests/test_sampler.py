@@ -8,7 +8,7 @@ import telescopic
 from telescopic import CoupledSampler, sample
 from telescopic.engine import Status
 from telescopic.initial import Empirical, Normal
-from telescopic.kernels import Gibbs, RandomWalk
+from telescopic.kernels import HMC, MALA, Gibbs, Mixture, RandomWalk
 from telescopic.sampler import _slow_pairs
 from telescopic.warnings import ConvergenceWarning, InputWarning
 
@@ -106,18 +106,32 @@ def test_unknown_kernel_names_are_listed():
         CoupledSampler(log_prob, INIT, kernel="nuts")
 
 
-@pytest.mark.parametrize("kernel", ["mala", "hmc"])
-def test_gradient_kernels_are_tuned_by_name(kernel):
+@pytest.mark.parametrize(("kernel", "kind"), [("mala", MALA), ("hmc", HMC)])
+def test_gradient_kernels_are_tuned_by_name(kernel, kind):
     result = sample(log_prob, INIT, 5, grad=lambda x: -x, kernel=kernel, k=100, rng=13)
+    assert isinstance(result.kernel, kind)
     assert result.kernel.is_tuned
     assert result.n_replicates == 5
+
+
+def conditional(point, block):
+    return stats.norm(0.8 * point[1 - block], 0.6)
 
 
 @pytest.mark.parametrize(
     ("arguments", "message"),
     [
         ({"kernel": "mala"}, "needs the gradient"),
-        ({"log_prob": None}, "only with a Gibbs kernel"),
+        ({"log_prob": None}, "needs a log-density"),
+        (
+            {
+                "log_prob": None,
+                "kernel": Mixture(
+                    [Gibbs(conditional, [[0], [1]]), RandomWalk(np.eye(2))], [0.5, 0.5]
+                ),
+            },
+            "needs a log-density",
+        ),
     ],
 )
 def test_kernels_without_what_they_need_raise(arguments, message):
@@ -125,12 +139,19 @@ def test_kernels_without_what_they_need_raise(arguments, message):
         CoupledSampler(**({"log_prob": log_prob, "init": INIT} | arguments))
 
 
-def test_a_gibbs_sampler_runs_without_a_log_density():
-    def conditional(point, block):
-        return stats.norm(0.8 * point[1 - block], 0.6)
-
-    gibbs = Gibbs(conditional, [[0], [1]])
-    assert sample(None, INIT, 5, kernel=gibbs, k=20, rng=14).n_replicates == 5
+@pytest.mark.parametrize(
+    "kernel",
+    [
+        Gibbs(conditional, [[0], [1]]),
+        Mixture(
+            [Gibbs(conditional, [[0], [1]]), Gibbs(conditional, [[0], [1]], coupling="crn")],
+            [0.5, 0.5],
+        ),
+    ],
+    ids=["gibbs", "mixture"],
+)
+def test_gibbs_samplers_and_their_mixtures_run_without_a_log_density(kernel):
+    assert sample(None, INIT, 5, kernel=kernel, k=20, rng=14).n_replicates == 5
 
 
 def test_a_slow_pair_warns_once_when_unmet_at_the_threshold():

@@ -48,7 +48,7 @@ class Gibbs(Kernel):
         Index arrays that partition the coordinates ``0, ..., d - 1``.
     coupling : {"maximal", "crn", "two-scale"}
     eta : float
-        Cap on the maximal coupling's meeting probability, in (0, 1].
+        Cap on the maximal coupling's meeting probability, in (0, 1]; 1 with ``"crn"``.
     threshold : float, optional
         The distance at which ``"two-scale"`` switches couplings; required by it, and
         refused by the others.
@@ -81,7 +81,11 @@ class Gibbs(Kernel):
             raise ValueError(f"threshold must be positive, not {threshold}")
         if not 0 < eta <= 1:
             raise ValueError(f"eta must be in (0, 1], not {eta}")
-        self.blocks = [np.atleast_1d(np.asarray(block)) for block in blocks]
+        if coupling == "crn" and eta != 1:
+            raise ValueError(
+                "eta applies to the maximal coupling, which coupling='crn' never uses"
+            )
+        self.blocks = [np.atleast_1d(block) for block in blocks]
         indices = np.concatenate(self.blocks) if self.blocks else np.zeros(0)
         if (
             not all(block.ndim == 1 and len(block) for block in self.blocks)
@@ -93,6 +97,12 @@ class Gibbs(Kernel):
             )
         self.conditional = conditional
         self.coupling, self.eta, self.threshold = coupling, eta, threshold
+        # One rule for the three couplings: common random numbers beyond this distance.
+        self._switch = threshold if threshold is not None else 0.0 if coupling == "crn" else np.inf
+
+    @property
+    def needs_log_prob(self) -> bool:
+        return False
 
     @property
     def ndim(self) -> int | None:
@@ -100,35 +110,38 @@ class Gibbs(Kernel):
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         x = state.x.copy()
+        generators = [draws.generator(row) for row in range(len(x))]
         for b, block in enumerate(self.blocks):
-            for row in range(len(x)):
-                x[row, block] = self._conditional(x, row, b).rvs(random_state=draws.generator(row))
+            points = _read_only(x)
+            for row, generator in enumerate(generators):
+                x[row, block] = self.conditional(points[row], b).rvs(random_state=generator)
         return evaluate(target, x, state.grad is not None), np.ones(len(x))
 
     def coupled_step(
         self, target: Target, state_x: State, state_y: State, draws: Draws
     ) -> tuple[State, State]:
         x, y = state_x.x.copy(), state_y.x.copy()
-        common = np.full(len(x), self.coupling == "crn")
-        if self.threshold is not None:
-            common = np.linalg.norm(x - y, axis=1) > self.threshold
+        common = np.linalg.norm(x - y, axis=1) > self._switch
         for b, block in enumerate(self.blocks):
+            points_x, points_y = _read_only(x), _read_only(y)
             outside = np.ones(x.shape[1], dtype=bool)
             outside[block] = False
             same = np.all(x[:, outside] == y[:, outside], axis=1)
-            p = [self._conditional(x, row, b) for row in range(len(x))]
-            q = [p[row] if same[row] else self._conditional(y, row, b) for row in range(len(x))]
             new_x = np.empty((len(x), len(block)))
             new_y = np.empty_like(new_x)
+            # Identical conditionals: one draw for both chains (spec section 5.7).
             for row in same.nonzero()[0].tolist():
-                new_x[row] = new_y[row] = p[row].rvs(random_state=draws.generator(row))
+                drawn = self.conditional(points_x[row], b).rvs(random_state=draws.generator(row))
+                new_x[row] = new_y[row] = drawn
             for rows, couple in (
                 ((~same & common).nonzero()[0], _common),
                 ((~same & ~common).nonzero()[0], partial(_maximal, eta=self.eta)),
             ):
                 if len(rows):
                     new_x[rows], new_y[rows] = couple(
-                        [p[row] for row in rows], [q[row] for row in rows], draws.subset(rows)
+                        [self.conditional(points_x[row], b) for row in rows],
+                        [self.conditional(points_y[row], b) for row in rows],
+                        draws.subset(rows),
                     )
             x[:, block], y[:, block] = new_x, new_y
         identical = np.all(x == y, axis=1)
@@ -136,16 +149,19 @@ class Gibbs(Kernel):
             partial(evaluate, target, need_grad=state_x.grad is not None), x, y, identical
         )
 
-    def _conditional(self, points: FloatArray, row: int, b: int) -> Any:
-        point = points[row]
-        point.flags.writeable = False
-        return self.conditional(point, b)
-
     def __repr__(self) -> str:
         return (
             f"Gibbs({getattr(self.conditional, '__name__', 'conditional')}, "
-            f"{len(self.blocks)} blocks, coupling={self.coupling!r})"
+            f"{len(self.blocks)} blocks, coupling={self.coupling!r}, eta={self.eta}, "
+            f"threshold={self.threshold})"
         )
+
+
+def _read_only(points: FloatArray) -> FloatArray:
+    # A view that the user's conditionals cannot write through.
+    view = points.view()
+    view.flags.writeable = False
+    return view
 
 
 def _maximal(p: list[Any], q: list[Any], draws: Draws, eta: float) -> tuple[FloatArray, ...]:
@@ -158,9 +174,10 @@ def _common(p: list[Any], q: list[Any], draws: Draws) -> tuple[FloatArray, ...]:
     # multivariate normal's Cholesky factor.
     if all(hasattr(conditional, "ppf") for conditional in p + q):
         u = draws.uniform()
-        x = np.array([conditional.ppf(value) for conditional, value in zip(p, u, strict=True)])
-        y = np.array([conditional.ppf(value) for conditional, value in zip(q, u, strict=True)])
-        return x[:, None], y[:, None]
+        return tuple(
+            np.array([c.ppf(value) for c, value in zip(side, u, strict=True)])[:, None]
+            for side in (p, q)
+        )
     if not all(
         hasattr(conditional, "mean") and hasattr(conditional, "cov") for conditional in p + q
     ):

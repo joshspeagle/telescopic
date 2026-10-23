@@ -12,7 +12,7 @@ from telescopic._random import MAIN, PILOT, replicate_generator, root_seed
 from telescopic._types import FloatArray, Seed
 from telescopic.estimators import averaging_times
 from telescopic.initial import as_initial, draw
-from telescopic.kernels import HMC, MALA, Gibbs, Independence, Kernel, RandomWalk
+from telescopic.kernels import HMC, MALA, Independence, Kernel, RandomWalk
 from telescopic.results import Result
 from telescopic.target import Target
 from telescopic.tuning import TuningReport, choose_k
@@ -44,7 +44,8 @@ class CoupledSampler:
     log_prob : callable or None
         :math:`\log\pi` up to a constant: ``log_prob(x, *args, **kwargs)`` for ``x`` of
         shape ``(d,)``, or of shape ``(n, d)`` with ``vectorize=True``. ``None`` only with
-        a :class:`~telescopic.kernels.Gibbs` kernel.
+        a kernel that needs no log-density: a :class:`~telescopic.kernels.Gibbs` kernel or
+        a mixture of them.
     init
         The initial distribution :math:`\pi_0`: an object with
         ``rvs(random_state=rng)`` (such as a frozen SciPy distribution or
@@ -88,10 +89,12 @@ class CoupledSampler:
         self.target = Target(log_prob, grad, args=args, kwargs=kwargs, vectorize=vectorize)
         self.initial = as_initial(init)
         self.kernel = _kernel(kernel)
-        if self.kernel.needs_grad and grad is None:
+        if self.kernel.needs_grad and not self.target.has_grad:
             raise ValueError(f"{self.kernel!r} needs the gradient of log_prob: pass grad=")
-        if log_prob is None and not isinstance(self.kernel, Gibbs):
-            raise ValueError("log_prob may be None only with a Gibbs kernel")
+        if self.kernel.needs_log_prob and not self.target.has_log_prob:
+            raise ValueError(
+                f"{self.kernel!r} needs a log-density; log_prob=None is for Gibbs kernels"
+            )
         self.seed = root_seed(rng)
         # One draw from a throwaway generator gives the dimension, so that names are
         # checked now rather than after the runs.
