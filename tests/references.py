@@ -13,7 +13,9 @@ def assert_z_scores(z_scores, n, seed):
     # The test plan's tolerance rule for z(n, rng), an array of z-scores from n draws: pass
     # if every |z| <= 4; if the largest is in (4, 6], pass if every |z| <= 4 in one rerun
     # with 4n draws and a seed derived from the first.
-    largest = np.max(np.abs(z_scores(n, np.random.default_rng(seed))))
+    z = z_scores(n, np.random.default_rng(seed))
+    assert np.all(np.isfinite(z)), z
+    largest = np.max(np.abs(z))
     if largest > 4:
         assert largest <= 6, f"|z| = {largest:.2f}"
         derived = np.random.SeedSequence(seed).spawn(1)[0]

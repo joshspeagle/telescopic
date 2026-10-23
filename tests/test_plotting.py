@@ -80,7 +80,23 @@ def test_plots_draw_on_the_axes_they_are_given():
     axes = plt.subplots(1, 4)[1]
     assert RESULT.plot_meeting_times(axes[:2]) == list(axes[:2])
     assert RESULT.plot_tv_bound(axes[2]) is axes[2]
-    assert RESULT.plot_marginals([1], axes=axes[3:]) == [axes[3]]
+    assert RESULT.plot_marginals(1, axes=axes[3]) == [axes[3]]
+
+
+@pytest.mark.parametrize(
+    ("call", "message"),
+    [
+        (lambda axes: RESULT.plot_meeting_times(axes[:3]), "axes must hold 2 Axes, not 3"),
+        (lambda axes: RESULT.plot_marginals([0, 1], axes=axes[:1]), "axes must hold 2 Axes"),
+        (lambda axes: RESULT.plot_marginals([0, 2]), "dims must be an integer in"),
+        (lambda axes: RESULT.plot_corner([-1]), "dims must be an integer in"),
+    ],
+)
+def test_invalid_plot_arguments_raise_before_drawing(call, message):
+    axes = plt.subplots(1, 3)[1]
+    with pytest.raises(ValueError, match=message):
+        call(axes)
+    assert not any(ax.has_data() for ax in axes)
 
 
 def test_paths_need_the_paths_of_the_engine():

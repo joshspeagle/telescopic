@@ -10,7 +10,7 @@ import numpy.typing as npt
 from numpy.random import Generator
 from scipy import stats
 
-from telescopic._random import Draws, Streams, root_seed
+from telescopic._random import MAIN, Draws, Streams, replicate_generator, root_seed
 from telescopic._types import FloatArray, Seed
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
@@ -109,15 +109,18 @@ def check_coupling(
         raise ValueError(f"x and y must be points of one shape (d,), not {x.shape} and {y.shape}")
     if n < 2:
         raise ValueError(f"n must be at least 2, not {n}")
-    seeds = root_seed(rng).spawn(4)
+    # Generators derived from the root seed: spawning would change a caller's SeedSequence.
+    root = root_seed(rng)
+    generators = [replicate_generator(root, MAIN, i) for i in range(4)]
     starts = kernel.init_state(target, np.stack([x, y]))
     start_x, start_y = (starts.take(np.full(n, row)) for row in (0, 1))
-    new_x, new_y = kernel.coupled_step(target, start_x, start_y, random_draws(n, seeds[0]))
+    new_x, new_y = kernel.coupled_step(target, start_x, start_y, random_draws(n, generators[0]))
     alone = [
-        kernel.step(target, start, random_draws(n, seed))[0]
-        for start, seed in ((start_x, seeds[1]), (start_y, seeds[2]))
+        kernel.step(target, start, random_draws(n, generator))[0]
+        for start, generator in ((start_x, generators[1]), (start_y, generators[2]))
     ]
-    directions = np.random.default_rng(seeds[3]).standard_normal((PROJECTIONS, len(x)))
+    # In one dimension every projection gives the same test.
+    directions = generators[3].standard_normal((PROJECTIONS if len(x) > 1 else 1, len(x)))
     stay, moves = [], []
     for point, coupled, single in ((x, new_x.x, alone[0].x), (y, new_y.x, alone[1].x)):
         stayed = [np.all(chain == point, axis=1) for chain in (coupled, single)]
@@ -155,9 +158,7 @@ def _stale(kernel: Kernel, target: Target, state: State) -> int:
     # Chains whose cache disagrees with a fresh evaluation beyond rounding: a vectorised
     # target can change the last bits between batches (spec section 6.1).
     fresh = kernel.init_state(target, state.x)
-    close = (state.log_prob == fresh.log_prob) | (
-        np.abs(state.log_prob - fresh.log_prob) <= 1e-9 * np.abs(fresh.log_prob)
-    )
+    close = np.isclose(state.log_prob, fresh.log_prob, rtol=1e-9, atol=0)
     if state.grad is not None and fresh.grad is not None:
         error = np.linalg.norm(state.grad - fresh.grad, axis=1)
         close &= error <= 1e-9 * np.linalg.norm(fresh.grad, axis=1)

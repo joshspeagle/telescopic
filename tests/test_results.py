@@ -84,7 +84,9 @@ def test_without_bias_corrections_quantiles_are_those_of_the_pooled_draws():
 def test_histogram_bins_average_each_replicates_signed_mass_in_half_open_bins(dims, limits):
     masses, errors, edges = RESULT.histogram(dims, bins=7, range=limits)
     if np.ndim(dims) == 0:
-        dims, edges = [dims], [edges]
+        dims, edges, limits = [dims], [edges], [limits]
+    for edge, limit in zip(edges, limits, strict=True):
+        assert (edge[0], edge[-1]) == limit
     atoms, weights, owner = (
         RESULT.measure.atoms[:, dims],
         RESULT.measure.weights,

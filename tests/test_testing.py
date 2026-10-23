@@ -3,7 +3,7 @@ import pytest
 
 from references import P_MIN
 from telescopic import examples
-from telescopic.kernels import Gibbs, RandomWalk, State
+from telescopic.kernels import MALA, Gibbs, RandomWalk, State
 from telescopic.target import Target
 from telescopic.testing import check_coupling
 
@@ -46,6 +46,18 @@ class Stale(RandomWalk):
         return new_x, State(new_y.x, new_x.log_prob)
 
 
+class StaleGradient(MALA):
+    # Y carries X's gradient.
+    def coupled_step(self, target, state_x, state_y, draws):
+        new_x, new_y = super().coupled_step(target, state_x, state_y, draws)
+        return new_x, State(new_y.x, new_y.log_prob, new_x.grad)
+
+
+def positive_first(x):
+    # A standard normal restricted to x_0 > 0.
+    return np.where(x[..., 0] > 0, -0.5 * np.sum(x**2, axis=-1), -np.inf)
+
+
 class Independent(RandomWalk):
     # Each chain steps alone: the marginals are right, but the chains never meet.
     def coupled_step(self, target, state_x, state_y, draws):
@@ -67,10 +79,36 @@ def test_check_coupling_flags_a_coupling_that_recomputes_y_where_the_chains_meet
     assert not report.passed()
 
 
-def test_check_coupling_flags_a_stale_log_density():
-    report = check_coupling(Stale(COV), TARGET, [0.1, 0.2], [0.3, -0.1], n=2_000, rng=5)
+@pytest.mark.parametrize(
+    ("kernel", "target", "y"),
+    [
+        (Stale(COV), TARGET, [0.3, -0.1]),
+        (StaleGradient(0.8, cov=COV), TARGET, [0.3, -0.1]),
+        # Y stays at a point of zero density, with X's finite log-density.
+        (Stale(0.01 * np.eye(2)), Target(positive_first, vectorize=True), [-3.0, 0.0]),
+    ],
+    ids=["log-density", "gradient", "zero-density"],
+)
+def test_check_coupling_flags_a_stale_cache(kernel, target, y):
+    report = check_coupling(kernel, target, [0.1, 0.2], y, n=2_000, rng=5)
     assert report.stale > 0
     assert not report.passed()
+
+
+def test_check_coupling_accepts_chains_held_at_points_of_zero_density():
+    target = Target(positive_first, vectorize=True)
+    kernel = RandomWalk(0.01 * np.eye(2))
+    report = check_coupling(kernel, target, [-3.0, 0.0], [-3.0, 0.1], n=100, rng=7)
+    assert report.stale == 0
+
+
+def test_check_coupling_leaves_a_seed_sequence_unchanged():
+    seed = np.random.SeedSequence(7)
+    first, second = (
+        check_coupling(RandomWalk(COV), TARGET, [0.1, 0.2], [0.3, -0.1], n=500, rng=seed)
+        for _ in range(2)
+    )
+    assert first == second
 
 
 def test_check_coupling_flags_a_coupling_that_never_meets():

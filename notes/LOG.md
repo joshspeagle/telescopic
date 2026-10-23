@@ -168,4 +168,12 @@ Append only. One entry per working session or milestone.
   in 0.1 to 0.7 s instead of 9 to 11 s at max τ − L = 10⁷; the corner plot at d = 10
   takes 4.4-5.4 s instead of 2.3-2.4 s. Two items deferred to before M10 (PLAN). 398
   fast tests in 36 s.
+- M8 `/code-review` at high effort (`notes/reviews/m8.md`): ten findings, all fixed.
+  `check_coupling` missed a stale log-density at a point of zero density, warned on two
+  infinite ones, changed a caller's `SeedSequence`, and in one dimension reported
+  p-values 3 times too large. `Result.load("run")` missed the `run.npz` that saving
+  wrote. The plot functions now check `dims` and `axes` before drawing. The corner plot
+  bins each coordinate once with the binning `histogram` uses, and takes 1.6-2.1 s at
+  d = 10 against 4.4-5.4 s after the simplify round. Seven mutants checked. 410 fast
+  tests in 38 s.
 

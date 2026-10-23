@@ -36,7 +36,9 @@ def meeting_times(result: Result, axes: Sequence[Axes] | None = None) -> list[Ax
     -------
     list of two Axes
     """
-    histogram, survival = plt.subplots(1, 2, figsize=(9, 3.5))[1] if axes is None else axes
+    histogram, survival = (
+        plt.subplots(1, 2, figsize=(9, 3.5))[1] if axes is None else _axes(axes, 2)
+    )
     shifted = result.meeting_times - result.lag
     histogram.hist(shifted[np.isfinite(shifted)], bins="auto")
     histogram.set(xlabel=r"$\tau - L$", ylabel="pairs")
@@ -77,7 +79,7 @@ def tv_bound(result: Result, ax: Axes | None = None) -> Axes:
 
 def marginals(
     result: Result,
-    dims: Sequence[int] | None = None,
+    dims: int | Sequence[int] | None = None,
     bins: int = 20,
     axes: Sequence[Axes] | None = None,
 ) -> list[Axes]:
@@ -91,7 +93,7 @@ def marginals(
     Parameters
     ----------
     result : Result
-    dims : sequence of int, optional
+    dims : int or sequence of int, optional
         Coordinates; all by default.
     bins : int
     axes : sequence of Axes, optional
@@ -101,10 +103,12 @@ def marginals(
     -------
     list of Axes
     """
-    dims = list(range(result.ndim)) if dims is None else list(dims)
+    columns = range(result.ndim) if dims is None else result._columns(dims)
+    n = len(columns)
     if axes is None:
-        axes = list(plt.subplots(1, len(dims), figsize=(3.5 * len(dims), 3), squeeze=False)[1][0])
-    for ax, dim in zip(axes, dims, strict=True):
+        axes = plt.subplots(1, n, figsize=(3.5 * n, 3), squeeze=False)[1][0]
+    axes = _axes(axes, n)
+    for ax, dim in zip(axes, columns, strict=True):
         masses, errors, edges = result.histogram(dim, bins)
         widths = np.diff(edges)
         density, error = masses / widths, errors / widths
@@ -112,10 +116,10 @@ def marginals(
         ax.bar(edges[:-1], 4 * error, widths, density - 2 * error, align="edge", fill=False)
         ax.axhline(0, color="black", linewidth=0.5)
         ax.set(xlabel=result.names[dim], ylabel="density")
-    return list(axes)
+    return axes
 
 
-def corner(result: Result, dims: Sequence[int] | None = None, bins: int = 20) -> Any:
+def corner(result: Result, dims: int | Sequence[int] | None = None, bins: int = 20) -> Any:
     """A corner plot of signed histograms: marginals on the diagonal, pairs below it.
 
     The pairs are coloured by signed density with a diverging map centred on 0
@@ -125,7 +129,7 @@ def corner(result: Result, dims: Sequence[int] | None = None, bins: int = 20) ->
     Parameters
     ----------
     result : Result
-    dims : sequence of int, optional
+    dims : int or sequence of int, optional
         Coordinates; all by default.
     bins : int
 
@@ -133,21 +137,27 @@ def corner(result: Result, dims: Sequence[int] | None = None, bins: int = 20) ->
     -------
     ndarray of Axes, shape (len(dims), len(dims))
     """
-    dims = list(range(result.ndim)) if dims is None else list(dims)
-    n = len(dims)
+    columns = range(result.ndim) if dims is None else result._columns(dims)
+    n = len(columns)
     grid = plt.subplots(n, n, figsize=(2.5 * n, 2.5 * n), squeeze=False)[1]
+    # Each coordinate binned once, as Result.histogram bins it; a pair's masses are then one
+    # bincount, without the per-replicate masses that its errors would need.
+    cells = [result._bins(dim, bins) for dim in columns]
+    weights = result.measure.weights / result.n_replicates
     for row in range(n):
-        marginals(result, [dims[row]], bins, [grid[row, row]])
+        marginals(result, columns[row], bins, [grid[row, row]])
         for column in range(n):
             ax = grid[row, column]
             if column > row:
                 ax.axis("off")
             elif column < row:
-                masses, _, (edges_x, edges_y) = result.histogram([dims[column], dims[row]], bins)
-                density = masses / np.outer(np.diff(edges_x), np.diff(edges_y))
+                (which_x, edges_x), (which_y, edges_y) = cells[column], cells[row]
+                masses = np.bincount(which_x * bins + which_y, weights, bins * bins)
+                area = np.outer(np.diff(edges_x), np.diff(edges_y))
+                density = masses.reshape(bins, bins) / area
                 limit = np.max(np.abs(density))
                 ax.pcolormesh(edges_x, edges_y, density.T, cmap="RdBu_r", vmin=-limit, vmax=limit)
-                ax.set(xlabel=result.names[dims[column]], ylabel=result.names[dims[row]])
+                ax.set(xlabel=result.names[columns[column]], ylabel=result.names[columns[row]])
     return grid
 
 
@@ -193,3 +203,11 @@ def paths(
             line = ax.plot(x[:, dims[0]], x[:, dims[1]])[0]
             ax.plot(y[:, dims[0]], y[:, dims[1]], linestyle="--", color=line.get_color())
     return ax
+
+
+def _axes(axes: Any, n: int) -> list[Axes]:
+    # The given axes, flattened, checked to number n.
+    flat = list(np.ravel(axes))
+    if len(flat) != n:
+        raise ValueError(f"axes must hold {n} Axes, not {len(flat)}")
+    return flat

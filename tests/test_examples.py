@@ -151,6 +151,12 @@ def test_the_pump_conditionals_are_the_gamma_laws_of_the_model():
     assert example.log_prob(np.append(point[:10], -1.0)) == -np.inf
 
 
+def test_an_uncorrelated_gaussian_has_a_float_covariance():
+    cov = examples.gaussian(3, 0).cov
+    assert cov.dtype == np.float64
+    np.testing.assert_array_equal(cov, np.eye(3))
+
+
 @pytest.mark.parametrize(
     ("make", "kwargs"),
     [

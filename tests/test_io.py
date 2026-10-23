@@ -1,5 +1,7 @@
 import io
+import tempfile
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -74,6 +76,14 @@ def test_save_and_load_round_trip_every_field(result):
         else:
             assert_same(getattr(loaded, name), value, name)
     assert repr(loaded.summary()) == repr(result.summary())
+
+
+def test_a_name_without_the_suffix_loads_what_saving_wrote(result):
+    # NumPy appends .npz when saving; the directory is inside the repository, and removed.
+    with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
+        path = Path(directory) / "run"
+        result.save(path)
+        np.testing.assert_array_equal(Result.load(path).meeting_times, result.meeting_times)
 
 
 def test_a_file_from_a_later_schema_raises(result, monkeypatch):

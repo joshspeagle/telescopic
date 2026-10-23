@@ -76,7 +76,7 @@ def gaussian(d: int = 10, rho: float = 0.9) -> Example:
     if not -1 < rho < 1:
         raise ValueError(f"rho must be in (-1, 1), not {rho}")
     steps = np.arange(d)
-    cov = rho ** np.abs(steps[:, None] - steps[None, :])
+    cov = float(rho) ** np.abs(steps[:, None] - steps[None, :])
     precision = np.linalg.inv(cov)
     return Example(
         "gaussian",

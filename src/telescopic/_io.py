@@ -66,6 +66,9 @@ def save(result: Result, path: str | os.PathLike[str] | IO[bytes]) -> None:
 
 
 def load(path: str | os.PathLike[str] | IO[bytes], cls: type[Result]) -> Result:
+    # As np.savez does, a name without the suffix gets it.
+    if isinstance(path, str | os.PathLike) and not os.fspath(path).endswith(".npz"):
+        path = f"{os.fspath(path)}.npz"
     with np.load(path, allow_pickle=False) as data:
         metadata: dict[str, Any] = json.loads(str(data["metadata"]))
         if metadata["schema"] > SCHEMA:

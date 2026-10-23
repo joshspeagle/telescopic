@@ -273,15 +273,7 @@ class Result:
             bin ``j`` of the second.
         edges : ndarray, shape (bins + 1,), or a list of them for a sequence of coordinates
         """
-        columns = np.atleast_1d(dims)
-        if (
-            columns.ndim != 1
-            or columns.dtype.kind not in "iu"
-            or np.any((columns < 0) | (columns >= self.ndim))
-        ):
-            raise ValueError(
-                f"dims must be an integer in [0, {self.ndim}) or a sequence of them, not {dims}"
-            )
+        columns = self._columns(dims)
         if bins < 1:
             raise ValueError(f"bins must be at least 1, not {bins}")
         expected = (*np.shape(dims), 2)
@@ -289,14 +281,11 @@ class Result:
             raise ValueError(f"range must have shape {expected}, not {np.shape(range)}")
         self._require(2)
         limits = [None] * len(columns) if range is None else map(tuple, np.reshape(range, (-1, 2)))
-        edges, cells = [], []
+        cells, edges = [], []
         for column, limit in zip(columns, limits, strict=True):
-            values = self.measure.atoms[:, column]
-            edge = np.histogram_bin_edges(values, bins, limit)
-            if limit is None:
-                edge[-1] = np.nextafter(edge[-1], np.inf)  # keep the largest atom inside
+            which, edge = self._bins(column, bins, limit)
+            cells.append(which)
             edges.append(edge)
-            cells.append(np.searchsorted(edge, values, side="right") - 1)
         shape = (bins,) * len(columns)
         which = np.stack(cells)
         inside = np.all((which >= 0) & (which < bins), axis=0)
@@ -460,7 +449,7 @@ class Result:
         Parameters
         ----------
         path : str, path-like or binary file
-            NumPy appends ``.npz`` to a name that lacks it.
+            ``.npz`` is appended to a name that lacks it.
         """
         # Imported here: telescopic._io imports this module.
         from telescopic import _io
@@ -474,6 +463,7 @@ class Result:
         Parameters
         ----------
         path : str, path-like or binary file
+            ``.npz`` is appended to a name that lacks it.
 
         Returns
         -------
@@ -518,7 +508,7 @@ class Result:
 
     def plot_marginals(
         self,
-        dims: Sequence[int] | None = None,
+        dims: int | Sequence[int] | None = None,
         bins: int = 20,
         axes: Sequence[Any] | None = None,
     ) -> Any:
@@ -526,7 +516,7 @@ class Result:
 
         Parameters
         ----------
-        dims : sequence of int, optional
+        dims : int or sequence of int, optional
             Coordinates; all by default.
         bins : int
         axes : sequence of matplotlib Axes, optional
@@ -540,12 +530,12 @@ class Result:
 
         return plotting.marginals(self, dims, bins, axes)
 
-    def plot_corner(self, dims: Sequence[int] | None = None, bins: int = 20) -> Any:
+    def plot_corner(self, dims: int | Sequence[int] | None = None, bins: int = 20) -> Any:
         """Plot a corner plot of signed histograms (needs matplotlib).
 
         Parameters
         ----------
-        dims : sequence of int, optional
+        dims : int or sequence of int, optional
             Coordinates; all by default.
         bins : int
 
@@ -570,6 +560,30 @@ class Result:
             raise RuntimeError("; ".join(messages))
         for message in messages:
             warn(message, ConvergenceWarning)
+
+    def _columns(self, dims: int | Sequence[int]) -> npt.NDArray[np.intp]:
+        # Coordinates given as one integer or a sequence of them, checked.
+        columns = np.atleast_1d(dims)
+        if (
+            columns.ndim != 1
+            or columns.dtype.kind not in "iu"
+            or np.any((columns < 0) | (columns >= self.ndim))
+        ):
+            raise ValueError(
+                f"dims must be an integer in [0, {self.ndim}) or a sequence of them, not {dims}"
+            )
+        return columns.astype(np.intp)
+
+    def _bins(
+        self, column: int, bins: int, limit: tuple[float, float] | None = None
+    ) -> tuple[npt.NDArray[np.intp], FloatArray]:
+        # The bin of each atom along a coordinate, below 0 or from bins outside the edges,
+        # and the edges; by default the last is nudged up to keep the largest atom inside.
+        values = self.measure.atoms[:, column]
+        edges = np.histogram_bin_edges(values, bins, limit)
+        if limit is None:
+            edges[-1] = np.nextafter(edges[-1], np.inf)
+        return np.searchsorted(edges, values, side="right") - 1, edges
 
     def _require(self, n: int) -> None:
         if self.n_replicates < n:

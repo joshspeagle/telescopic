@@ -636,7 +636,7 @@ result.plot_tv_bound()                       # with the plot extra: distance fro
 - a conjugate hierarchical model for Gibbs (the pump-failure model of JOA20), whose exact expectations come from one-dimensional quadrature over $\beta$ after integrating out $\lambda$.
 
 **`telescopic.testing.check_coupling(kernel, target, x, y, n, rng)`** checks a kernel's coupling as the engine uses it. From `n` copies of `(x, y)`, it compares each chain of one `coupled_step` with one `step` from the same state, and inspects the pairs:
-- marginals: Fisher's exact test of the frequency of staying put, and two-sample KS tests of the moved values on 5 random one-dimensional projections and on the distance moved, Bonferroni-corrected;
+- marginals: Fisher's exact test of the frequency of staying put, and two-sample KS tests of the moved values on 5 random one-dimensional projections (1 in one dimension) and on the distance moved, Bonferroni-corrected;
 - meetings: the fraction of pairs that met, which must be positive;
 - caches: the chains whose returned log-density or gradient differs from a fresh evaluation by more than $10^{-9}$ of its size (the engine reuses them);
 - near misses: pairs apart by at most 64 units in the last place in every coordinate without being equal, the mark of a coupling that recomputes $Y$ where it should copy $X$'s proposal (R-KER-3).

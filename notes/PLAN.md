@@ -1,7 +1,7 @@
 # Plan
 
-**Current position:** Phase 4, milestones M0 to M8 implemented and M0 to M7 reviewed;
-M8's `/simplify` fixes are in, and its `/code-review` is next.
+**Current position:** Phase 4, milestones M0 to M8 implemented and reviewed; M9 (the
+slow statistical suite, benchmarks and warning calibration) is next.
 
 ## Phases
 
@@ -28,7 +28,7 @@ M8's `/simplify` fixes are in, and its `/code-review` is next.
 | M5 | Tuning, sampler, `sample` | yes | done, fixed (with M4) | done, fixed | `notes/reviews/m4-m5.md` |
 | M6 | MALA, HMC, Gibbs | yes | done, fixed | done, fixed | `notes/reviews/m6.md` |
 | M7 | Parallel execution, interrupts, progress (budgets deferred) | yes | done, fixed | done, fixed | `notes/reviews/m7.md` |
-| M8 | IO, plotting, examples, `check_coupling` | yes | done, fixed | pending | `notes/reviews/m8.md` |
+| M8 | IO, plotting, examples, `check_coupling` | yes | done, fixed | done, fixed | `notes/reviews/m8.md` |
 | M9 | Slow statistical suite, benchmarks, warning calibration | no | | | |
 | M10 | Documentation and tutorials | no | | | |
 | M11 | Independent audit, checkpoint report | no | | | |
