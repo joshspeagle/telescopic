@@ -1,0 +1,7 @@
+{"commit": "89f93d1-dirty", "machine": "Intel(R) Xeon(R) Processor @ 2.10GHz, 4 CPUs, Linux 6.18.44-fc-v153", "available CPUs": 4, "blas": [{"internal_api": "openblas", "version": "0.3.34.106.0", "num_threads": 1}, {"internal_api": "openblas", "version": "0.3.31.dev", "num_threads": 1}], "python": "3.13.16", "numpy": "2.5.4", "scipy": "1.18.1", "telescopic": "0.1.0.dev0"}
+line fit, point by point, k = 87, 100 replicates: 64 lanes 0.669 s; 100 lanes 0.542 s; 128 lanes 0.528 s; 256 lanes 0.554 s
+line fit, point by point, k = 87, 1000 replicates: 64 lanes 6.880 s; 128 lanes 6.114 s; 256 lanes 5.400 s; 512 lanes 4.991 s; 1024 lanes 4.809 s
+line fit, vectorised, k = 87, 100 replicates: 64 lanes 0.210 s; 100 lanes 0.134 s; 128 lanes 0.142 s; 256 lanes 0.136 s
+line fit, vectorised, k = 87, 1000 replicates: 64 lanes 2.028 s; 128 lanes 1.279 s; 256 lanes 0.877 s; 512 lanes 0.773 s; 1024 lanes 0.659 s
+gaussian(10), vectorised, k = 222, 100 replicates: 64 lanes 0.549 s; 100 lanes 0.361 s; 128 lanes 0.429 s; 256 lanes 0.367 s
+gaussian(10), vectorised, k = 222, 1000 replicates: 64 lanes 5.697 s; 128 lanes 3.904 s; 256 lanes 2.878 s; 512 lanes 1.911 s; 1024 lanes 1.810 s

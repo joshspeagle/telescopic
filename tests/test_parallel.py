@@ -181,9 +181,9 @@ def test_a_stop_reaches_the_replicates_of_telescopics_workers():
     # The stop comes before the worker has started: its first chunk starts one set of
     # lanes and refills none, and the other chunks run nothing.
     with opened(1) as workers:
-        stopped = execute(job(), np.arange(512), workers, lambda status: True)
+        stopped = execute(job(), np.arange(2048), workers, lambda status: True)
     np.testing.assert_array_equal(stopped.index, np.arange(engine.LANES))
-    np.testing.assert_array_equal(stopped.requested, np.arange(512))
+    np.testing.assert_array_equal(stopped.requested, np.arange(2048))
 
 
 def test_a_chunk_that_starts_after_the_stop_runs_nothing_unless_it_is_the_first(
@@ -193,8 +193,8 @@ def test_a_chunk_that_starts_after_the_stop_runs_nothing_unless_it_is_the_first(
     stop.set()
     monkeypatch.setattr(_parallel, "_stop", stop)
     payload = _parallel._dumps(job())
-    assert _parallel._task(payload, os.getpid(), np.arange(200)) is None
-    first = _parallel._task(payload, os.getpid(), np.arange(200), first=True)
+    assert _parallel._task(payload, os.getpid(), np.arange(600)) is None
+    first = _parallel._task(payload, os.getpid(), np.arange(600), first=True)
     np.testing.assert_array_equal(first.index, np.arange(engine.LANES))
 
 
@@ -274,17 +274,17 @@ def interrupting(after):
 
 
 def test_an_interrupted_run_is_completed_by_the_next_run(capsys):
-    # Ctrl-C after 2,000 evaluations, while the first 64 replicates (one per lane) are in
-    # progress: they finish, and the next run starts with the missing ones, so the two
-    # runs equal one uninterrupted run. k = 40 keeps the pairs from meeting late.
+    # Ctrl-C after 2,000 evaluations, while the first 256 replicates (one per lane) are
+    # in progress: they finish, and the next run starts with the 44 missing ones, so the
+    # two runs equal one uninterrupted run. k = 40 keeps the pairs from meeting late.
     kernel = RandomWalk(np.eye(2))
     sampler = telescopic.CoupledSampler(interrupting(2_000), INIT, kernel=kernel, rng=7)
-    first = sampler.run(90, k=40)
+    first = sampler.run(300, k=40)
     assert first.interrupted
     np.testing.assert_array_equal(first.index, np.arange(engine.LANES))
-    second = sampler.run(30)
+    second = sampler.run(50)
     assert not second.interrupted
-    whole = telescopic.sample(gaussian_log_prob, INIT, 94, kernel=kernel, k=40, rng=7)
+    whole = telescopic.sample(gaussian_log_prob, INIT, 306, kernel=kernel, k=40, rng=7)
     assert_same_replicates(second._replicates, whole._replicates)
     assert "press Ctrl-C again" in capsys.readouterr().err
 

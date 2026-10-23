@@ -438,7 +438,7 @@ The choice of component must not depend on the states (AJ24 §4.2). Switching be
 
 ### 6.2 Engine (R-EXEC-3)
 
-The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each holding one replicate.
+The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each holding one replicate. `B` is 256 by default, or the number of replicates if fewer (DECISIONS #52).
 
 - **Phases:** each slot is in one of three phases: lagging ($X$ alone, $t < L$), coupled, or after-meeting ($X$ alone until $t \ge m$).
 - **Each step:**
@@ -465,7 +465,7 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
   - `None` runs in-process;
   - an integer creates that many worker processes;
   - an object with `submit` (a `concurrent.futures.Executor`), or with `map` (emcee/dynesty/schwimmbad style), is used as given.
-- **Tasks:** chunks of consecutive replicate indices, one per worker at least, more where a chunk would exceed a full set of 64 lanes, and four per worker at most. The workers are counted by the pool's size: an executor's `_max_workers`, a multiprocessing pool's `_processes`, a schwimmbad pool's `size`, or else the CPUs the process may use. Each worker runs the engine on its chunk. Chunks are submitted at once, in index order; a pool with only `map` runs them in waves of one per worker. The job (target, kernel, initial distribution, root and settings) travels with each task (DECISIONS #23).
+- **Tasks:** chunks of consecutive replicate indices, one per worker at least, more where a chunk would exceed 64 replicates, and four per worker at most. The workers are counted by the pool's size: an executor's `_max_workers`, a multiprocessing pool's `_processes`, a schwimmbad pool's `size`, or else the CPUs the process may use. Each worker runs the engine on its chunk. Chunks are submitted at once, in index order; a pool with only `map` runs them in waves of one per worker. The job (target, kernel, initial distribution, root and settings) travels with each task (DECISIONS #23).
 - **Results:** reduced in index order. The wall time of a pool run is the parent's.
 - **Worker hygiene:**
   - a task in the main thread of another process pins BLAS to one thread and ignores Ctrl-C, in user pools too. Tasks in the parent process, as on a thread pool, or in other threads leave those settings alone: they belong to the process, and concurrent tasks would restore each other's;

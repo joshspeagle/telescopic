@@ -29,6 +29,9 @@ threadpoolctl = importlib.import_module("threadpoolctl")
 
 # At most this many chunks per worker, so that the workers finish together.
 CHUNKS_PER_WORKER = 4
+# Replicates per chunk at most, where CHUNKS_PER_WORKER allows: smaller chunks balance the
+# workers, and an engine advances a chunk's replicates together (DECISIONS #52).
+CHUNK = 64
 
 # The most processes that ProcessPoolExecutor accepts on Windows; elsewhere it has no limit.
 MAX_PROCESSES = 61 if sys.platform == "win32" else sys.maxsize
@@ -146,8 +149,7 @@ def execute(job: Job, indices: IntArray, pool: Any, monitor: Monitor) -> engine.
         return job(indices, monitor=monitor)
     start = time.perf_counter()
     workers = pool.n if isinstance(pool, Workers) else _workers(pool)
-    # Chunks of at least a full set of lanes where there are enough replicates.
-    count = max(workers, math.ceil(len(indices) / engine.LANES))
+    count = max(workers, math.ceil(len(indices) / CHUNK))
     pieces = np.array_split(indices, min(len(indices), CHUNKS_PER_WORKER * workers, count))
     task = functools.partial(_task, _dumps(job), os.getpid())
     if isinstance(pool, Workers):

@@ -19,8 +19,8 @@ from telescopic.initial import draw
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
 
-# Replicates advanced together by default.
-LANES = 64
+# Replicates advanced together by default (DECISIONS #52).
+LANES = 256
 
 
 class Settings(NamedTuple):
@@ -180,7 +180,7 @@ def run(
         The root seed (spec section 6.1), recorded in the output. Runs of other indices
         with the same ``SeedSequence`` or integer can be merged.
     lanes : int
-        Number of replicates advanced together.
+        Number of replicates advanced together, at most the number requested.
     store : bool
         Whether to store the signed measures and distances; meeting-time pilots do not.
     keep_paths : bool
@@ -213,6 +213,7 @@ def run(
     ):
         raise ValueError("indices must be a non-empty sequence of distinct integers >= 0")
     requested = requested.astype(np.int64)
+    lanes = min(lanes, len(requested))  # empty lanes would only cost time
     seed = root_seed(rng)
     queue = iter(requested.tolist())
     first = next(queue)

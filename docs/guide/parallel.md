@@ -68,8 +68,7 @@ and join the results ([Merging runs](results.md#merging-runs)).
 ## Chunks and workers
 
 A pool runs chunks of consecutive replicate indices: one per worker at least, more where
-a chunk would hold more than 64 replicates (the lanes that the engine advances together),
-and four per worker at most. An executor receives every chunk at once, in index order; a
+a chunk would hold more than 64 replicates, and four per worker at most. An executor receives every chunk at once, in index order; a
 pool with only `map` receives them in waves of one chunk per worker.
 
 telescopic reads the number of workers of an integer pool, a `concurrent.futures`
@@ -142,7 +141,8 @@ if __name__ == "__main__":
 ## Interrupting a run
 
 The first Ctrl-C during the replicates of a run starts no new replicate and lets those in
-progress finish. The run then returns a result flagged `interrupted`, with every replicate
+progress finish. In this process they run 256 at a time, so a run of 256 or fewer has
+started them all, and Ctrl-C then waits for them. The run then returns a result flagged `interrupted`, with every replicate
 that started, and telescopic prints that a second Ctrl-C stops at once. Its estimates are
 consistent but not exactly unbiased, since the number of replicates that ran depends on
 their costs, and its summary says so. The sampler's next `run` starts with the missing
