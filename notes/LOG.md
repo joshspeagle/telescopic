@@ -177,3 +177,11 @@ Append only. One entry per working session or milestone.
   d = 10 against 4.4-5.4 s after the simplify round. Seven mutants checked. 410 fast
   tests in 38 s.
 
+## 2026-10-23: run settings in the replicates
+
+- Done before M9, which would otherwise write its slow tests and benchmarks against an
+  engine interface about to change. `Replicates` record their run's root seed and
+  settings, `engine.run` takes `rng`, and `Result(replicates, ...)` reads them, so a
+  result can no longer be given another lag than its run's (DECISIONS #31). `merge`
+  checks the seed, the settings and the dimension. 413 fast tests in 37 s.
+

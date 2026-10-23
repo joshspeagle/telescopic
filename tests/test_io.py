@@ -9,7 +9,6 @@ import pytest
 import telescopic
 from references import gaussian_log_prob
 from telescopic import _io
-from telescopic._random import MAIN, root_seed
 from telescopic.engine import run
 from telescopic.initial import Normal
 from telescopic.kernels import RandomWalk
@@ -25,19 +24,18 @@ INIT = Normal([2.0, -1.0], [4.0, 4.0])
 )
 def result(request):
     if request.param is None:
-        # From the engine alone: no kernel, initial distribution, seed, tuning or pilot.
+        # From the engine alone: no kernel, initial distribution, tuning or pilot.
         replicates = run(
             Target(gaussian_log_prob),
             RandomWalk(np.eye(2)),
             INIT,
             range(5),
-            root=root_seed(5),
-            namespace=MAIN,
+            rng=5,
             k=2,
             m=6,
             lag=1,
         )
-        return Result(replicates, k=2, m=6, lag=1)
+        return Result(replicates)
     # Tuned, with a pilot and censored pairs; a generator gives a seed of four integers.
     sampler = telescopic.CoupledSampler(gaussian_log_prob, INIT, rng=request.param)
     sampler.meeting_times(20)
@@ -56,8 +54,11 @@ def reloaded(result):
 
 
 def assert_same(loaded, original, name):
-    # Compares the fields of the replicates, the measure and the tuning report one by one.
-    if hasattr(original, "__dataclass_fields__"):
+    # Compares seeds by their state, and the fields of the replicates, the measure and the
+    # tuning report one by one.
+    if isinstance(original, np.random.SeedSequence):
+        assert loaded.state == original.state, name
+    elif hasattr(original, "__dataclass_fields__"):
         for field, value in vars(original).items():
             if field != "paths":
                 assert_same(getattr(loaded, field), value, f"{name}.{field}")
@@ -71,8 +72,6 @@ def test_save_and_load_round_trip_every_field(result):
     for name, value in vars(result).items():
         if name in ("kernel", "initial"):
             assert getattr(loaded, name) == (None if value is None else str(value))
-        elif name == "seed":
-            assert (loaded.seed is None) if value is None else loaded.seed.state == value.state
         else:
             assert_same(getattr(loaded, name), value, name)
     assert repr(loaded.summary()) == repr(result.summary())

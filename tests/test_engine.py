@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 
 from references import gaussian_log_prob
-from telescopic._random import MAIN, root_seed
 from telescopic.engine import Status, merge, run
 from telescopic.estimators import averaging_times, correction_coefficients
 from telescopic.initial import Empirical, Normal
@@ -15,14 +14,12 @@ FAR = Normal(mean=[3.0, -1.0], cov=[1.0, 1.0])
 
 
 def simulate(kernel=None, initial=FAR, n=20, indices=None, **options):
-    settings = {"k": 2, "m": 10, "lag": 1, "lanes": 8} | options
+    settings = {"k": 2, "m": 10, "lag": 1, "lanes": 8, "rng": 1} | options
     return run(
         TARGET,
         RandomWalk(np.eye(2), scale=1.0) if kernel is None else kernel,
         initial,
         range(n) if indices is None else indices,
-        root=root_seed(1),
-        namespace=MAIN,
         **settings,
     )
 
@@ -79,8 +76,9 @@ def test_a_replicates_output_does_not_depend_on_the_lanes(coupling):
     runs = [simulate(kernel, n=30, k=3, m=8, lag=2, lanes=lanes) for lanes in (1, 7, 64)]
     np.testing.assert_array_equal(runs[0].index, np.arange(30))
     for other in runs[1:]:
+        assert other.root.state == runs[0].root.state
         for name, value in vars(other).items():
-            if name != "seconds":
+            if name not in ("root", "seconds"):
                 np.testing.assert_array_equal(value, getattr(runs[0], name))
 
 
@@ -159,8 +157,7 @@ def test_the_run_records_its_evaluations_and_the_starts_outside_the_support():
         RandomWalk(np.eye(1)),
         Empirical([[-1.0], [1.0]]),
         range(10),
-        root=root_seed(2),
-        namespace=MAIN,
+        rng=2,
         k=0,
         m=2,
         lag=1,
@@ -179,3 +176,17 @@ def test_merging_refuses_parts_that_share_replicates():
     part = simulate(n=3)
     with pytest.raises(ValueError, match="share replicate indices"):
         merge([part, part])
+
+
+def test_merging_refuses_parts_of_another_dimension():
+    other = simulate(RandomWalk(np.eye(1)), Normal([3.0], [[1.0]]), indices=[3, 4])
+    with pytest.raises(ValueError, match="dimensions 2 and 1"):
+        merge([simulate(n=3), other])
+
+
+@pytest.mark.parametrize("rng", [1, np.random.SeedSequence(1)], ids=["int", "seed sequence"])
+def test_replicates_record_the_settings_and_root_seed_of_their_run(rng):
+    replicates = simulate(n=4, k=2, m=10, lag=3, thin=2, max_iter=40, rng=rng)
+    settings = [getattr(replicates, name) for name in ("k", "m", "lag", "thin", "max_iter")]
+    assert settings == [2, 10, 3, 2, 40]
+    assert replicates.root.state == np.random.SeedSequence(1).state

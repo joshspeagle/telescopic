@@ -24,7 +24,8 @@ All notable changes to this project are documented here. The format follows
 - The engine (`telescopic.engine.run`): replicates of coupled chains in lockstep lanes
   with refill, exact meeting detection, the lag-$L$ and thinned estimator weights, signed
   measures, distances between the chains, censoring and a slow-pair warning. A
-  replicate's output does not depend on the number of lanes.
+  replicate's output does not depend on the number of lanes. The output records the
+  run's settings and root seed, which `Result` and `merge` read.
 - `SignedMeasure`, the unbiased covariance estimator and quantiles of signed measures by
   isotonic projection (`telescopic.measure`, `telescopic.estimators`).
 - `Result` with estimates and confidence intervals for any test function, unbiased

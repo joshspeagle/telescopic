@@ -120,11 +120,12 @@ SignedMeasure(atoms (N, d), weights (N,), replicate (N,), n_replicates)
 ### 2.6 Engine (`engine.py`)
 
 ```text
-Replicates(index, meeting_time, cost, atoms, weights, owner, distance_owner, distance_time,
-           distance, zero_density, requested, n_log_prob, n_grad, seconds, paths)   # inf = censored
-merge(parts) -> Replicates
-run(target, kernel, initial, indices, *, root, namespace, k, m, lag, thin=1, max_iter=None,
-    lanes=64, store=True, keep_paths=False, monitor=None) -> Replicates
+Replicates(root, k, m, lag, thin, max_iter, index, meeting_time, cost, atoms, weights, owner,
+           distance_owner, distance_time, distance, zero_density, requested, n_log_prob,
+           n_grad, seconds, paths)                          # inf = censored
+merge(parts) -> Replicates                                  # same root, settings and dimension
+run(target, kernel, initial, indices, *, k, m, lag, thin=1, max_iter=None, rng=None,
+    namespace=MAIN, lanes=64, store=True, keep_paths=False, monitor=None) -> Replicates
 Status(started, finished, slowest, t)                       # given to the monitor every iteration
 ```
 
@@ -165,8 +166,8 @@ choose_k(meeting_times, quantile=0.99) -> k    # spec R-TUNE-2; inverted-CDF qua
 
 ### 2.9 Results (`results.py`, `diagnostics.py`)
 
-- **`Result`** holds:
-  - the configuration, the frozen kernel and the seed;
+- **`Result(replicates, *, names, kernel, initial, tuning, pilot)`** holds:
+  - the configuration and the seed, read from the replicates, and the frozen kernel;
   - per-replicate arrays and the `SignedMeasure`;
   - the tuning and pilot reports.
 

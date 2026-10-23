@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import telescopic
 from references import gaussian_log_prob
 from telescopic import plotting
-from telescopic._random import MAIN, root_seed
 from telescopic.engine import run
 from telescopic.initial import Normal
 from telescopic.kernels import RandomWalk
@@ -105,14 +104,13 @@ def test_paths_need_the_paths_of_the_engine():
         RandomWalk(np.eye(2)),
         INIT,
         range(3),
-        root=root_seed(2),
-        namespace=MAIN,
+        rng=2,
         k=1,
         m=5,
         lag=1,
         keep_paths=True,
     )
-    ax = plotting.paths(replicates, lag=1)
+    ax = plotting.paths(replicates)
     assert len(ax.lines) == 6
     with pytest.raises(ValueError, match="keep_paths=True"):
-        plotting.paths(RESULT._replicates, lag=1)
+        plotting.paths(RESULT._replicates)

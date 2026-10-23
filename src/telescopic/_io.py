@@ -9,7 +9,7 @@ from typing import IO, Any
 import numpy as np
 from numpy.random import SeedSequence
 
-from telescopic.engine import Replicates
+from telescopic.engine import SETTINGS, Replicates
 from telescopic.results import Result
 from telescopic.tuning import TuningReport
 
@@ -43,13 +43,11 @@ def save(result: Result, path: str | os.PathLike[str] | IO[bytes]) -> None:
         arrays["pilot"] = result.pilot
     metadata = {
         "schema": SCHEMA,
-        "settings": {
-            name: getattr(result, name) for name in ("k", "m", "lag", "thin", "max_iter")
-        },
+        "settings": {name: getattr(replicates, name) for name in SETTINGS},
+        "seed": replicates.root.state,
         "names": result.names,
         "kernel": None if result.kernel is None else str(result.kernel),
         "initial": None if result.initial is None else str(result.initial),
-        "seed": None if result.seed is None else result.seed.state,
         "counts": {
             "n_log_prob": replicates.n_log_prob,
             "n_grad": replicates.n_grad,
@@ -77,6 +75,8 @@ def load(path: str | os.PathLike[str] | IO[bytes], cls: type[Result]) -> Result:
                 f"{SCHEMA}: upgrade telescopic to load it"
             )
         replicates = Replicates(
+            root=SeedSequence(**metadata["seed"]),
+            **metadata["settings"],
             **{name: data[f"replicates.{name}"] for name in REPLICATE_ARRAYS},
             **metadata["counts"],
         )
@@ -85,14 +85,11 @@ def load(path: str | os.PathLike[str] | IO[bytes], cls: type[Result]) -> Result:
             tuning = TuningReport(
                 **{name: data[f"tuning.{name}"] for name in TUNING_ARRAYS}, **tuning
             )
-        seed = metadata["seed"]
         return cls(
             replicates,
-            **metadata["settings"],
             names=metadata["names"],
             kernel=metadata["kernel"],
             initial=metadata["initial"],
-            seed=None if seed is None else SeedSequence(**seed),
             tuning=tuning,
             pilot=data.get("pilot"),
         )

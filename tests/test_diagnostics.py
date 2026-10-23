@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from telescopic._random import MAIN, root_seed
+from telescopic._random import root_seed
 from telescopic.diagnostics import hill, issues, tv_bound, variance_share, w1_bound
 from telescopic.engine import Replicates, run
 from telescopic.initial import Normal
@@ -20,6 +20,12 @@ def synthetic(meeting_times, values, *, k=0, lag=1, max_iter=None, tuning=None):
     values = np.asarray(values, dtype=np.float64)
     return Result(
         Replicates(
+            root=root_seed(0),
+            k=k,
+            m=k,
+            lag=lag,
+            thin=1,
+            max_iter=max_iter,
             index=np.arange(len(tau)),
             meeting_time=tau,
             cost=np.ones(len(tau), dtype=np.int64),
@@ -32,10 +38,6 @@ def synthetic(meeting_times, values, *, k=0, lag=1, max_iter=None, tuning=None):
             zero_density=np.zeros(0, dtype=np.int64),
             requested=np.arange(len(tau)),
         ),
-        k=k,
-        m=k,
-        lag=lag,
-        max_iter=max_iter,
         tuning=tuning,
     )
 
@@ -111,13 +113,12 @@ def test_no_warning_fires_on_a_clean_gaussian_run():
         RandomWalk(np.eye(2)),
         Normal([1.0, 1.0], [1.0, 1.0]),
         range(100),
-        root=root_seed(6),
-        namespace=MAIN,
+        rng=6,
         k=30,
         m=300,
         lag=30,
     )
-    assert issues(Result(replicates, k=30, m=300, lag=30)) == []
+    assert issues(Result(replicates)) == []
 
 
 def test_without_late_pairs_the_upper_bound_of_the_late_fraction_is_the_rule_of_three():

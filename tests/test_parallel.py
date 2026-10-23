@@ -16,7 +16,6 @@ import telescopic
 from references import gaussian_log_prob
 from telescopic import _parallel, _progress, engine
 from telescopic._parallel import Interrupt, execute, opened
-from telescopic._random import MAIN, root_seed
 from telescopic.initial import Normal
 from telescopic.kernels import RandomWalk, State
 from telescopic.target import Target
@@ -33,8 +32,7 @@ def job(log_prob=gaussian_log_prob, args=()):
         Target(log_prob, args=args),
         RandomWalk(np.eye(2)),
         INIT,
-        root=root_seed(5),
-        namespace=MAIN,
+        rng=5,
         **SETTINGS,
     )
 
@@ -44,8 +42,9 @@ def never(status):
 
 
 def assert_same_replicates(a, b):
+    assert a.root.state == b.root.state
     for name, value in vars(a).items():
-        if name != "seconds":
+        if name not in ("root", "seconds"):
             np.testing.assert_array_equal(value, getattr(b, name), err_msg=name)
 
 

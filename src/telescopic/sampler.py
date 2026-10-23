@@ -238,10 +238,8 @@ class CoupledSampler:
             names=self.names,
             kernel=self.kernel,
             initial=self.initial,
-            seed=self.seed,
             tuning=self.tuning,
             pilot=self.pilot,
-            **settings,
         )
         for issue in diagnostics.issues(result):
             if issue.kind not in _LIVE:
@@ -274,7 +272,7 @@ class CoupledSampler:
             self.target,
             self.kernel,
             self.initial,
-            root=self.seed,
+            rng=self.seed,
             namespace=namespace,
             store=main,
             **settings,
@@ -295,7 +293,7 @@ class CoupledSampler:
             finally:
                 if bar is not None:
                     bar.close()
-        slow.after(replicates, settings["max_iter"])
+        slow.after(replicates)
         if len(replicates.zero_density):
             warn(
                 f"{len(replicates.zero_density)} replicates start where the target density "
@@ -425,11 +423,10 @@ class _SlowPairs:
         if status.t >= self.threshold:
             self._warn(status.slowest)
 
-    def after(self, replicates: engine.Replicates, max_iter: int | None) -> None:
+    def after(self, replicates: engine.Replicates) -> None:
         # A pair is unmet at the threshold when it meets, or is censored, after it.
-        tau = replicates.meeting_time
-        stopped = tau if max_iter is None else np.minimum(tau, max_iter)
-        slow = replicates.index[stopped > self.threshold]
+        cap = np.inf if replicates.max_iter is None else replicates.max_iter
+        slow = replicates.index[np.minimum(replicates.meeting_time, cap) > self.threshold]
         if len(slow):
             self._warn(int(slow[0]))
 

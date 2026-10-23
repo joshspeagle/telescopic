@@ -1,7 +1,8 @@
 # Plan
 
-**Current position:** Phase 4, milestones M0 to M8 implemented and reviewed; M9 (the
-slow statistical suite, benchmarks and warning calibration) is next.
+**Current position:** Phase 4, milestones M0 to M8 implemented and reviewed. The two
+interface changes deferred from M8 are implemented (DECISIONS #31) and under review;
+M9 (the slow statistical suite, benchmarks and warning calibration) follows.
 
 ## Phases
 
@@ -33,10 +34,10 @@ slow statistical suite, benchmarks and warning calibration) is next.
 | M10 | Documentation and tutorials | no | | | |
 | M11 | Independent audit, checkpoint report | no | | | |
 
-## Deferred to before M10
+## Deferred from M8, now under review
 
-From the M8 altitude review (`notes/reviews/m8.md`), to settle before the tutorials use
-these interfaces:
+From the M8 altitude review (`notes/reviews/m8.md`), done before M9 so that its tests and
+benchmarks use the final interfaces (DECISIONS #31):
 
 - `Replicates` records k, m, the lag, thin, `max_iter` and the root seed, so that
   `Result(replicates)`, `plotting.paths(replicates)` and `merge` need no settings.

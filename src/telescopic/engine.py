@@ -12,8 +12,8 @@ import numpy as np
 import numpy.typing as npt
 from numpy.random import Generator, SeedSequence
 
-from telescopic._random import Streams, replicate_generator
-from telescopic._types import BoolArray, Distribution, FloatArray, IntArray
+from telescopic._random import MAIN, Streams, replicate_generator, root_seed
+from telescopic._types import BoolArray, Distribution, FloatArray, IntArray, Seed
 from telescopic.estimators import averaging_times, correction_coefficients
 from telescopic.initial import draw
 from telescopic.kernels.base import Kernel, State
@@ -22,13 +22,25 @@ from telescopic.target import Target
 # Replicates advanced together by default.
 LANES = 64
 
+# The settings of a run, which Replicates record.
+SETTINGS = ("k", "m", "lag", "thin", "max_iter")
+
 
 @dataclass
 class Replicates:
-    r"""The outputs of a set of replicates, sorted by replicate index (spec section 6.2).
+    r"""The outputs of a set of replicates, sorted by replicate index, and their run's settings.
+
+    Spec section 6.2.
 
     Attributes
     ----------
+    root : numpy.random.SeedSequence
+        The root seed of the run, from which each replicate's stream derives (spec
+        section 6.1).
+    k, m, lag, thin : int
+        The settings of the estimator (spec section 3.2).
+    max_iter : int or None
+        The cap of the run.
     index : ndarray of int, shape (R,)
         Replicate indices.
     meeting_time : ndarray of float, shape (R,)
@@ -56,6 +68,12 @@ class Replicates:
         shapes ``(T + 1, d)`` and ``(T_Y + 1, d)``, where :math:`Y` stops at the meeting.
     """
 
+    root: SeedSequence
+    k: int
+    m: int
+    lag: int
+    thin: int
+    max_iter: int | None
     index: IntArray
     meeting_time: FloatArray
     cost: IntArray
@@ -98,13 +116,13 @@ def run(
     initial: Distribution,
     indices: npt.ArrayLike,
     *,
-    root: SeedSequence,
-    namespace: int,
     k: int,
     m: int,
     lag: int,
     thin: int = 1,
     max_iter: int | None = None,
+    rng: Seed = None,
+    namespace: int = MAIN,
     lanes: int = LANES,
     store: bool = True,
     keep_paths: bool = False,
@@ -115,9 +133,9 @@ def run(
     Each replicate draws :math:`X_0` and then :math:`Y_0` from ``initial`` with its own
     stream (spec section 6.1), runs :math:`X` alone for ``lag`` steps, then the coupled
     kernel until :math:`X_t = Y_{t-L}` bitwise, then :math:`X` alone until :math:`t = m`.
-    A replicate's output depends only on ``root``, ``namespace``, its index and the
-    arguments, never on the other replicates or on ``lanes``. The engine emits no
-    warning: it records what its caller needs to warn about.
+    A replicate's output depends only on the root seed, its index and the arguments,
+    never on the other replicates or on ``lanes``. The engine emits no warning: it
+    records what its caller needs to warn about.
 
     Parameters
     ----------
@@ -127,10 +145,6 @@ def run(
     initial : object with ``rvs(random_state=generator)``
     indices : array_like of int, shape (R,)
         Distinct replicate indices, at least one, started in this order.
-    root : numpy.random.SeedSequence
-        Root seed of the run.
-    namespace : int
-        Stream namespace: ``telescopic._random.MAIN``, ``TUNING`` or ``PILOT``.
     k, m : int
         First and last averaged times, :math:`0 \le k \le m`.
     lag : int
@@ -140,6 +154,11 @@ def run(
     max_iter : int, optional
         Censor a pair still unmet when :math:`t` reaches ``max_iter``, which must exceed
         ``max(lag, m)``. ``None`` runs every pair until it meets.
+    rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
+        The root seed (spec section 6.1), recorded in the output. Runs of other indices
+        with the same ``SeedSequence`` or integer can be merged.
+    namespace : int
+        The streams' namespace; telescopic's pilots use their own (spec section 6.1).
     lanes : int
         Number of replicates advanced together.
     store : bool
@@ -173,6 +192,7 @@ def run(
     ):
         raise ValueError("indices must be a non-empty sequence of distinct integers >= 0")
     requested = requested.astype(np.int64)
+    root = root_seed(rng)
     queue = iter(requested.tolist())
     first = next(queue)
     evaluations, start = (target.n_log_prob, target.n_grad), time.perf_counter()
@@ -189,6 +209,7 @@ def run(
         if not stopping:
             batch.fill(free, starts)
     return batch.result(
+        root,
         np.sort(requested),
         target.n_log_prob - evaluations[0],
         target.n_grad - evaluations[1],
@@ -215,9 +236,10 @@ def check_settings(k: int, m: int, lag: int, thin: int, max_iter: int | None) ->
 
 
 def merge(parts: Sequence[Replicates]) -> Replicates:
-    """Join the outputs of disjoint sets of replicates, sorted by replicate index.
+    """Join the outputs of disjoint sets of replicates of one run, sorted by replicate index.
 
-    The requested indices are the union of the parts' requested indices.
+    The parts must share the root seed, the settings and the dimension; the requested
+    indices are the union of theirs.
 
     Parameters
     ----------
@@ -227,6 +249,20 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
     -------
     Replicates
     """
+    first = parts[0]
+    for part in parts[1:]:
+        if _seed_key(part.root) != _seed_key(first.root):
+            raise ValueError(
+                "cannot merge runs with different seeds: their indices differ in meaning"
+            )
+        for name in SETTINGS:
+            mine, theirs = getattr(first, name), getattr(part, name)
+            if mine != theirs:
+                raise ValueError(f"cannot merge runs with different {name}: {mine} and {theirs}")
+        if part.atoms.shape[1] != first.atoms.shape[1]:
+            raise ValueError(
+                f"cannot merge runs of dimensions {first.atoms.shape[1]} and {part.atoms.shape[1]}"
+            )
     groups = {
         "index": ("index", "meeting_time", "cost"),
         "owner": ("owner", "atoms", "weights"),
@@ -242,6 +278,8 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
         for name in names:
             columns[name] = np.concatenate([getattr(part, name) for part in parts])[order]
     return Replicates(
+        root=first.root,
+        **{name: getattr(first, name) for name in SETTINGS},
         **columns,
         requested=np.unique(np.concatenate([part.requested for part in parts])),
         n_log_prob=sum(part.n_log_prob for part in parts),
@@ -249,6 +287,11 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
         seconds=sum(part.seconds for part in parts),
         paths={index: path for part in parts for index, path in part.paths.items()},
     )
+
+
+def _seed_key(seed: SeedSequence) -> tuple[Any, ...]:
+    # Entropy may be an int, a sequence or an array; lists compare by value.
+    return np.atleast_1d(seed.entropy).tolist(), seed.spawn_key, seed.pool_size
 
 
 class _Start:
@@ -380,13 +423,19 @@ class _Batch:
         )
 
     def result(
-        self, requested: IntArray, n_log_prob: int, n_grad: int, start: float
+        self, root: SeedSequence, requested: IntArray, n_log_prob: int, n_grad: int, start: float
     ) -> Replicates:
         # The seconds since start include this join, a large part of a run with many atoms.
         index, tau, cost = self.finished.join()
         owner, atoms, weights = self.atoms.join(keep=index[tau >= 0])
         distance_owner, distance_time, distance = self.distances.join()
         return Replicates(
+            root=root,
+            k=self.k,
+            m=self.m,
+            lag=self.lag,
+            thin=self.thin,
+            max_iter=self.max_iter,
             index=index,
             meeting_time=np.where(tau >= 0, tau, np.inf),
             cost=cost,
