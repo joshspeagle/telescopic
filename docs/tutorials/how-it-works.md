@@ -6,24 +6,31 @@ kernelspec:
 
 # How it works
 
-This page runs pairs of coupled chains by hand, on a standard normal target in one
-dimension with chains started far from it, and takes their estimates apart.
-[Theory](../theory.md) derives each step.
+[Getting started](../getting-started.md) describes a run in words. This page runs one by
+hand, on a standard normal target in one dimension with chains started far from it: the
+paths of a few pairs, one replicate's estimate taken apart, and the bias that the
+correction removes on average. [Theory](../theory.md) derives each step.
+
+```{code-cell} python
+:tags: [remove-cell]
+
+from myst_nb import glue
+```
 
 ## Pairs of chains
 
-The target is $\mathcal N(0, 1)$ and the chains start from $\mathcal N(5, 1)$. The kernel
-is random-walk Metropolis with proposals $x' \sim \mathcal N(x, 2.38^2)$, its default for
-`cov=[[1.0]]`, coupled by the reflection-maximal coupling
-([Kernels and couplings](../guide/kernels.md)). {func}`telescopic.engine.run` runs
-replicates with given settings, and with `keep_paths=True` it keeps the paths of both
-chains. Here the burn-in `k` is 5, the run length `m` is 20 and the lag is 1; the output
-is the meeting times of sixteen pairs:
+The target $\pi$ is $\mathcal N(0, 1)$, and the chains start from $\mathcal N(5, 1)$,
+five standard deviations away. The kernel is random-walk Metropolis with proposals
+$x' \sim \mathcal N(x, 2.38^2)$, its default for `cov=[[1.0]]`, coupled by the
+reflection-maximal coupling ([Kernels and couplings](../guide/kernels.md)).
+{func}`telescopic.engine.run` runs replicates with given settings, and with
+`keep_paths=True` it keeps the paths of both chains. Here the burn-in $k$ is 5, the run
+length $m$ is 20 and the lag $L$ is 1; the output is the meeting times $\tau$ of sixteen
+pairs:
 
 ```{code-cell} python
 import matplotlib.pyplot as plt
 import numpy as np
-from myst_nb import glue
 
 import telescopic
 from telescopic import engine, plotting
@@ -43,9 +50,9 @@ replicates.meeting_time
 ```
 
 {func}`telescopic.plotting.paths` draws the first pairs against time: $X$ solid and $Y$
-dashed, shifted right by the lag of one step, so that a pair meets where its dashed line
-joins its solid one, marked with a dot. After a meeting only $X$ runs, until $m$. The
-MCMC average uses the shaded times, $k$ to $m$:
+dashed, shifted right by the lag, so that a pair meets where its dashed line joins its
+solid one, marked with a dot. After a meeting only $X$ runs, until $m$. The MCMC average
+uses the shaded times, $k$ to $m$:
 
 ```{code-cell} python
 n = 4
@@ -54,9 +61,14 @@ meeting = replicates.meeting_time[:n].astype(int)
 position = np.array([replicates.paths[i][0][meeting[i], 0] for i in range(n)])
 ax.plot(meeting, position, "o", color="black")
 ax.axvspan(k, m, color="grey", alpha=0.15)
+ax.set(xlabel="$t$", ylabel="$X_t$ and $Y_{t-1}$");
+```
+
+```{code-cell} python
+:tags: [remove-cell]
+
 glue("early", int(np.sum(meeting <= 3)), display=False)
 glue("far", int(np.sum(np.abs(position) > 3)), display=False)
-ax.set(xlabel="$t$", ylabel="$X_t$ and $Y_{t-1}$");
 ```
 
 Of the four pairs, {glue:text}`early:d` meet within three steps, and {glue:text}`far:d`
@@ -66,11 +78,11 @@ that the chains have reached the target.
 ## One replicate's estimate
 
 Each replicate's estimate is a signed measure: atoms with weights, whose weighted sum of
-$h$ estimates $\pi(h)$ for any $h$ ([Theory](../theory.md#signed-measures)).
-{class}`telescopic.Result` holds the measures of all replicates in its `measure`, a
-{class}`telescopic.SignedMeasure` whose `replicate` array gives each atom's replicate.
-The first pair that met after $k + L$, here $k + 1$, has a bias correction that is
-not zero:
+a function $h$ estimates its expectation $\pi(h)$ under the target
+([Theory](../theory.md#signed-measures)). {class}`telescopic.Result` holds the measures of
+all replicates in its `measure`, a {class}`telescopic.SignedMeasure` whose `replicate`
+array gives each atom's replicate. The first pair that met after $k + L$, here $k + 1$,
+has a bias correction that is not zero:
 
 ```{code-cell} python
 result = telescopic.Result(replicates)
@@ -123,45 +135,35 @@ for each of two lags, 1 and $k$, estimate the mean of the target, 0, with `z` th
 in units of its error bar:
 
 ```{code-cell} python
-results, z = {}, {}
 print(f"{'lag':>3}  {'estimator':12}{'mean':>8}{'error bar':>11}{'z':>7}")
+rows = {}
 for lag, seed in ((1, 2), (k, 3)):
     runs = engine.run(
         target, kernel, init, range(4000), k=k, m=m, lag=lag, rng=seed, keep_paths=True
     )
-    results[lag] = telescopic.Result(runs)
     mcmc = np.array([runs.paths[i][0][k : m + 1, 0].mean() for i in runs.index])
-    full = results[lag].estimate(lambda x: x[:, 0]).replicates
+    full = telescopic.Result(runs).estimate(lambda x: x[:, 0]).replicates
     for name, values in (("MCMC average", mcmc), ("full", full)):
         mean, error = values.mean(), values.std(ddof=1) / np.sqrt(len(values))
-        z[lag, name] = mean / error
-        print(f"{lag:3}  {name:12}{mean:8.4f}{error:11.4f}{z[lag, name]:7.2f}")
-glue("full_z_1", float(abs(z[1, "full"])), display=False)
-glue("full_z_k", float(abs(z[k, "full"])), display=False)
+        rows[lag, name] = mean / error, error
+        print(f"{lag:3}  {name:12}{mean:8.4f}{error:11.4f}{mean / error:7.2f}")
+```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claims of the next paragraph.
+assert all(abs(rows[lag, "MCMC average"][0]) > 10 for lag in (1, k))
+assert all(abs(rows[lag, "full"][0]) < 2 for lag in (1, k))
+assert rows[k, "full"][1] < rows[1, "full"][1]
 ```
 
 The MCMC average is many error bars from 0 with either lag, since the lag does not change
-the law of $X$. The full estimator is {glue:text}`full_z_1:.2f` error bars from 0 with lag
-1 and {glue:text}`full_z_k:.2f` with lag $k$, and its error bar is smaller with $L = k$.
+the law of $X$. The full estimator is within two error bars of 0 with both lags, and its
+error bar is smaller with $L = k$.
 
-## Distance to stationarity
+## Next
 
-The meeting times also bound the total variation distance between the law of $X_t$ and
-the target ([Theory](../theory.md#distance-to-stationarity)). Both runs bound the same
-distance, since the lag does not change the law of $X$:
-
-```{code-cell} python
-fig, ax = plt.subplots(figsize=(5, 3.5))
-t = np.arange(40)
-for lag, run in results.items():
-    bound = run.tv_bound(t)
-    ax.plot(t[bound > 0], bound[bound > 0], label=f"lag {lag}")
-ax.axvline(k, color="grey", linestyle="--", label="$k$")
-ax.set(yscale="log", xlabel="$t$", ylabel=r"TV bound on $X_t$")
-ax.legend();
-```
-
-At $t = k$ neither bound is small, consistent with the bias of the MCMC average, and the
-bound from lag $k$ is the tighter of the two. {func}`telescopic.sample` chooses $k$ from
-the meeting times of pilot pairs, so that few pairs meet after $k + L$ and the bound at
-$k$ is small ([Settings](../guide/settings.md)).
+[Choosing k, m and the lag](choosing-settings.md) shows how {func}`telescopic.sample`
+chooses $k$, $m$ and the lag, and how the lag changes the bound on the distance to
+stationarity.
