@@ -23,3 +23,13 @@ Each item has the default that work proceeds on until Josh answers.
   need an explicit step; the error of `choose_k` already says to give a better-tuned
   kernel.
 
+- [ ] **Starts far from the target.** From a π0 a hundred times wider than the posterior,
+  or far from it, the recipe k = q_0.99 leaves about one replicate in a hundred averaged
+  while its chain is still on its way, and the estimates of variances become heavy-tailed:
+  on the README's line fit from N(0, 10I), 11 of 20 runs warned and some estimated a
+  negative variance (`notes/experiments/m9_initial_width.out`; Sherlock reports the same in
+  his discussion of JOA20). Two remedies are new constructions (DECISIONS #1): a π0 built
+  from the tuning pilot's mean and covariance, widened, which loses the protection of a
+  wide π0 against missed modes; or k at a higher quantile or a multiple of it, which costs
+  more. Default: keep the recipe, recommend a π0 a few to ten times wider than the target
+  (spec §4.2, DECISIONS #35), and rely on the variance warning.

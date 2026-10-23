@@ -267,7 +267,7 @@ Rules:
 - A draw with the wrong shape or non-finite entries raises `ValueError`.
 - A draw with $\log\pi = -\infty$ emits an `InputWarning`; the chains leave it as §4.1 describes.
 
-The documentation recommends a $\pi_0$ that is overdispersed relative to $\pi$ and covers all its modes (JOA20 §2.3; AJ24).
+The documentation recommends a $\pi_0$ that is overdispersed relative to $\pi$ and covers all its modes (JOA20 §2.3; AJ24), but not by orders of magnitude. A replicate whose chain $X$ is still far away at $k$ is averaged without correction, and only rarer replicates whose chain $Y$ is late balance it, so the estimates of second moments become heavy-tailed. On the README's line fit, Gaussians 2 and 10 times wider than the posterior never raised the variance warning in 20 runs; 100 times wider, 9 runs raised it, and from $\mathcal N(0, 10I)$, 70 posterior standard deviations away, 11 runs did, with standard deviations from 4.2 times the truth to a negative variance (`notes/experiments/m9_initial_width.out`). For a unimodal posterior, an optimiser's fit with its inverse Hessian scaled by 100 is a practical start (DECISIONS #35).
 
 ### 4.3 Parameter names
 
@@ -610,19 +610,30 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
 
 ```python
 import numpy as np
+from scipy import optimize
+
 import telescopic
+
+rng = np.random.default_rng(0)
+x = np.sort(10 * rng.random(50))
+yerr = 0.1 + 0.5 * rng.random(50)
+y = -0.9 * x + 4.3 + yerr * rng.normal(size=50)
 
 def log_prob(theta, x, y, yerr):
     slope, intercept = theta
     return -0.5 * np.sum(((y - slope * x - intercept) / yerr) ** 2)
 
-init = telescopic.initial.Normal(mean=[0.0, 0.0], cov=np.diag([10.0, 10.0]))
+# Start the chains from a Gaussian ten times wider than the best fit's errors.
+fit = optimize.minimize(lambda theta: -log_prob(theta, x, y, yerr), [0.0, 0.0])
+init = telescopic.initial.Normal(mean=fit.x, cov=100 * fit.hess_inv)
 result = telescopic.sample(log_prob, init, args=(x, y, yerr), names=["slope", "intercept"],
                            rng=42)
 print(result.summary())                      # unbiased means, standard errors, intervals
 result.estimate(lambda t: t[:, 0] * t[:, 1])  # any function, after the run
 result.plot_tv_bound()                       # with the plot extra: distance from stationarity
 ```
+
+The first draft started from $\mathcal N(0, 10I)$, which made most runs warn (§4.2; DECISIONS #35).
 
 ---
 
