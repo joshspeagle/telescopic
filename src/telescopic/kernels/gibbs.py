@@ -85,9 +85,12 @@ class Gibbs(Kernel):
             raise ValueError(f"coupling must be one of {', '.join(map(repr, COUPLINGS))}")
         if (coupling == "two-scale") != (threshold is not None):
             raise ValueError("threshold is required by coupling='two-scale', and only by it")
-        if threshold is not None and not real("threshold", threshold) > 0:
-            raise ValueError(f"threshold must be positive, not {threshold}")
-        if not 0 < real("eta", eta) <= 1:
+        if threshold is not None:
+            threshold = real("threshold", threshold)
+            if not threshold > 0:
+                raise ValueError(f"threshold must be positive, not {threshold}")
+        eta = real("eta", eta)
+        if not 0 < eta <= 1:
             raise ValueError(f"eta must be in (0, 1], not {eta}")
         if coupling == "crn" and eta != 1:
             raise ValueError(

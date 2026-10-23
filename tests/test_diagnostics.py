@@ -45,8 +45,10 @@ def test_hill_recovers_a_pareto_tail_index(alpha):
 
 
 def test_hill_measures_the_tail_from_the_largest_value_below_it():
-    # The 2 largest of [1, 2, 4, 8] over the next, 2: log 4 and log 2.
-    assert hill([1.0, 2.0, 4.0, 8.0], 2) == pytest.approx(2 / (3 * np.log(2)), rel=1e-12)
+    # The 2 largest of [1, 2, 4, 8] over the next, 2: log 4 and log 2. In uint8, -n_tail
+    # would wrap.
+    for n_tail in (2, np.uint8(2)):
+        assert hill([1.0, 2.0, 4.0, 8.0], n_tail) == pytest.approx(2 / (3 * np.log(2)), rel=1e-12)
 
 
 def test_the_tv_bound_refuses_censored_pairs_given_as_infinite():

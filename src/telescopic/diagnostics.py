@@ -81,8 +81,7 @@ def w1_bound(
     -------
     ndarray, shape of ``t``
     """
-    if integer("n_replicates", n_replicates) < 1:
-        raise ValueError(f"n_replicates must be at least 1, not {n_replicates}")
+    n_replicates = integer("n_replicates", n_replicates, minimum=1)
     total = np.bincount(
         np.asarray(distance_time, dtype=np.int64), weights=np.asarray(distance, dtype=np.float64)
     )
@@ -93,8 +92,7 @@ def w1_bound(
 def _lagged_tail(values: FloatArray, lag: int, t: npt.ArrayLike) -> FloatArray:
     # sum_{j >= 1} values[t + jL], with values zero past the end. tail[i, r] sums values
     # over the times i'L + r with i' >= i; the padding adds a last row of zeros.
-    if integer("lag", lag) < 1:
-        raise ValueError(f"lag must be at least 1, not {lag}")
+    lag = integer("lag", lag, minimum=1)
     times = np.asarray(t)
     if not np.all(times == np.floor(times)) or np.any(times < 0):
         raise ValueError(f"t must be non-negative integers, not {times}")
@@ -131,7 +129,8 @@ def hill(values: npt.ArrayLike, n_tail: int) -> float:
         leave the tail unresolved.
     """
     x = np.sort(np.asarray(values, dtype=np.float64))
-    if not 1 <= integer("n_tail", n_tail) < len(x):
+    n_tail = integer("n_tail", n_tail)
+    if not 1 <= n_tail < len(x):
         raise ValueError(
             f"n_tail must be at least 1 and below the number of values, {len(x)}, not {n_tail}"
         )

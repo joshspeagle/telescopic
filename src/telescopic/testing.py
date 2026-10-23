@@ -109,8 +109,7 @@ def check_coupling(
     x, y = np.asarray(x, dtype=np.float64), np.asarray(y, dtype=np.float64)
     if x.ndim != 1 or x.shape != y.shape:
         raise ValueError(f"x and y must be points of one shape (d,), not {x.shape} and {y.shape}")
-    if integer("n", n) < 2:
-        raise ValueError(f"n must be at least 2, not {n}")
+    n = integer("n", n, minimum=2)
     seeds = root_seed(rng).spawn(4)
     starts = kernel.init_state(target, np.stack([x, y]))
     start_x, start_y = (starts.take(np.full(n, row)) for row in (0, 1))
@@ -211,8 +210,7 @@ def random_draws(n_rows: int, rng: Seed = None) -> Draws:
     -------
     Draws
     """
-    if integer("n_rows", n_rows) < 1:
-        raise ValueError(f"n_rows must be at least 1, not {n_rows}")
+    n_rows = integer("n_rows", n_rows, minimum=1)
     return _Shared(n_rows, np.random.default_rng(rng)).view(np.arange(n_rows))
 
 

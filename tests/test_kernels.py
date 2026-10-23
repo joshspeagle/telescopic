@@ -376,7 +376,7 @@ def test_independence_refuses_a_proposal_without_sample_and_log_density(proposal
     [
         ({"mean": [np.nan, 0.0]}, "mean must be finite"),
         ({"mean": [[0.0, 0.0]]}, "mean must have shape"),
-        ({"df": 0}, "df must be a positive integer, or None for the Gaussian, not 0"),
+        ({"df": 0}, "df must be at least 1, not 0"),
     ],
 )
 def test_multivariate_t_rejects_invalid_parameters(kwargs, message):

@@ -94,9 +94,9 @@ def test_quantiles_of_a_signed_measure_merge_project_and_clip_its_cdf():
 @pytest.mark.parametrize(
     ("settings", "error", "message"),
     [
-        ((4, 2, 1, 1), ValueError, "must satisfy 0 <= k <= m"),
-        ((0, 5, 0, 1), ValueError, "must satisfy"),
-        ((0, 5, 1, 0), ValueError, "must satisfy"),
+        ((4, 2, 1, 1), ValueError, "m must be at least k = 4, not 2"),
+        ((0, 5, 0, 1), ValueError, "lag must be at least 1, not 0"),
+        ((0, 5, 1, 0), ValueError, "thin must be at least 1, not 0"),
         ((1.5, 5, 1, 1), TypeError, "k must be an integer"),
         ((0, 5, 1, 2.0), TypeError, "thin must be an integer"),
     ],

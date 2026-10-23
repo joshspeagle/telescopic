@@ -129,7 +129,7 @@ def test_pairs_meet_only_when_every_coordinate_is_exactly_equal():
 @pytest.mark.parametrize(
     ("options", "message"),
     [
-        ({"k": 3, "m": 2}, "0 <= k <= m"),
+        ({"k": 3, "m": 2}, "m must be at least k = 3, not 2"),
         ({"lag": 0}, "at least 1"),
         ({"thin": 0}, "at least 1"),
         ({"max_iter": 10}, "max_iter must exceed"),

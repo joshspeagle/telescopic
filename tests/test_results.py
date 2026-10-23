@@ -125,6 +125,12 @@ def test_histogram_bins_average_each_replicates_signed_mass_in_half_open_bins(di
     assert abs(total.sum() - 1) < 1e-12
 
 
+def test_a_numpy_integer_of_bins_computes_as_a_python_integer():
+    # 20 ** 2 wraps to 144 in uint8.
+    masses, _, _ = RESULT.histogram([0, 1], bins=np.uint8(20))
+    assert masses.shape == (20, 20)
+
+
 def test_censored_pairs_are_listed_as_infinite_and_left_out_of_the_estimates():
     result = gaussian_result(n=30, k=3, m=3, lag=1, max_iter=4)
     censored = np.isinf(result.meeting_times)

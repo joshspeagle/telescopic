@@ -13,10 +13,10 @@ from telescopic import diagnostics, engine
 from telescopic._parallel import Interrupt, check_pool, execute, opened
 from telescopic._progress import Progress
 from telescopic._random import MAIN, PILOT, namespace_seed, replicate_generator, root_seed
-from telescopic._types import FloatArray, IntArray, Seed, integer
+from telescopic._types import FloatArray, IntArray, Seed, integer, parameter_names
 from telescopic.initial import as_initial, draw
 from telescopic.kernels import HMC, MALA, Independence, Kernel, RandomWalk
-from telescopic.results import Result, parameter_names
+from telescopic.results import Result
 from telescopic.target import Target
 from telescopic.tuning import TuningReport, choose_k
 from telescopic.warnings import ConvergenceWarning, InputWarning, warn
@@ -176,7 +176,7 @@ class CoupledSampler:
         ndarray, shape (n,)
             Meeting times, ``inf`` for a censored pair.
         """
-        n = _count("n", n)
+        n = integer("n", n, minimum=1)
         settings = engine.check_settings(PILOT_SETTINGS._replace(max_iter=max_iter))
         with opened(self.pool) as pool:
             return self._meeting_times(n, settings, pool, self.progress)
@@ -236,7 +236,7 @@ class CoupledSampler:
             Unbiased for an ``n_replicates`` fixed in advance; extending a run after
             looking at it keeps consistency, not exact unbiasedness (spec section 3.3).
         """
-        n_replicates = _count("n_replicates", n_replicates)
+        n_replicates = integer("n_replicates", n_replicates, minimum=1)
         given = self._check(k, m, lag, thin, max_iter)
         show = self.progress if progress is None else progress
         # Worker processes start before tuning, which runs here meanwhile, and serve the
@@ -322,9 +322,8 @@ class CoupledSampler:
         self, k: int | str, m: int | str, lag: int | str, thin: int | None, max_iter: int | None
     ) -> dict[str, int]:
         # The settings given, those not "auto" or None, as integers, checked before any
-        # tuning or worker starts: every bound when k is given, since only k needs the
-        # pilot, and otherwise those of lag, thin and max_iter alone. Later runs keep the
-        # first run's settings (D-21, DECISIONS #4 and #8).
+        # tuning or worker starts: with an automatic k, at k = 0, whose bounds hold for
+        # every k. Later runs keep the first run's settings (D-21, DECISIONS #4 and #8).
         given = {}
         for name, value, default in (
             ("k", k, "auto"),
@@ -343,12 +342,8 @@ class CoupledSampler:
                         f"{name} was {kept} in the earlier runs; a sampler keeps its "
                         f"settings, so start a new one for {name}={value}"
                     )
-        elif "k" in given:
-            _settings(given)
         else:
-            for name in ("lag", "thin", "max_iter"):
-                if name in given and given[name] < 1:
-                    raise ValueError(f"{name} must be at least 1, not {given[name]}")
+            _settings({"k": 0} | given)
         return given
 
     def _configure(self, given: dict[str, int], pool: Any, progress: bool) -> engine.Settings:
@@ -472,14 +467,6 @@ class _SlowPairs:
                 "the meeting times may be heavy-tailed",
                 ConvergenceWarning,
             )
-
-
-def _count(name: str, value: Any) -> int:
-    # A number of replicates or pilot pairs to run.
-    count = integer(name, value)
-    if count < 1:
-        raise ValueError(f"{name} must be at least 1, not {count}")
-    return count
 
 
 def _settings(given: dict[str, int]) -> engine.Settings:

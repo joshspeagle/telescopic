@@ -67,14 +67,16 @@ class RandomWalk(Kernel):
     ) -> None:
         if coupling not in ("reflection", "maximal"):
             raise ValueError(f"coupling must be 'reflection' or 'maximal', not {coupling!r}")
-        if scale is not None and not 0 < real("scale", scale) < np.inf:
-            raise ValueError(f"scale must be positive and finite, not {scale}")
+        if scale is not None:
+            scale = real("scale", scale)
+            if not 0 < scale < np.inf:
+                raise ValueError(f"scale must be positive and finite, not {scale}")
         self.scale = scale
         self.coupling = coupling
         self.cov: FloatArray | None = None
         self._factors: tuple[FloatArray, FloatArray] | None = None
         if cov is not None:
-            self.cov, chol = covariance(cov, "cov")
+            self.cov, chol = covariance("cov", cov)
             self._factors = _proposal_factors(chol, scale)
 
     @property

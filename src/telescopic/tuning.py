@@ -155,9 +155,9 @@ def adaptive_metropolis(
     Cholesky factorisations: beyond 20 dimensions the chains refactor the covariance and
     keep their states every :math:`\lceil d/20\rceil` steps, or fewer for a short pilot.
     """
-    if n_steps is not None and integer("n_steps", n_steps, "an integer or None") < 3:
+    if n_steps is not None:
         # The second half of each chain needs two states for R-hat.
-        raise ValueError(f"n_steps must be at least 3, not {n_steps}")
+        n_steps = integer("n_steps", n_steps, "an integer or None", minimum=3)
     root = root_seed(rng)
     initial = as_initial(initial)
     generators = [replicate_generator(root, TUNING, i) for i in range(N_CHAINS)]

@@ -13,7 +13,7 @@ import numpy.typing as npt
 from scipy import stats
 
 from telescopic import diagnostics, engine
-from telescopic._types import FloatArray, integer, real
+from telescopic._types import FloatArray, integer, parameter_names, real
 from telescopic.engine import Replicates
 from telescopic.estimators import unbiased_covariance, unbiased_variance, weighted_quantile
 from telescopic.measure import SignedMeasure
@@ -272,8 +272,7 @@ class Result:
         edges : ndarray, shape (bins + 1,), or a list of them for a sequence of coordinates
         """
         columns = self._columns(dims)
-        if integer("bins", bins) < 1:
-            raise ValueError(f"bins must be at least 1, not {bins}")
+        bins = integer("bins", bins, minimum=1)
         expected = (*np.shape(dims), 2)
         if range is not None and np.shape(range) != expected:
             raise ValueError(f"range must have shape {expected}, not {np.shape(range)}")
@@ -611,30 +610,6 @@ class Result:
         # Every time from 0 to the last at which a bound of section 3.6 can be positive,
         # given the first time after the last that enters it.
         return np.arange(max(1, last - self.lag))
-
-
-def parameter_names(names: Sequence[str] | None, ndim: int) -> list[str]:
-    """Distinct names of the ``ndim`` coordinates; ``x0``, ``x1``, ... by default.
-
-    Parameters
-    ----------
-    names : sequence of str or None
-    ndim : int
-
-    Returns
-    -------
-    list of str
-    """
-    if names is None:
-        return [f"x{i}" for i in range(ndim)]
-    if isinstance(names, str) or not all(isinstance(name, str) for name in names):
-        raise TypeError(f"names must be a sequence of strings, not {names!r}")
-    names = list(names)
-    if len(names) != ndim:
-        raise ValueError(f"names must have {ndim} entries, not {len(names)}")
-    if len(set(names)) != ndim:
-        raise ValueError(f"names must be distinct, not {names}")
-    return names
 
 
 @dataclass(eq=False)

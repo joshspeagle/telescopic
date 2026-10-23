@@ -8,12 +8,12 @@ import numpy as np
 import numpy.typing as npt
 from scipy.optimize import isotonic_regression
 
-from telescopic._types import FloatArray, IntArray, integer
+from telescopic._types import FloatArray, IntArray, averaging, integer
 
 
 def averaging_times(k: int, m: int, thin: int) -> IntArray:
     """The averaging set :math:`S = \\{k, k + s, k + 2s, \\dots\\} \\cap [k, m]` for ``thin`` = s."""
-    _check(k, m, 1, thin)
+    k, m, thin = averaging(k, m, thin)
     return np.arange(k, m + 1, thin, dtype=np.int64)
 
 
@@ -44,7 +44,8 @@ def correction_coefficients(t: npt.ArrayLike, k: int, m: int, lag: int, thin: in
     -------
     ndarray of float, same shape as ``t``
     """
-    _check(k, m, lag, thin)
+    k, m, thin = averaging(k, m, thin)
+    lag = integer("lag", lag, minimum=1)
     t = np.asarray(t, dtype=np.int64)
     n_averaged = (m - k) // thin + 1
     g = gcd(thin, lag)
@@ -56,16 +57,6 @@ def correction_coefficients(t: npt.ArrayLike, k: int, m: int, lag: int, thin: in
     last = np.minimum(n_averaged - 1, (t - lag - k) // thin)
     count = np.where(solvable & (first <= last), (last - first) // period + 1, 0)
     return count / n_averaged
-
-
-def _check(k: int, m: int, lag: int, thin: int) -> None:
-    for name, value in (("k", k), ("m", m), ("lag", lag), ("thin", thin)):
-        integer(name, value)
-    if not (0 <= k <= m and lag >= 1 and thin >= 1):
-        raise ValueError(
-            "k, m, lag and thin must satisfy 0 <= k <= m, lag >= 1 and thin >= 1, "
-            f"not {k}, {m}, {lag} and {thin}"
-        )
 
 
 def unbiased_covariance(first: FloatArray, second: FloatArray) -> FloatArray:

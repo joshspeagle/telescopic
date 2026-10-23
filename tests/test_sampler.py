@@ -64,9 +64,10 @@ def unevaluated(x):
         ({"max_iter": "9"}, TypeError, "max_iter must be an integer or None"),
         ({"lag": 0}, ValueError, "lag must be at least 1, not 0"),
         ({"thin": 0}, ValueError, "thin must be at least 1, not 0"),
-        ({"max_iter": 0}, ValueError, "max_iter must be at least 1, not 0"),
-        ({"k": -1}, ValueError, "0 <= k <= m"),
-        ({"k": 5, "m": 3}, ValueError, "0 <= k <= m"),
+        ({"m": -1}, ValueError, "m must be at least 0, not -1"),
+        ({"max_iter": 1}, ValueError, r"max_iter must exceed max\(lag, m\) = 1, not 1"),
+        ({"k": -1}, ValueError, "k must be at least 0, not -1"),
+        ({"k": 5, "m": 3}, ValueError, "m must be at least k = 5, not 3"),
         ({"k": 40, "max_iter": 100}, ValueError, "max_iter must exceed"),
     ],
 )
@@ -91,7 +92,7 @@ def test_invalid_pilot_settings_raise_before_tuning(arguments, error, message):
 
 def test_invalid_first_settings_are_not_kept():
     sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3)
-    with pytest.raises(ValueError, match="0 <= k <= m"):
+    with pytest.raises(ValueError, match="m must be at least k = 40"):
         sampler.run(5, k=40, m=5)
     assert sampler.run(5, k=40, m=50).m == 50
 

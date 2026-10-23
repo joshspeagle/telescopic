@@ -207,7 +207,7 @@ class GradientKernel(Kernel):
         self.cov: FloatArray | None = None
         self._chol: FloatArray | None = None
         if cov is not None:
-            self.cov, self._chol = covariance(cov, "cov")
+            self.cov, self._chol = covariance("cov", cov)
 
     @property
     def needs_grad(self) -> bool:
@@ -255,9 +255,10 @@ class GradientKernel(Kernel):
 
 
 def _checked_step_size(step_size: float) -> float:
-    if not 0 < real("step_size", step_size) < np.inf:
+    step_size = real("step_size", step_size)
+    if not 0 < step_size < np.inf:
         raise ValueError(f"step_size must be positive and finite, not {step_size}")
-    return float(step_size)
+    return step_size
 
 
 def evaluate(target: Target, x: FloatArray, need_grad: bool) -> State:

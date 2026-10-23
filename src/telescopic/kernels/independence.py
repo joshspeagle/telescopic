@@ -8,9 +8,9 @@ import numpy as np
 import numpy.typing as npt
 from scipy.special import gammaln
 
-from telescopic._linalg import covariance, inverse_lower, matvec, vector
+from telescopic._linalg import covariance, inverse_lower, matvec
 from telescopic._random import Draws
-from telescopic._types import FloatArray, Seed, integer
+from telescopic._types import FloatArray, Seed, integer, vector
 from telescopic.kernels.base import Kernel, State, acceptance, evaluate, log_ratio, select
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport
@@ -32,12 +32,10 @@ class MultivariateT:
     """
 
     def __init__(self, mean: npt.ArrayLike, cov: npt.ArrayLike, df: int | None = 5) -> None:
-        self.mean = vector(mean, "mean")
-        self.cov, self._chol = covariance(cov, "cov", len(self.mean))
+        self.mean = vector("mean", mean)
+        self.cov, self._chol = covariance("cov", cov, len(self.mean))
         expected = "a positive integer, or None for the Gaussian"
-        if df is not None and integer("df", df, expected) < 1:
-            raise ValueError(f"df must be {expected}, not {df}")
-        self.df = None if df is None else int(df)
+        self.df = None if df is None else integer("df", df, expected, minimum=1)
         self._inverse = inverse_lower(self._chol)
         self._log_det = 2.0 * np.log(np.diag(self._chol)).sum()
 

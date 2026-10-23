@@ -1,4 +1,4 @@
-"""Row-independent linear algebra for kernels (spec R-KER-6), and validated parameters."""
+"""Row-independent linear algebra for kernels (spec R-KER-6), and validated covariances."""
 
 from __future__ import annotations
 
@@ -23,19 +23,8 @@ def inverse_lower(chol: FloatArray) -> FloatArray:
     return inverse
 
 
-def vector(values: npt.ArrayLike, name: str) -> FloatArray:
-    # A validated finite vector of shape (d,), d >= 1, or a scalar as shape (1,); errors
-    # name the argument.
-    array = np.array(values, dtype=np.float64, ndmin=1)
-    if array.ndim != 1 or len(array) == 0:
-        raise ValueError(f"{name} must have shape (d,) with d >= 1, not {array.shape}")
-    if not np.all(np.isfinite(array)):
-        raise ValueError(f"{name} must be finite, not {array.tolist()}")
-    return array
-
-
 def covariance(
-    cov: npt.ArrayLike, name: str, ndim: int | None = None
+    name: str, cov: npt.ArrayLike, ndim: int | None = None
 ) -> tuple[FloatArray, FloatArray]:
     # A validated covariance matrix, of size ndim if given, and its lower Cholesky
     # factor; errors name the argument.

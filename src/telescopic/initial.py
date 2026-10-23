@@ -8,8 +8,8 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 
-from telescopic._linalg import covariance, vector
-from telescopic._types import Distribution, FloatArray
+from telescopic._linalg import covariance
+from telescopic._types import Distribution, FloatArray, vector
 
 
 class Normal:
@@ -23,10 +23,10 @@ class Normal:
     """
 
     def __init__(self, mean: npt.ArrayLike, cov: npt.ArrayLike) -> None:
-        self.mean = vector(mean, "mean")
+        self.mean = vector("mean", mean)
         matrix = np.asarray(cov, dtype=np.float64)
         self.cov, self._chol = covariance(
-            np.diag(matrix) if matrix.ndim == 1 else matrix, "cov", len(self.mean)
+            "cov", np.diag(matrix) if matrix.ndim == 1 else matrix, len(self.mean)
         )
 
     def rvs(self, *, random_state: np.random.Generator) -> FloatArray:
@@ -46,7 +46,7 @@ class Uniform:
     """
 
     def __init__(self, low: npt.ArrayLike, high: npt.ArrayLike) -> None:
-        self.low, self.high = vector(low, "low"), vector(high, "high")
+        self.low, self.high = vector("low", low), vector("high", high)
         if self.low.shape != self.high.shape or not np.all(self.low < self.high):
             raise ValueError("low and high must have the same shape, with low < high")
 
