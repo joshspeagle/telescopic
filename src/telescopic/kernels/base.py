@@ -97,6 +97,19 @@ class Kernel(ABC):
         if self.needs_grad and not target.has_grad:
             raise ValueError(f"{self!r} needs the gradient of log_prob: pass grad=")
 
+    def check_ndim(self, ndim: int) -> None:
+        """Raise ``ValueError`` if the kernel works in another dimension than ``ndim``.
+
+        Parameters
+        ----------
+        ndim : int
+            The dimension of the initial points.
+        """
+        if self.ndim is not None and ndim != self.ndim:
+            raise ValueError(
+                f"the kernel works in {self.ndim} dimensions, but the initial points have {ndim}"
+            )
+
     def tune(
         self,
         target: Target,
@@ -155,11 +168,7 @@ class Kernel(ABC):
         -------
         State
         """
-        if self.ndim is not None and x.shape[1] != self.ndim:
-            raise ValueError(
-                f"the kernel works in {self.ndim} dimensions, but the initial points have "
-                f"{x.shape[1]}"
-            )
+        self.check_ndim(x.shape[1])
         self.check_target(target)
         return evaluate(target, x, self.needs_grad)
 

@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 
-from telescopic._types import FloatArray
+from telescopic._types import FloatArray, read_only
 
 
 class Target:
@@ -107,8 +107,7 @@ class Target:
     def _call(
         self, function: Callable[..., Any], x: FloatArray, event: tuple[int, ...]
     ) -> FloatArray:
-        view = x.view()
-        view.flags.writeable = False
+        view = read_only(x)
         if self.vectorize:
             values = function(view, *self.args, **self.kwargs)
             returned_none = values is None

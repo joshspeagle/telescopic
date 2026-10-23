@@ -365,7 +365,7 @@ class _Batch:
         self.target, self.kernel, self.settings = target, kernel, settings
         self.k, self.m, self.lag, self.thin, self.max_iter, self.store = settings
         self.keep_paths = keep_paths
-        self.weight = 1.0 / ((self.m - self.k) // self.thin + 1)  # 1 / |S|, without building S
+        self.weight = 1.0 / len(range(self.k, self.m + 1, self.thin))  # 1 / |S|
         self.streams = Streams(lanes)
         self.replicate = np.full(lanes, -1, dtype=np.int64)
         self.t = np.zeros(lanes, dtype=np.int64)

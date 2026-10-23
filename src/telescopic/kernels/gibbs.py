@@ -11,7 +11,7 @@ import numpy.typing as npt
 from scipy import linalg
 
 from telescopic._random import Draws
-from telescopic._types import FloatArray, real
+from telescopic._types import FloatArray, read_only, real
 from telescopic.couplings import maximal
 from telescopic.kernels.base import Kernel, State, evaluate, evaluate_pair
 from telescopic.target import Target
@@ -123,7 +123,7 @@ class Gibbs(Kernel):
         x = state.x.copy()
         generators = [draws.generator(row) for row in range(len(x))]
         for b, block in enumerate(self.blocks):
-            points = _read_only(x)
+            points = read_only(x)
             drawn = np.empty((len(x), len(block)))
             for row, generator in enumerate(generators):
                 drawn[row] = self.conditional(points[row], b).rvs(random_state=generator)
@@ -136,7 +136,7 @@ class Gibbs(Kernel):
         x, y = state_x.x.copy(), state_y.x.copy()
         common = np.linalg.norm(x - y, axis=1) > self._switch
         for b, block in enumerate(self.blocks):
-            points_x, points_y = _read_only(x), _read_only(y)
+            points_x, points_y = read_only(x), read_only(y)
             outside = np.ones(x.shape[1], dtype=bool)
             outside[block] = False
             same = np.all(x[:, outside] == y[:, outside], axis=1)
@@ -168,13 +168,6 @@ class Gibbs(Kernel):
             f"{len(self.blocks)} blocks, coupling={self.coupling!r}, eta={self.eta}, "
             f"threshold={self.threshold})"
         )
-
-
-def _read_only(points: FloatArray) -> FloatArray:
-    # A view that the user's conditionals cannot write through.
-    view = points.view()
-    view.flags.writeable = False
-    return view
 
 
 def _finite(drawn: FloatArray, b: int, points: FloatArray) -> FloatArray:

@@ -10,7 +10,7 @@ import numpy as np
 import numpy.typing as npt
 from scipy.sparse import csr_array
 
-from telescopic._types import FloatArray, IntArray
+from telescopic._types import FloatArray, IntArray, read_only
 
 
 @dataclass(frozen=True, eq=False)
@@ -52,10 +52,8 @@ class SignedMeasure:
         -----
         Cost: one call of ``h`` on all :math:`N` atoms, then one sparse product.
         """
-        # A read-only view: an h that writes to its input would change every later estimate.
-        atoms = self.atoms.view()
-        atoms.flags.writeable = False
-        values = np.asarray(h(atoms), dtype=np.float64)
+        # An h that writes to its input would change every later estimate.
+        values = np.asarray(h(read_only(self.atoms)), dtype=np.float64)
         if values.ndim not in (1, 2) or len(values) != len(self.atoms):
             raise ValueError(
                 f"h must map atoms of shape (n, d) to shape (n,) or (n, p); for n = "

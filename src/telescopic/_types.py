@@ -83,3 +83,10 @@ def parameter_names(names: Sequence[str] | None, ndim: int) -> list[str]:
     if len(set(names)) != ndim:
         raise ValueError(f"names must be distinct, not {names}")
     return names
+
+
+def read_only(array: npt.NDArray[Any]) -> npt.NDArray[Any]:
+    # A view that the user's functions cannot write through.
+    view = array.view()
+    view.flags.writeable = False
+    return view

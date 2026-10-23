@@ -155,7 +155,7 @@ def test_an_explicit_k_of_zero_gets_a_lag_of_one():
         (lambda: CoupledSampler(log_prob, INIT, kernel=KERNEL).meeting_times(0), "n must be"),
         (
             lambda: CoupledSampler(log_prob, INIT, kernel=RandomWalk(np.eye(3))),
-            "kernel works in 3 dimensions, but init draws points in 2",
+            "the kernel works in 3 dimensions, but the initial points have 2",
         ),
     ],
 )

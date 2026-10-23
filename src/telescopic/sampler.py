@@ -125,11 +125,7 @@ class CoupledSampler:
         # One draw from a throwaway generator gives the dimension, so that the kernel's and
         # the names are checked now rather than after tuning.
         self.ndim = len(draw(self.initial, replicate_generator(self.seed, MAIN, 0)))
-        if self.kernel.ndim is not None and self.kernel.ndim != self.ndim:
-            raise ValueError(
-                f"kernel works in {self.kernel.ndim} dimensions, but init draws points in "
-                f"{self.ndim}"
-            )
+        self.kernel.check_ndim(self.ndim)
         self.names = None if names is None else parameter_names(names, self.ndim)
         self.tuning: TuningReport | None = None
         self.pilot: FloatArray | None = None
@@ -361,7 +357,7 @@ class CoupledSampler:
         # Spec R-EXEC-7: estimate the atoms and distances to store before running, and warn
         # above 1 GB. The pilot's meeting times stand in for those of the run, their
         # tau - 1 for its tau - L.
-        n_averaged = (settings.m - settings.k) // settings.thin + 1
+        n_averaged = len(range(settings.k, settings.m + 1, settings.thin))
         late = distances = 0.0
         if self.pilot is not None and np.isfinite(self.pilot).any():
             coupled = self.pilot[np.isfinite(self.pilot)] - 1

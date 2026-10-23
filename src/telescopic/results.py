@@ -216,9 +216,6 @@ class Result:
         -------
         ndarray, shape (d,) for a scalar ``q``, else ``(len(q), d)``
         """
-        q = np.asarray(q, dtype=np.float64)
-        if not np.all((q >= 0) & (q <= 1)):
-            raise ValueError(f"q must be in [0, 1], not {q}")
         self._require(1)
         # Rejections repeat atoms; merging consecutive equal rows first shortens every sort.
         atoms = self.measure.atoms

@@ -47,7 +47,7 @@ def correction_coefficients(t: npt.ArrayLike, k: int, m: int, lag: int, thin: in
     k, m, thin = averaging(k, m, thin)
     lag = integer("lag", lag, minimum=1)
     t = np.asarray(t, dtype=np.int64)
-    n_averaged = (m - k) // thin + 1
+    n_averaged = len(range(k, m + 1, thin))
     g = gcd(thin, lag)
     period = lag // g
     offset = t - k
