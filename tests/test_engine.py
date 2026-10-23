@@ -201,6 +201,12 @@ def test_the_run_records_its_evaluations_and_the_starts_outside_the_support():
     assert 0 < len(replicates.zero_density) < 30
 
 
+def test_the_engine_takes_an_array_of_points_as_its_initial_distribution():
+    # As sample and tune do, through as_initial.
+    replicates = simulate(initial=np.array([[3.0, -1.0], [2.0, 0.0]]), n=3)
+    assert len(replicates.index) == 3
+
+
 def test_a_kernel_of_another_dimension_than_the_points_raises():
     with pytest.raises(ValueError, match="kernel works in 1 dimensions"):
         simulate(RandomWalk(np.eye(1)))

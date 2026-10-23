@@ -23,7 +23,7 @@ from telescopic._types import (
     integer,
 )
 from telescopic.estimators import correction_coefficients
-from telescopic.initial import draw
+from telescopic.initial import as_initial, draw
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
 
@@ -144,7 +144,7 @@ class Status(NamedTuple):
 def run(
     target: Target,
     kernel: Kernel,
-    initial: Distribution,
+    initial: Any,
     indices: npt.ArrayLike,
     *,
     k: int,
@@ -173,7 +173,9 @@ def run(
     target : Target
     kernel : Kernel
         A tuned kernel.
-    initial : object with ``rvs(random_state=generator)``
+    initial
+        An object with ``rvs(random_state=generator)``, a callable ``initial(rng)`` or an
+        array of points of shape ``(n, d)``, as for :func:`telescopic.initial.as_initial`.
     indices : array_like of int, shape (R,)
         Distinct replicate indices, at least one, started in this order.
     k, m : int
@@ -222,7 +224,7 @@ def run(
         raise ValueError("indices must be a non-empty sequence of distinct integers >= 0")
     requested = requested.astype(np.int64)
     lanes = min(lanes, len(requested))  # empty lanes would only cost time
-    seed = root_seed(rng)
+    seed, initial = root_seed(rng), as_initial(initial)
     queue = iter(requested.tolist())
     first = next(queue)
     evaluations, start = (target.n_log_prob, target.n_grad), time.perf_counter()
