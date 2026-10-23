@@ -345,7 +345,7 @@ class Result:
             one-sided 95% Clopper-Pearson upper bound, which stays informative when the
             fraction is 0; ``tv_bound_at_k``; ``variance_share``, the largest share of one
             replicate in the sample variance of the estimate of a coordinate's mean or
-            second moment, and ``variance_share_of``, that estimate, ``nan`` and ``None``
+            variance, and ``variance_share_of``, that estimate, ``nan`` and ``None``
             below 2 replicates; ``mean_cost``, ``seconds_per_replicate`` and
             ``relative_cost``, the mean cost over :math:`m - k + 1` (spec R-TUNE-4).
         """
@@ -368,10 +368,13 @@ class Result:
         tv_at_k = min(1.0, float(np.maximum(0, excess).mean()))
         share, share_of = np.nan, None
         if self.n_replicates >= 2:
-            moments = [self.measure.per_replicate(h) for h in (lambda x: x, np.square)]
-            shares = diagnostics.variance_share(np.concatenate(moments, axis=1))
+            # The second moments about the atoms' mean, which the variances use: about 0,
+            # far from it, they would vary with the means and hide their own spread.
+            centred, first = self._centred()
+            second = self.measure.per_replicate(lambda _: np.square(centred))
+            shares = diagnostics.variance_share(np.concatenate([first, second], axis=1))
             worst = int(np.argmax(shares))
-            moment = "mean" if worst < self.ndim else "second moment"
+            moment = "mean" if worst < self.ndim else "variance"
             share = float(shares[worst])
             share_of = f"the {moment} of {self.names[worst % self.ndim]}"
         mean_cost = float(self.costs.mean())
@@ -593,9 +596,9 @@ class Result:
         # The atoms about their mean, and each replicate's mean of them. Each replicate's
         # weights sum to 1, so the covariance estimator is the same about any point; about
         # 0, a mean far from 0 next to the spread would cancel catastrophically.
-        centre = self.measure.atoms.mean(axis=0)
-        centred = self.measure.atoms - centre
-        return centred, self.measure.per_replicate(lambda x: x - centre)
+        atoms = self.measure.atoms
+        centred = atoms - np.ones(len(atoms)) @ atoms / len(atoms)  # faster than mean(axis=0)
+        return centred, self.measure.per_replicate(lambda _: centred)
 
     def _require(self, n: int) -> None:
         if self.n_replicates < n:

@@ -239,7 +239,7 @@ The lines below it:
   `lag = k` the fraction is close to the bound on the total variation distance at `k`
   ([Distance to stationarity](diagnostics.md#distance-to-stationarity));
 - the largest share of one replicate in the variance of the estimate of a coordinate's
-  mean or second moment, and that estimate
+  mean or variance, and that estimate
   ([`variance`](diagnostics.md#one-replicate-dominating-the-variance-variance));
 - for an interrupted run, that its estimates are consistent but not exactly unbiased
   ([Interrupting a run](parallel.md#interrupting-a-run));

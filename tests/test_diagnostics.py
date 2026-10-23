@@ -125,14 +125,16 @@ def test_no_warning_fires_on_a_clean_gaussian_run():
 
 
 def test_the_variance_share_names_the_moment_and_coordinate_that_hold_it():
-    # x1 is +-1 but for one replicate at 3, whose square, the only one apart from the 99
-    # others, holds the share 1 - 1/R of their variance; it holds less of the mean's.
-    rng = np.random.default_rng(7)
-    normal = rng.standard_normal((100, 2))
-    values = np.column_stack([normal[:, 0], np.r_[rng.choice([-1, 1], 99), 3], normal[:, 1]])
-    found = synthetic([2] * 100, values, k=5).diagnostics()
-    assert found["variance_share_of"] == "the second moment of x1"
-    assert found["variance_share"] == pytest.approx(0.99)
+    # x1 is 1 or -1 about its mean 0 but for one replicate at 3, whose squared deviation,
+    # the only one apart from the 99 others, holds the share 1 - 1/R of their variance; it
+    # holds less of the mean's. Far from 0 the share is the same.
+    normal = np.random.default_rng(7).standard_normal((100, 2))
+    x1 = np.r_[np.repeat([1.0, -1.0], [48, 51]), 3.0]
+    for offset in (0.0, 1000.0):
+        values = np.column_stack([normal[:, 0], x1 + offset, normal[:, 1]])
+        found = synthetic([2] * 100, values, k=5).diagnostics()
+        assert found["variance_share_of"] == "the variance of x1"
+        assert found["variance_share"] == pytest.approx(0.99)
 
 
 def test_the_tail_index_is_that_of_tau_minus_the_lag_from_500_replicates():

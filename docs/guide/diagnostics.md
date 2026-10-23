@@ -107,8 +107,8 @@ assert abs(values["late_fraction"] - values["tv_bound_at_k"]) < 0.01
   which stays informative when the fraction is 0. The fraction is the leading term of
   `tv_bound_at_k`, the TV bound at $k$, and with `lag = k` the two are close.
 - `variance_share` and `variance_share_of`: the largest share of one replicate in the
-  variance of the estimate of a coordinate's mean or second moment, and that estimate,
-  such as `"the second moment of x1"`; `nan` and `None` below 2 replicates
+  variance of the estimate of a coordinate's mean or variance, and that estimate, such as
+  `"the variance of x1"`; `nan` and `None` below 2 replicates
   ([`variance`](#one-replicate-dominating-the-variance-variance)).
 - `mean_cost`, `seconds_per_replicate` and `relative_cost`: the cost of a replicate
   ([Settings](settings.md#cost)).
@@ -147,7 +147,7 @@ which make the variance high. **Remedy:** a new sampler with a larger `k`
 ### One replicate dominating the variance (`variance`)
 
 **Trigger:** with at least 100 replicates, one replicate holds more than half of the
-sample variance of the estimate of some coordinate's mean or second moment.
+sample variance of the estimate of some coordinate's mean or variance.
 `result.diagnostics()` reports the largest share as `variance_share`, and the estimate
 that holds it as `variance_share_of`, whether or not the warning fires. **Meaning:**
 heavy tails or rare excursions make the error bars unreliable. A replicate whose chain is
