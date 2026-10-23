@@ -14,7 +14,6 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
-    "sphinx.ext.mathjax",
     "sphinx_copybutton",
 ]
 
@@ -38,4 +37,3 @@ intersphinx_mapping = {
 exclude_patterns = ["_build", "jupyter_execute", "**.ipynb_checkpoints"]
 html_theme = "furo"
 html_title = f"telescopic {release}"
-html_static_path = ["_static"]

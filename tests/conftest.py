@@ -13,7 +13,5 @@ for name in (
     os.environ.setdefault(name, "1")
 
 # deadline=None: a deadline turns a slow CI runner into a failure.
-settings.register_profile(
-    "telescopic", max_examples=50, derandomize=True, database=None, deadline=None
-)
+settings.register_profile("telescopic", max_examples=50, derandomize=True, deadline=None)
 settings.load_profile("telescopic")

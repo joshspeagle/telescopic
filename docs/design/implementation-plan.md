@@ -262,7 +262,7 @@ These add to the rules of `CLAUDE.md`.
 | A coupling that "meets" up to rounding only | copy-on-event couplings and the engine's exact comparison; a binomial test of the frequency of equal outputs against the exact Gaussian formula (test-plan §2.2) |
 | Heavy-tailed estimators make statistical tests flaky | sequential escalation (test-plan §1); coverage tests in the slow tier only |
 | Python overhead with cheap targets | lockstep lanes over replicates; a vectorised log-density path |
-| Per-replicate streams slow down lockstep batches | buffered draws gathered by windows (about 2× a shared generator, 0.3 µs per lane-step; M0 efficiency review); a benchmark guards it |
+| Per-replicate streams slow down lockstep batches | buffered draws gathered by windows (2.2× a shared generator, 0.33 µs per lane-step at 256 lanes, $d = 10$; `notes/reviews/m0.md`); a benchmark guards it |
 | Batched linear algebra breaks bitwise invariance | `einsum`-only kernel arithmetic (spec R-KER-6) and a batch-of-one test per kernel |
 | Users mistake unbiased for accurate | warnings by default; a tutorial on failure modes; guarantees stated as in spec §3.3 |
 | Pool pickling and BLAS oversubscription | worker initializers, `threadpoolctl`, and documented guards |

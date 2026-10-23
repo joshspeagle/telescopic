@@ -6,9 +6,8 @@ from scipy import stats
 from scipy.integrate import quad
 
 from references import reflection
-from telescopic._random import MAIN, Streams, replicate_generator, root_seed
 from telescopic.couplings import discrete_maximal, maximal, reflection_maximal
-from telescopic.testing import fixed_draws
+from telescopic.testing import fixed_draws, random_draws
 
 # One-sample tests use a p-value threshold that keeps the family-wise false-positive rate
 # of this module below about 1e-3 (CLAUDE.md: tolerances from the Monte Carlo error).
@@ -18,14 +17,6 @@ P_MIN = 1e-5
 def dense_cholesky(d, rng):
     a = rng.standard_normal((d, d))
     return np.linalg.cholesky(a @ a.T + d * np.eye(d))
-
-
-def per_row_draws(n, d, seed):
-    streams = Streams(n, d)
-    root = root_seed(seed)
-    for row in range(n):
-        streams.assign(row, replicate_generator(root, MAIN, row))
-    return streams.view(np.arange(n))
 
 
 class Normal:
@@ -171,7 +162,7 @@ def test_maximal_with_eta_caps_the_meeting_probability_of_identical_distribution
 def test_maximal_has_exact_marginals_and_the_documented_meeting_rate(eta):
     p, q = Normal(0.0, 1.0), Normal(1.0, 1.5)
     n = 20_000
-    x, y, identical, n_draws = maximal([p] * n, [q] * n, per_row_draws(n, 1, 7), eta=eta)
+    x, y, identical, n_draws = maximal([p] * n, [q] * n, random_draws(n, 7), eta=eta)
     rate = quad(lambda t: min(eta * stats.norm.pdf(t), stats.norm.pdf(t, 1.0, 1.5)), -20, 20)[0]
     assert abs(identical.mean() - rate) < 5 * np.sqrt(rate * (1 - rate) / n)
     assert stats.kstest(x, "norm").pvalue > P_MIN
@@ -182,10 +173,10 @@ def test_maximal_has_exact_marginals_and_the_documented_meeting_rate(eta):
 
 
 def test_maximal_accepts_frozen_scipy_distributions_continuous_and_discrete():
-    draws = per_row_draws(4, 1, 11)
+    draws = random_draws(4, 11)
     _, _, identical, _ = maximal([stats.norm(0, 1)] * 4, [stats.norm(0, 1)] * 4, draws)
     assert identical.all()
-    x, y, _, _ = maximal([stats.poisson(3)] * 4, [stats.poisson(5)] * 4, per_row_draws(4, 1, 12))
+    x, y, _, _ = maximal([stats.poisson(3)] * 4, [stats.poisson(5)] * 4, random_draws(4, 12))
     assert x.dtype == y.dtype == np.float64
     assert np.all(x == np.round(x))
 

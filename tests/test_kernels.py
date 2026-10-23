@@ -5,7 +5,7 @@ from scipy import integrate, stats
 from references import metropolis, reflection
 from telescopic.kernels import Independence, Kernel, Mixture, MultivariateT, RandomWalk, State
 from telescopic.target import Target
-from telescopic.testing import fixed_draws
+from telescopic.testing import fixed_draws, random_draws
 
 P_MIN = 1e-5
 
@@ -31,13 +31,6 @@ def kernels(d):
             [RandomWalk(np.eye(d), scale=0.5), RandomWalk(np.eye(d), scale=2.0)], [0.3, 0.7]
         ),
     }
-
-
-def random_draws(n, d, seed):
-    # Enough prescribed numbers for one coupled step of any kernel above.
-    rng = np.random.default_rng(seed)
-    generators = [np.random.default_rng([seed, row]) for row in range(n)]
-    return fixed_draws(rng.standard_normal((n, 2 * d)), rng.random((n, 4)), generators)
 
 
 # Oracle tests: draw for draw against independent references.
@@ -150,7 +143,7 @@ def test_each_chain_of_a_coupled_step_has_the_exact_one_step_law(name, gap):
     x0, y0 = 0.4, 0.4 + gap
     start_x = State(np.full((n, 1), x0), np.full(n, gaussian_log_prob(np.array([x0]))))
     start_y = State(np.full((n, 1), y0), np.full(n, gaussian_log_prob(np.array([y0]))))
-    new_x, new_y, _ = kernel.coupled_step(TARGET, start_x, start_y, random_draws(n, 1, 4))
+    new_x, new_y, _ = kernel.coupled_step(TARGET, start_x, start_y, random_draws(n, 4))
     for start, new in ((x0, new_x.x[:, 0]), (y0, new_y.x[:, 0])):
         stay, cdf = one_step_law(kernel, start)
         stayed = new == start
@@ -165,10 +158,10 @@ def test_coupled_marginals_match_single_steps_in_three_dimensions(name):
     rng = np.random.default_rng(5)
     x0, y0 = rng.standard_normal(3), rng.standard_normal(3)
     starts = [state(np.tile(p, (n, 1))) for p in (x0, y0)]
-    new_x, new_y, _ = kernel.coupled_step(TARGET, *starts, random_draws(n, 3, 6))
+    new_x, new_y, _ = kernel.coupled_step(TARGET, *starts, random_draws(n, 6))
     directions = rng.standard_normal((3, 3))
     for start, coupled, seed in ((starts[0], new_x, 7), (starts[1], new_y, 8)):
-        single, _ = kernel.step(TARGET, start, random_draws(n, 3, seed))
+        single, _ = kernel.step(TARGET, start, random_draws(n, seed))
         for direction in directions:
             p = stats.ks_2samp(coupled.x @ direction, single.x @ direction).pvalue
             assert p > P_MIN / 3
@@ -184,7 +177,7 @@ def test_equal_states_stay_equal_and_met(name):
     state_x, state_y = state(points), state(points.copy())
     for step in range(100):
         state_x, state_y, met = kernel.coupled_step(
-            TARGET, state_x, state_y, random_draws(50, 2, step)
+            TARGET, state_x, state_y, random_draws(50, step)
         )
         assert met.all()
         np.testing.assert_array_equal(state_x.x, state_y.x)
@@ -199,7 +192,7 @@ def test_met_holds_exactly_for_bitwise_equal_pairs(name):
         state(rng.standard_normal((400, 2))),
         state(rng.standard_normal((400, 2)) * 0.2),
     )
-    new_x, new_y, met = kernel.coupled_step(TARGET, state_x, state_y, random_draws(400, 2, 11))
+    new_x, new_y, met = kernel.coupled_step(TARGET, state_x, state_y, random_draws(400, 11))
     np.testing.assert_array_equal(met, np.all(new_x.x == new_y.x, axis=1))
     np.testing.assert_array_equal(new_x.log_prob[met], new_y.log_prob[met])
     assert met.any()
