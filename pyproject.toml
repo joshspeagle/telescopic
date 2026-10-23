@@ -62,6 +62,10 @@ docs = [
     "numpydoc==1.11.0",
     "matplotlib>=3.8",
     "ipykernel",
+    # The quickstart tutorial runs emcee beside telescopic, and the parallel tutorial
+    # sends functions defined in a notebook to worker processes.
+    "emcee==3.1.6",
+    "cloudpickle>=3.0",
 ]
 
 [tool.hatch.version]

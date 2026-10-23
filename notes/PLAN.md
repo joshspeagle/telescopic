@@ -41,3 +41,14 @@ pitfalls page exist. Open for M11: the pool and pipeline benchmarks (`notes/revi
 Done before M9, so that its tests and benchmarks use the final interfaces: the
 replicates record their run's seed and settings, and `engine.run` takes `rng`
 (DECISIONS #31, #32; `notes/reviews/run-settings.md`).
+
+## M11 scope
+
+- An independent audit by reviewers who did not write the code, one per angle: the
+  estimators, weights and couplings against the papers and `docs/theory.md`; the engine's
+  meetings, censoring and streams; numerical robustness; the API and its errors; the
+  tests' power (mutants); and the documentation against the code.
+- Performance left open by M9: the pool benchmark with started workers, `sample()`'s fixed
+  64 lanes (a second wave at R = 100), and the point-by-point overhead at one lane.
+- The checkpoint report to Josh: what exists, what was measured, the open questions.
+
