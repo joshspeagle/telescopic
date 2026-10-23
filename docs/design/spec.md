@@ -606,7 +606,7 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
    - Each call continues the replicate indices and returns the cumulative result.
    - The first call fixes `k`, `m`, `lag`, `thin` and `max_iter` (DECISIONS #4). On the first call `"auto"` derives a value, `thin=None` means 1 and `max_iter=None` no cap; on later calls `"auto"` and `None` keep the first call's values, and any other change raises `ValueError` (DECISIONS #8). A setting that is not an integer raises `TypeError` on any call, before tuning; with `k` given, every bound is checked before tuning (DECISIONS #44). A run completes a pilot of fewer than 100 pairs before choosing `k` (DECISIONS #46).
    - Each call ends by emitting the warnings of §7.4 that apply to the cumulative result, except slow pairs and disagreeing tuning chains, which are emitted as they happen, or for slow pairs on a pool as each run ends (§6.3, DECISIONS #8).
-3. **Building blocks:** `Target`, `State`, `telescopic.kernels.*`, `telescopic.couplings.*`, `telescopic.engine.run(...)`, `telescopic.estimators.*`, `telescopic.diagnostics.*` and `SignedMeasure`.
+3. **Building blocks:** `Target`, `telescopic.kernels.*` (`State` among them), `telescopic.couplings.*`, `telescopic.engine.run(...)`, `telescopic.estimators.*`, `telescopic.diagnostics.*` and `SignedMeasure`.
 
 ### 8.2 Conventions (R-API-2)
 

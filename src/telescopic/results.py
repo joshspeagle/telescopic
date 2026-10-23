@@ -672,7 +672,12 @@ class Summary:
 
     def to_pandas(self) -> Any:
         """The table as a ``pandas.DataFrame`` indexed by parameter name (needs pandas)."""
-        import pandas as pd
+        try:
+            import pandas as pd
+        except ImportError as error:
+            raise ImportError(
+                "to_pandas needs pandas: pip install 'telescopic[pandas]'"
+            ) from error
 
         return pd.DataFrame(self.table, index=self.names)
 

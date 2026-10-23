@@ -61,7 +61,8 @@ class CoupledSampler:
     args, kwargs
         Extra arguments of ``log_prob`` and ``grad``.
     grad : callable, optional
-        :math:`\nabla\log\pi` with the signature of ``log_prob``.
+        :math:`\nabla\log\pi` with the signature of ``log_prob``. Only the kernels that
+        need it, MALA and HMC, evaluate it; ``"auto"`` is random-walk Metropolis.
     vectorize : bool
         Whether ``log_prob`` and ``grad`` take a batch of points.
     kernel : Kernel or str

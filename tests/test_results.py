@@ -1,4 +1,5 @@
 import itertools
+import sys
 from dataclasses import replace
 
 import numpy as np
@@ -149,6 +150,12 @@ def test_the_summary_reports_every_parameter_and_the_run():
 def test_the_summary_converts_to_pandas():
     pytest.importorskip("pandas")
     assert list(RESULT.summary().to_pandas().index) == ["a", "b"]
+
+
+def test_without_pandas_the_summary_names_the_extra_to_install(monkeypatch):
+    monkeypatch.setitem(sys.modules, "pandas", None)  # import pandas then fails
+    with pytest.raises(ImportError, match=r"telescopic\[pandas\]"):
+        RESULT.summary().to_pandas()
 
 
 def test_a_result_missing_requested_replicates_is_interrupted_until_they_run():

@@ -130,7 +130,9 @@ def hill(values: npt.ArrayLike, n_tail: int) -> float:
     """
     x = np.sort(np.asarray(values, dtype=np.float64))
     if not 1 <= n_tail < len(x):
-        raise ValueError(f"n_tail must be in [1, {len(x) - 1}], not {n_tail}")
+        raise ValueError(
+            f"n_tail must be at least 1 and below the number of values, {len(x)}, not {n_tail}"
+        )
     if not x[0] > 0:
         raise ValueError(f"values must be positive, not as small as {x[0]}")
     if x[-n_tail - 1] == x[0]:

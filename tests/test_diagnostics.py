@@ -188,6 +188,10 @@ def test_the_tv_bound_at_k_of_the_diagnostics_is_the_bounds():
     )
 
 
-def test_hill_refuses_non_positive_values():
-    with pytest.raises(ValueError, match="positive"):
-        hill([0.0, 1.0, 2.0], 1)
+@pytest.mark.parametrize(
+    ("values", "message"),
+    [([0.0, 1.0, 2.0], "values must be positive"), ([], "below the number of values, 0")],
+)
+def test_hill_refuses_invalid_arguments(values, message):
+    with pytest.raises(ValueError, match=message):
+        hill(values, 1)
