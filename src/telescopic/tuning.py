@@ -151,7 +151,7 @@ def adaptive_metropolis(
 
     Notes
     -----
-    Cost: ``4 n_steps`` log-density evaluations and about ``n_steps / ceil(d/20)``
+    Cost: ``4 (n_steps + 1)`` log-density evaluations and about ``n_steps / ceil(d/20)``
     Cholesky factorisations: beyond 20 dimensions the chains refactor the covariance and
     keep their states every :math:`\lceil d/20\rceil` steps, or fewer for a short pilot.
     """

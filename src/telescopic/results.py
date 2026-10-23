@@ -576,14 +576,10 @@ class Result:
     def _columns(self, dims: int | Sequence[int]) -> npt.NDArray[np.intp]:
         # Coordinates given as one integer or a sequence of them, checked.
         columns = np.atleast_1d(dims)
-        if (
-            columns.ndim != 1
-            or columns.dtype.kind not in "iu"
-            or np.any((columns < 0) | (columns >= self.ndim))
-        ):
-            raise ValueError(
-                f"dims must be an integer in [0, {self.ndim}) or a sequence of them, not {dims}"
-            )
+        if columns.ndim != 1 or columns.dtype.kind not in "iu":
+            raise TypeError(f"dims must be an integer or a sequence of integers, not {dims!r}")
+        if np.any((columns < 0) | (columns >= self.ndim)):
+            raise ValueError(f"dims must be in [0, {self.ndim}), not {dims}")
         return columns.astype(np.intp)
 
     def _bins(

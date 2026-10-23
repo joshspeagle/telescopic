@@ -23,14 +23,16 @@ All notable changes to this project are documented here. The format follows
   not depend on the other rows of its batch.
 - The engine (`telescopic.engine.run`): replicates of coupled chains in lockstep lanes
   with refill, exact meeting detection, the lag-$L$ and thinned estimator weights, signed
-  measures, distances between the chains, censoring and a slow-pair warning. A
-  replicate's output does not depend on the number of lanes. The output records the
+  measures, distances between the chains and censoring. A replicate's output does not
+  depend on the number of lanes, bitwise for a log-density evaluated point by point. The
+  output records the
   run's settings and root seed, which `Result` and `merge` read.
 - `SignedMeasure`, the unbiased covariance estimator and quantiles of signed measures by
   isotonic projection (`telescopic.measure`, `telescopic.estimators`).
 - `Result` with estimates and confidence intervals for any test function, unbiased
-  covariances, quantiles, credible intervals and signed histograms; total variation and
-  1-Wasserstein bounds from the meeting times; a summary table; and the warnings of the
+  covariances, quantiles, credible intervals and signed histograms; total variation
+  bounds from the meeting times and 1-Wasserstein bounds from the distances between the
+  chains; a summary table; and the warnings of the
   specification (`telescopic.results`, `telescopic.diagnostics`).
 - Automatic tuning and the sampler: adaptive Metropolis pilots whose chains share their
   adaptation, set the kernels' unset parameters and warn when they disagree; the choice

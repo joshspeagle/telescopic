@@ -260,9 +260,8 @@ conditionals:
 - `coupling="crn"`: common random numbers, one uniform through `ppf` for a block of one
   coordinate, or common standard normals for a normal conditional, an object with `mean`
   and `cov`, whose `cov` may be singular. An object with `mean` and `cov` that is not
-  normal, such as a multivariate Student-t, would get the wrong law. Common random numbers
-  can bring the chains together, but make them equal only by rounding; `"two-scale"` adds
-  the maximal coupling.
+  normal would get the wrong law. Common random numbers can bring the chains together,
+  but make them equal only by rounding; `"two-scale"` adds the maximal coupling.
 - `coupling="two-scale"`: common random numbers for pairs farther apart than `threshold`
   at the start of a sweep, and the maximal coupling for the others, as in Biswas,
   Bhattacharya, Jacob & Johndrow (2022).

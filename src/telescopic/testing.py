@@ -11,7 +11,7 @@ from numpy.random import Generator
 from scipy import stats
 
 from telescopic._random import Draws, Streams, root_seed
-from telescopic._types import FloatArray, Seed, integer
+from telescopic._types import FloatArray, Seed, integer, real
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
 
@@ -63,6 +63,8 @@ class CouplingReport:
         -------
         bool
         """
+        if not 0 < real("alpha", alpha) < 1:
+            raise ValueError(f"alpha must be in (0, 1), not {alpha}")
         p_values = (*self.stay, *self.moves)
         return min(p_values) >= alpha and self.met > 0 and not (self.stale or self.near_misses)
 

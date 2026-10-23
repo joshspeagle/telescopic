@@ -97,8 +97,8 @@ def test_plots_draw_on_the_axes_they_are_given():
     [
         (lambda axes: RESULT.plot_meeting_times(axes[:3]), "axes must hold 2 Axes, not 3"),
         (lambda axes: RESULT.plot_marginals([0, 1], axes=axes[:1]), "axes must hold 2 Axes"),
-        (lambda axes: RESULT.plot_marginals([0, 2]), "dims must be an integer in"),
-        (lambda axes: RESULT.plot_corner([-1]), "dims must be an integer in"),
+        (lambda axes: RESULT.plot_marginals([0, 2]), r"dims must be in \[0, 2\)"),
+        (lambda axes: RESULT.plot_corner([-1]), r"dims must be in \[0, 2\)"),
     ],
 )
 def test_invalid_plot_arguments_raise_before_drawing(call, message):

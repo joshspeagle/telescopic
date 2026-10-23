@@ -159,9 +159,9 @@ the initial distribution $\pi_0$, with its own random stream. `init` can be:
   an ensemble sampler like emcee. A single point of shape `(d,)` is refused;
   `Empirical([point])` starts every chain there.
 
-The dimension `d` comes from a draw. Draws are converted to shape `(d,)`, since SciPy
-returns a scalar in one dimension; a draw of another shape, or with a non-finite
-coordinate, raises `ValueError`. Each form, on the Gaussian above:
+The dimension `d` comes from a draw. Draws are converted to shape `(d,)`: SciPy returns
+a scalar for a normal in one dimension, and shape `(1, d)` for a Dirichlet. A draw of
+another shape, or with a non-finite coordinate, raises `ValueError`. Each form, on the Gaussian above:
 
 ```{code-cell} python
 points = stats.multivariate_normal(mean, np.diag(sd**2)).rvs(size=50, random_state=1)

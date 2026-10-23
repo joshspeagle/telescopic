@@ -79,8 +79,8 @@ meeting times of 100 pilot pairs, and ran 100 replicates.
 
 ## Reading the summary
 
-The table has one row per parameter: the estimate of the posterior mean with its
-standard error, both unbiased, and the standard deviation and the 16th, 50th and 84th
+The table has one row per parameter: the estimate of the posterior mean, which is
+unbiased, and its standard error, the standard deviation and the 16th, 50th and 84th
 percentiles, which are consistent. Below it are the settings, the meeting times, the
 cost of a replicate, the fraction of pairs that met late, and the warnings that apply.
 [Results](guide/results.md#the-summary) defines each entry, and

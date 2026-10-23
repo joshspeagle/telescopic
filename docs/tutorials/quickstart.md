@@ -87,7 +87,8 @@ print(f"{for_telescopic.points:,} evaluations, {result.n_log_prob:,} of them in 
 ```
 
 `result.n_log_prob` counts the evaluations of the run; the others are those of tuning and
-of the meeting-time pilot, which [Getting started](../getting-started.md) counts.
+of the meeting-time pilot, which [A slow log-density](../guide/settings.md#a-slow-log-density)
+counts.
 
 ## emcee
 

@@ -539,7 +539,7 @@ Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 - the tail index of warning 4 of §7.4, from 500 replicates (DECISIONS #40);
 - mean cost per replicate, in kernel applications and in seconds;
 - the relative cost, mean cost / $(m - k + 1)$ (R-TUNE-4);
-- the fraction of replicates with a non-zero bias correction, which estimates the TV bound at $k$ (§3.6);
+- the fraction of pairs that met after $k + L$, censored ones included: the first term of the TV bound at $k$ (§3.6);
 - the largest share of warning 3 of §7.4, and the estimate that holds it (DECISIONS #40);
 - for an interrupted run, that its estimates are consistent but not exactly unbiased (§6.5);
 - (should; deferred beyond v0.1, DECISIONS #38) $\hat R$ across the replicates' X-chains;
@@ -612,7 +612,7 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
 
 - **Randomness:** every function that draws random numbers takes `rng` (SPEC 7). There is no global state.
 - **Shapes:** batch first. States are `(n, d)`; test functions map `(n, d)` to `(n,)` or `(n, p)`; per-replicate values are `(R, ...)`.
-- **Errors:** `TypeError` for an argument of the wrong type and `ValueError` for a value out of bounds, with messages that name the argument and say what was expected (DECISIONS #50). Questionable inputs emit `InputWarning`; reliability problems emit `ConvergenceWarning`.
+- **Errors:** a scalar number argument of the wrong type raises `TypeError`, and one out of bounds `ValueError`, with messages that name it and say what was expected (DECISIONS #50); NumPy converts array arguments, and its errors apply. Questionable inputs emit `InputWarning`; reliability problems emit `ConvergenceWarning`.
 - **Progress:** `progress=True` draws tqdm's text bar when tqdm is installed, in notebooks too, and falls back to periodic lines on stderr (DECISIONS #39).
 - **Types and documentation:** public signatures are typed, with NumPy-style docstrings.
 - **Vocabulary:** the documentation says "replicates" and "pairs", never "walkers".

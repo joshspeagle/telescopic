@@ -116,6 +116,8 @@ def test_check_coupling_flags_a_coupling_that_never_meets():
     assert report.met == 0
     assert min(*report.stay, *report.moves) > P_MIN
     assert not report.passed()
+    with pytest.raises(TypeError, match="alpha must be a real number"):
+        report.passed("0.1")
 
 
 @pytest.mark.parametrize(

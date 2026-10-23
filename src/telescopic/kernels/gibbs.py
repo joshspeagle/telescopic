@@ -33,8 +33,7 @@ class Gibbs(Kernel):
       without ``ppf``, ``"crn"`` takes each conditional to be the normal with its ``mean``
       and ``cov``, whatever its type, and common standard normals go through a square
       root of each ``cov``, which may be singular. A conditional with ``mean`` and ``cov``
-      that is not normal, such as a multivariate Student-:math:`t`, would get the wrong
-      law;
+      that is not normal would get the wrong law;
     - ``"two-scale"``: common random numbers for pairs farther apart than ``threshold``
       at the start of the sweep, the maximal coupling for the others (Biswas, Bhattacharya,
       Jacob & Johndrow 2022).

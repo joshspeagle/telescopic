@@ -226,19 +226,19 @@ def test_results_from_equal_array_seeds_merge():
 
 
 @pytest.mark.parametrize(
-    ("call", "message"),
+    ("call", "error", "message"),
     [
-        (lambda r: r.histogram(5), "dims must be an integer"),
-        (lambda r: r.histogram([0, 1.0]), "dims must be an integer"),
-        (lambda r: r.histogram(0, bins=0), "bins must be at least 1"),
-        (lambda r: r.histogram([0, 1], range=(0.0, 1.0)), r"range must have shape \(2, 2\)"),
-        (lambda r: r.tv_bound([-1]), "t must be non-negative"),
-        (lambda r: r.w1_bound([-1]), "t must be non-negative"),
-        (lambda r: r.quantile(np.nan), "q must be in"),
+        (lambda r: r.histogram(5), ValueError, r"dims must be in \[0, 2\)"),
+        (lambda r: r.histogram([0, 1.0]), TypeError, "dims must be an integer"),
+        (lambda r: r.histogram(0, bins=0), ValueError, "bins must be at least 1"),
+        (lambda r: r.histogram([0, 1], range=(0.0, 1.0)), ValueError, r"range must have shape"),
+        (lambda r: r.tv_bound([-1]), ValueError, "t must be non-negative"),
+        (lambda r: r.w1_bound([-1]), ValueError, "t must be non-negative"),
+        (lambda r: r.quantile(np.nan), ValueError, "q must be in"),
     ],
 )
-def test_invalid_arguments_of_the_result_raise(call, message):
-    with pytest.raises(ValueError, match=message):
+def test_invalid_arguments_of_the_result_raise(call, error, message):
+    with pytest.raises(error, match=message):
         call(RESULT)
 
 

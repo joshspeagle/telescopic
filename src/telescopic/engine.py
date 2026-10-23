@@ -156,8 +156,9 @@ def run(
     stream (spec section 6.1), runs :math:`X` alone for ``lag`` steps, then the coupled
     kernel until :math:`X_t = Y_{t-L}` under ``==``, then :math:`X` alone until :math:`t = m`.
     A replicate's output depends only on the root seed, its index and the arguments,
-    never on the other replicates or on ``lanes``. The engine emits no warning: it
-    records what its caller needs to warn about.
+    never on the other replicates or on ``lanes``: bitwise for a log-density evaluated
+    point by point, up to rounding for a vectorised one (spec R-EXEC-2). The engine emits
+    no warning: it records what its caller needs to warn about.
 
     Parameters
     ----------

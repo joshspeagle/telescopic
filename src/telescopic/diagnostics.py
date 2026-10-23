@@ -81,6 +81,8 @@ def w1_bound(
     -------
     ndarray, shape of ``t``
     """
+    if integer("n_replicates", n_replicates) < 1:
+        raise ValueError(f"n_replicates must be at least 1, not {n_replicates}")
     total = np.bincount(
         np.asarray(distance_time, dtype=np.int64), weights=np.asarray(distance, dtype=np.float64)
     )
@@ -129,7 +131,7 @@ def hill(values: npt.ArrayLike, n_tail: int) -> float:
         leave the tail unresolved.
     """
     x = np.sort(np.asarray(values, dtype=np.float64))
-    if not 1 <= n_tail < len(x):
+    if not 1 <= integer("n_tail", n_tail) < len(x):
         raise ValueError(
             f"n_tail must be at least 1 and below the number of values, {len(x)}, not {n_tail}"
         )
@@ -256,7 +258,7 @@ def slow_pair_threshold(lag: int, m: int) -> int:
     -------
     int
     """
-    return max(10_000, 10 * max(lag, m))
+    return max(10_000, 10 * max(integer("lag", lag), integer("m", m)))
 
 
 def tuning_disagreement(tuning: TuningReport | None) -> str | None:

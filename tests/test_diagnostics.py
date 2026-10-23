@@ -33,6 +33,8 @@ def test_the_w1_bound_sums_the_distances_at_lagged_times():
     t = np.arange(45)
     expected = [distance[(time > s) & ((time - s) % lag == 0)].sum() / n for s in t]
     np.testing.assert_allclose(w1_bound(time, distance, n, lag, t), expected, atol=1e-12)
+    with pytest.raises(ValueError, match="n_replicates must be at least 1"):
+        w1_bound(time, distance, 0, lag, t)
 
 
 @pytest.mark.parametrize("alpha", [1.5, 3.0])
@@ -155,6 +157,8 @@ def test_censored_pairs_count_as_late():
 def test_the_slow_pair_threshold_is_ten_times_the_larger_of_the_lag_and_m():
     assert slow_pair_threshold(1, 10) == 10_000
     assert slow_pair_threshold(1, 2_000) == slow_pair_threshold(2_000, 1) == 20_000
+    with pytest.raises(TypeError, match="lag must be an integer"):
+        slow_pair_threshold("1", 2)
 
 
 def test_the_relative_cost_divides_the_mean_cost_by_the_averaged_times():
@@ -189,9 +193,13 @@ def test_the_tv_bound_at_k_of_the_diagnostics_is_the_bounds():
 
 
 @pytest.mark.parametrize(
-    ("values", "message"),
-    [([0.0, 1.0, 2.0], "values must be positive"), ([], "below the number of values, 0")],
+    ("values", "n_tail", "error", "message"),
+    [
+        ([0.0, 1.0, 2.0], 1, ValueError, "values must be positive"),
+        ([], 1, ValueError, "below the number of values, 0"),
+        ([1.0, 2.0, 3.0], 1.0, TypeError, "n_tail must be an integer"),
+    ],
 )
-def test_hill_refuses_invalid_arguments(values, message):
-    with pytest.raises(ValueError, match=message):
-        hill(values, 1)
+def test_hill_refuses_invalid_arguments(values, n_tail, error, message):
+    with pytest.raises(error, match=message):
+        hill(values, n_tail)
