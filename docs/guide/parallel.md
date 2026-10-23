@@ -68,7 +68,8 @@ and join the results ([Merging runs](results.md#merging-runs)).
 ## Chunks and workers
 
 A pool runs chunks of consecutive replicate indices: one per worker at least, more where
-a chunk would hold more than 64 replicates, and four per worker at most. An executor receives every chunk at once, in index order; a
+a chunk would hold more than 256 replicates, the lanes that the engine advances together,
+and four per worker at most. An executor receives every chunk at once, in index order; a
 pool with only `map` receives them in waves of one chunk per worker.
 
 telescopic reads the number of workers of an integer pool, a `concurrent.futures`

@@ -89,10 +89,10 @@ def test_the_sampler_runs_its_pilot_and_replicates_on_its_pool():
 
 
 @pytest.mark.parametrize(
-    ("n", "workers", "chunks"), [(3, 4, 3), (200, 4, 4), (600, 4, 10), (1_000, 1, 4)]
+    ("n", "workers", "chunks"), [(3, 4, 3), (200, 4, 4), (2_000, 4, 8), (1_000, 1, 4)]
 )
 def test_a_pool_gets_chunks_of_full_lanes_and_at_most_four_per_worker(n, workers, chunks):
-    # 600 replicates fill 64 lanes 10 times; 1,000 on one worker are cut in four.
+    # 2,000 replicates fill 256 lanes 8 times; 1,000 on one worker are cut in four.
     with Counting(workers) as executor:
         execute(job(), np.arange(n), executor, never)
     assert len(executor.chunks) == chunks
@@ -100,9 +100,9 @@ def test_a_pool_gets_chunks_of_full_lanes_and_at_most_four_per_worker(n, workers
 
 
 def test_a_map_pool_that_reports_its_size_gets_waves_of_that_size():
-    # 1,000 replicates on 2 workers: 8 chunks, in waves of 2.
+    # 2,000 replicates on 2 workers: 8 chunks, in waves of 2.
     pool = Sized()
-    execute(job(), np.arange(1_000), pool, never)
+    execute(job(), np.arange(2_000), pool, never)
     assert pool.waves == [2, 2, 2, 2]
 
 
@@ -202,7 +202,9 @@ def test_a_chunk_that_starts_after_the_stop_runs_nothing_unless_it_is_the_first(
 @pytest.mark.parametrize("at_once", [True, False])
 def test_a_stop_on_a_pool_keeps_the_finished_chunks(pool, at_once, monkeypatch):
     # A stop before any chunk starts, or once one has finished: chunks not started are
-    # dropped, except the first, and the result lacks requested replicates.
+    # dropped, except the first, and the result lacks requested replicates. One worker, so
+    # that the 4 chunks run one at a time.
+    monkeypatch.setattr(_parallel.os, "process_cpu_count", lambda: 1, raising=False)
     monkeypatch.setattr(_parallel.os, "cpu_count", lambda: 1)
     indices = np.arange(1_000)
     with ThreadPoolExecutor(1) as thread:
@@ -233,9 +235,9 @@ class Broken(Executor):
 
 
 def test_a_pool_broken_after_a_stop_returns_the_finished_chunks():
-    # 200 replicates in 4 chunks: the first ran.
+    # 200 replicates in 2 chunks: the first ran.
     stopped = execute(job(), np.arange(200), Broken(first=True), lambda status: True)
-    np.testing.assert_array_equal(stopped.index, np.arange(50))
+    np.testing.assert_array_equal(stopped.index, np.arange(100))
     np.testing.assert_array_equal(stopped.requested, np.arange(200))
 
 
