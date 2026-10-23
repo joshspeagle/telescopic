@@ -42,3 +42,9 @@ All notable changes to this project are documented here. The format follows
   they evaluate (`needs_grad`, `needs_log_prob`) and check a target for it
   (`check_target`).
   A kernel's `step` returns acceptance probabilities.
+- Parallel runs: `pool=` takes a number of worker processes, an executor or a pool with
+  `map`, and gives the same replicates as a run in-process. The first Ctrl-C lets the
+  replicates in progress finish and returns a result flagged `interrupted`, which the
+  sampler's next run completes; the second stops at once. `progress=` shows a tqdm bar
+  or lines on stderr. The `parallel` extra installs cloudpickle, which ships functions
+  defined in notebooks to the workers.

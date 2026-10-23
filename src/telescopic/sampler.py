@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
+from contextlib import nullcontext
 from typing import Any
 
 import numpy as np
 
 from telescopic import diagnostics, engine
+from telescopic._parallel import Interrupt, Job, check_pool, execute
+from telescopic._progress import Progress
 from telescopic._random import MAIN, PILOT, replicate_generator, root_seed
-from telescopic._types import FloatArray, Seed
+from telescopic._types import FloatArray, IntArray, Seed
 from telescopic.estimators import averaging_times
 from telescopic.initial import as_initial, draw
 from telescopic.kernels import HMC, MALA, Independence, Kernel, RandomWalk
@@ -27,8 +30,6 @@ KERNELS: dict[str, Callable[[], Kernel]] = {
 }
 PILOT_REPLICATES = 100
 PILOT_MAX_ITER = 100_000
-# The warnings of spec section 7.4 that a run emits as they happen, not at its end.
-_LIVE = ("slow", "tuning")
 
 
 class CoupledSampler:
@@ -64,6 +65,16 @@ class CoupledSampler:
         ``"independence"``.
     names : sequence of str, optional
         Parameter names for summaries.
+    pool : None, int, executor or pool
+        Where the pilot pairs and the replicates run: ``None`` in this process; an
+        integer, that many worker processes, started for each run; or an object with
+        ``submit``, such as a :class:`concurrent.futures.Executor`, or with ``map``, such
+        as an emcee or schwimmbad pool. A pool runs chunks of consecutive indices, four
+        per worker, with BLAS pinned to one thread; no result depends on the pool (spec
+        section 6.4).
+    progress : bool
+        Show the progress of the pilot and of each run: a tqdm bar when tqdm is
+        installed, lines on stderr otherwise.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
         The root of every random stream (spec section 6.1).
 
@@ -84,8 +95,12 @@ class CoupledSampler:
         vectorize: bool = False,
         kernel: Kernel | str = "auto",
         names: Sequence[str] | None = None,
+        pool: Any = None,
+        progress: bool = False,
         rng: Seed = None,
     ) -> None:
+        check_pool(pool)
+        self.pool, self.progress = pool, progress
         self.target = Target(log_prob, grad, args=args, kwargs=kwargs, vectorize=vectorize)
         self.initial = as_initial(init)
         self.kernel = _kernel(kernel)
@@ -143,7 +158,10 @@ class CoupledSampler:
         self.tune()
         start = 0 if self.pilot is None else len(self.pilot)
         settings = {"k": 0, "m": 0, "lag": 1, "thin": 1, "max_iter": max_iter}
-        times = self._run(PILOT, range(start, start + n), settings, store=False).meeting_time
+        indices = np.arange(start, start + n)
+        times = self._run(
+            PILOT, indices, settings, store=False, progress=self.progress
+        ).meeting_time
         self.pilot = times if self.pilot is None else np.concatenate([self.pilot, times])
         return times
 
@@ -156,12 +174,18 @@ class CoupledSampler:
         lag: int | str = "auto",
         thin: int | None = None,
         max_iter: int | None = None,
+        progress: bool | None = None,
     ) -> Result:
         """Run ``n_replicates`` more replicates and return the result of all of them so far.
 
         The first call tunes the kernel and runs the pilot when needed, and fixes the
         settings of the later calls (spec R-TUNE-2). The result warns about the
         conditions of spec section 7.4.
+
+        The first Ctrl-C during the replicates lets those in progress finish and returns a
+        result flagged ``interrupted``; the next call runs the missing replicates first. A
+        second Ctrl-C raises ``KeyboardInterrupt`` at once, without a result (spec
+        section 6.5).
 
         Parameters
         ----------
@@ -176,6 +200,8 @@ class CoupledSampler:
         max_iter : int, optional
             Censor pairs still unmet at this time. ``None`` runs every pair until it
             meets on the first call, and keeps the first call's cap on later ones.
+        progress : bool, optional
+            Show the run's progress; ``None`` takes the sampler's setting.
 
         Returns
         -------
@@ -186,9 +212,15 @@ class CoupledSampler:
         if n_replicates < 1:
             raise ValueError(f"n_replicates must be at least 1, not {n_replicates}")
         settings = self._configure(k, m, lag, thin, max_iter)
-        start = 0 if self._replicates is None else len(self._replicates.index)
-        self._check_memory(settings, start + n_replicates)
-        part = self._run(MAIN, range(start, start + n_replicates), settings)
+        done = 0 if self._replicates is None else len(self._replicates.index)
+        self._check_memory(settings, done + n_replicates)
+        part = self._run(
+            MAIN,
+            self._next_indices(n_replicates),
+            settings,
+            progress=self.progress if progress is None else progress,
+            interruptible=True,
+        )
         self.settings = settings
         self._replicates = (
             part if self._replicates is None else engine.merge([self._replicates, part])
@@ -204,25 +236,56 @@ class CoupledSampler:
             **settings,
         )
         for issue in diagnostics.issues(result):
-            if issue.kind not in _LIVE:
-                warn(issue.message, ConvergenceWarning)
+            # Disagreeing tuning chains, and slow pairs in this process, were warned about
+            # as they happened.
+            if issue.kind == "tuning" or (issue.kind == "slow" and self.pool is None):
+                continue
+            warn(issue.message, ConvergenceWarning)
         return result
 
+    def _next_indices(self, n: int) -> IntArray:
+        # The requested replicates that an interrupted run never started come first, then
+        # new indices, so that a run completes an interrupted one (spec section 6.5).
+        if self._replicates is None:
+            return np.arange(n)
+        requested = self._replicates.requested
+        missing = np.setdiff1d(requested, self._replicates.index)
+        top = int(requested[-1]) + 1
+        return np.concatenate([missing, np.arange(top, top + n)])[:n]
+
     def _run(
-        self, namespace: int, indices: range, settings: dict[str, Any], store: bool = True
+        self,
+        namespace: int,
+        indices: IntArray,
+        settings: dict[str, Any],
+        *,
+        store: bool = True,
+        progress: bool = False,
+        interruptible: bool = False,
     ) -> engine.Replicates:
-        # The engine on new replicates, warning live about slow pairs and zero densities.
-        replicates = engine.run(
-            self.target,
-            self.kernel,
-            self.initial,
-            indices,
-            root=self.seed,
-            namespace=namespace,
-            store=store,
-            monitor=_slow_pairs(settings["lag"], settings["m"]),
-            **settings,
-        )
+        # The engine on the given replicates, here or on the pool. In this process it warns
+        # about slow pairs as they happen; a main run stops on Ctrl-C (spec section 6.5).
+        job = Job(self.target, self.kernel, self.initial, self.seed, namespace, settings, store)
+        slow = _slow_pairs(settings["lag"], settings["m"])
+        description = "pilot pairs" if namespace == PILOT else "replicates"
+        bar = Progress(len(indices), description) if progress else None
+        interrupt = Interrupt()
+
+        def monitor(status: engine.Status) -> bool:
+            if bar is not None:
+                bar.update(status.finished)
+            return slow(status)
+
+        def on_part(part: engine.Replicates) -> None:
+            if bar is not None:
+                bar.update(bar.finished + len(part.index))
+
+        with interrupt.catching() if interruptible else nullcontext():
+            try:
+                replicates = execute(job, indices, self.pool, interrupt, monitor, on_part)
+            finally:
+                if bar is not None:
+                    bar.close()
         if len(replicates.zero_density):
             warn(
                 f"{len(replicates.zero_density)} replicates start where the target density "
@@ -300,6 +363,8 @@ def sample(
     thin: int | None = None,
     max_iter: int | None = None,
     names: Sequence[str] | None = None,
+    pool: Any = None,
+    progress: bool = False,
     rng: Seed = None,
 ) -> Result:
     """Unbiased estimates of expectations under a target, in one call (spec R-API-1).
@@ -320,6 +385,8 @@ def sample(
         vectorize=vectorize,
         kernel=kernel,
         names=names,
+        pool=pool,
+        progress=progress,
         rng=rng,
     )
     return sampler.run(n_replicates, k=k, m=m, lag=lag, thin=thin, max_iter=max_iter)

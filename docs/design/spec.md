@@ -229,7 +229,7 @@ $$d_{TV}(\pi_t, \pi) \le \mathbb E\big[\max(0, \lceil (\tau - L - t)/L \rceil)\b
 
   It needs the Euclidean distance $\lVert X_s - Y_{s-L}\rVert$ for $L \le s < \tau$, which the engine records. Its value depends on the parametrisation; the documentation says so.
 
-### 3.7 Budgets (should)
+### 3.7 Budgets (should; deferred beyond v0.1, DECISIONS #22)
 
 Averaging only the replicates completed by a deadline is biased by $-\mathbb E[H\,\mathbb 1(C > t)]$ (Glynn & Heidelberger 1990). The exactly unbiased per-lane estimator (GH91 $\bar\mu_1$, JOA20 §3.3) works as follows:
 1. Each lane runs replicates in sequence.
@@ -461,19 +461,22 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
   - `None` runs in-process;
   - an integer creates that many worker processes;
   - an object with `submit` (a `concurrent.futures.Executor`), or with `map` (emcee/dynesty/schwimmbad style), is used as given.
-- **Tasks:** chunks of replicate indices, each sized for at least about 10 ms of work. Each worker runs the engine on its chunk.
-- **Results:** reduced in index order.
+- **Tasks:** chunks of consecutive replicate indices, four per worker: the pool's size, an executor's `_max_workers`, or else the number of CPUs. Each worker runs the engine on its chunk. Chunks are submitted at once, in index order; a pool with only `map` runs them in waves of one per worker (DECISIONS #21).
+- **Results:** reduced in index order. The wall time of a pool run is the parent's.
 - **Worker hygiene:**
-  - every task runs under `threadpool_limits(1)`, so BLAS is pinned to one thread in user pools too;
+  - every task in another process runs under `threadpool_limits(1)`, so BLAS is pinned to one thread in user pools too. Tasks in the parent process, on a thread pool, leave BLAS settings alone: they belong to the process, and concurrent threads would restore each other's;
+  - pools that telescopic creates start their workers with the spawn method, which behaves alike on every platform; forking a process whose BLAS runs threads can deadlock;
   - in pools that telescopic creates, the target is shipped once per worker and workers ignore SIGINT. With a user executor the target travels with each task.
 - **Picklability:** telescopic ships the target, the initial distribution and the kernel (which can hold user functions, such as Gibbs conditionals) to the workers it creates with `cloudpickle` when it is installed (the `parallel` extra), so functions defined in a notebook work under the spawn and forkserver start methods (D-27). Otherwise they must be picklable, and the error says how to fix it. The documentation covers the `if __name__ == "__main__"` guard.
 - **Counters:** each task returns its own numbers of log-density and gradient evaluations, since the `Target` counters of a worker process are not the parent's.
 
 ### 6.5 Interruption (R-EXEC-6)
 
-- **First Ctrl-C:** no new replicate starts, the ones in progress finish, and the result is flagged `interrupted`. It contains every started replicate, which form a prefix of the indices. Process pools that telescopic creates finish their running chunks; a `.map` pool returns its completed waves only.
+- **First Ctrl-C:** no new replicate starts, the ones in progress finish, and the result is flagged `interrupted`. It contains every started replicate. Process pools that telescopic creates finish their running chunks and cancel the others, except the first; a `.map` pool returns its completed waves only. Ctrl-C reaches the workers of a user's pool too, and how they react is up to the pool.
+- **Requested indices:** a result records the indices it was asked for, and `interrupted` is true while one of them has not run. In-process, and on pools that start tasks in order, the started replicates form a prefix of the indices. The sampler's next run starts with the missing indices, and `merge` joins the requests, so a run that completes an interrupted one clears the flag (DECISIONS #20).
 - **Its estimates are consistent, not exactly unbiased:** the number of replicates depends on their costs, which correlate with $h$ through $\tau$, so the mean is a ratio estimator (Glynn & Heidelberger 1991). The bias is visible with few lanes (one lane: $z = -12.9$ in design review D-R3) and was not detectable with 16 or more. `summary()` says so. Running the remaining replicates of the requested $R$ restores exact unbiasedness, because $R$ is then fixed in advance (D-22).
-- **Second Ctrl-C:** raises `KeyboardInterrupt` at once, without a result.
+- **Second Ctrl-C:** raises `KeyboardInterrupt` at once, without a result, and stops the workers that telescopic started.
+- **Scope:** tuning and the meeting-time pilot have no result to return early: Ctrl-C there raises `KeyboardInterrupt`.
 
 ### 6.6 Memory (R-EXEC-7)
 
@@ -496,7 +499,7 @@ Fields:
 - `n_log_prob`, `n_grad` and `wall_time` for the run;
 - `measure` (a `SignedMeasure`);
 - `tuning` and `pilot` (reports);
-- `interrupted`.
+- `interrupted`: whether a requested replicate has not run (§6.5).
 
 Methods:
 - **Estimates:**
@@ -698,6 +701,7 @@ These targets are measured by `benchmarks/` and are not gating.
    - unbiased asymptotic-variance reports (UPAVE).
 4. **Families:** particle MCMC (CCPF, PMMH), piecewise-deterministic samplers, partitions, and tempering for multimodal targets.
 5. **Outputs:**
+   - budgets: the per-lane estimator of §3.7 (DECISIONS #22);
    - streaming estimators with constant memory;
    - HDF5/Zarr checkpoints with mid-replicate snapshots;
    - nonlinear functionals by randomised multilevel Monte Carlo.

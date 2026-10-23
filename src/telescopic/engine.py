@@ -41,6 +41,9 @@ class Replicates:
         (to the cap for a censored pair).
     zero_density : ndarray of int
         The replicates whose :math:`X_0` or :math:`Y_0` has zero target density.
+    requested : ndarray of int
+        The indices the run was asked for, sorted: ``index`` lacks those of replicates
+        that an interrupted run never started (spec section 6.5).
     n_log_prob, n_grad : int
         Evaluations of the log-density and its gradient (spec R-EST-7).
     seconds : float
@@ -60,6 +63,7 @@ class Replicates:
     distance_time: IntArray
     distance: FloatArray
     zero_density: IntArray
+    requested: IntArray
     n_log_prob: int = 0
     n_grad: int = 0
     seconds: float = 0.0
@@ -119,7 +123,7 @@ def run(
         A tuned kernel.
     initial : object with ``rvs(random_state=generator)``
     indices : iterable of int
-        Replicate indices, started in this order.
+        Replicate indices, started in this order; at least one.
     root : numpy.random.SeedSequence
         Root seed of the run.
     namespace : int
@@ -156,10 +160,11 @@ def run(
     check_settings(k, m, lag, thin, max_iter)
     if lanes < 1:
         raise ValueError(f"lanes must be at least 1, not {lanes}")
-    queue = iter(indices)
-    first = next(queue, None)
-    if first is None:
+    requested = np.fromiter(indices, dtype=np.int64)
+    if not len(requested):
         raise ValueError("indices must not be empty")
+    queue = iter(requested.tolist())
+    first = next(queue)
     evaluations, start = (target.n_log_prob, target.n_grad), time.perf_counter()
     head = _Start(first, initial, root, namespace, None)
     ndim = len(head.x0)
@@ -173,7 +178,12 @@ def run(
         stopping = (monitor is not None and monitor(batch.status())) or stopping
         if not stopping:
             batch.fill(free, starts)
-    return batch.result(target.n_log_prob - evaluations[0], target.n_grad - evaluations[1], start)
+    return batch.result(
+        np.sort(requested),
+        target.n_log_prob - evaluations[0],
+        target.n_grad - evaluations[1],
+        start,
+    )
 
 
 def check_settings(k: int, m: int, lag: int, thin: int, max_iter: int | None) -> None:
@@ -196,6 +206,8 @@ def check_settings(k: int, m: int, lag: int, thin: int, max_iter: int | None) ->
 
 def merge(parts: Sequence[Replicates]) -> Replicates:
     """Join the outputs of disjoint sets of replicates, sorted by replicate index.
+
+    The requested indices are the union of the parts' requested indices.
 
     Parameters
     ----------
@@ -221,6 +233,7 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
             columns[name] = np.concatenate([getattr(part, name) for part in parts])[order]
     return Replicates(
         **columns,
+        requested=np.unique(np.concatenate([part.requested for part in parts])),
         n_log_prob=sum(part.n_log_prob for part in parts),
         n_grad=sum(part.n_grad for part in parts),
         seconds=sum(part.seconds for part in parts),
@@ -356,7 +369,9 @@ class _Batch:
             self.n_started, self.n_finished, int(self.replicate[lane]), int(self.t[lane])
         )
 
-    def result(self, n_log_prob: int, n_grad: int, start: float) -> Replicates:
+    def result(
+        self, requested: IntArray, n_log_prob: int, n_grad: int, start: float
+    ) -> Replicates:
         # The seconds since start include this join, a large part of a run with many atoms.
         index, tau, cost = self.finished.join()
         owner, atoms, weights = self.atoms.join(keep=index[tau >= 0])
@@ -372,6 +387,7 @@ class _Batch:
             distance_time=distance_time,
             distance=distance,
             zero_density=np.sort(np.array(self.zero_density, dtype=np.int64)),
+            requested=requested,
             n_log_prob=n_log_prob,
             n_grad=n_grad,
             seconds=time.perf_counter() - start,

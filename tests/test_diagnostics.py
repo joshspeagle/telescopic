@@ -30,6 +30,7 @@ def synthetic(meeting_times, values, *, k=0, lag=1, max_iter=None, tuning=None):
             distance_time=np.zeros(0, dtype=np.int64),
             distance=np.zeros(0),
             zero_density=np.zeros(0, dtype=np.int64),
+            requested=np.arange(len(tau)),
         ),
         k=k,
         m=k,

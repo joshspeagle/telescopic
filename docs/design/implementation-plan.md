@@ -29,7 +29,8 @@ telescopic/
 │   │   └── mixture.py        # Mixture
 │   ├── estimators.py         # lag weights, thinning coefficients, unbiased covariance, quantiles, histograms
 │   ├── engine.py             # lockstep lanes with refill; Replicate records
-│   ├── parallel.py           # in-process and pool execution of index chunks; worker set-up; interrupts
+│   ├── _parallel.py          # in-process and pool execution of index chunks; worker set-up; interrupts
+│   ├── _progress.py          # progress bars (tqdm) or lines on stderr
 │   ├── tuning.py             # adaptive Metropolis pilot, TuningReport, dual averaging, choose_k
 │   ├── measure.py            # SignedMeasure
 │   ├── diagnostics.py        # TV and W1 bounds, tail index, variance shares, warning checks
@@ -120,7 +121,7 @@ SignedMeasure(atoms (N, d), weights (N,), replicate (N,), n_replicates)
 
 ```text
 Replicates(index, meeting_time, cost, atoms, weights, owner, distance_owner, distance_time,
-           distance, zero_density, n_log_prob, n_grad, seconds, paths)   # inf = censored
+           distance, zero_density, requested, n_log_prob, n_grad, seconds, paths)   # inf = censored
 merge(parts) -> Replicates
 run(target, kernel, initial, indices, *, root, namespace, k, m, lag, thin=1, max_iter=None,
     lanes=64, store=True, keep_paths=False, monitor=None) -> Replicates
@@ -137,20 +138,21 @@ Status(started, finished, slowest, t)                       # given to the monit
 - **Monitoring:** the engine emits no warning. It records the facts (censoring, starts with zero density, evaluations, time) and passes a `Status` to `monitor` every iteration; the sampler warns about slow pairs from it, shows progress, and stops new replicates on an interrupt by returning true. Results and facts reach the parent from pool workers, which warnings would not.
 - **Pilot use:** the meeting-time pilot calls `run(k=0, m=0, lag=1, store=False)`.
 
-### 2.7 Parallel execution (`parallel.py`)
+### 2.7 Parallel execution (`_parallel.py`)
 
 ```text
-execute(task, chunks, pool) -> list[list[Replicate]]   # in index order
-make_chunks(indices, chunk_size) -> list[array]
+Job(target, kernel, initial, root, namespace, settings, store)    # job(indices, monitor) runs the engine
+execute(job, indices, pool, interrupt, monitor=None, on_part=None) -> Replicates   # requested = indices
+Interrupt().catching()                                            # the first Ctrl-C sets .stopping; the second raises
 ```
 
 - **Pool forms:**
   - `pool=None` runs in-process;
-  - `pool=int` creates a `ProcessPoolExecutor` whose initializer caches the target and pins BLAS threads with `threadpoolctl`;
+  - `pool=int` creates a spawn `ProcessPoolExecutor` whose initializer loads the job once and ignores SIGINT;
   - an `Executor` is used through `submit`;
   - a `.map`-only pool runs in waves.
-- **Interrupts:** a `KeyboardInterrupt` in the parent cancels the chunks not yet started, awaits the running ones, and returns every started index, a prefix (spec §6.5). A `.map` pool returns its completed waves.
-- **Hygiene:** each task runs under `threadpool_limits(1)`. Pools that telescopic creates ship the target once per worker, with `cloudpickle` when it is installed.
+- **Interrupts:** the first Ctrl-C in the parent cancels the chunks not yet started, except the first, and awaits the running ones (spec §6.5). A `.map` pool returns its completed waves. The second raises, and terminates the workers that telescopic started.
+- **Hygiene:** each task in another process runs under `threadpool_limits(1)`. Jobs are pickled with `cloudpickle` when it is installed.
 
 ### 2.8 Tuning (`tuning.py`)
 
@@ -197,7 +199,7 @@ Each milestone is one reviewed unit (`CLAUDE.md`, Milestones). It lands with its
 | M4 | `results`, `diagnostics`, warnings, summary | test-plan §2.7–2.8 green |
 | M5 | `tuning`, `CoupledSampler`, `sample` | test-plan §2.9 green; the spec §8.3 example runs |
 | M6 | `MALA`, `HMC`, `Gibbs` | test-plan §2.4 (these kernels) green |
-| M7 | `parallel`, interrupts, budget mode (should) | test-plan §2.10 green; serial and pool results identical |
+| M7 | `_parallel`, interrupts, progress; budget mode deferred (DECISIONS #22) | test-plan §2.10 green; serial and pool results identical |
 | M8 | `io`, `plotting`, `examples`, `testing.check_coupling` | test-plan §2.11 green |
 | M9 | Slow statistical suite, benchmarks, calibration of the warning thresholds | test-plan §2.12 green; benchmark JSON committed under `benchmarks/results/` |
 | M10 | Docs: theory, user guide, tutorials, API reference, README | `sphinx-build -W` passes with executed tutorials |

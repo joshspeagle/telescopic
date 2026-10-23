@@ -1,4 +1,5 @@
 import itertools
+from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -126,9 +127,13 @@ def test_the_summary_converts_to_pandas():
     assert list(RESULT.summary().to_pandas().index) == ["a", "b"]
 
 
-def test_an_interrupted_run_says_its_estimates_are_not_exactly_unbiased():
-    result = Result(RESULT._replicates, interrupted=True, **SETTINGS)
-    assert "not exactly unbiased" in repr(result.summary())
+def test_a_result_missing_requested_replicates_is_interrupted_until_they_run():
+    # Replicates 0 to 39 ran of 0 to 59 requested; a run of 40 to 59 completes them.
+    interrupted = Result(replace(RESULT._replicates, requested=np.arange(60)), **SETTINGS)
+    assert interrupted.interrupted
+    assert "not exactly unbiased" in repr(interrupted.summary())
+    rest = Result(gaussian_run(range(40, 60), **SETTINGS), **SETTINGS)
+    assert not interrupted.merge(rest).interrupted
 
 
 def test_names_must_match_the_dimension():
