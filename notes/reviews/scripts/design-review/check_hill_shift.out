@@ -1,0 +1,3 @@
+true alpha 1.2: P(alarm) on tau-L+1 0.922; on tau = L + G - 1 0.111
+true alpha 1.5: P(alarm) on tau-L+1 0.777; on tau = L + G - 1 0.046
+true alpha 1.8: P(alarm) on tau-L+1 0.601; on tau = L + G - 1 0.016

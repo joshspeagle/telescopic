@@ -1,0 +1,2 @@
+correct kernel, d=3, n=20000: acceptance 0.380; KS p-values of whitened moved coordinates vs N(0,1): [1.37063409e-242 2.29642210e-103 0.00000000e+000]
+KS of all whitened increments including stays (a point mass at 0): 0.00e+00

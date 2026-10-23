@@ -1,0 +1,15 @@
+d=   2 z @ chol.T                              : rows differing from the single-row result: 9/45
+d=   2 np.dot(z, chol.T)                       : rows differing from the single-row result: 9/45
+d=   2 solve_triangular-ish (lstsq via solve)  : rows differing from the single-row result: 21/45
+d=   5 z @ chol.T                              : rows differing from the single-row result: 37/45
+d=   5 np.dot(z, chol.T)                       : rows differing from the single-row result: 37/45
+d=   5 solve_triangular-ish (lstsq via solve)  : rows differing from the single-row result: 40/45
+d=  10 z @ chol.T                              : rows differing from the single-row result: 44/45
+d=  10 np.dot(z, chol.T)                       : rows differing from the single-row result: 44/45
+d=  10 solve_triangular-ish (lstsq via solve)  : rows differing from the single-row result: 37/45
+d=  30 z @ chol.T                              : rows differing from the single-row result: 44/45
+d=  30 np.dot(z, chol.T)                       : rows differing from the single-row result: 44/45
+d=  30 solve_triangular-ish (lstsq via solve)  : rows differing from the single-row result: 44/45
+d= 100 z @ chol.T                              : rows differing from the single-row result: 44/45
+d= 100 np.dot(z, chol.T)                       : rows differing from the single-row result: 44/45
+d= 100 solve_triangular-ish (lstsq via solve)  : rows differing from the single-row result: 44/45

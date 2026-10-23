@@ -84,7 +84,7 @@ files = ["src/telescopic"]
 
 [tool.ruff]
 line-length = 99
-extend-exclude = ["research_notes", "reports", "*.md"]
+extend-exclude = ["research_notes", "notes/reviews/scripts", "*.md"]
 
 [tool.ruff.lint]
 # No pep8-naming rules: the code follows the spec's notation (H, R, L), as CLAUDE.md allows.

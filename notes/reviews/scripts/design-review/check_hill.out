@@ -1,0 +1,14 @@
+E[tau-L+1]=   5 n=  100 k_h=sqrt(n) : on tau-L+1 median  3.20, P(<2) 0.036 | on tau with L=q99: median   7.42, P(<2) 0.000
+E[tau-L+1]=   5 n=  100 k_h=n/10    : on tau-L+1 median  3.20, P(<2) 0.036 | on tau with L=q99: median   7.42, P(<2) 0.000
+E[tau-L+1]=   5 n= 1000 k_h=sqrt(n) : on tau-L+1 median  4.40, P(<2) 0.000 | on tau with L=q99: median   8.94, P(<2) 0.000
+E[tau-L+1]=   5 n= 1000 k_h=n/10    : on tau-L+1 median  3.22, P(<2) 0.000 | on tau with L=q99: median   7.80, P(<2) 0.000
+E[tau-L+1]=  50 n=  100 k_h=sqrt(n) : on tau-L+1 median  3.06, P(<2) 0.041 | on tau with L=q99: median   7.42, P(<2) 0.000
+E[tau-L+1]=  50 n=  100 k_h=n/10    : on tau-L+1 median  3.06, P(<2) 0.041 | on tau with L=q99: median   7.42, P(<2) 0.000
+E[tau-L+1]=  50 n= 1000 k_h=sqrt(n) : on tau-L+1 median  4.31, P(<2) 0.000 | on tau with L=q99: median   8.93, P(<2) 0.000
+E[tau-L+1]=  50 n= 1000 k_h=n/10    : on tau-L+1 median  3.10, P(<2) 0.000 | on tau with L=q99: median   7.76, P(<2) 0.000
+E[tau-L+1]= 500 n=  100 k_h=sqrt(n) : on tau-L+1 median  3.08, P(<2) 0.042 | on tau with L=q99: median   7.44, P(<2) 0.000
+E[tau-L+1]= 500 n=  100 k_h=n/10    : on tau-L+1 median  3.08, P(<2) 0.042 | on tau with L=q99: median   7.44, P(<2) 0.000
+E[tau-L+1]= 500 n= 1000 k_h=sqrt(n) : on tau-L+1 median  4.30, P(<2) 0.000 | on tau with L=q99: median   8.93, P(<2) 0.000
+E[tau-L+1]= 500 n= 1000 k_h=n/10    : on tau-L+1 median  3.09, P(<2) 0.000 | on tau with L=q99: median   7.76, P(<2) 0.000
+Pareto(1.5), n=100, k_h=10 (a true alarm case): median 1.54, P(<2) 0.776
+Pareto(3.0), n=100, k_h=10 (finite variance): median 3.11, P(<2) 0.074

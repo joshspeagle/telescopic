@@ -1,0 +1,8 @@
+d=  2 z @ chol.T                    : max distinct results of one row across batch sizes = 1
+d=  2 einsum('ij,kj->ik', z, chol)  : max distinct results of one row across batch sizes = 1
+d=  5 z @ chol.T                    : max distinct results of one row across batch sizes = 2
+d=  5 einsum('ij,kj->ik', z, chol)  : max distinct results of one row across batch sizes = 1
+d= 10 z @ chol.T                    : max distinct results of one row across batch sizes = 2
+d= 10 einsum('ij,kj->ik', z, chol)  : max distinct results of one row across batch sizes = 1
+d= 30 z @ chol.T                    : max distinct results of one row across batch sizes = 2
+d= 30 einsum('ij,kj->ik', z, chol)  : max distinct results of one row across batch sizes = 1

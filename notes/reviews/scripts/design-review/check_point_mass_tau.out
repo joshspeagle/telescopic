@@ -1,0 +1,2 @@
+d=1: P(X_1 = Y_0) = 0.454; for those pairs AJ24 tau = 1, flag-only engine records tau = 1 + G with E[G] = 1.84 (acceptance at x0 0.544); each recorded step is counted as a coupled step (2 kernel applications)
+d=5: P(X_1 = Y_0) = 0.571; for those pairs AJ24 tau = 1, flag-only engine records tau = 1 + G with E[G] = 2.33 (acceptance at x0 0.429); each recorded step is counted as a coupled step (2 kernel applications)

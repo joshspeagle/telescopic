@@ -38,7 +38,7 @@ telescopic/
 │   ├── io.py                 # versioned .npz save and load
 │   ├── plotting.py           # matplotlib helpers (optional dependency)
 │   ├── examples.py           # targets with exact answers
-│   └── testing.py            # FixedDraws, check_coupling
+│   └── testing.py            # fixed_draws, random_draws, check_coupling
 ├── tests/                    # see test-plan.md
 ├── benchmarks/               # run.py: timing and efficiency cases, JSON output, run by hand
 ├── docs/                     # Sphinx + MyST-NB (see §5)
@@ -52,17 +52,17 @@ telescopic/
 ```text
 root_seed(rng) -> SeedSequence                        # SPEC 7 normalisation; records entropy and spawn key
 replicate_generator(root, namespace, index) -> Generator   # PCG64DXSM(SeedSequence(root.entropy, spawn_key=root.spawn_key + (namespace, index)))
-Streams(n_lanes, ndim, block=64)                       # per-lane buffers of normals and uniforms
-  .assign(lane, generator)                             # a new replicate enters a lane: fresh buffers
+Streams(n_lanes, width=...)                            # per-lane buffers of normals and uniforms
+  .assign(lane, generator)                             # a new replicate enters a lane; its buffers read generator.spawn(2)
   .view(lanes) -> Draws
 Draws                                                  # what kernels see; rows follow the lanes of the view
-  .normal(size) -> (n, size)      .uniform() -> (n,)     .generator(row) -> Generator
-  .subset(rows) -> Draws          __len__
+  .normal(size) -> (n, size)      .uniform() -> (n,)     .log_uniform() -> (n,)
+  .generator(row) -> Generator    .subset(rows) -> Draws  __len__
 ```
 
-- **Buffers:** each lane holds a buffer of `block × ndim` normals and `block × 4` uniforms, with cursors. A request that a lane's buffer cannot satisfy refills that lane from its generator. Requests are gathered by advanced indexing.
-- **Invariance:** buffer sizes depend only on `ndim`, so a replicate's draws do not depend on the lane layout (spec R-EXEC-2).
-- **Tests:** `testing.FixedDraws` implements the `Draws` interface from prescribed arrays, for oracle tests.
+- **Buffers:** each lane holds a buffer of normals and one of uniforms, each fed by its own child generator and read in order through a cursor. A request that a lane's buffer cannot satisfy moves the unread numbers to the front and tops the buffer up; a request wider than the buffer widens it. Requests are gathered from a strided view of whole windows.
+- **Invariance:** each lane's numbers are the in-order streams of its replicate's children, so they depend on neither the lane layout nor the buffer width (spec R-EXEC-2).
+- **Tests:** `testing.fixed_draws` replays prescribed arrays, for oracle tests; `testing.random_draws` serves fresh numbers to any number of rows from one generator.
 
 ### 2.2 Target (`target.py`)
 
@@ -85,23 +85,24 @@ State(x (n, d), log_prob (n,), grad (n, d) | None)
 Kernel
   needs_grad: bool
   step(target, state, draws) -> (state, accepted (n,))
-  coupled_step(target, sx, sy, draws) -> (sx, sy, met (n,))
-  tune(target, initial, root, **options) -> (kernel, TuningReport)   # returns self when already tuned
+  coupled_step(target, sx, sy, draws) -> (sx, sy)
+  tune(target, initial, rng, **options) -> (kernel, TuningReport)    # returns self when already tuned
   init_state(target, x) -> State                                   # evaluates log_prob (and grad if needed)
 ```
 
 - **Purity:** kernels are pure functions of their inputs and draws, and are picklable.
-- **Meeting:** on a meeting, `coupled_step` copies the rows of `sx` into `sy`. Every kernel documents its draws per step in its docstring.
+- **Meeting:** a coupling that makes the proposals identical gives `sy` a copy of `sx`'s proposal and log-density; the engine detects meetings (§4). Every kernel documents its draws per step in its docstring.
+- **Batch invariance:** kernels hold their Cholesky factor and its inverse, and apply them with `np.einsum` (spec R-KER-6).
 
 ### 2.4 Couplings (`couplings.py`)
 
 ```text
-reflection_maximal(mu_x, mu_y, chol, draws) -> (x, y, identical)
+reflection_maximal(mu_x, mu_y, chol, inverse, draws) -> (x, y, identical)   # inverse = chol^{-1}
 maximal(p, q, draws, eta=1.0) -> (x, y, identical, n_draws)       # p, q: lists of per-row distributions
 discrete_maximal(log_p, log_q, draws) -> (i, j)                    # (n, K) log-probabilities
 ```
 
-`p` and `q` provide `sample(generator)` and `log_density(value)`. Adapters wrap frozen SciPy distributions.
+`p` and `q` are frozen SciPy-like distributions: `rvs(random_state=...)` and a normalised `logpdf` or `logpmf`.
 
 ### 2.5 Estimators and measures (`estimators.py`, `measure.py`)
 
@@ -118,16 +119,18 @@ SignedMeasure(atoms (N, d), weights (N,), replicate (N,), n_replicates)
 ### 2.6 Engine (`engine.py`)
 
 ```text
-Replicate(index, meeting_time | None, cost, atoms, weights, correction, distances, paths | None)
+Replicates(index, meeting_time, cost, atoms, weights, owner, correction, distance_owner,
+           distance_time, distance, paths)         # arrays over a set of replicates; -1 = censored
+merge(parts) -> Replicates
 run(target, kernel, initial, indices, *, root, namespace, k, m, lag, thin=1, max_iter=None,
-    lanes=64, store=True, keep_paths=False, slow_after=None, stop=None) -> list[Replicate]
+    lanes=64, store=True, keep_paths=False, slow_after=None, stop=None) -> Replicates
 ```
 
 - **Lane state:** replicate index, $t$, phase, $\tau$, cost, the `State` of $X$ and of $Y$, and the atom accumulators.
 - **Each iteration:**
   1. `kernel.step` on lagging and after-meeting lanes;
   2. `kernel.coupled_step` on coupled lanes;
-  3. bookkeeping;
+  3. bookkeeping, including the exact comparison of positions after coupled steps and at $t = L$;
   4. refill.
 - **Storage:** atoms from $t = k$, with weights from `averaging_times` and `correction_coefficients`. `correction` marks the bias-correction atoms.
 - **Stopping:** `stop` is a callable polled each iteration, used for interrupts. Once it returns true, no new replicates start.
@@ -145,14 +148,15 @@ make_chunks(indices, chunk_size) -> list[array]
   - `pool=int` creates a `ProcessPoolExecutor` whose initializer caches the target and pins BLAS threads with `threadpoolctl`;
   - an `Executor` is used through `submit`;
   - a `.map`-only pool runs in waves.
-- **Interrupts:** a `KeyboardInterrupt` in the parent cancels pending chunks and returns the completed prefix of indices.
+- **Interrupts:** a `KeyboardInterrupt` in the parent cancels the chunks not yet started, awaits the running ones, and returns every started index, a prefix (spec §6.5). A `.map` pool returns its completed waves.
+- **Hygiene:** each task runs under `threadpool_limits(1)`. Pools that telescopic creates ship the target once per worker, with `cloudpickle` when it is installed.
 
 ### 2.8 Tuning (`tuning.py`)
 
 ```text
 adaptive_metropolis(target, initial, root, n_chains=4, n_steps=None) -> AdaptiveRun(cov, scale, acceptance, chains)
 dual_averaging(make_kernel, target, initial_states, root, target_accept, n_steps) -> step_size
-choose_kml(meeting_times, quantile=0.99, multiple=10) -> (k, m, lag)    # spec R-TUNE-2
+choose_kml(meeting_times, quantile=0.99, multiple=10) -> (k, m, lag)    # spec R-TUNE-2; inverted-CDF quantile; censored = inf
 ```
 
 ### 2.9 Results (`results.py`, `diagnostics.py`)
@@ -186,7 +190,7 @@ Each milestone is one reviewed unit (`CLAUDE.md`, Milestones). It lands with its
 | M | Content | Exit criteria |
 |---|---|---|
 | M0 | Scaffold: pyproject, layout, CI, pre-commit, docs skeleton, licence files, `warnings`, `_random` | the commands of `CLAUDE.md` pass; test-plan §2.1 green |
-| M1 | Coupling primitives, `testing.FixedDraws` | test-plan §2.2 green |
+| M1 | Coupling primitives, `testing.fixed_draws` | test-plan §2.2 green |
 | M2 | `Target`, `initial`, `State`, `Kernel`, `RandomWalk`, `Independence`, `Mixture` | test-plan §2.3–2.4 (these kernels) green |
 | M3 | `estimators`, `measure`, `engine` | test-plan §2.5–2.6 green, including invariance across lane counts |
 | M4 | `results`, `diagnostics`, warnings, summary | test-plan §2.7–2.8 green |
@@ -207,13 +211,13 @@ These add to the rules of `CLAUDE.md`.
   - no Python loops over atoms or replicates where a NumPy expression exists;
   - Python loops over lanes only for per-replicate generators, refills and user conditionals.
 - **Log space:** accept or reject with `log u < log_ratio`, a strict inequality. NumPy's `random()` is in [0, 1), so $\log u$ can be $-\infty$, and a proposal with $\log\pi = -\infty$ must still be rejected.
-- **Whitening:** proposals are generated and couplings computed with the same Cholesky factor.
-- **Meetings:** compare with `np.array_equal` only in tests and debug assertions; the kernels' flags drive the engine.
+- **Whitening:** proposals are generated and couplings computed with the same Cholesky factor, applied with `np.einsum` together with its precomputed inverse (spec R-KER-6).
+- **Meetings:** the engine compares positions exactly (`np.all(x == y, axis=1)`), never with a tolerance, and never recomputes $Y$ (spec R-EST-2).
 - **Optional dependencies:** matplotlib, tqdm and pandas are imported inside the functions that use them.
 
 ## 5. Documentation plan
 
-- **Toolchain:** Sphinx, MyST-NB (MyST Markdown notebooks executed at build time, cached), numpydoc, furo, sphinx-copybutton and sphinxcontrib-bibtex.
+- **Toolchain:** Sphinx, MyST-NB (MyST Markdown notebooks executed at build time, cached), numpydoc, furo and sphinx-copybutton.
 - **Tutorials:** each runs in under 2 minutes on a laptop CPU.
 - **Pages:**
   1. *Getting started*: install, the README example expanded, and what the summary means.
@@ -244,7 +248,7 @@ These add to the rules of `CLAUDE.md`.
 | Job | Contents |
 |---|---|
 | `lint` | `ruff check`, `ruff format --check`, `mypy` |
-| `test` | Ubuntu with Python 3.11–3.14, plus macOS and Windows at the oldest and newest Python; `pytest` (fast tier); coverage on one job |
+| `test` | Ubuntu with Python 3.11 to the newest release, plus macOS and Windows at the oldest and newest Python; `pytest` (fast tier); coverage on one job |
 | `oldest` | Python 3.11 with NumPy 1.26 and SciPy 1.12 |
 | `docs` | `sphinx-build -W --keep-going` with executed tutorials |
 | `dist` | `python -m build`; install the wheel in a clean environment; import smoke test |
@@ -255,9 +259,10 @@ These add to the rules of `CLAUDE.md`.
 | Risk | Mitigation |
 |---|---|
 | Weight or index bugs bias estimates by amounts too small to detect statistically | algebraic identity tests with Hypothesis; exact finite-state expectations; a perfect-kernel structural test (test-plan §2.5) |
-| A coupling that "meets" up to rounding only | the flag-and-copy contract; a binomial test of meeting frequency against the exact Gaussian formula (test-plan §2.2) |
-| Heavy-tailed estimators make statistical tests flaky | 5-standard-error tolerances with a sequential rerun at 4× $R$; coverage tests in the slow tier only |
+| A coupling that "meets" up to rounding only | copy-on-event couplings and the engine's exact comparison; a binomial test of the frequency of equal outputs against the exact Gaussian formula (test-plan §2.2) |
+| Heavy-tailed estimators make statistical tests flaky | sequential escalation (test-plan §1); coverage tests in the slow tier only |
 | Python overhead with cheap targets | lockstep lanes over replicates; a vectorised log-density path |
-| Per-replicate streams slow down lockstep batches | buffered block draws (1.4× measured); a benchmark guards it |
+| Per-replicate streams slow down lockstep batches | buffered draws gathered by windows (about 2× a shared generator, 0.3 µs per lane-step; M0 efficiency review); a benchmark guards it |
+| Batched linear algebra breaks bitwise invariance | `einsum`-only kernel arithmetic (spec R-KER-6) and a batch-of-one test per kernel |
 | Users mistake unbiased for accurate | warnings by default; a tutorial on failure modes; guarantees stated as in spec §3.3 |
 | Pool pickling and BLAS oversubscription | worker initializers, `threadpoolctl`, and documented guards |

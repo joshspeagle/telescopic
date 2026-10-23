@@ -1,0 +1,9 @@
+v_t formula vs brute-force count: 0 mismatches in 20000
+L=1 closed form min(t-k, m-k+1): 0 mismatches
+v_t < 0: 0 of 38400; v_t == 0 (zero-weight atoms inside the BC range): 5472 of 38400
+definitional H_S vs MCMC + sum c_t Delta_t: max abs error 7.11e-15 over 4000 cases
+signed measure applied to h vs H_S: max abs error 1.42e-14
+JRSSB reply weight differs from v_t/(m-k+1) in 4335 (t,k,m,L) cells with L>=2
+TV identity, pointwise: 0 mismatches
+cost formula vs horizon max(tau, m): 0 mismatches
+cells where a literal 'until t+1 > m' horizon (max(tau, m+1)) adds one step: 435

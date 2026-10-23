@@ -1,0 +1,38 @@
+simulated 30000 replicates in 2s; censored at 3000000: 0
+tau: mean 11.0, q99 35, max 7490; replicates with a chain crossing to x<0 before meeting: 27 (0.00090)
+all 30000: estimate -0.3064 +- 0.8782 (truth 0.4207)
+  batch  0: est 1.076 +- 0.534 covers False, crossings 2, max var share 0.999, hill 3.53, w2 False
+  batch  1: est -8.512 +- 13.377 covers True, crossings 3, max var share 0.785, hill 1.88, w2 False
+  batch  2: est 0.802 +- 0.010 covers False, crossings 0, max var share 0.026, hill 6.85, w2 False
+  batch  3: est -4.583 +- 9.040 covers True, crossings 2, max var share 0.965, hill 2.23, w2 False
+  batch  4: est 0.793 +- 0.011 covers False, crossings 0, max var share 0.020, hill 6.66, w2 False
+  batch  5: est 2.975 +- 4.254 covers True, crossings 1, max var share 0.999, hill 3.47, w2 False
+  batch  6: est -1.403 +- 4.329 covers True, crossings 1, max var share 0.999, hill 3.80, w2 False
+  batch  7: est -2.774 +- 7.017 covers True, crossings 1, max var share 0.999, hill 3.65, w2 False
+  batch  8: est -1.145 +- 3.964 covers True, crossings 2, max var share 0.998, hill 3.00, w2 False
+  batch  9: est 2.746 +- 3.819 covers True, crossings 1, max var share 0.999, hill 3.02, w2 False
+  batch 10: est 0.512 +- 0.554 covers True, crossings 2, max var share 0.998, hill 3.66, w2 False
+  batch 11: est -2.772 +- 7.007 covers True, crossings 1, max var share 0.999, hill 2.91, w2 False
+  batch 12: est 4.303 +- 6.869 covers True, crossings 1, max var share 0.999, hill 3.22, w2 False
+  batch 13: est 0.803 +- 0.010 covers False, crossings 0, max var share 0.026, hill 6.84, w2 False
+  batch 14: est 0.827 +- 0.055 covers False, crossings 1, max var share 0.967, hill 4.08, w2 False
+  batch 15: est -3.829 +- 9.067 covers True, crossings 1, max var share 0.999, hill 3.29, w2 False
+  batch 16: est 0.810 +- 0.009 covers False, crossings 0, max var share 0.032, hill 7.38, w2 False
+  batch 17: est 0.807 +- 0.009 covers False, crossings 0, max var share 0.030, hill 6.06, w2 False
+  batch 18: est -1.984 +- 5.470 covers True, crossings 1, max var share 0.999, hill 3.70, w2 False
+  batch 19: est 0.805 +- 0.009 covers False, crossings 1, max var share 0.028, hill 5.72, w2 False
+  batch 20: est 0.806 +- 0.009 covers False, crossings 0, max var share 0.028, hill 5.48, w2 False
+  batch 21: est 0.812 +- 0.008 covers False, crossings 0, max var share 0.038, hill 5.90, w2 False
+  batch 22: est 0.808 +- 0.009 covers False, crossings 0, max var share 0.030, hill 6.48, w2 False
+  batch 23: est -4.178 +- 9.758 covers True, crossings 1, max var share 0.999, hill 2.86, w2 False
+  batch 24: est 0.805 +- 0.009 covers False, crossings 0, max var share 0.028, hill 7.82, w2 False
+  batch 25: est 0.256 +- 0.964 covers True, crossings 2, max var share 0.986, hill 3.28, w2 False
+  batch 26: est -0.940 +- 3.406 covers True, crossings 1, max var share 0.999, hill 3.50, w2 False
+  batch 27: est 0.806 +- 0.009 covers False, crossings 0, max var share 0.028, hill 5.58, w2 False
+  batch 28: est 0.801 +- 0.010 covers False, crossings 0, max var share 0.026, hill 9.16, w2 False
+  batch 29: est 0.574 +- 0.462 covers True, crossings 2, max var share 0.999, hill 4.13, w2 False
+batches of 1000: CI covers truth 16/30; warning 2 0/30; warning 3 18/30; warning 4 1/30; warning 3 or 4 18/30
+
+real	0m10.309s
+user	0m3.707s
+sys	0m0.132s

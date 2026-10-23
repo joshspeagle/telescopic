@@ -1,0 +1,22 @@
+d=10: pilot (R0=2000, lag 1) mean tau 47.1; q99(tau-1) 152, q999 191, max 202
+  k from R0=100 pilots, beta=0.99: 5/50/95% = [116.95 142.   168.  ]; beta=0.999: 5/50/95% = [126.95 157.   196.  ]; q999 of 100 equals the sample max in 100% of rule uses (see note)
+  main run L=k=152, m=1520, R=4000: P(tau-L > k) = 0.0190 (se 0.0022); mean(tau-L) 76.3 vs pilot mean(tau-1) 46.1
+  estimated TV bound at t=k: 0.0190
+  P(tau-L > k_i) at the k_i of R0=100 pilots: 5/50/95% = [0.0098 0.0298 0.1004], fraction of pilots giving > 0.05: 0.268
+  warnings on 40 batches of R=100 (2d=20 estimates): w2 1/40, w3 0/40, w4 0/40
+  unbiasedness check: max |z| over coordinates, E[x]: 1.96, E[x^2]: 1.50
+  mean cost/(m-k+1) 1.166; 1+(k+tau_bar)/(m-k): pilot tau_bar 1.146, main-run tau_bar 1.278, main-run mean(tau-L) 1.167
+  [4s]
+d=30: pilot (R0=2000, lag 1) mean tau 200.2; q99(tau-1) 541, q999 687, max 821
+  k from R0=100 pilots, beta=0.99: 5/50/95% = [423. 480. 622.]; beta=0.999: 5/50/95% = [456. 579. 787.]; q999 of 100 equals the sample max in 100% of rule uses (see note)
+  main run L=k=542, m=5420, R=4000: P(tau-L > k) = 0.0285 (se 0.0026); mean(tau-L) 312.7 vs pilot mean(tau-1) 199.2
+  estimated TV bound at t=k: 0.0285
+  P(tau-L > k_i) at the k_i of R0=100 pilots: 5/50/95% = [0.0107 0.0638 0.1252], fraction of pilots giving > 0.05: 0.558
+  warnings on 40 batches of R=100 (2d=60 estimates): w2 3/40, w3 3/40, w4 0/40
+  unbiasedness check: max |z| over coordinates, E[x]: 1.52, E[x^2]: 2.99
+  mean cost/(m-k+1) 1.175; 1+(k+tau_bar)/(m-k): pilot tau_bar 1.152, main-run tau_bar 1.286, main-run mean(tau-L) 1.175
+  [37s]
+
+real	0m40.827s
+user	0m36.969s
+sys	0m3.526s

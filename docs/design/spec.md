@@ -2,7 +2,9 @@
 
 *Unbiased Markov chain Monte Carlo with coupled chains and telescoping sums*
 
-**Status:** draft, 2026-10-23.
+**Status:** v0.1 design, revised after the adversarial design review
+(`notes/reviews/design-review.md`), 2026-10-23. Later departures are recorded in
+`notes/DECISIONS.md`.
 
 **Inputs to this document:**
 - The landscape census: `reports/Unbiased MCMC with couplings landscape.md` and the eight notes behind it in `research_notes/Unbiased MCMC with couplings landscape/`.
@@ -123,10 +125,9 @@ This section is normative. Code, docstrings and `docs/theory.md` use exactly thi
 - **Construction (R-EST-1):**
   1. Draw $X_0$ and $Y_0$ from $\pi_0$ independently.
   2. Draw $X_t \sim P(X_{t-1}, \cdot)$ for $t = 1, \dots, L$.
-  3. For $t \ge L$, draw $(X_{t+1}, Y_{t+1-L}) \sim \bar P((X_t, Y_{t-L}), \cdot)$ until the pair has met and $t + 1 > m$.
-  4. After the meeting, only $X$ is simulated, and $Y_{t-L} := X_t$.
-- **Meeting time (R-EST-2):** $\tau = \inf\{t \ge L : X_t = Y_{t-L}\}$ (AJ24's convention, equal to JOA20's for $L = 1$). Equality is exact. The coupled kernel reports a meeting through a flag, never through a tolerance.
-- **Faithfulness (R-EST-3):** $X_t = Y_{t-L}$ for all $t \ge \tau$. The engine enforces it by copying $X$'s state (position, log-density and gradient) into $Y$ at the meeting. It does not rely on the coupled kernel.
+  3. For $t = L, L+1, \dots$ while $t < \max(\tau, m)$: before the meeting, draw $(X_{t+1}, Y_{t+1-L}) \sim \bar P((X_t, Y_{t-L}), \cdot)$; after it, draw $X_{t+1} \sim P(X_t, \cdot)$ and set $Y_{t+1-L} := X_{t+1}$.
+- **Meeting time (R-EST-2):** $\tau = \inf\{t \ge L : X_t = Y_{t-L}\}$ (AJ24's convention, equal to JOA20's for $L = 1$). Equality is exact: the engine compares the positions bitwise once at $t = L$ and after every coupled step. It never uses a tolerance.
+- **Faithfulness (R-EST-3):** $X_t = Y_{t-L}$ for all $t \ge \tau$. The engine enforces it by simulating only $X$ after the meeting (step 3). It does not rely on the coupled kernel keeping equal states together.
 
 ### 3.2 The estimator
 
@@ -146,13 +147,13 @@ $$v_t = \Big\lfloor \frac{t-k}{L} \Big\rfloor - \Big\lceil \frac{\max(L,\, t-m)}
 
 $$c_t = |S|^{-1}\,\#\{l \in S : l \le t - L,\ L \mid (t - l)\},$$
 
-which reduces to $v_t/(m-k+1)$ when $s = 1$.
+which reduces to $v_t/(m-k+1)$ when $s = 1$. The run still ends at $\max(\tau, m)$.
 
 **Signed measure (R-EST-6).** Each replicate yields
 
 $$\hat\pi = \sum_{l \in S} |S|^{-1}\,\delta_{X_l} + \sum_{t \ge \min S + L}^{\tau - 1} c_t\,\big(\delta_{X_t} - \delta_{Y_{t-L}}\big),$$
 
-whose weights sum to 1. Some weights are negative, so estimates can fall outside the range of $h$. $\hat\pi(h) = H_S$ for every $h$, so any test function can be applied after the run. The number of atoms is $|S| + 2\max(0, \tau - \min S - L)$.
+whose weights sum to 1. Some weights are negative, so estimates can fall outside the range of $h$. $\hat\pi(h) = H_S$ for every $h$, so any test function can be applied after the run. Atoms with $c_t = 0$ are not stored, so the number of atoms is at most $|S| + 2\max(0, \tau - \min S - L)$.
 
 **Cost (R-EST-7).** One replicate uses $C = L + 2(\tau - L) + \max(0, m - \tau)$ kernel applications, counting a coupled step before the meeting as two. The engine also records the log-density and gradient evaluations and the wall time, because kernels differ in evaluations per application.
 
@@ -171,6 +172,7 @@ whose weights sum to 1. Some weights are negative, so estimates can fall outside
 
   Under the last, the variance is finite if $\kappa > 2$ and $p > 2\kappa/(\kappa - 2)$.
 - **Error bars:** with $R$ independent replicates and finite variance, $\bar H \pm z_{1-\alpha/2}\,\hat\sigma/\sqrt R$ is an asymptotically valid interval as $R \to \infty$. The bounded work per replicate does not change this.
+- **Fixed $R$:** unbiasedness holds for a number of replicates fixed before any result is seen. Choosing $R$ after looking at results (for example, extending a run until the error bar is small) is optional stopping: the mean stays consistent and the large-$R$ intervals stay valid, but exact unbiasedness is lost.
 - **Total-variation bounds:** meeting times give upper bounds on $d_{TV}(\pi_t, \pi)$, where $\pi_t$ is the law of $X_t$ (§3.6).
 
 **Not guaranteed:**
@@ -190,10 +192,10 @@ Let $a_r = \hat\pi_r(h) \in \mathbb R^p$ for replicates $r = 1, \dots, R$. Write
 - **Covariance:** $\widehat{\mathrm{Cov}}_\pi(h) = R^{-1}\sum_r \hat\pi_r(hh^\top) - \bar a\bar a^\top + S_a/R$ is unbiased. The plug-in $\sum\omega hh^\top - (\sum \omega h)(\sum\omega h)^\top$ is biased by $-S_a/R$ and is not used. Standard deviations are $\sqrt{\max(0, \widehat{\mathrm{Var}})}$, which is consistent, not unbiased.
 - **Histograms:** each replicate's signed mass in each half-open bin $[a, b)$, averaged over replicates. This is unbiased, with standard errors from the replicates. Bins can be negative.
 - **Quantiles:**
-  1. Pool all replicates' atoms with weights $\omega/R$.
+  1. Pool all replicates' atoms with weights $\omega/R$, and merge atoms with equal coordinates by summing their weights.
   2. Sort along the coordinate and take the cumulative sum of the weights.
-  3. Project the cumulative sum onto non-decreasing sequences in $[0, 1]$ by isotonic regression.
-  4. Invert the projected curve.
+  3. Project the cumulative sum onto non-decreasing sequences by isotonic regression with unit weights (`scipy.optimize.isotonic_regression`), then clip to $[0, 1]$.
+  4. The $\beta$-quantile is the smallest atom whose projected cumulative weight is at least $\beta$ (the left-continuous inverse).
 
   This is consistent as $R \to \infty$ but not unbiased (JOA20 Prop. 3.2). Credible intervals use these quantiles. Their uncertainty comes from a bootstrap over whole replicates, labelled heuristic.
 
@@ -201,13 +203,16 @@ Let $a_r = \hat\pi_r(h) \in \mathbb R^p$ for replicates $r = 1, \dots, R$. Write
 
 - **R-TUNE-1:** kernel parameters left unset (for example the proposal covariance) are tuned on independent pilot chains, then frozen. Pilot chains may adapt. Coupled runs never do.
 - **R-TUNE-2:** `k`, `m` and `lag` set to `"auto"` follow AJ24. From a pilot of $R_0 = 100$ meeting times with $L = 1$:
-  1. set $k = \max(1, \lceil \hat q_{\beta}(\tau - 1) \rceil)$;
+  1. set $k = \max(1, \hat q_{\beta}(\tau - 1))$, where $\hat q_\beta$ is the inverted-CDF sample quantile (`np.quantile(..., method="inverted_cdf")`), an observed integer;
   2. set $L = k$;
   3. set $m = 10k$.
 
-  The quantile level $\beta$ is 0.99 by default. 0.999 gives a conservative mode, and smaller values a cheaper mode with more replicates per unit of compute. E01 (Appendix A) supports the default.
+  - **Level:** $\beta$ is 0.99 by default. Larger values give a more conservative mode and smaller values a cheaper one with more replicates per unit of compute. $\beta \le 1 - 1/R_0$ is required, so that $\hat q_\beta$ is not the sample maximum; 0.999 therefore needs $R_0 \ge 1000$.
+  - **Pilot size:** with $R_0 = 100$, $k$ varies by about ±20% between pilots (5% to 95% range 117 to 168 at $d = 10$; design review D-R5). This changes the cost and the variance, never the bias.
+  - **Partial `"auto"` (D-21):** a value given explicitly is kept. A missing `lag` or `m` is derived from `k` ($L = k$, $m = 10k$) without a pilot, and the pilot runs only when `k` is `"auto"`.
+  - **Evidence:** E01 (Appendix A) used a 2000-replicate pilot; the design review measured the 100-replicate pilot.
 - **R-TUNE-3:** pilots draw from their own random-stream namespaces (§6.1). Their replicates never enter estimates; they are reported.
-- **R-TUNE-4:** the result records every tuned value, the pilot meeting times, and the efficiency-loss approximation $1 + (k + \bar\tau)/(m - k)$ (JOA20 §3.1).
+- **R-TUNE-4:** the result records every tuned value, the pilot meeting times, and the measured inefficiency: the mean cost per replicate divided by $m - k + 1$. (JOA20 §3.1 approximates it by $1 + (k + \mathbb E[\tau - L])/(m - k)$; with $\bar\tau$ in place of $\mathbb E[\tau - L]$ the approximation is too high by $L/(m-k)$ when $L > 1$.)
 
 ### 3.6 Coupling bounds (R-DIAG-1)
 
@@ -216,12 +221,13 @@ For any $L$ and $t \ge 0$ (Biswas, Jacob & Vanetti 2019, Thm. 2.5):
 $$d_{TV}(\pi_t, \pi) \le \mathbb E\big[\max(0, \lceil (\tau - L - t)/L \rceil)\big] = \sum_{j \ge 1} \mathbb P(\tau > t + jL).$$
 
 - **Estimate:** the bound is estimated by the replicate average, reported as $\min(1, \cdot)$, with a binomial upper confidence bound where the average is 0.
-- **Use for $k$:** with $L = k$ the bound at $t = k$ is close to $\mathbb P(\tau - L > k)$. So "$k$ is the 99% quantile" means "the estimated bound at $k$ is about 0.01".
+- **Censored pairs** count as meeting at the cap, so with censoring the estimate is a lower bound. It is reported with the number censored.
+- **Use for $k$:** with $L = k$ the bound at $t = k$ is close to $\mathbb P(\tau - L > k)$, which the main run estimates and reports. It exceeds the pilot's $1 - \beta$, because the main run's $\tau - L$ is longer than the pilot's $\tau - 1$: the coupled phase starts from a near-stationary $X_L$. With $\beta = 0.99$ in E01's setting it is 0.019 at $d = 10$ and 0.029 at $d = 30$ (design review D-R5).
 - **1-Wasserstein (should):**
 
   $$d_{W_1}(\pi_t, \pi) \le \mathbb E\Big[\sum_{j=1}^{\lceil (\tau - L - t)/L\rceil} \lVert X_{t+jL} - Y_{t+(j-1)L} \rVert\Big].$$
 
-  It needs the distance between the chains at every coupled step, which the engine records. Its value depends on the parametrisation; the documentation says so.
+  It needs the Euclidean distance $\lVert X_s - Y_{s-L}\rVert$ for $L \le s < \tau$, which the engine records. Its value depends on the parametrisation; the documentation says so.
 
 ### 3.7 Budgets (should)
 
@@ -229,6 +235,9 @@ Averaging only the replicates completed by a deadline is biased by $-\mathbb E[H
 1. Each lane runs replicates in sequence.
 2. At the deadline, a lane with no completed replicate finishes its first. A lane with at least one completed replicate discards the one in progress.
 3. The estimate is the equal-weight mean over lanes of each lane's mean.
+
+- **Clock:** a lane's clock counts lockstep iterations, so a replicate occupies its lane for $\max(\tau, m)$ ticks, a function of the replicate alone. A wall-clock deadline also depends on the other lanes; it is offered with that caveat.
+- **Scope:** budgets run in-process in v0.1. Pools need long-lived lane tasks and are on the roadmap.
 
 "Keep the first $R$ to finish" and "pool everything completed" are never offered.
 
@@ -240,7 +249,7 @@ Averaging only the replicates completed by a deadline is biased by $-\mathbb E[H
 
 - **Log-density:** `log_prob(x, *args, **kwargs)` returns a float for `x` of shape `(d,)`. With `vectorize=True` it takes `(n, d)` and returns `(n,)`.
 - **Gradient:** an optional `grad` with the same signature returns $\nabla \log\pi$, of shape `(d,)` or `(n, d)`. A kernel that needs a gradient raises `ValueError` without one.
-- **Special values:** `-inf` is a valid value and is rejected by every Metropolis step. NaN or `+inf` raises `ValueError` with the offending point.
+- **Special values:** `-inf` is a valid value and is rejected by every Metropolis step. NaN or `+inf` raises `ValueError` with the offending point. Where the log-density is `-inf`, the gradient may be non-finite.
 - **Determinism:** the log-density must return the same value at the same point. A stochastic log-density can split chains that have met. The documentation says so.
 - **Layer C:** a `Target` object wraps these functions, counts evaluations, and presents a batched interface `(n, d) -> (n,)` to kernels, whether or not the user's function is vectorised.
 
@@ -248,7 +257,7 @@ Averaging only the replicates completed by a deadline is biased by $-\mathbb E[H
 
 `init` may be any of:
 - a callable `init(rng) -> array (d,)`;
-- a frozen SciPy distribution, used through `rvs(size=..., random_state=rng)`;
+- a frozen SciPy distribution, used through `rvs(random_state=rng)`, whose draw is normalised to shape `(d,)` (SciPy returns shape `()` for a one-dimensional multivariate normal);
 - an array of points of shape `(n, d)`, used as the uniform distribution over its rows. This lets emcee users start from an existing ensemble without losing unbiasedness;
 - a helper object (`telescopic.initial.Normal`, `Uniform`, `Empirical`).
 
@@ -275,33 +284,33 @@ A kernel is a picklable configuration object with:
 ```text
 needs_grad: bool
 step(target, state, draws) -> (state, accepted)            # one transition for n chains
-coupled_step(target, sx, sy, draws) -> (sx, sy, met)        # one coupled transition for n pairs
+coupled_step(target, sx, sy, draws) -> (sx, sy)             # one coupled transition for n pairs
 tune(target, initial, rng, **options) -> (kernel, report)   # only if it has unset parameters
 ```
 
 - **States:** `State(x, log_prob, grad)` are batch-first: `x` is `(n, d)`, `log_prob` is `(n,)`, and `grad` is `(n, d)` or `None`.
-- **Randomness:** `draws` supplies random numbers row by row from each replicate's stream (§6.1). Its `normal(d)`, `uniform()` and `generator(i)` give `(n, d)` normals, `(n,)` uniforms, and row `i`'s `numpy.random.Generator`.
+- **Randomness:** `draws` supplies random numbers row by row from each replicate's stream (§6.1). Its `normal(d)`, `uniform()`, `log_uniform()` and `generator(i)` give `(n, d)` normals, `(n,)` uniforms and their logarithms, and row `i`'s `numpy.random.Generator`.
 - **R-KER-2:** each marginal of `coupled_step` has exactly the law of `step`.
-- **R-KER-3:** `met[i]` is true if and only if the returned states of pair `i` are bitwise equal. On a meeting, the kernel copies $X$'s position and caches into $Y$.
-- **R-KER-4:** from equal states, `coupled_step` returns equal states and `met` true.
+- **R-KER-3:** the engine declares a meeting when the returned positions of a pair are bitwise equal (R-EST-2). A coupling that makes the two proposals identical gives $Y$ a copy of $X$'s proposal and its cached log-density, never a recomputation, so that equality is exact.
+- **R-KER-4:** the built-in couplings keep equal states equal. The engine does not rely on this: it never applies `coupled_step` to an equal pair.
 - **R-KER-5:** each kernel documents the random numbers it consumes per step.
+- **R-KER-6:** a row's arithmetic does not depend on the other rows of the batch. Kernels compute row-wise linear algebra with `np.einsum` (without `optimize`) or elementwise operations, never with BLAS-backed `@` or `solve` on a batch: those give a row different bits in a batch of one than in a larger batch (design review D-R4). R-EXEC-2 depends on this.
 
 ### 5.2 Coupling primitives (R-CPL)
 
 All three work on batches and in log space.
 
-**Reflection-maximal coupling** of $\mathcal N(\mu_x, \Sigma)$ and $\mathcal N(\mu_y, \Sigma)$, with $\Sigma = LL^\top$ (R-CPL-1). This is JOA20 §4.1, after Bou-Rabee, Eberle & Zimmer (2020):
+**Reflection-maximal coupling** of $\mathcal N(\mu_x, \Sigma)$ and $\mathcal N(\mu_y, \Sigma)$, with $\Sigma = CC^\top$ (R-CPL-1). This is JOA20 §4.1, after Bou-Rabee, Eberle & Zimmer (2020):
 
 ```text
-delta = L^{-1} (mu_x - mu_y);  e = delta / |delta|
-z ~ N(0, I);  u ~ U(0, 1)
-if log u < -(z . delta) - |delta|^2 / 2:  identical; y' = x'            # copy, never recompute
-else:                                      z_y = z - 2 (e . z) e;  y' = mu_y + L z_y
-x' = mu_x + L z
+delta = C^{-1} (mu_x - mu_y)                      # C^{-1} precomputed by the kernel
+z ~ N(0, I);  u ~ U(0, 1);  x' = mu_x + C z
+if log u < -(z . delta) - |delta|^2 / 2:  identical; y' = x'      # a copy, never recomputed
+else:  e = delta / |delta|;  z_y = z - 2 (e . z) e;  y' = mu_y + C z_y
 ```
 - It is maximal: $\mathbb P(x' = y') = 2\Phi(-\lVert\delta\rVert/2)$.
 - Its cost is deterministic: $d$ normals and 1 uniform.
-- $\delta = 0$ gives `identical` with probability 1.
+- $\delta = 0$ gives `identical` with probability 1, so $e$ is needed, and computed, only on rows with $\lVert\delta\rVert > 0$. The test is exact: a threshold would copy $Y = X$ for a small non-zero $\delta$ and bias $Y$'s marginal.
 
 **Rejection maximal coupling** of distributions $p$ and $q$ with samplers and normalised log-densities (R-CPL-2). This is JOA20 Algorithm 2 (Thorisson):
 
@@ -326,12 +335,12 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 
 `RandomWalk(cov=None, *, scale=None, coupling="reflection")`.
 
-**Proposal:** $x' = x + \lambda L z$, where $LL^\top$ = `cov`, $\lambda$ = `scale`, and $z \sim \mathcal N(0, I)$.
+**Proposal:** $x' = x + \lambda C z$, where $CC^\top$ = `cov`, $\lambda$ = `scale`, and $z \sim \mathcal N(0, I)$.
 
-**Acceptance:** accept when $\log u < \log\pi(x') - \log\pi(x)$.
+**Acceptance:** accept when $\log u < \log\pi(x') - \log\pi(x)$. A current state with $\log\pi(x) = -\infty$ accepts any proposal with a finite log-density and rejects one with $-\infty$; $-\infty - (-\infty)$ is never computed as a number.
 
 **Couplings:**
-- `"reflection"` (default; JOA20, O'Leary 2021): reflection-maximal proposals, a common $u$, and `met` = identical ∧ both accept.
+- `"reflection"` (default; JOA20, O'Leary 2021): reflection-maximal proposals and a common $u$.
   - It uses at most two log-density evaluations per step, one when the proposals are identical.
   - It consumes $d$ normals and 2 uniforms.
 - `"maximal"`: rejection maximal coupling with independent residuals, for comparison and teaching. Its meeting times grow exponentially with $d$ (JOA20 §4.2), and the documentation says so.
@@ -346,7 +355,7 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 
 `MALA(step_size=None, *, cov=None, coupling="reflection")` requires a gradient.
 
-**Proposal:** $x' = x + \tfrac{\epsilon^2}{2} \Sigma\nabla\log\pi(x) + \epsilon L z$, with $\Sigma = LL^\top$ = `cov`. The acceptance ratio includes the forward and reverse proposal densities.
+**Proposal:** $x' = x + \tfrac{\epsilon^2}{2} \Sigma\nabla\log\pi(x) + \epsilon C z$, with $\Sigma = CC^\top$ = `cov`. The acceptance ratio includes the forward and reverse proposal densities. A proposal with $\log\pi(x') = -\infty$ is rejected whatever its gradient.
 
 **Coupling:** reflection-maximal coupling of the two Gaussian proposals, which share the covariance $\epsilon^2\Sigma$, plus a common $u$ (JOA20 §4.4; AJ24 §4.3).
 
@@ -354,14 +363,15 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 
 ### 5.5 HMC (R-KER-HMC)
 
-`HMC(step_size=None, n_steps=None, *, cov=None, meeting_prob=0.05, meeting_scale=1e-3)` requires a gradient. It follows Heng & Jacob (2019).
+`HMC(step_size=None, n_steps=None, *, cov=None, meeting_weight=0.05, meeting_scale=1e-3)` requires a gradient. It follows Heng & Jacob (2019).
 
-**Marginal kernel.** With probability $1 - \gamma$ ($\gamma$ = `meeting_prob`), take a leapfrog step:
+**Marginal kernel.** With probability $1 - \gamma$ ($\gamma$ = `meeting_weight`, the mixture weight of the meeting component), take a leapfrog step:
 - whitened momentum $\nu \sim \mathcal N(0, I)$;
-- `n_steps` leapfrog updates of size $\epsilon$: $\nu \leftarrow \nu + \tfrac{\epsilon}{2}L^\top\nabla\log\pi(x)$, then $x \leftarrow x + \epsilon L\nu$, then the half step again;
-- accept on the change in $\log\pi(x) - \tfrac12\lVert\nu\rVert^2$.
+- `n_steps` leapfrog updates of size $\epsilon$: $\nu \leftarrow \nu + \tfrac{\epsilon}{2}C^\top\nabla\log\pi(x)$, then $x \leftarrow x + \epsilon C\nu$, then the half step again;
+- accept on the change in $\log\pi(x) - \tfrac12\lVert\nu\rVert^2$;
+- a trajectory that reaches a point with $\log\pi = -\infty$ or a non-finite gradient stops there and is rejected, without raising.
 
-With probability $\gamma$, take a RWMH step with proposal covariance $\sigma^2\Sigma$, where $\sigma$ = `meeting_scale`.
+With probability $\gamma$, take a RWMH step with proposal covariance $\sigma^2\Sigma$, where $\sigma$ = `meeting_scale`. Heng & Jacob use $\sigma^2 I$; the whitened $\sigma^2\Sigma$ makes the component invariant to the scale of each coordinate (D-24).
 
 **Coupling:**
 - a common uniform chooses the component, so both chains use the same one;
@@ -373,29 +383,31 @@ Heng & Jacob used the rejection maximal coupling for this step. Both couplings a
 **Tuning:**
 - `cov` from the RWMH pilot;
 - $\epsilon$ by dual averaging toward acceptance 0.8;
-- `n_steps` $= \lceil (\pi/2)/\epsilon \rceil$, so the trajectory lasts a quarter period of a unit Gaussian in whitened coordinates. That length contracts the pair most for Gaussian targets.
+- `n_steps` $= \lceil 1/\epsilon \rceil$, a trajectory of length about 1 in whitened coordinates, as in Heng & Jacob. For a Gaussian direction of whitened frequency $\omega$ the difference between the chains scales by $\cos(\omega\,\epsilon\,n)$, which stays below 1 in magnitude for $\omega < \pi$. A length of $\pi/2$ would contract most at $\omega = 1$ but not at all at $\omega = 2$, a direction whose variance the pilot underestimates fourfold (design review D-R12; D-24).
 
 The documentation says that settings optimal for HMC alone can fail to contract when coupled (Heng & Jacob §5), and that meeting times should be checked.
 
 ### 5.6 Independence Metropolis–Hastings (R-KER-IMH)
 
-`Independence(proposal=None)`. `proposal` has `rvs(size, random_state)` and a batched `logpdf`.
+`Independence(proposal=None)`. `proposal` has `sample(draws)`, returning `(n, d)` from the buffered normals, and a batched, normalised `log_density(x)`. `MultivariateT(mean, cov, df=5)` is the built-in.
 - **Acceptance:** accept when $\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]$.
-- **Coupling:** both chains share the proposal $x'$ and $u$, so `met` = both accept. This is already a maximal kernel coupling (O'Leary, Wang & Jacob 2021).
-- **Default proposal:** a multivariate Student-$t$ with 5 degrees of freedom, centred and scaled by the RWMH pilot.
+- **Coupling:** both chains share the proposal $x'$ and $u$, so they meet when both accept. This is already a maximal kernel coupling (O'Leary, Wang & Jacob 2021).
+- **Default proposal:** a multivariate Student-$t$ with 5 degrees of freedom, located at the RWMH pilot's mean, with the pilot's covariance as its scale matrix, so its covariance is $5/3$ of the pilot's (D-25). The tuning report gives the largest importance-weight ratio $\pi/q$ seen in the pilot, relative to the median.
 - **Documented caveats:** meeting times are geometric only for bounded importance weights. A poor proposal gives heavy-tailed meeting times.
 
 ### 5.7 Gibbs (R-KER-GIBBS)
 
 `Gibbs(conditional, blocks, *, coupling="maximal", eta=1.0, threshold=None)`.
-- **Conditionals:** `conditional(x, b)` returns the full conditional of block `b` given the rest of `x`. It is a frozen SciPy-like distribution with `rvs(random_state=...)` and a normalised `logpdf` (or `logpmf` for discrete ones).
+- **Blocks:** a sequence of integer index arrays that partition the coordinates.
+- **Conditionals:** `conditional(x, b)` receives one state `x` of shape `(d,)` and a block number `b`, and returns the full conditional of block `b` given the rest of `x`. It is a frozen SciPy-like distribution with `rvs(random_state=...)` and a normalised `logpdf` (or `logpmf` for discrete ones). Sweeps loop over rows.
 - **Sweep:** blocks are updated in the given order.
 - **Couplings, per block:**
   - `"maximal"`: rejection maximal coupling (§5.2), with the $\eta$ option;
-  - `"crn"`: a common uniform through `ppf`, for univariate conditionals; it contracts but does not meet on its own;
-  - `"two-scale"`: CRN while $\lVert x - y\rVert >$ `threshold`, maximal otherwise (Biswas et al. 2022). The switch depends only on the pair, and both branches couple the same conditional, so it is valid (AJ24 §4.2).
-- **Meeting:** declared when the whole state is bitwise equal at the end of a sweep.
-- **Log-density:** a Gibbs kernel needs none. `log_prob` may be `None`.
+  - `"crn"`: common random numbers, which contract but do not meet on their own: a common uniform through `ppf` for univariate conditionals, and common standard normals for multivariate normal ones (objects with `mean` and `cov`, such as `scipy.stats.multivariate_normal`);
+  - `"two-scale"`: CRN while $\lVert x - y\rVert >$ `threshold`, maximal otherwise (Biswas et al. 2022). The switch depends only on the pair, and both branches couple the same conditional, so it is valid (AJ24 §4.2). `threshold` is required.
+- **Identical conditionals:** when the coordinates outside block `b` are bitwise equal in the two chains, their conditionals are identical, and both chains receive the same draw. This identity coupling is a valid state-dependent choice; it also keeps equal states equal when $\eta < 1$, which the rejection coupling alone would split with probability $1 - \eta$ (design review D-R2).
+- **Meeting:** the engine's exact comparison after each sweep (R-EST-2). Blocks updated by CRN can become equal without a coupling event.
+- **Log-density:** a Gibbs kernel needs none. With `log_prob=None`, states carry log-density 0, the `InputWarning` check of §4.2 is skipped, and there is nothing to tune.
 
 ### 5.8 Mixtures (R-KER-MIX)
 
@@ -409,12 +421,13 @@ The choice of component must not depend on the states (AJ24 §4.2). Switching be
 
 ### 6.1 Replicates and random streams (R-EXEC-1)
 
-- **Root seed:** `rng` (SPEC 7: `None`, an integer, a `SeedSequence` or a `Generator`) is normalised to a root `SeedSequence`. The root entropy and spawn key are recorded.
-- **Per-replicate stream:** replicate `i` in namespace `ns` uses `Generator(PCG64DXSM(SeedSequence(root.entropy, spawn_key=root.spawn_key + (ns, i))))`.
-- **Namespaces:** 0 for main replicates, 1 for tuning pilots, 2 for meeting-time pilots.
-- **Initial states:** $X_0$, then $Y_0$, are drawn first from the replicate's stream.
-- **Buffering:** draws come from per-replicate blocks of pre-drawn normals and uniforms, so a lockstep batch gathers them with array indexing.
-- **R-EXEC-2:** a replicate's output is a function of `(root, ns, i)` and its configuration only. It is bitwise identical across batch sizes, worker counts and executors when the log-density is evaluated point by point. A vectorised log-density can differ in the last bits between batch layouts, so there the guarantee is statistical. The documentation says so.
+- **Root seed:** `rng` (SPEC 7) is normalised to a root `SeedSequence`. `None` draws fresh entropy, an integer seeds it, and a `SeedSequence` is used as given. A `Generator` gives the `SeedSequence` of four integers drawn from it: the run is then a function of the generator's state, and passing the same generator twice gives two different runs (D-26). The root entropy and spawn key are recorded.
+- **Per-replicate streams:** replicate `i` in namespace `ns` has the generator `G = Generator(PCG64DXSM(SeedSequence(root.entropy, spawn_key=root.spawn_key + (ns, i))))`.
+  - `G` draws $X_0$, then $Y_0$, and serves `draws.generator(i)`.
+  - The replicate's normals and uniforms come from `G.spawn(2)`: the generators with spawn keys `+ (0,)` and `+ (1,)` under `G`'s seed sequence. Each is read in order (D-8).
+- **Buffering:** each lane pre-draws its replicate's normals and uniforms into buffers, so a lockstep batch gathers them with array indexing. A request that needs more numbers than a buffer holds tops it up and keeps the unread ones, so the buffer width changes no number.
+- **Namespaces:** 0 for main replicates, 1 for tuning pilots, 2 for meeting-time pilots. Each call of `tune`, `meeting_times` or `run` continues the indices of its namespace.
+- **R-EXEC-2:** a replicate's output is a function of `(root, ns, i)` and its configuration only. It is bitwise identical across batch sizes, worker counts and executors when the log-density is evaluated point by point (R-KER-6), on one machine with the same NumPy and SciPy versions: generator algorithms, SciPy samplers and BLAS builds can change between versions and machines. A vectorised log-density can differ in the last bits between batch layouts, so there the guarantee is statistical. The documentation says so.
 
 ### 6.2 Engine (R-EXEC-3)
 
@@ -424,19 +437,20 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 - **Each step:**
   1. one batched kernel step for the slots in the lagging or after-meeting phase;
   2. one batched coupled step for the coupled slots;
-  3. bookkeeping of the meeting time, cost and estimator terms.
+  3. bookkeeping of the meeting time (the exact comparison of R-EST-2), cost and estimator terms.
 - **Refill:** a finished slot takes the next replicate index, until the requested indices run out.
-- **Storage:** the engine stores the atoms and weights of §3.2 as it goes, starting at $t = k$. It also stores the distance between the chains at each coupled step.
+- **Storage:** the engine stores the atoms and weights of §3.2 as it goes, starting at $t = k$. It also stores the distance $\lVert X_t - Y_{t-L}\rVert$ for $L \le t < \tau$.
 
 ### 6.3 Pairs that do not meet (R-EXEC-4)
 
-- **No cap by default:** `max_iter=None` runs every pair until it meets, as the theory requires.
-- **Slow-pair warning:** when a pair passes 100 times the pilot's 99% meeting-time quantile, the engine emits one `ConvergenceWarning` naming the replicate.
-- **With a cap:** pairs that reach `max_iter` are **censored**:
-  - they are listed in the result;
-  - they are excluded from the estimates;
-  - they are reported by a `ConvergenceWarning` stating that the estimates are biased.
-- They are never dropped silently, and never averaged as if they had met.
+- **No cap by default:** in the main run, `max_iter=None` runs every pair until it meets, as the theory requires.
+- **The cap:** `max_iter` caps $t$ and must exceed $\max(L, m)$. A pair still unmet when $t$ reaches it is **censored**:
+  - it is listed in the result, with meeting time `inf`;
+  - it is excluded from the estimates, from $R$ and from the signed measure;
+  - it is reported by a `ConvergenceWarning` stating that the estimates are biased.
+- Censored pairs are never dropped silently, and never averaged as if they had met.
+- **Slow-pair warning:** when a pair passes $t = 10\max(L, m)$, the engine emits one `ConvergenceWarning` naming the replicate. With the recipe of R-TUNE-2 this is 100 times the pilot's $\hat q_\beta$, and it needs no pilot.
+- **Meeting-time pilot:** it is capped at `pilot_max_iter` (default $10^5$) and warns at $10^4$ iterations. Capped pairs are censored and sort above every finite meeting time; if $\hat q_\beta$ falls on a censored pair, the pilot raises `ValueError` with advice (a wider $\pi_0$, a better kernel, or explicit `k`, `lag` and `m`). So `sample()` cannot run forever on a target where the coupling never meets (D-23).
 
 ### 6.4 Parallel execution (R-EXEC-5)
 
@@ -447,20 +461,19 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 - **Tasks:** chunks of replicate indices, each sized for at least about 10 ms of work. Each worker runs the engine on its chunk.
 - **Results:** reduced in index order.
 - **Worker hygiene:**
-  - workers pin BLAS to one thread (`threadpoolctl`);
-  - the target is shipped once per worker;
-  - worker processes ignore SIGINT.
-- **Picklability:** the target must be picklable. The documentation covers the `if __name__ == "__main__"` guard and the restrictions of the spawn and forkserver start methods.
+  - every task runs under `threadpool_limits(1)`, so BLAS is pinned to one thread in user pools too;
+  - in pools that telescopic creates, the target is shipped once per worker and workers ignore SIGINT. With a user executor the target travels with each task.
+- **Picklability:** telescopic ships the target to the workers it creates with `cloudpickle` when it is installed (the `parallel` extra), so a `log_prob` defined in a notebook works under the spawn and forkserver start methods (D-27). Otherwise the target must be picklable, and the error says how to fix it. The documentation covers the `if __name__ == "__main__"` guard.
 
 ### 6.5 Interruption (R-EXEC-6)
 
-- The first Ctrl-C stops starting new replicates, finishes the ones in progress, and returns a result flagged `interrupted` that contains the completed replicates.
-- A second Ctrl-C stops at once.
-- An interrupted result is a valid fixed-$R$ result only for the indices it contains, which are always a prefix. The engine completes indices in order of assignment, and replicates in progress are finished.
+- **First Ctrl-C:** no new replicate starts, the ones in progress finish, and the result is flagged `interrupted`. It contains every started replicate, which form a prefix of the indices. Process pools that telescopic creates finish their running chunks; a `.map` pool returns its completed waves only.
+- **Its estimates are consistent, not exactly unbiased:** the number of replicates depends on their costs, which correlate with $h$ through $\tau$, so the mean is a ratio estimator (Glynn & Heidelberger 1991). The bias is visible with few lanes (one lane: $z = -12.9$ in design review D-R3) and was not detectable with 16 or more. `summary()` says so. Running the remaining replicates of the requested $R$ restores exact unbiasedness, because $R$ is then fixed in advance (D-22).
+- **Second Ctrl-C:** raises `KeyboardInterrupt` at once, without a result.
 
 ### 6.6 Memory (R-EXEC-7)
 
-- **Atoms:** storage needs about $R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})\,d \times 8$ bytes.
+- **Atoms:** storage needs about $R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})\,(8d + 16)$ bytes for positions, weights and replicate indices, plus 24 bytes per stored distance.
 - **Estimate first:** the sampler estimates this before the main run and warns above 1 GB, suggesting `thin`.
 - **Streaming:** a streaming mode with a fixed `h` and constant memory is on the roadmap.
 
@@ -472,9 +485,9 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 
 Fields:
 - `k`, `m`, `lag`, `thin`, `n_replicates`, `ndim`, `names`;
-- `kernel` (the frozen kernel) and `initial` (a description of $\pi_0$);
+- `kernel` (the frozen kernel; `save` stores its description, and `load` restores the description, not the object) and `initial` (a description of $\pi_0$);
 - `seed` (root entropy and spawn key);
-- `meeting_times` (`(R,)`, censored as `inf`) and `costs` (kernel applications) per replicate;
+- `meeting_times` (censored as `inf`) and `costs` (kernel applications) for every replicate, censored ones included;
 - `n_log_prob`, `n_grad` and `wall_time` for the run;
 - `measure` (a `SignedMeasure`);
 - `tuning` and `pilot` (reports);
@@ -482,9 +495,9 @@ Fields:
 
 Methods:
 - **Estimates:**
-  - `estimate(h, level=0.95)` returns an `Estimate`. `h` maps `(n, d)` to `(n,)` or `(n, p)`;
+  - `estimate(h, level=0.95)` returns an `Estimate`. `h` maps `(n, d)` to `(n,)` or `(n, p)`; any other output shape raises `ValueError`;
   - `mean()`, `cov()`, `var()`, `std()` follow §3.4.
-- **Quantiles and histograms:** `quantile(q)`, `interval(level=0.68)` and `histogram(dim, bins=..., range=None)`.
+- **Quantiles and histograms:** `quantile(q)`, `interval(mass=0.68)` (the central interval holding that mass of $\pi$; `level` is reserved for confidence levels) and `histogram(dim, bins=..., range=None)`.
 - **Diagnostics:** `tv_bound(t=None)`, `w1_bound(t=None)` (should), and `diagnostics()` (a dict).
 - **Reporting:** `summary(level=0.95)` returns a `Summary` table. `check(strict=False)` emits the warnings of §7.4, or raises if strict.
 - **Plots:** `plot_meeting_times()`, `plot_tv_bound()`, `plot_marginals(dims=None)`, `plot_corner(dims=None)` (signed 2-D histograms).
@@ -512,8 +525,9 @@ Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 - the kernel and its coupling;
 - meeting-time median, 90th and 99th percentiles, maximum, and number censored;
 - mean cost per replicate, in kernel applications and in seconds;
-- the efficiency-loss approximation;
-- the fraction of replicates with a non-zero bias correction;
+- the measured inefficiency, mean cost / $(m - k + 1)$ (R-TUNE-4);
+- the fraction of replicates with a non-zero bias correction, which estimates the TV bound at $k$ (§3.6);
+- for an interrupted run, that its estimates are consistent but not exactly unbiased (§6.5);
 - (should) $\hat R$ across the replicates' X-chains;
 - warnings raised.
 
@@ -523,15 +537,15 @@ Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 
 Classes: `TelescopicWarning`, with subclasses `ConvergenceWarning` and `InputWarning`.
 
-`check()` warns on these conditions (heuristics; the slow tests calibrate the thresholds):
+`check()` warns on these conditions. They are heuristics; the thresholds are set so that clean Gaussian runs at the defaults rarely trigger them, and M9 measures and documents each false-alarm rate (D-16):
 1. any censored replicate;
-2. a fraction of replicates with $\tau - L > k$ above 0.05 ("k may be too small");
-3. one replicate contributing more than 25% of the sample variance of any reported estimate, with $R \ge 20$ (heavy tails or rare excursions);
-4. a Hill tail-index estimate of $\tau$ below 2 (finite variance in doubt);
+2. a fraction of replicates with $\tau - L > k$ above 0.25 ("k may be too small"). The recipe itself gives 0.02 to 0.13 (§3.6), so a lower threshold fires on clean runs;
+3. one replicate contributing more than 25% of the sample variance of any reported estimate, with $R \ge 100$ (heavy tails or rare excursions). At $R = 20$ to 30 that share is typical of Gaussian data;
+4. a Hill estimate of the tail index of $\tau - L + 1$ below 2 (finite variance in doubt), from the $\max(10, \lfloor R/10\rfloor)$ largest values, with $R \ge 500$. Applied to $\tau$ itself with $L = k$, the shift by $L$ removes almost all its power;
 5. pilot chains that disagree (§5.3);
-6. a pair that has not met by 100 times the pilot's 99% quantile (§6.3).
+6. a slow pair (§6.3).
 
-The documentation explains each, with the failure cases of JOA20 §5.1.
+The documentation explains each, with the failure cases of JOA20 §5.1, and says that a run that never left one mode cannot be detected from its own output at moderate $R$ (design review D-R9).
 
 ### 7.5 Plotting (optional dependency)
 
@@ -555,16 +569,17 @@ The documentation explains each, with the failure cases of JOA20 §5.1.
                      max_iter=None, pool=None, names=None, progress=False, rng=None) -> Result
    ```
 
-   `kernel="auto"` means RWMH without a gradient and MALA with one (D-3).
+   `kernel` is a `Kernel` or one of the strings `"auto"`, `"rwmh"`, `"mala"`, `"hmc"` and `"independence"`. `"auto"` means RWMH, with or without a gradient; gradient kernels are requested by name (D-3).
 2. **Sampler object:**
 
    ```python
    sampler = telescopic.CoupledSampler(log_prob, init, *, args=(), kwargs=None, grad=None,
                                        vectorize=False, kernel="auto", names=None, pool=None,
-                                       rng=None)
+                                       progress=False, rng=None)
    sampler.tune()                                  # pilot runs; freezes sampler.kernel
    times = sampler.meeting_times(n=100)            # pilot meeting times, lag 1
-   result = sampler.run(500, k="auto", m="auto", lag="auto", thin=1, max_iter=None)
+   result = sampler.run(500, k="auto", m="auto", lag="auto", thin=1, max_iter=None,
+                        progress=None)             # None: the sampler's setting
    result = sampler.run(500)                       # 500 more replicates, same k, m, lag
    ```
 
@@ -589,14 +604,15 @@ import numpy as np
 import telescopic
 
 def log_prob(theta, x, y, yerr):
-    m, b = theta
-    return -0.5 * np.sum(((y - m * x - b) / yerr) ** 2)
+    slope, intercept = theta
+    return -0.5 * np.sum(((y - slope * x - intercept) / yerr) ** 2)
 
 init = telescopic.initial.Normal(mean=[0.0, 0.0], cov=np.diag([10.0, 10.0]))
-result = telescopic.sample(log_prob, init, args=(x, y, yerr), names=["m", "b"], rng=42)
+result = telescopic.sample(log_prob, init, args=(x, y, yerr), names=["slope", "intercept"],
+                           rng=42)
 print(result.summary())                      # unbiased means, standard errors, intervals
 result.estimate(lambda t: t[:, 0] * t[:, 1])  # any function, after the run
-result.plot_tv_bound()                       # how far from stationarity the chains were
+result.plot_tv_bound()                       # with the plot extra: distance from stationarity
 ```
 
 ---
@@ -608,14 +624,13 @@ result.plot_tv_bound()                       # how far from stationarity the cha
 - the banana of Heng & Jacob, with exact moments;
 - a bimodal Gaussian mixture;
 - Neal's funnel, with exact marginals;
-- a conjugate hierarchical model for Gibbs (the pump-failure model of JOA20).
+- a conjugate hierarchical model for Gibbs (the pump-failure model of JOA20), whose exact expectations come from one-dimensional quadrature over $\beta$ after integrating out $\lambda$.
 
-**`telescopic.testing.check_coupling(kernel, target, x, y, n, rng)`** checks a kernel and its coupling:
-- marginals: two-sample tests on random one-dimensional projections, Bonferroni-corrected;
-- faithfulness: equal states stay equal over 100 steps;
-- the `met` flag: it holds if and only if the states are bitwise equal.
+**`telescopic.testing.check_coupling(kernel, target, x, y, n, rng)`** checks a kernel and its coupling, comparing each chain of `coupled_step` from `(x, y)` with `step` from the same state:
+- marginals: a two-proportion test of the frequency of staying put, and two-sample KS tests of the moved values on random one-dimensional projections and on the norm, Bonferroni-corrected;
+- faithfulness: equal states stay equal over 100 steps.
 
-It returns a report with p-values. Custom kernels should pass it before use.
+It returns a report with p-values. Custom kernels should pass it before use. `telescopic.testing` also provides `fixed_draws` (prescribed random numbers, for draw-for-draw tests) and `random_draws` (fresh random numbers for any number of rows).
 
 ---
 
@@ -627,9 +642,9 @@ These targets are measured by `benchmarks/` and are not gating.
 |---|---|
 | Lockstep coupled RWMH, vectorised Gaussian target, $d = 10$, 256 lanes | ≤ 2 µs per pair-step (research note measurement: 0.37 µs at 1000 lanes without per-replicate streams) |
 | Same, point-by-point log-density, 1 lane | ≤ 40 µs per pair-step of overhead beyond the log-density |
-| Per-replicate random streams in lockstep | ≤ 1.5× the cost of one shared generator |
+| Per-replicate random streams in lockstep | ≤ 0.5 µs per lane-step for the draws of a coupled RWMH step at 256 lanes, $d = 10$ (one shared generator: 0.13 µs), and ≤ 50 µs per replicate to set up its streams |
 | Process pool, log-density ≥ 1 ms | ≥ 3.5× speed-up on 4 workers |
-| Automatic pipeline overhead (both pilots) | ≤ 10% of the main run at the default $R = 100$ on the example targets |
+| Automatic pipeline overhead (both pilots) | ≤ 15% of the main run at the default $R = 100$ for $d \ge 10$. At $d = 2$ the fixed tuning pilot makes it about 30% (design review D-R13); it falls as $1/R$ |
 
 ---
 
@@ -640,7 +655,7 @@ These targets are measured by `benchmarks/` and are not gating.
 - **Python:** ≥ 3.11. CI covers 3.11 to the newest release.
 - **Dependencies:**
   - core: `numpy>=1.26`, `scipy>=1.12` (for `scipy.optimize.isotonic_regression`) and `threadpoolctl`;
-  - extras: `plot` (matplotlib), `progress` (tqdm) and `pandas`;
+  - extras: `plot` (matplotlib), `progress` (tqdm), `pandas` and `parallel` (cloudpickle);
   - dependency groups: `test`, `dev` and `docs`.
 - **Quality tooling:** ruff (lint and format, line length 99) and mypy on `src/`. pytest runs with warnings as errors; hypothesis provides property tests. pre-commit runs ruff.
 - **Tests:**
@@ -691,23 +706,31 @@ These were decided without Josh's input so that work could proceed. Each is easy
 |---|---|---|---|
 | D-1 | NumPy/SciPy core in pure Python, with optional extras. JAX is on the roadmap | emcee-like install-anywhere usability; Josh's brief ("hopefully pure Python") | JAX-first core |
 | D-2 | Layered API: `sample` → `CoupledSampler` → building blocks | the pattern of every praised sampler (research note `api_ux_samplers.md` Q5) | a single sampler class |
-| D-3 | Default kernel RWMH with reflection-maximal coupling; MALA when a gradient is given; HMC opt-in | best-published gradient-free option (O'Leary 2021 Table 1: mean τ 30 vs 279 for independent residuals at $d = 10$); MALA beats RWMH when gradients exist (Papp & Sherlock 2025 §7.4); HMC needs contraction checks (Heng & Jacob §5) | HMC default with gradients; MALA only on request |
+| D-3 | Default kernel RWMH with reflection-maximal coupling, with or without a gradient; MALA and HMC on request | best-published gradient-free option (O'Leary 2021 Table 1: mean τ 30 vs 279 for independent residuals at $d = 10$). MALA can beat RWMH when gradients exist (Papp & Sherlock 2025 §7.4), but its transient from the overdispersed $\pi_0$ the docs recommend is sensitive to the step size (Christensen et al. 2005, cited in `mh_couplings.md`; design review D-R25); HMC needs contraction checks (Heng & Jacob §5) | MALA whenever a gradient is given (the first draft); HMC default with gradients |
 | D-4 | Pilot, then freeze. Covariance from adaptive Metropolis pilots | adaptation inside coupled runs breaks unbiasedness (AJ24 §5.2) | user-supplied tuning only; ensemble pilot (roadmap) |
-| D-5 | `k`, `m`, `lag` "auto" by AJ24's recipe, from 100 pilot meeting times | best-supported published default. E01: unbiased, 2–6% better inefficiency than lag 1 at the same $k$, $m$ | $k$ = 90% quantile (CoupledHMC.jl); Douc et al.'s $m = 5k$ |
+| D-5 | `k`, `m`, `lag` "auto" by AJ24's recipe, from 100 pilot meeting times, with the inverted-CDF quantile and $\beta \le 1 - 1/R_0$ | best-supported published default. E01 (2000-replicate pilot): unbiased, 2–6% better inefficiency than lag 1 at the same $k$, $m$. The inverted-CDF quantile is an observed meeting time, and the bound on $\beta$ keeps it below the sample maximum (design review D-R5) | $k$ = 90% quantile (CoupledHMC.jl); Douc et al.'s $m = 5k$; linear interpolation (NumPy's default), which E01 floored |
 | D-6 | $\tau = \inf\{t \ge L : X_t = Y_{t-L}\}$ | matches JOA20 for $L = 1$ and AJ24 in general; estimator values do not depend on the convention | $\inf\{t > L\}$ (Biswas et al.) |
-| D-7 | Meeting by flag and copy; only $X$ is simulated after the meeting | recomputing $Y$ gave bitwise-different states in 100% of 20,000 cases (research note `mh_couplings.md` §5), and a recomputing coupling met 0.2% instead of 94% of the time (`validation_benchmarks.md` Q1) | exact comparison of recomputed states; tolerances (ColCarroll's `np.isclose`, unsafe) |
-| D-8 | Per-replicate streams `(root, namespace, index)` with PCG64DXSM and buffered draws | results invariant to batching and workers (Pigeons-style). Cost 1.4× a shared generator with block buffering (research note `parallel_engineering.md`) | one generator per batch: fastest, but depends on the batch layout |
+| D-7 | Meetings detected by the engine's exact comparison of positions, once at $t = L$ and after each coupled step; couplings copy $X$'s proposal for $Y$ on the meeting branch; only $X$ is simulated after the meeting. Kernels return states only | recomputing $Y$ gave bitwise-different states in 100% of 20,000 cases (research note `mh_couplings.md` §5), and a recomputing coupling met 0.2% instead of 94% of the time (`validation_benchmarks.md` Q1). A kernel flag (the first draft) missed equal pairs that both reject (65% of RWMH steps from equal states) and meetings at $t = L$ (45–57% of lag-1 pilot pairs with a point mass $\pi_0$; design review D-R1) | a `met` flag returned by kernels; tolerances (ColCarroll's `np.isclose`, unsafe) |
+| D-8 | Per-replicate streams `(root, namespace, index)` with PCG64DXSM. Normals and uniforms come from two children of the replicate's generator, each read in order through buffers that keep unread numbers | results invariant to batching and workers (Pigeons-style). With separate children, no buffer width enters any number, so widths are free performance settings (M0 altitude review). Cost after the M0 efficiency review: about 2× a shared generator for a step's draws, 0.3 µs per lane-step at 256 lanes, $d = 10$; the research prototype's 1.4× had no per-lane cursors | one generator per batch: fastest, but depends on the batch layout; one generator per replicate feeding both buffers and discarding on refill (the M0 code): block size, uniform width and $d$ then enter every seeded number |
 | D-9 | One engine: lockstep lanes with refill; pools distribute chunks of indices to engines | one code path for every executor; refill never biases (`parallel_engineering.md`) | separate scalar and vectorised drivers |
 | D-10 | Fixed-$R$ mode by default; a budget mode with the per-lane GH rule only | exactly unbiased; biased budget rules are never offered | pooled completion within the budget (biased) |
 | D-11 | HMC's meeting step uses the reflection-maximal coupling instead of Heng & Jacob's rejection coupling | both are maximal, with the same meeting probability per step; reflection has deterministic cost and vectorises | rejection coupling exactly as published |
 | D-12 | Default storage: signed-measure atoms from $t = k$, so any $h$ can be applied after the run, with `thin` and a memory warning. This departs from the census report, which recommends per-replicate estimates by default | users want quantiles, histograms and plots, which need atoms; memory is modest at emcee scale (about 18 MB at $R = 256$, $\lvert S\rvert = 900$, $d = 10$); the atoms from $k$ to $m$ also give $\hat R$ across replicates | per-replicate estimates of fixed $h$ (constant memory; roadmap) |
-| D-13 | No meeting cap by default. With a cap, censored pairs are excluded and reported as biasing the result | the theory needs every pair to meet; silent truncation is the R package's hazard | a default cap with silent `inf` (unbiasedmcmc) |
-| D-14 | Unbiased covariances by the U-statistic; quantiles by an isotonic projection of the pooled signed CDF | exact where possible (§3.4); isotonic is the $L^2$ projection, while a running maximum is biased upward | plug-in covariance (biased); the crossing rule (non-unique) |
+| D-13 | No meeting cap by default in the main run. With a cap, censored pairs are excluded and reported as biasing the result. The meeting-time pilot is capped (D-23) | the theory needs every pair to meet; silent truncation is the R package's hazard | a default cap with silent `inf` (unbiasedmcmc) |
+| D-14 | Unbiased covariances by the U-statistic; quantiles by an isotonic projection of the pooled signed CDF | exact where possible (§3.4); isotonic regression is the $L^2$ projection onto monotone curves. A running maximum is another monotonisation; both are consistent and biased at finite $R$, and gave the same quantiles in the design review's test | plug-in covariance (biased); a running maximum; the crossing rule (non-unique) |
 | D-15 | Literature notation for `k`, `m`, `lag` in the API | users read JOA20 and AJ24 alongside the docs; "auto" covers newcomers | `burn_in`, `n_iter` |
-| D-16 | Warnings thresholds from §7.4, documented as heuristics | no published calibration exists (`diagnostics_practice.md` §4) | no warnings; strict errors |
+| D-16 | Warning thresholds from §7.4, documented as heuristics: warning 2 at 0.25, warning 3 only for $R \ge 100$, warning 4 on $\tau - L + 1$ for $R \ge 500$ | no published calibration exists (`diagnostics_practice.md` §4). The first draft's thresholds fired on clean Gaussian runs at the defaults (warning 2 with probability 0.25 at $d = 10$ and 0.49 at $d = 30$; warning 3 with probability 0.73 at $R = 30$ for 10 estimates; design review D-R6) | no warnings; strict errors; binomial tests at a stated level |
 | D-17 | Docs with Sphinx, MyST-NB and furo | furo is the lead's most recent choice (GSPICE); MyST-NB executes the tutorials | pydata-sphinx-theme (pastry) |
 | D-18 | Python ≥ 3.11, NumPy ≥ 1.26, SciPy ≥ 1.12 | the floors of Josh's other packages; SciPy 1.12 adds `isotonic_regression` | SPEC 0 floors (3.12, NumPy 2.0) |
 | D-19 | Implement from the papers, never from the GPL R code. The R package is a reference for numbers only | the MIT licence; `software_landscape.md` licence analysis | port the R code under GPL |
+| D-20 | Kernel arithmetic is row-independent: `np.einsum` without optimisation or elementwise operations, with precomputed inverse Cholesky factors (R-KER-6) | BLAS-backed products gave a row different bits in a batch of one (9 to 44 of 45 rows; design review D-R4); `einsum` never did. Measured cost at 256 lanes: 18 µs against 4 µs for `@` at $d = 10$, 645 against 104 µs at $d = 100$ | BLAS products, with bitwise invariance weakened to a statistical guarantee |
+| D-21 | Explicit `k`, `lag` or `m` are kept; with `k` given, `lag = k` and `m = 10k` without a pilot | one rule for every mix of explicit and `"auto"` values (design review D-R25) | `"auto"` all or nothing |
+| D-22 | An interrupted run returns every started replicate, labelled consistent but not exactly unbiased; completing the requested $R$ restores exactness | the started set is a prefix whose length depends on the costs, a ratio estimator (design review D-R3: z = −12.9 with one lane); the census report wanted no estimate unless a valid rule applies | no estimate after an interrupt; GH per-lane estimates |
+| D-23 | The meeting-time pilot is capped at $10^5$ iterations; capped pairs sort last, and a censored $\hat q_\beta$ raises | an uncapped pilot can hang `sample()` with no message on a target where the coupling never meets (design review D-R7); a fixed cap keeps each pilot replicate a function of its own stream | a cap from running quantiles (depends on completion order, so on the batch layout); no cap |
+| D-24 | HMC: trajectory length $\epsilon\,n \approx 1$ (Heng & Jacob), and a whitened meeting component $\sigma^2\Sigma$ | length $\pi/2$ fails to contract at whitened frequency 2 (design review D-R12); whitening makes the meeting step invariant to coordinate scales | length $\pi/2$ (the first draft); $\sigma^2 I$ as published |
+| D-25 | Default IMH proposal: Student-$t_5$ at the pilot mean with the pilot covariance as scale matrix | inflates the covariance by $5/3$ against pilot covariances that understate the tails; bounded weights keep meeting times geometric (design review D-R27) | scale matrix $\Sigma (\nu - 2)/\nu$ (matching the covariance) |
+| D-26 | A `Generator` passed as `rng` gives the root seed of four integers drawn from it | the run is then a function of the generator's state, with one code path; spawning from its seed sequence depended on a spawn counter that is not part of the state (M0 simplification review; design review D-R22) | spawn a child of the generator's seed sequence (the M0 code), which leaves the generator's stream untouched |
+| D-27 | Pools that telescopic creates ship the target with `cloudpickle` when it is installed (the `parallel` extra) | Python 3.14 made forkserver the Linux default, so a `log_prob` defined in a notebook no longer pickles (design review D-R25) | standard pickling only; forcing the fork start method (unsafe with threads) |
 
 **Open questions (they do not block v0.1):**
 1. The licence: MIT by default.
@@ -725,12 +748,13 @@ These were decided without Josh's input so that work could proceed. Each is easy
 
 | ID | Experiment | Result |
 |---|---|---|
-| E01 (`notes/experiments/e01_lag_recipe.py`) | RWMH, reflection-maximal coupling, $\mathcal N(0, I_d)$ from $\pi_0 = \mathcal N(3, I_d)$. $k = q_{0.99}(\tau - 1)$, $m = 10k$, $L \in \{1, k\}$, 4000 replicates | both lags unbiased ($\lvert z\rvert < 1$). $L = k$: inefficiency 36.6 vs 38.8 at $d = 10$ and 8.4 vs 8.6 at $d = 2$, for 1–2% more cost. The bias correction is non-zero in 1–4% of replicates |
+| E01 (`notes/experiments/e01_lag_recipe.py`) | RWMH, reflection-maximal coupling, $\mathcal N(0, I_d)$ from $\pi_0 = \mathcal N(3, I_d)$. $k$ = the floor of NumPy's linearly interpolated $q_{0.99}(\tau - 1)$ from a 2000-replicate pilot, $m = 10k$, $L \in \{1, k\}$, 4000 replicates | both lags unbiased ($\lvert z\rvert < 1$). $L = k$: inefficiency 36.6 vs 38.8 at $d = 10$ and 8.4 vs 8.6 at $d = 2$, for 1–2% more cost. The bias correction is non-zero in 1–4% of replicates |
 | Kickoff prototype (`notes/LOG.md`, 2026-10-23) | Same coupling, stationary start, step $2.38/\sqrt d$ | mean $\tau$ = 3.8, 5.7, 13.4, 32.1, 83.2, 256.9 at $d$ = 1, 2, 5, 10, 20, 50 |
 | E-R1 (`mh_couplings.md` §2, §3) | Census reproductions | reflection-maximal $\bar\tau$ = 32.3 at $d = 10$ (O'Leary 2021: 30); independent residuals 274 (279). Reflection grows about as $d^{1.3}$ to $d = 400$ |
 | E-R2 (`validation_benchmarks.md` Q1) | A coupling that recomputes $Y$ on the meeting branch | met 0.2% of the time instead of 94%; marginal tests still passed; only a binomial test of the meeting frequency caught it |
 | E-R3 (`advanced_couplings.md` §5) | emcee-style stretch and DE ensembles with shared random numbers, plus a maximal-coupling step | no contraction; 0 meetings in 50,000 iterations at $d$ = 1 to 10. Coupled single-chain RWMH met with median τ = 32 at $d = 5$ |
-| E-R4 (`parallel_engineering.md`) | Budget policies on coupled RWMH | pooled completion within a deadline biased (z up to 221); fixed $R$ and per-lane GH unbiased |
+| E-R4 (`parallel_engineering.md`) | Budget policies on coupled RWMH | pooled completion within a deadline biased (z = +165 with 64 lanes, +211 with 1024); "first $R$ completed" z = 221; fixed $R$ and per-lane GH unbiased |
+| DR (`notes/reviews/design-review.md`) | Checks of the first draft by an independent reviewer | TV bound at $k$ 0.019 ($d = 10$) and 0.029 ($d = 30$) with $\beta = 0.99$; $k$ from 100-replicate pilots varies ±20%; interrupt bias z = −12.9 with one lane, undetectable with 16 lanes or more; batched `@` changes a row's bits in a batch of one, `einsum` does not |
 
 ## Appendix B: key references
 

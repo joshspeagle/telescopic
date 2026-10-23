@@ -1,0 +1,6 @@
+stationary N(0,1): k = L = 38, m = 380; P(tau - L > k) = 0.0080
+  h=x  : coverage 0.945 (binomial se 0.007); excess kurtosis of H 0.2
+  h=x^2: coverage 0.939 (binomial se 0.008); excess kurtosis of H 0.8
+near-stationary N(1,1): k = L = 38, m = 380; P(tau - L > k) = 0.0098
+  h=x  : coverage 0.946 (binomial se 0.007); excess kurtosis of H 0.1
+  h=x^2: coverage 0.951 (binomial se 0.007); excess kurtosis of H 0.8
