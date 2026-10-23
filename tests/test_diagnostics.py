@@ -11,22 +11,24 @@ from telescopic.target import Target
 
 
 def synthetic(meeting_times, values, *, k=0, lag=1, max_iter=None):
-    # One atom of weight 1 per replicate that met: its estimate is its value.
-    tau = np.asarray(meeting_times, dtype=np.int64)
-    met = np.flatnonzero(tau >= 0)
+    # One atom of weight 1 per replicate that met: its estimate is its value. A meeting
+    # time of -1 marks a censored pair.
+    tau = np.asarray(meeting_times, dtype=np.float64)
+    tau[tau < 0] = np.inf
+    met = np.flatnonzero(np.isfinite(tau))
     values = np.asarray(values, dtype=np.float64)
     return Result(
         Replicates(
             index=np.arange(len(tau)),
             meeting_time=tau,
-            cost=np.maximum(tau, 1),
+            cost=np.ones(len(tau), dtype=np.int64),
             atoms=values[met, None],
             weights=np.ones(len(met)),
             owner=met,
-            correction=np.zeros(len(met), dtype=bool),
             distance_owner=np.zeros(0, dtype=np.int64),
             distance_time=np.zeros(0, dtype=np.int64),
             distance=np.zeros(0),
+            zero_density=np.zeros(0, dtype=np.int64),
         ),
         k=k,
         m=k,

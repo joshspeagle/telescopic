@@ -449,7 +449,7 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
   - it is excluded from the estimates, from $R$ and from the signed measure;
   - it is reported by a `ConvergenceWarning` stating that the estimates are biased.
 - Censored pairs are never dropped silently, and never averaged as if they had met.
-- **Slow-pair warning:** when a pair passes $t = \max(10^4, 10\max(L, m))$, the engine emits one `ConvergenceWarning` naming the replicate. With the recipe of R-TUNE-2 and $m \ge 1000$ this is 100 times the pilot's $\hat q_\beta$; it needs no pilot, and in the meeting-time pilot ($L = 1$, $m = 0$) it is $10^4$.
+- **Slow-pair warning:** when a pair passes $t = \max(10^4, 10\max(L, m))$, the sampler emits one `ConvergenceWarning` naming the replicate, from the engine's progress reports. With the recipe of R-TUNE-2 and $m \ge 1000$ this is 100 times the pilot's $\hat q_\beta$; it needs no pilot, and in the meeting-time pilot ($L = 1$, $m = 0$) it is $10^4$.
 - **Meeting-time pilot:** it is capped at `pilot_max_iter` (default $10^5$). Capped pairs are censored and sort above every finite meeting time; if $\hat q_\beta$ falls on a censored pair, the pilot raises `ValueError` with advice (a wider $\pi_0$, a better kernel, or explicit `k`, `lag` and `m`). So `sample()` cannot run forever on a target where the coupling never meets (D-23).
 
 ### 6.4 Parallel execution (R-EXEC-5)

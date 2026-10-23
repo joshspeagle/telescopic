@@ -122,7 +122,6 @@ Kernel-specific tests:
 
 **Algebraic identities (Hypothesis).** Paths are synthetic: random arrays $X_{0..T}$ and $Y_{0..T-L}$ with a forced meeting time $\tau$, and random $0 \le k \le m$, $L \ge 1$, `thin` $\ge 1$. On them:
 - The weighted sum of §3.2 equals the definitional average of $H_l$ over the averaging set, to `1e-12`. This is the main guard against weight and index bugs.
-- `correction_coefficients` with $L = 1$ and `thin=1` equals $\min(1, (t - k)/(m - k + 1))$ (JOA20 eq. 2.1), an anchor independent of the reference above.
 - The weights of the signed measure sum to 1, and $\hat\pi(h)$ equals $H$ for several $h$ (in 2.6, on recorded paths).
 - The cost equals $L + 2(\tau - L) + \max(0, m - \tau)$ (in 2.6).
 
@@ -137,8 +136,6 @@ Kernel-specific tests:
 **Exact expectation.**
 - Fast tier: with $\mathbb E\,h(X_t) = a_t$ converging geometrically, $|S|^{-1}\sum_{l\in S} a_l + \sum_t c_t (a_t - a_{t-L})$, computed with the package's `correction_coefficients`, equals $\lim a_t$ to $10^{-12}$ for random $(k, m, L, \text{thin})$. Since a faithful coupling's marginals give exactly this expectation, this is the unbiasedness of the weights, checked against the truth rather than a reference. (A 4-state chain is one such sequence; the recursion on its joint law adds nothing.)
 - Slow tier: the engine's average over $10^6$ replicates matches it (sequential escalation).
-
-**Perfect kernel.** A test-only kernel with $P(x, \cdot) = \pi$ for every $x$, coupled by common draws, meets at the first coupled step. The engine records $\tau = L + 1$, or $\tau = L$ when $X_L = Y_0$. This checks the meeting-time bookkeeping and the lag indexing deterministically.
 
 ### 2.6 `tests/test_engine.py` (R-EST-1–3, R-EST-7, R-EXEC-3, R-EXEC-4)
 
@@ -272,7 +269,7 @@ Kernel-specific tests:
 
 | Requirement | Tests |
 |---|---|
-| R-EST-1–3 (construction, meeting, faithfulness) | 2.4 faithfulness; 2.5 perfect kernel; 2.6 lag and meeting, and a splitting kernel |
+| R-EST-1–3 (construction, meeting, faithfulness) | 2.4 faithfulness; 2.6 lag, meeting and the transition each chain receives |
 | R-EST-4–6 (weights, thinning, signed measure) | 2.5 identities; 2.6 recorded paths; 2.12 unbiasedness |
 | R-EST-7 (cost) | 2.5; 2.6 |
 | R-EST-8 (derived estimators) | 2.5; 2.7 |

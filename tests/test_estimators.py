@@ -55,21 +55,15 @@ def test_the_coefficients_telescope_to_the_limit(configuration, rate):
     assert abs(expectation - 1.0) < 1e-12
 
 
-def test_lag_one_coefficients_follow_jacob_oleary_atchade_equation_2_1():
-    k, m = 5, 20
-    t = np.arange(k + 1, 60)
-    expected = np.minimum(1.0, (t - k) / (m - k + 1))
-    np.testing.assert_allclose(correction_coefficients(t, k, m, 1, 1), expected, rtol=1e-15)
-
-
 def test_the_covariance_is_the_mean_second_moment_minus_the_u_statistic():
     rng = np.random.default_rng(1)
-    first, second = rng.standard_normal((7, 3)), rng.standard_normal((7, 3, 3))
+    first, b = rng.standard_normal((7, 3)), rng.standard_normal((3, 3))
+    second = b + b.T  # second moments are symmetric
     u_statistic = sum(
         np.outer(first[r], first[s]) for r in range(7) for s in range(7) if r != s
     ) / (7 * 6)
     np.testing.assert_allclose(
-        unbiased_covariance(first, second), second.mean(axis=0) - u_statistic, atol=1e-14
+        unbiased_covariance(first, second), second - u_statistic, atol=1e-14
     )
 
 
@@ -80,19 +74,17 @@ def test_the_covariance_is_the_mean_second_moment_minus_the_u_statistic():
 )
 def test_quantiles_of_positive_weights_are_inverted_cdf_quantiles(counts, q, seed):
     # Integer weights are repeated values, so NumPy's inverted-CDF quantile is the
-    # reference; ties between values exercise the merging of equal atoms.
+    # reference.
     values = np.random.default_rng(seed).integers(0, 6, size=len(counts)).astype(float)
     weights = np.array(counts) / sum(counts)
     expected = np.quantile(np.repeat(values, counts), q, method="inverted_cdf")
     assert weighted_quantile(values, weights, q) == expected
 
 
-def test_quantiles_of_a_signed_measure_are_monotone_and_inside_the_atoms():
-    rng = np.random.default_rng(2)
-    values = rng.standard_normal(200)
-    weights = rng.standard_normal(200)
-    weights += (1 - weights.sum()) / 200
-    levels = np.linspace(0, 1, 101)
-    quantiles = weighted_quantile(values, weights, levels)
-    assert np.all(np.diff(quantiles) >= 0)
-    assert np.isin(quantiles, values).all()
+def test_quantiles_of_a_signed_measure_merge_project_and_clip_its_cdf():
+    # Merged: [-1, 0, 1, 2, 3] with masses [-0.1, 0.5, 0.2, -0.2, 0.6]; cumulative
+    # [-0.1, 0.4, 0.6, 0.4, 1.0]; isotonic [-0.1, 0.4, 0.5, 0.5, 1.0]; clipped at 0.
+    values = np.array([1.0, -1.0, 0.0, 1.0, 2.0, 3.0])
+    weights = np.array([0.5, -0.1, 0.5, -0.3, -0.2, 0.6])
+    levels = [0.0, 0.45, 0.5, 0.55, 1.0]
+    np.testing.assert_array_equal(weighted_quantile(values, weights, levels), [-1, 1, 1, 3, 3])

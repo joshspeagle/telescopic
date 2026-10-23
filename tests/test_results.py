@@ -47,18 +47,14 @@ def test_an_estimate_averages_the_replicates_with_a_normal_interval():
 
 def test_the_covariance_combines_first_and_second_moments_coordinate_by_coordinate():
     first = RESULT.measure.per_replicate(lambda x: x)
-    second = np.stack(
+    second = np.array(
         [
-            np.stack(
-                [
-                    RESULT.measure.per_replicate(lambda x, i=i, j=j: x[:, i] * x[:, j])
-                    for j in range(2)
-                ],
-                axis=1,
-            )
+            [
+                RESULT.measure.per_replicate(lambda x, i=i, j=j: x[:, i] * x[:, j]).mean()
+                for j in range(2)
+            ]
             for i in range(2)
-        ],
-        axis=1,
+        ]
     )
     covariance = RESULT.cov()
     np.testing.assert_allclose(covariance, unbiased_covariance(first, second), atol=1e-12)

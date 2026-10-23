@@ -66,3 +66,24 @@ class SignedMeasure:
         )
         per_replicate: FloatArray = sums.reshape(self.n_replicates, *values.shape[1:])
         return per_replicate
+
+    def mass(self, cell: IntArray, n_cells: int) -> FloatArray:
+        """Each replicate's signed mass in each of ``n_cells`` cells, such as histogram bins.
+
+        Parameters
+        ----------
+        cell : ndarray of int, shape (N,)
+            The cell of each atom, from 0 to ``n_cells - 1``, or -1 for none.
+        n_cells : int
+
+        Returns
+        -------
+        ndarray, shape (R, n_cells)
+        """
+        inside = cell >= 0
+        masses: FloatArray = np.bincount(
+            self.replicate[inside] * n_cells + cell[inside],
+            weights=self.weights[inside],
+            minlength=self.n_replicates * n_cells,
+        ).reshape(self.n_replicates, n_cells)
+        return masses

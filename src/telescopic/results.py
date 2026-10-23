@@ -76,10 +76,6 @@ class Result:
         The frozen kernel and the initial distribution, for the record.
     seed : numpy.random.SeedSequence, optional
         The root seed, whose ``entropy`` and ``spawn_key`` reproduce the run.
-    n_log_prob, n_grad : int
-        Evaluations of the log-density and its gradient during the run.
-    wall_time : float
-        Duration of the run in seconds.
     tuning, pilot : optional
         Reports of the pilot runs.
     interrupted : bool
@@ -97,6 +93,10 @@ class Result:
         :math:`R`, the replicates that met.
     n_censored : int
     ndim : int
+    n_log_prob, n_grad : int
+        Evaluations of the log-density and its gradient during the runs.
+    wall_time : float
+        Seconds spent in the runs.
     """
 
     def __init__(
@@ -112,14 +112,11 @@ class Result:
         kernel: Any = None,
         initial: Any = None,
         seed: SeedSequence | None = None,
-        n_log_prob: int = 0,
-        n_grad: int = 0,
-        wall_time: float = 0.0,
         tuning: Any = None,
         pilot: Any = None,
         interrupted: bool = False,
     ) -> None:
-        met = replicates.meeting_time >= 0
+        met = np.isfinite(replicates.meeting_time)
         self.n_replicates = int(met.sum())
         self.n_censored = len(met) - self.n_replicates
         if self.n_censored and max_iter is None:
@@ -129,7 +126,7 @@ class Result:
         if len(self.names) != self.ndim:
             raise ValueError(f"names must have {self.ndim} entries, not {len(self.names)}")
         self.index = replicates.index
-        self.meeting_times = np.where(met, replicates.meeting_time, np.inf)
+        self.meeting_times = replicates.meeting_time
         self.costs = replicates.cost
         self.measure = SignedMeasure(
             replicates.atoms,
@@ -139,7 +136,8 @@ class Result:
         )
         self.k, self.m, self.lag, self.thin, self.max_iter = k, m, lag, thin, max_iter
         self.kernel, self.initial, self.seed = kernel, initial, seed
-        self.n_log_prob, self.n_grad, self.wall_time = n_log_prob, n_grad, wall_time
+        self.n_log_prob, self.n_grad = replicates.n_log_prob, replicates.n_grad
+        self.wall_time = replicates.seconds
         self.tuning, self.pilot, self.interrupted = tuning, pilot, interrupted
         # The time each pair stopped: its meeting time, or the cap for a censored pair,
         # which makes the bounds of section 3.6 lower bounds of their estimates.
@@ -184,12 +182,10 @@ class Result:
         -------
         ndarray, shape (d, d)
         """
-        d = self.ndim
         first = self.measure.per_replicate(lambda x: x)
-        second = self.measure.per_replicate(
-            lambda x: (x[:, :, None] * x[:, None, :]).reshape(len(x), d * d)
-        )
-        return unbiased_covariance(first, second.reshape(-1, d, d))
+        atoms, weights = self.measure.atoms, self.measure.weights
+        second = atoms.T @ (weights[:, None] * atoms) / self.n_replicates
+        return unbiased_covariance(first, second)
 
     def var(self) -> FloatArray:
         """Unbiased estimates of the variances, shape ``(d,)``; they can be negative."""
@@ -268,12 +264,7 @@ class Result:
         if range is None:
             edges[-1] = np.nextafter(edges[-1], np.inf)  # keep the largest atom inside
         which = np.searchsorted(edges, values, side="right") - 1
-        inside = (which >= 0) & (which < bins)
-        masses = np.bincount(
-            self.measure.replicate[inside] * bins + which[inside],
-            weights=self.measure.weights[inside],
-            minlength=self.n_replicates * bins,
-        ).reshape(self.n_replicates, bins)
+        masses = self.measure.mass(np.where(which < bins, which, -1), bins)
         errors = masses.std(axis=0, ddof=1) / np.sqrt(self.n_replicates)
         return masses.mean(axis=0), errors, edges
 
@@ -334,7 +325,7 @@ class Result:
             "meeting_time_50": float(quantiles[0]),
             "meeting_time_90": float(quantiles[1]),
             "meeting_time_99": float(quantiles[2]),
-            "meeting_time_max": float(met.max()) if len(met) else np.nan,
+            "meeting_time_max": float(np.max(met)) if len(met) else np.nan,
             "censored": self.n_censored,
             "late_fraction": float(np.mean(met - self.lag > self.k)) if len(met) else np.nan,
             "mean_cost": mean_cost,
