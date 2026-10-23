@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+
+# Tools
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+coverage.xml
+htmlcov/
+
+# Docs
+docs/_build/
+docs/jupyter_execute/
+docs/api/generated/
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
