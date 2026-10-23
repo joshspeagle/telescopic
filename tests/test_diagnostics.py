@@ -170,9 +170,13 @@ def test_the_relative_cost_divides_the_mean_cost_by_the_averaged_times():
     assert (found["mean_cost"], found["relative_cost"]) == (25, 2.5)
 
 
-def test_hill_leaves_a_tail_unresolved_by_ties_undefined():
-    # 92% ones and 8% twos: the threshold, the 51st largest value, is the smallest value.
-    assert np.isnan(hill([1.0] * 460 + [2.0] * 40, 50))
+def test_hill_keeps_its_threshold_above_ties_at_the_smallest_value():
+    # 92% ones: a threshold of 1 gave 1.80 for ones and twos, and nan hid a Pareto tail.
+    pareto = 2 * 40 / (40 - np.arange(40) - 0.5)
+    for tail, expected in ((np.full(40, 2.0), np.inf), (pareto, hill(pareto, 39))):
+        assert hill(np.r_[np.ones(460), tail], 50) == expected
+    assert hill(np.r_[np.ones(460), pareto], 50) < 2
+    assert np.isnan(hill(np.r_[np.ones(499), 2.0], 50))
 
 
 def test_variance_share_ignores_spreads_of_rounding():

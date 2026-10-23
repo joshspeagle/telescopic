@@ -336,9 +336,9 @@ class Result:
         Returns
         -------
         dict
-            ``meeting_time`` quantiles (50, 90, 99) and maximum; ``tail_index``, Hill's
-            estimate of the tail index of :math:`\\tau - L + 1` from its
-            :math:`\\lfloor R/10 \\rfloor` largest values, ``nan`` below 500 replicates;
+            ``meeting_time`` quantiles (50, 90, 99) and maximum; ``tail_index``,
+            :func:`~telescopic.diagnostics.hill` of :math:`\\tau - L + 1` with
+            ``n_tail`` :math:`= \\lfloor R/10 \\rfloor`, ``nan`` below 500 replicates;
             ``censored``; ``late_fraction``, the fraction of pairs with
             :math:`\\tau - L > k`, censored ones included (the leading term of the TV
             bound at :math:`k`, spec section 3.6), with ``late_fraction_upper``, its

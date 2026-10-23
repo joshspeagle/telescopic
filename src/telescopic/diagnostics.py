@@ -113,6 +113,10 @@ def hill(values: npt.ArrayLike, n_tail: int) -> float:
 
     from the :math:`k` = ``n_tail`` largest of :math:`n` values. A tail
     :math:`P(X > x) \propto x^{-\alpha}` has finite moments below :math:`\alpha` only.
+    Where ties make the smallest value the threshold :math:`x_{(n-k)}`, as among small
+    integers, :math:`k` becomes one less than the number of values above it, so that the
+    threshold is the next larger value: a threshold of 1 would read a step to 2 as a heavy
+    tail.
 
     Parameters
     ----------
@@ -124,9 +128,8 @@ def hill(values: npt.ArrayLike, n_tail: int) -> float:
     Returns
     -------
     float
-        ``inf`` when the largest values are all equal, and ``nan`` when
-        :math:`x_{(n-k)}` is the smallest value, so that ties, as among small integers,
-        leave the tail unresolved.
+        ``inf`` when the largest values are all equal, and ``nan`` when ties at the
+        smallest value leave fewer than two values above it.
     """
     x = np.sort(np.asarray(values, dtype=np.float64))
     n_tail = integer("n_tail", n_tail)
@@ -136,8 +139,10 @@ def hill(values: npt.ArrayLike, n_tail: int) -> float:
         )
     if not x[0] > 0:
         raise ValueError(f"values must be positive, not as small as {x[0]}")
-    if x[-n_tail - 1] == x[0]:
-        return np.nan
+    if x[1] == x[-n_tail - 1] == x[0]:
+        n_tail = int(np.count_nonzero(x > x[0])) - 1
+        if n_tail < 1:
+            return np.nan
     mean_log = float(np.mean(np.log(x[-n_tail:] / x[-n_tail - 1])))
     return np.inf if mean_log == 0 else 1.0 / mean_log
 

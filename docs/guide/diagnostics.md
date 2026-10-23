@@ -100,8 +100,8 @@ assert abs(values["late_fraction"] - values["tv_bound_at_k"]) < 0.01
 - `meeting_time_50`, `meeting_time_90`, `meeting_time_99`, `meeting_time_max` and
   `censored`: the meeting times of the pairs that met, and the number of censored pairs.
 - `tail_index`: Hill's estimate of the tail index of $\tau - L + 1$, `nan` below 500
-  replicates, or when ties among small meeting times leave the tail unresolved
-  ([`tail`](#heavy-tailed-meeting-times-tail)).
+  replicates, or when ties at the smallest meeting time leave fewer than two pairs above
+  it ([`tail`](#heavy-tailed-meeting-times-tail)).
 - `late_fraction` and `late_fraction_upper`: the fraction of pairs that met after
   `k + lag`, censored ones included, and its one-sided 95% Clopper-Pearson upper bound,
   which stays informative when the fraction is 0. The fraction is the leading term of
@@ -163,15 +163,15 @@ checks a function of your own.
 
 **Trigger:** with at least 500 replicates, Hill's estimate of the tail index of
 $\tau - L + 1$ ({func}`telescopic.diagnostics.hill`), from its $\lfloor R/10 \rfloor$
-largest values, is below 2. `result.diagnostics()` reports it as `tail_index` whether or
-not the warning fires. **Meaning:** unbiasedness needs moments of the meeting time, and
-valid error bars need a finite variance of the estimates
-([Theory](../theory.md#guarantees-and-their-limits)). Meeting times with a polynomial
-tail can break both: a tail index below 2 means an infinite variance of the meeting
-times, the estimates may have one too, and then their error bars are not reliable at any
-number of replicates. **Remedy:** look at the survival function of `plot_meeting_times`,
-whose tail is straight on its log scale for geometric meeting times, and at the kernel
-([Kernels](kernels.md)).
+largest values, or from fewer when most pairs meet at the smallest time, is below 2.
+`result.diagnostics()` reports it as `tail_index` whether or not the warning fires.
+**Meaning:** unbiasedness needs moments of the meeting time, and valid error bars need a
+finite variance of the estimates ([Theory](../theory.md#guarantees-and-their-limits)).
+Meeting times with a polynomial tail can break both: a tail index below 2 means an
+infinite variance of the meeting times, the estimates may have one too, and then their
+error bars are not reliable at any number of replicates. **Remedy:** look at the
+survival function of `plot_meeting_times`, whose tail is straight on its log scale for
+geometric meeting times, and at the kernel ([Kernels](kernels.md)).
 
 ### Disagreeing tuning chains (`tuning`)
 

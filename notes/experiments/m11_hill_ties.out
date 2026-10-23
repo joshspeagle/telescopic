@@ -1,0 +1,12 @@
+share of runs below 2 / nan, by rule
+geometric(0.5): none 0.007 / 0.000, nan 0.007 / 0.000, package 0.007 / 0.000
+geometric(0.8): none 0.000 / 0.000, nan 0.000 / 0.000, package 0.000 / 0.000
+geometric(0.88): none 0.086 / 0.000, nan 0.000 / 0.086, package 0.000 / 0.000
+geometric(0.9): none 0.538 / 0.000, nan 0.000 / 0.548, package 0.000 / 0.000
+geometric(0.92): none 0.771 / 0.000, nan 0.000 / 0.952, package 0.000 / 0.000
+geometric(0.95): none 0.027 / 0.000, nan 0.000 / 1.000, package 0.000 / 0.000
+geometric(0.99): none 0.000 / 0.000, nan 0.000 / 1.000, package 0.000 / 0.040
+ones and 5% heavy: none 0.796 / 0.000, nan 0.000 / 1.000, package 0.656 / 0.000
+ones and 8% heavy: none 0.986 / 0.000, nan 0.036 / 0.951, package 0.691 / 0.000
+ones and 20% heavy: none 0.995 / 0.000, nan 0.995 / 0.000, package 0.995 / 0.000
+exit 0
