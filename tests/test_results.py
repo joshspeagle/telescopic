@@ -70,7 +70,7 @@ def test_the_covariance_combines_first_and_second_moments_coordinate_by_coordina
 
 def test_variances_stay_exact_far_from_the_origin():
     # Moments about 0 would cancel catastrophically at an offset of 1e8 for a spread of 1.
-    replicates = gaussian_run(range(40), **SETTINGS)
+    replicates = RESULT._replicates
     shifted = Result(replace(replicates, atoms=replicates.atoms + 1e8))
     np.testing.assert_allclose(shifted.cov(), RESULT.cov(), rtol=1e-6, atol=1e-6)
     np.testing.assert_allclose(shifted.var(), RESULT.var(), rtol=1e-6)

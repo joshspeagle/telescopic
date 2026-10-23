@@ -177,11 +177,24 @@ def test_maximal_refuses_a_log_density_of_nan_or_plus_infinity(value, broken):
         maximal([p], [q], random_draws(1, 8))
 
 
+class UnitNormals:
+    """Unit normals with an array of means, like a frozen SciPy normal with array parameters."""
+
+    def __init__(self, mean):
+        self.mean = np.asarray(mean)
+
+    def rvs(self, *, random_state):
+        return self.mean + random_state.standard_normal(self.mean.shape)
+
+    def logpdf(self, value):
+        return -0.5 * (value - self.mean) ** 2 - 0.5 * np.log(2 * np.pi)
+
+
 def test_maximal_couples_draws_of_several_coordinates_by_their_joint_density():
     # Normals with array parameters draw several independent coordinates, and give each its
     # log-density; the coupling sums them.
     n = 4000
-    p, q = stats.norm([0.0, 0.0], 1.0), stats.norm([1.0, 0.5], 1.0)
+    p, q = UnitNormals([0.0, 0.0]), UnitNormals([1.0, 0.5])
     x, y, identical, _ = maximal([p] * n, [q] * n, random_draws(n, 13))
     # Unit normals whose means are a distance r apart overlap with probability 2 Phi(-r/2).
     rate = 2 * stats.norm.cdf(-np.hypot(1.0, 0.5) / 2)

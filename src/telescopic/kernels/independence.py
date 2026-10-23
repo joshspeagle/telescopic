@@ -111,7 +111,6 @@ class Independence(Kernel):
 
     @property
     def ndim(self) -> int | None:
-        # A proposal's mean, if it has one, fixes the dimension.
         mean = getattr(self.proposal, "mean", None)
         return None if mean is None else len(mean)
 

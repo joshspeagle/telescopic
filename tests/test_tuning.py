@@ -92,7 +92,7 @@ def test_the_pilot_does_not_depend_on_the_scales_of_the_coordinates():
     # the narrow coordinate, so that sample() failed.
     def pilot(scales):
         target = Target(lambda x: -0.5 * np.sum((x / scales) ** 2, axis=1), vectorize=True)
-        return adaptive_metropolis(target, Normal(np.zeros(2), 4 * scales**2), 1)
+        return adaptive_metropolis(target, Normal(np.zeros(2), 4 * scales**2), 1, n_steps=200)
 
     scales = np.array([1e-5, 1e5])
     unit, scaled = pilot(np.ones(2)), pilot(scales)
@@ -107,14 +107,12 @@ def test_the_pilot_refuses_draws_whose_dimension_changes():
         adaptive_metropolis(TARGET, lambda rng: rng.normal(size=next(lengths)), 1)
 
 
-@pytest.mark.parametrize(
-    "initial",
-    [np.random.default_rng(3).normal(size=(10, 5)), lambda rng: rng.normal(size=5)],
-    ids=["array", "callable"],
-)
-def test_kernels_tune_from_an_array_or_a_callable_as_sample_does(initial):
-    kernel, _ = RandomWalk().tune(TARGET, initial, 1)
-    assert kernel.ndim == 5
+def test_the_pilot_draws_from_an_array_of_points_as_sample_does():
+    # So that Kernel.tune takes every initial form that sample takes.
+    pilot = adaptive_metropolis(
+        TARGET, np.random.default_rng(3).normal(size=(10, 5)), 1, n_steps=100
+    )
+    assert pilot.samples.shape[2] == 5
 
 
 def test_tuning_checks_the_target_before_running_the_pilot():

@@ -144,8 +144,9 @@ def test_a_run_completes_a_pilot_of_fewer_than_100_pairs():
 
 def test_an_explicit_k_of_zero_gets_a_lag_of_one():
     sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=4)
-    settings = sampler._configure({"k": 0}, None, False)
-    assert (settings.k, settings.lag, settings.m) == (0, 1, 0)
+    with pytest.warns(ConvergenceWarning, match="met after k \\+ lag"):  # with k = 0, all do
+        sampler.run(2, k=0)
+    assert (sampler.settings.lag, sampler.settings.m) == (1, 0)
 
 
 @pytest.mark.parametrize(

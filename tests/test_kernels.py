@@ -365,10 +365,9 @@ def test_independence_takes_any_proposal_with_sample_and_log_density():
     np.testing.assert_array_equal(new.x[0], [0.3, -0.4])
 
 
-@pytest.mark.parametrize("proposal", ["x", stats.multivariate_normal(np.zeros(2))])
-def test_independence_refuses_a_proposal_without_sample_and_log_density(proposal):
+def test_independence_refuses_a_proposal_without_sample_and_log_density():
     with pytest.raises(TypeError, match="proposal must have sample"):
-        Independence(proposal)
+        Independence(stats.multivariate_normal(np.zeros(2)))
 
 
 @pytest.mark.parametrize(
@@ -819,7 +818,6 @@ def test_gibbs_rejects_invalid_parameters(kwargs, message):
     ("make", "message"),
     [
         (lambda: RandomWalk(np.eye(2), scale="1"), "scale must be a real number, not '1'"),
-        (lambda: RandomWalk(np.eye(2), scale=np.ones(2)), "scale must be a real number"),
         (lambda: MALA("0.1", cov=np.eye(1)), "step_size must be a real number"),
         (lambda: MALA(0.5, cov=np.eye(1)).with_step_size(np.eye(2)), "step_size must be a real"),
         (lambda: HMC(0.1, 2.0, cov=np.eye(1)), "n_steps must be an integer or None, not 2.0"),

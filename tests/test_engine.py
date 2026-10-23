@@ -108,12 +108,8 @@ def test_a_cap_censors_unmet_pairs_and_drops_their_measures():
     np.testing.assert_array_equal(replicates.cost, 1 + 2 * (15 - 1))
 
 
-class Beside(RandomWalk):
+class Beside(Tagged):
     """Y lands beside X: equal in the first coordinate, 1e-12 away in the second."""
-
-    def step(self, target, state, draws):
-        x = state.x + 1.0
-        return State(x, target.log_prob(x)), np.ones(len(x))
 
     def coupled_step(self, target, state_x, state_y, draws):
         moved, _ = self.step(target, state_x, draws)

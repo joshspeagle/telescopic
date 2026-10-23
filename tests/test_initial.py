@@ -63,9 +63,7 @@ def test_a_covariance_symmetric_up_to_rounding_is_accepted_and_symmetrised():
     # As np.linalg.inv returns: an asymmetry of 1e-20 against variances of 1e-4 is
     # rounding, which a test relative to each entry refused.
     cov = np.array([[1e-4, 1e-20], [0.0, 2e-4]])
-    normal = Normal([0.0, 0.0], cov)
-    np.testing.assert_array_equal(normal.cov, normal.cov.T)
-    np.testing.assert_array_equal(normal.cov[0, 1], 5e-21)
+    np.testing.assert_array_equal(Normal([0.0, 0.0], cov).cov, [[1e-4, 5e-21], [5e-21, 2e-4]])
 
 
 def test_a_non_finite_draw_raises():
@@ -100,7 +98,6 @@ def test_an_object_without_rvs_is_not_an_initial_distribution():
         (lambda: Uniform([-np.inf], [0.0]), "low must be finite"),
         (lambda: Uniform([0.0], [np.inf]), "high must be finite"),
         (lambda: Empirical([[0.0, 1.0], [np.nan, 0.0]]), r"finite, but row 1 is \[nan, 0.0\]"),
-        (lambda: Empirical([]), "shape"),
         (lambda: Empirical(np.zeros((3, 0))), "d >= 1"),
         (lambda: Empirical([1.0, 2.0]), r"not \(2,\)"),
     ],

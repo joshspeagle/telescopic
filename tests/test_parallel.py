@@ -279,12 +279,12 @@ def test_an_interrupted_run_is_completed_by_the_next_run(capsys):
     # two runs equal one uninterrupted run. k = 40 keeps the pairs from meeting late.
     kernel = RandomWalk(np.eye(2))
     sampler = telescopic.CoupledSampler(interrupting(2_000), INIT, kernel=kernel, rng=7)
-    first = sampler.run(300, k=40)
+    first = sampler.run(300, k=40, m=40)
     assert first.interrupted
     np.testing.assert_array_equal(first.index, np.arange(engine.LANES))
     second = sampler.run(50)
     assert not second.interrupted
-    whole = telescopic.sample(gaussian_log_prob, INIT, 306, kernel=kernel, k=40, rng=7)
+    whole = telescopic.sample(gaussian_log_prob, INIT, 306, kernel=kernel, k=40, m=40, rng=7)
     assert_same_replicates(second._replicates, whole._replicates)
     assert "press Ctrl-C again" in capsys.readouterr().err
 
