@@ -166,7 +166,12 @@ On a pool, telescopic's workers start no new replicate after the first Ctrl-C, a
 that starts afterwards runs nothing, unless it is the first, so that the result holds at
 least one replicate. On an executor of your own, the chunks not yet started are cancelled
 and the running ones finish; a pool with only `map` returns the waves it completed. How
-the rest of a pool of your own reacts to Ctrl-C is up to the pool.
+the rest of a pool of your own reacts to Ctrl-C is up to the pool. A process pool of your
+own should ignore Ctrl-C in its workers, as telescopic's do:
+`ProcessPoolExecutor(4, initializer=signal.signal, initargs=(signal.SIGINT, signal.SIG_IGN))`.
+Otherwise Ctrl-C kills its idle workers and breaks the pool: the run returns the chunks
+that had finished, flagged `interrupted`, or raises `BrokenProcessPool` if none had, and
+the pool cannot run again.
 
 ## Progress
 

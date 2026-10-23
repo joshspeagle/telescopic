@@ -121,7 +121,7 @@ SignedMeasure(atoms (N, d), weights (N,), replicate (N,), n_replicates)
 
 ```text
 Settings(k, m, lag, thin=1, max_iter=None, store=True)      # spec §3.2
-check_settings(settings)                                    # raises ValueError
+check_settings(settings) -> Settings                        # ints; TypeError, ValueError
 Replicates(seed, settings, index, meeting_time, cost, atoms, weights, owner, distance_owner,
            distance_time, distance, zero_density, requested, n_log_prob, n_grad, seconds,
            paths)                                           # inf = censored

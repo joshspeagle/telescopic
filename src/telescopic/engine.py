@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import itertools
+import operator
 import time
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
@@ -14,7 +15,7 @@ from numpy.random import Generator, SeedSequence
 
 from telescopic._random import MAIN, Streams, replicate_generator, root_seed
 from telescopic._types import BoolArray, Distribution, FloatArray, IntArray, Seed
-from telescopic.estimators import averaging_times, correction_coefficients
+from telescopic.estimators import correction_coefficients
 from telescopic.initial import draw
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
@@ -197,10 +198,10 @@ def run(
     Notes
     -----
     Memory: the stored atoms take about :math:`R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})
-    (8d + 16)` bytes (spec R-EXEC-7).
+    (8d + 16)` bytes, and the :math:`\tau - L` distances of each replicate 24 bytes each
+    (spec R-EXEC-7).
     """
-    settings = Settings(k, m, lag, thin, max_iter, store)
-    check_settings(settings)
+    settings = check_settings(Settings(k, m, lag, thin, max_iter, store))
     if lanes < 1:
         raise ValueError(f"lanes must be at least 1, not {lanes}")
     requested = np.asarray(indices)
@@ -238,23 +239,49 @@ def run(
     )
 
 
-def check_settings(settings: Settings) -> None:
-    r"""Raise ``ValueError`` unless the settings of a run are valid (spec section 3.2).
+def check_settings(settings: Settings) -> Settings:
+    r"""Check the settings of a run and return them with Python integers (spec section 3.2).
 
-    They need :math:`0 \le k \le m`, :math:`L \ge 1`, ``thin`` :math:`\ge 1`, and a
-    ``max_iter`` above :math:`\max(L, m)` if any.
+    They need integers :math:`0 \le k \le m`, :math:`L \ge 1` and ``thin`` :math:`\ge 1`,
+    and an integer ``max_iter`` above :math:`\max(L, m)` or ``None``. NumPy integers
+    become ``int``.
 
     Parameters
     ----------
     settings : Settings
+
+    Returns
+    -------
+    Settings
+
+    Raises
+    ------
+    TypeError
+        If a setting is not an integer.
+    ValueError
+        If the settings break a bound.
     """
-    k, m, lag, thin, max_iter, _ = settings
+    k, m, lag, thin = (
+        _integer(name, getattr(settings, name)) for name in ("k", "m", "lag", "thin")
+    )
+    max_iter = settings.max_iter
+    if max_iter is not None:
+        max_iter = _integer("max_iter", max_iter, "an integer or None")
     if not 0 <= k <= m:
         raise ValueError(f"k and m must satisfy 0 <= k <= m, not k={k}, m={m}")
     if lag < 1 or thin < 1:
         raise ValueError(f"lag and thin must be at least 1, not lag={lag}, thin={thin}")
     if max_iter is not None and max_iter <= max(lag, m):
         raise ValueError(f"max_iter must exceed max(lag, m) = {max(lag, m)}, not {max_iter}")
+    return Settings(k, m, lag, thin, max_iter, settings.store)
+
+
+def _integer(name: str, value: Any, expected: str = "an integer") -> int:
+    # The sampler checks its own arguments with it too.
+    try:
+        return operator.index(value)
+    except TypeError:
+        raise TypeError(f"{name} must be {expected}, not {value!r}") from None
 
 
 def merge(parts: Sequence[Replicates]) -> Replicates:
@@ -343,7 +370,7 @@ class _Batch:
         self.target, self.kernel, self.settings = target, kernel, settings
         self.k, self.m, self.lag, self.thin, self.max_iter, self.store = settings
         self.keep_paths = keep_paths
-        self.weight = 1.0 / len(averaging_times(self.k, self.m, self.thin))
+        self.weight = 1.0 / ((self.m - self.k) // self.thin + 1)  # 1 / |S|, without building S
         self.streams = Streams(lanes)
         self.replicate = np.full(lanes, -1, dtype=np.int64)
         self.t = np.zeros(lanes, dtype=np.int64)

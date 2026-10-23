@@ -65,12 +65,13 @@ pilot runs whenever the kernel has parameters to tune.
   was left to tune.
 - {meth}`~telescopic.CoupledSampler.meeting_times` runs `n` more pilot pairs, 100 by
   default, and adds them to `sampler.pilot`. The first run's automatic `k` comes from
-  all of them, by {func}`telescopic.tuning.choose_k`, which needs at least 100. More
-  pilot pairs give a `k` that varies less between runs.
+  all of them, by {func}`telescopic.tuning.choose_k`; a run first completes a pilot of
+  fewer than 100 pairs. More pilot pairs give a `k` that varies less between runs.
 - {meth}`~telescopic.CoupledSampler.run` runs `n_replicates` more replicates and returns
   the result of all of them so far. The first call tunes the kernel and runs the pilot
   when needed, and fixes `k`, `m`, `lag`, `thin` and `max_iter`, kept in
-  `sampler.settings`; later calls keep them, and another value raises `ValueError`.
+  `sampler.settings`; later calls keep them, and another value raises `ValueError`. A
+  setting that is not an integer raises `TypeError`, before any tuning.
   [Parallel runs](parallel.md#interrupting-a-run) describes what Ctrl-C does during a
   run.
 
@@ -217,8 +218,9 @@ A result stores each replicate's signed measure
 ([Theory](../theory.md#signed-measures)): one atom per averaged state,
 $\lfloor (m - k)/s \rfloor + 1$ of them for `thin` $= s$, and two per term of the bias
 correction, each atom of $8d + 16$ bytes (its coordinates, its weight and its
-replicate). Before each run the sampler estimates the total for all the replicates, and
-emits an {class}`~telescopic.warnings.InputWarning` above 1 GB.
+replicate), and the $\tau - L$ distances of the 1-Wasserstein bound, 24 bytes each.
+Before each run the sampler estimates the total for all the replicates, and emits an
+{class}`~telescopic.warnings.InputWarning` above 1 GB.
 
 `thin` $= s$ stores about $1/s$ of the averaged states. The run is as long, and the
 estimates stay unbiased ([Theory](../theory.md#the-time-averaged-estimator)). Thinning

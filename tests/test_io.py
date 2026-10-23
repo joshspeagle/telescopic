@@ -104,6 +104,14 @@ def test_a_file_from_a_later_schema_raises(result, monkeypatch):
         Result.load(buffer)
 
 
+def test_a_file_that_is_not_a_saved_result_raises():
+    buffer = io.BytesIO()
+    np.savez(buffer, x=np.zeros(3))
+    buffer.seek(0)
+    with pytest.raises(ValueError, match="not a saved telescopic result"):
+        Result.load(buffer)
+
+
 def test_saved_files_hold_no_pickled_objects(result):
     buffer = io.BytesIO()
     result.save(buffer)

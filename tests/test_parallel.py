@@ -6,7 +6,8 @@ import sys
 import threading
 import time
 import warnings
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import Executor, Future, ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 
 import numpy as np
 import pytest
@@ -162,7 +163,7 @@ def test_invalid_settings_raise_before_workers_start(monkeypatch):
 
     monkeypatch.setattr(_parallel, "Workers", refuse)
     sampler = telescopic.CoupledSampler(gaussian_log_prob, INIT, pool=2)
-    with pytest.raises(ValueError, match="k must be an integer"):
+    with pytest.raises(TypeError, match="k must be an integer or 'auto'"):
         sampler.run(10, k="bad")
 
 
@@ -211,6 +212,38 @@ def test_a_stop_on_a_pool_keeps_the_finished_chunks(pool, at_once, monkeypatch):
     assert 0 < len(stopped.index) < len(indices)
     np.testing.assert_array_equal(stopped.index, np.arange(len(stopped.index)))
     np.testing.assert_array_equal(stopped.requested, indices)
+
+
+class Broken(Executor):
+    # Runs the first chunk, if asked, and fails the others, as a process pool does once
+    # Ctrl-C has killed one of its idle workers.
+    _max_workers = 2
+
+    def __init__(self, first):
+        self.first = first
+
+    def submit(self, function, piece, first):
+        future = Future()
+        if first and self.first:
+            future.set_result(function(piece, first=True))
+        else:
+            future.set_exception(BrokenProcessPool("a worker died"))
+        return future
+
+
+def test_a_pool_broken_after_a_stop_returns_the_finished_chunks():
+    # 200 replicates in 4 chunks: the first ran.
+    stopped = execute(job(), np.arange(200), Broken(first=True), lambda status: True)
+    np.testing.assert_array_equal(stopped.index, np.arange(50))
+    np.testing.assert_array_equal(stopped.requested, np.arange(200))
+
+
+@pytest.mark.parametrize(
+    ("first", "monitor"), [(True, never), (False, lambda status: True)], ids=["no stop", "no part"]
+)
+def test_a_broken_pool_raises_without_a_stop_or_a_finished_chunk(first, monitor):
+    with pytest.raises(BrokenProcessPool):
+        execute(job(), np.arange(200), Broken(first), monitor)
 
 
 def test_ctrl_c_once_stops_new_replicates_and_twice_raises(capsys):
@@ -283,7 +316,7 @@ def test_slow_pilot_pairs_on_a_pool_warn_after_the_run():
     sampler = telescopic.CoupledSampler(
         gaussian_log_prob, INIT, kernel=Apart(np.eye(2)), pool=Serial(), rng=9
     )
-    with pytest.warns(ConvergenceWarning, match="has not met after 10000 iterations"):
+    with pytest.warns(ConvergenceWarning, match="pilot pair 0 has not met after 10000"):
         sampler.meeting_times(2, max_iter=10_001)
 
 
@@ -329,17 +362,37 @@ def test_pools_ship_functions_with_cloudpickle_and_say_what_to_do_without(monkey
         execute(nameless, np.arange(4), Serial(), never)
 
 
+def locked_log_prob(x, lock):
+    return gaussian_log_prob(x)
+
+
+@pytest.mark.parametrize("cloudpickle", [True, False], ids=["cloudpickle", "pickle"])
+def test_a_job_that_cannot_be_pickled_names_the_cause(cloudpickle, monkeypatch):
+    # Installing cloudpickle is advised only where it is missing.
+    if not cloudpickle:
+        monkeypatch.setitem(sys.modules, "cloudpickle", None)
+    locked = job(locked_log_prob, (threading.Lock(),))
+    with pytest.raises(TypeError, match=r"cannot pickle '_thread\.lock' object") as error:
+        execute(locked, np.arange(4), Serial(), never)
+    assert ("install cloudpickle" in str(error.value)) is not cloudpickle
+
+
 def test_a_worker_that_cannot_load_the_job_says_why():
     with pytest.raises(RuntimeError, match="could not load the target"):
         _parallel._load(b"not a pickle")
 
 
 @pytest.mark.parametrize(
-    ("pool", "error"),
-    [(True, TypeError), ("four", TypeError), (object(), TypeError), (0, ValueError)],
+    ("pool", "error", "message"),
+    [
+        (True, TypeError, "pool must be None, a number of processes"),
+        ("four", TypeError, "pool must be None, a number of processes"),
+        (object(), TypeError, "pool must be None, a number of processes"),
+        (0, ValueError, "pool must be at least 1, not 0"),
+    ],
 )
-def test_invalid_pools_raise(pool, error):
-    with pytest.raises(error, match="pool must be"):
+def test_invalid_pools_raise(pool, error, message):
+    with pytest.raises(error, match=message):
         telescopic.CoupledSampler(gaussian_log_prob, INIT, pool=pool)
 
 

@@ -125,6 +125,22 @@ def test_invalid_settings_raise(options, message):
         simulate(**options)
 
 
+@pytest.mark.parametrize("name", ["k", "m", "lag", "thin", "max_iter"])
+def test_a_setting_that_is_not_an_integer_raises(name):
+    # A float k or m would give biased measures without an error.
+    options = {"k": 2, "m": 10, "lag": 1, "thin": 1, "max_iter": 50}
+    with pytest.raises(TypeError, match=f"{name} must be an integer"):
+        simulate(**options | {name: options[name] + 0.5})
+
+
+def test_numpy_integer_settings_run_as_python_integers():
+    numpy = simulate(
+        k=np.int64(2), m=np.int32(10), lag=np.uint8(2), thin=np.int16(3), max_iter=np.int64(60)
+    )
+    assert all(type(value) is int for value in numpy.settings[:5])
+    assert_same_replicates(numpy, simulate(k=2, m=10, lag=2, thin=3, max_iter=60))
+
+
 def test_pilot_mode_returns_meeting_times_only():
     replicates = simulate(k=0, m=0, lag=1, store=False)
     assert (replicates.meeting_time >= 1).all()

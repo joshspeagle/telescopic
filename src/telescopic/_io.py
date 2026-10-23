@@ -68,6 +68,8 @@ def load(path: str | os.PathLike[str] | IO[bytes], cls: type[Result]) -> Result:
     if isinstance(path, str | os.PathLike) and not os.fspath(path).endswith(".npz"):
         path = f"{os.fspath(path)}.npz"
     with np.load(path, allow_pickle=False) as data:
+        if "metadata" not in data.files:
+            raise ValueError("the file is not a saved telescopic result: it has no metadata")
         metadata: dict[str, Any] = json.loads(str(data["metadata"]))
         if metadata["schema"] > SCHEMA:
             raise ValueError(
