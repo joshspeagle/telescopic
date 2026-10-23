@@ -27,6 +27,22 @@ nb_execution_raise_on_error = True
 
 numpydoc_show_class_members = False
 
+# Every cross-reference must resolve, but for type hints that have no page of their own.
+nitpicky = True
+nitpick_ignore = [
+    ("py:class", name)
+    for name in (
+        "Seed",
+        "matplotlib.axes._axes.Axes",
+        "numpy._typing._array_like.ArrayLike",
+        "numpy._typing._array_like.NDArray",
+        "numpy.float64",
+        "numpy.int64",
+        "telescopic._random.Streams",
+        "telescopic._types.Distribution",
+    )
+]
+
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable", None),

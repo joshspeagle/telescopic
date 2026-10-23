@@ -176,7 +176,7 @@ def fixed_draws(
     normals, uniforms : array_like, shape (n, k), optional
         Row ``i`` is consumed left to right by row ``i`` of every request.
     generators : sequence of numpy.random.Generator, length n, optional
-        Served by :meth:`Draws.generator`.
+        Served by :meth:`telescopic.kernels.Draws.generator`.
 
     Returns
     -------

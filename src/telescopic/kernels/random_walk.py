@@ -36,7 +36,7 @@ class RandomWalk(Kernel):
     ----------
     cov : array_like, shape (d, d), optional
         Shape of the proposal, usually an estimate of the target covariance. ``None``
-        leaves the kernel untuned: :meth:`tune` sets it to the covariance of adaptive
+        leaves the kernel untuned: :meth:`~telescopic.kernels.Kernel.tune` sets it to the covariance of adaptive
         Metropolis pilot chains (spec section 5.3).
     scale : float, optional
         Scale :math:`\lambda`; defaults to :math:`2.38/\sqrt d`, the optimal scale for a

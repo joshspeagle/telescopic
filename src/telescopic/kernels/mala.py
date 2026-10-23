@@ -38,12 +38,12 @@ class MALA(GradientKernel):
     Parameters
     ----------
     step_size : float, optional
-        :math:`\epsilon`. ``None`` leaves it to :meth:`tune`: dual averaging toward an
+        :math:`\epsilon`. ``None`` leaves it to :meth:`~telescopic.kernels.Kernel.tune`: dual averaging toward an
         acceptance rate of 0.574 from :math:`\epsilon_0 = 1.65\,d^{-1/6}` (spec section
         5.4; Roberts & Rosenthal 1998).
     cov : array_like, shape (d, d), optional
         :math:`\Sigma`, usually an estimate of the target covariance. ``None`` leaves it to
-        :meth:`tune`, which takes the covariance of adaptive Metropolis pilot chains.
+        :meth:`~telescopic.kernels.Kernel.tune`, which takes the covariance of adaptive Metropolis pilot chains.
 
     Notes
     -----

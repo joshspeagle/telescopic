@@ -83,6 +83,19 @@ class CoupledSampler:
         installed, lines on stderr otherwise.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
         The root of every random stream (spec section 6.1).
+
+    Attributes
+    ----------
+    kernel : Kernel
+        The kernel, replaced by its tuned copy when tuned.
+    tuning : TuningReport or None
+        The report of the tuning pilot; ``None`` before tuning or with nothing to tune.
+    pilot : ndarray or None
+        The meeting times of every lag-1 pilot pair run so far; ``None`` before the first.
+    seed : numpy.random.SeedSequence
+        The root seed.
+    ndim : int
+        The dimension of the target.
     """
 
     def __init__(
@@ -145,7 +158,7 @@ class CoupledSampler:
         """Meeting times of ``n`` new pilot pairs with lag 1 (spec R-TUNE-2).
 
         Each call runs new pilot replicates, continuing their indices, and adds them to
-        :attr:`pilot`.
+        ``pilot``.
 
         Parameters
         ----------
@@ -386,8 +399,8 @@ def sample(
     r"""Unbiased estimates of expectations under a target, in one call (spec R-API-1).
 
     ``sample(log_prob, init, n, ...)`` is ``CoupledSampler(log_prob, init, ...).run(n,
-    ...)``: it tunes the kernel, chooses ``k``, ``m`` and the lag from 100 lag-1 pilot
-    pairs, and runs ``n_replicates`` replicates of coupled chains.
+    ...)``: it tunes the kernel's unset parameters, chooses ``k`` from 100 lag-1 pilot
+    pairs when it is ``"auto"``, and runs ``n_replicates`` replicates of coupled chains.
 
     Parameters
     ----------

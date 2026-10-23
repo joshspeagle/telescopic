@@ -185,7 +185,7 @@ class Kernel(ABC):
 class GradientKernel(Kernel):
     """A kernel with a step size and a covariance, driven by the gradient: MALA, HMC.
 
-    :meth:`tune` takes the covariance of the pilot chains unless ``cov`` was given, then
+    :meth:`~telescopic.kernels.Kernel.tune` takes the covariance of the pilot chains unless ``cov`` was given, then
     the step size by dual averaging toward ``target_acceptance`` from the pilot's last
     states unless ``step_size`` was given (spec sections 5.4 and 5.5).
 
