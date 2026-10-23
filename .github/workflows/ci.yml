@@ -17,6 +17,8 @@ jobs:
   test:
     name: test (${{ matrix.os }}, py${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
+    # A hung test fails the job instead of holding a runner for six hours.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -44,6 +46,7 @@ jobs:
   oldest:
     name: test (oldest stack, py3.11, numpy 1.26, scipy 1.12)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -70,6 +73,7 @@ jobs:
 
   docs:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -102,6 +106,7 @@ jobs:
     # Runs only when started by hand: -m "" lifts the -m "not slow" of pyproject.toml.
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7

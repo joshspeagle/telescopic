@@ -106,6 +106,11 @@ def test_the_estimator_weights_refuse_invalid_settings(settings, error, message)
         correction_coefficients([5, 6, 7], *settings)
 
 
+def test_the_quantile_at_one_is_the_largest_atom_when_the_weights_sum_below_one():
+    # Ten weights of 0.1 sum to 0.9999999999999999.
+    assert weighted_quantile(np.arange(10.0), np.full(10, 0.1), 1.0) == 9.0
+
+
 def test_weighted_quantiles_refuse_levels_outside_the_unit_interval():
     with pytest.raises(ValueError, match="q must be in"):
         weighted_quantile(np.arange(3.0), np.full(3, 1 / 3), np.nan)

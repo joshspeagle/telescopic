@@ -104,6 +104,26 @@ def test_a_cap_censors_unmet_pairs_and_drops_their_measures():
     np.testing.assert_array_equal(replicates.meeting_time, np.inf)
     assert len(replicates.atoms) == 0
     np.testing.assert_array_equal(np.bincount(replicates.distance_owner), 15)
+    # X's L steps alone, then max_iter - L coupled steps of both chains.
+    np.testing.assert_array_equal(replicates.cost, 1 + 2 * (15 - 1))
+
+
+class Beside(RandomWalk):
+    """Y lands beside X: equal in the first coordinate, 1e-12 away in the second."""
+
+    def step(self, target, state, draws):
+        x = state.x + 1.0
+        return State(x, target.log_prob(x)), np.ones(len(x))
+
+    def coupled_step(self, target, state_x, state_y, draws):
+        moved, _ = self.step(target, state_x, draws)
+        y = moved.x + np.array([0.0, 1e-12])
+        return moved, State(y, target.log_prob(y))
+
+
+def test_pairs_meet_only_when_every_coordinate_is_exactly_equal():
+    replicates = simulate(Beside(np.eye(2)), n=3, max_iter=12)
+    np.testing.assert_array_equal(replicates.meeting_time, np.inf)
 
 
 @pytest.mark.parametrize(
@@ -169,7 +189,7 @@ def test_the_run_records_its_evaluations_and_the_starts_outside_the_support():
         target,
         RandomWalk(np.eye(1)),
         Empirical([[-1.0], [1.0]]),
-        range(10),
+        range(30),
         rng=2,
         k=0,
         m=2,
@@ -177,7 +197,8 @@ def test_the_run_records_its_evaluations_and_the_starts_outside_the_support():
         max_iter=50,
     )
     assert replicates.n_log_prob == target.n_log_prob > 0
-    assert 0 < len(replicates.zero_density) < 10
+    # Each replicate starts outside with probability 3/4, so 0 < count < 30 but for 2e-4.
+    assert 0 < len(replicates.zero_density) < 30
 
 
 def test_a_kernel_of_another_dimension_than_the_points_raises():

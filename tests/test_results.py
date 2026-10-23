@@ -5,6 +5,8 @@ import numpy as np
 import pytest
 from scipy import stats
 
+from references import synthetic
+from telescopic.diagnostics import w1_bound
 from telescopic.engine import run
 from telescopic.estimators import unbiased_covariance
 from telescopic.initial import Normal
@@ -61,6 +63,7 @@ def test_the_covariance_combines_first_and_second_moments_coordinate_by_coordina
     covariance = RESULT.cov()
     np.testing.assert_allclose(covariance, unbiased_covariance(first, second), atol=1e-12)
     np.testing.assert_array_equal(covariance, covariance.T)
+    np.testing.assert_allclose(RESULT.var(), np.diag(covariance), rtol=1e-12)
     np.testing.assert_allclose(RESULT.std(), np.sqrt(np.maximum(0, np.diag(covariance))))
 
 
@@ -75,13 +78,22 @@ def test_variances_stay_exact_far_from_the_origin():
 def test_without_bias_corrections_quantiles_are_those_of_the_pooled_draws():
     # With k past every meeting, all weights are 1 / |S|: an ordinary empirical measure.
     # The levels avoid multiples of 1 / N, where rounding of the cumulative weights
-    # decides between two neighbouring atoms.
+    # decides between two neighbouring atoms; the interval's are 0.2225 and 0.7775.
     result = gaussian_result(k=40, m=45, lag=1, max_iter=None)
     assert not result.measure.weights.min() < 0
     levels = [0.137, 0.503, 0.911]
     for dim in range(2):
-        expected = np.quantile(result.measure.atoms[:, dim], levels, method="inverted_cdf")
+        atoms = result.measure.atoms[:, dim]
+        expected = np.quantile(atoms, levels, method="inverted_cdf")
         np.testing.assert_array_equal(result.quantile(levels)[:, dim], expected)
+        central = np.quantile(atoms, [(1 - 0.555) / 2, (1 + 0.555) / 2], method="inverted_cdf")
+        np.testing.assert_array_equal(result.interval(0.555)[:, dim], central)
+
+
+def test_quantiles_keep_apart_atoms_that_share_some_coordinates():
+    # A Gibbs sweep changes some coordinates of consecutive atoms and keeps the others.
+    values = [[0.0, 1.0], [0.0, 2.0], [0.0, 3.0], [0.0, 4.0]]
+    np.testing.assert_array_equal(synthetic([2] * 4, values).quantile(0.6), [0.0, 3.0])
 
 
 @pytest.mark.parametrize(
@@ -237,6 +249,10 @@ def test_the_default_w1_times_reach_a_censored_pairs_last_distance():
     bound = result.w1_bound()
     assert len(bound) == replicates.distance_time.max() - result.lag + 1
     assert bound[-1] > 0
+    # The bound averages over every replicate, censored ones included, as the TV bound.
+    times = np.arange(len(bound))
+    expected = w1_bound(replicates.distance_time, replicates.distance, 40, result.lag, times)
+    np.testing.assert_array_equal(bound, expected)
 
 
 def test_the_default_bound_times_end_where_the_bound_vanishes():

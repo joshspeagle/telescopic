@@ -3,6 +3,10 @@
 import numpy as np
 from scipy import special
 
+from telescopic._random import root_seed
+from telescopic.engine import Replicates, Settings
+from telescopic.results import Result
+
 # One-sample and frequency tests use this p-value threshold, which keeps each module's
 # family-wise false-positive rate below about 1e-3 (CLAUDE.md: tolerances from the Monte
 # Carlo error).
@@ -28,6 +32,33 @@ def assert_z_scores(z_scores, n, seed):
         derived = np.random.SeedSequence(seed).spawn(1)[0]
         rerun = np.max(np.abs(z_scores(4 * n, np.random.default_rng(derived))))
         assert rerun <= 4, f"|z| = {largest:.2f}, then {rerun:.2f} with 4n draws"
+
+
+def synthetic(meeting_times, values, *, k=0, m=None, lag=1, max_iter=None, cost=None, tuning=None):
+    # One atom of weight 1 per replicate that met: its estimate is its value. A meeting
+    # time of -1 marks a censored pair. m is k and each replicate costs 1 unless given.
+    tau = np.asarray(meeting_times, dtype=np.float64)
+    tau[tau < 0] = np.inf
+    met = np.flatnonzero(np.isfinite(tau))
+    values = np.asarray(values, dtype=np.float64)
+    return Result(
+        Replicates(
+            seed=root_seed(0),
+            settings=Settings(k, k if m is None else m, lag, max_iter=max_iter),
+            index=np.arange(len(tau)),
+            meeting_time=tau,
+            cost=np.ones(len(tau), dtype=np.int64) if cost is None else np.asarray(cost),
+            atoms=values[met].reshape(len(met), -1),
+            weights=np.ones(len(met)),
+            owner=met,
+            distance_owner=np.zeros(0, dtype=np.int64),
+            distance_time=np.zeros(0, dtype=np.int64),
+            distance=np.zeros(0),
+            zero_density=np.zeros(0, dtype=np.int64),
+            requested=np.arange(len(tau)),
+        ),
+        tuning=tuning,
+    )
 
 
 class Normal:

@@ -42,6 +42,7 @@ test = [
     "cloudpickle>=3.0",
     "tqdm>=4.66",
     "matplotlib>=3.8",
+    "pandas>=2.1",
 ]
 dev = [
     { include-group = "test" },

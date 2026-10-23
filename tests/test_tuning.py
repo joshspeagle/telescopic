@@ -152,6 +152,18 @@ def test_chains_that_never_move_raise():
         adaptive_metropolis(nowhere, START, 1, n_steps=10)
 
 
+def test_rhat_is_that_of_gelman_et_al():
+    # BDA3, section 11.4, on 4 chains of 50, one of them shifted.
+    samples = np.random.default_rng(1).standard_normal((4, 50, 1))
+    samples[3] += 1.0
+    means = samples[:, :, 0].mean(axis=1)
+    between = 50 * np.var(means, ddof=1)
+    within = np.mean(np.var(samples[:, :, 0], axis=1, ddof=1))
+    expected = np.sqrt((49 / 50 * within + between / 50) / within)
+    pilot = PilotRun(samples, np.zeros((4, 50)), np.ones(4), 100)
+    assert pilot.rhat[0] == pytest.approx(expected, rel=1e-12)
+
+
 def test_reports_of_different_pilots_compare_without_error():
     first, second = (adaptive_metropolis(TARGET, START, seed, n_steps=10) for seed in (5, 6))
     assert first.report() != second.report()
@@ -163,6 +175,7 @@ def test_tuning_freezes_kernels_with_the_pilots_mean_and_covariance():
     np.testing.assert_array_equal(walk.cov, pilot.cov)
     assert RandomWalk(scale=0.1).tune(TARGET, START, pilot=pilot)[0].scale == 0.1
     independence, report = Independence().tune(TARGET, START, pilot=pilot)
+    assert independence.proposal.df == 5
     np.testing.assert_array_equal(independence.proposal.mean, pilot.mean)
     np.testing.assert_array_equal(independence.proposal.cov, pilot.cov)
     assert report.max_weight_ratio >= 1
@@ -234,6 +247,11 @@ def test_choose_k_takes_the_inverted_cdf_quantile_of_tau_minus_one(lowest):
     assert choose_k(np.full(100, lowest), quantile=0.5) == max(1, lowest - 1)
 
 
+def test_choose_k_takes_the_inverted_cdf_quantile_of_any_pilot_size():
+    # Of 150, the 149th smallest tau - 1; interpolation and the lower neighbour give 147.
+    assert choose_k(np.arange(1.0, 151.0)) == 148
+
+
 def test_choose_k_refuses_no_meeting_times():
     with pytest.raises(ValueError, match="non-empty"):
         choose_k([])
@@ -241,7 +259,7 @@ def test_choose_k_refuses_no_meeting_times():
 
 def test_choose_k_refuses_a_quantile_beyond_the_pilot():
     with pytest.raises(ValueError, match="run more pilot pairs"):
-        choose_k(np.arange(1, 101), quantile=0.999)
+        choose_k(np.arange(1, 101), quantile=0.995)
 
 
 def test_choose_k_refuses_a_quantile_on_a_censored_pair():

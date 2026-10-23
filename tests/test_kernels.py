@@ -14,6 +14,7 @@ from telescopic.kernels import (
     RandomWalk,
     State,
 )
+from telescopic.kernels.base import acceptance
 from telescopic.target import Target
 from telescopic.testing import check_coupling, fixed_draws, random_draws
 from telescopic.tuning import PilotRun
@@ -64,15 +65,30 @@ def dense(d):
 def test_random_walk_step_matches_the_reference(accept):
     rng = np.random.default_rng(1)
     cov = np.array([[2.0, 0.5, 0.0], [0.5, 1.0, 0.2], [0.0, 0.2, 0.5]])
-    chol = np.linalg.cholesky(cov)
+    chol = 2.38 / np.sqrt(3) * np.linalg.cholesky(cov)  # the default scale, 2.38 / sqrt(d)
     x, z = rng.standard_normal(3), rng.standard_normal(3)
     ratio = np.exp(gaussian_log_prob(x + chol @ z) - gaussian_log_prob(x))
     u = min(0.999, ratio * (0.5 if accept else 1.5))
-    new, acceptance = RandomWalk(cov, scale=1.0).step(TARGET, state(x), fixed_draws([z], [[u]]))
+    new, acceptance = RandomWalk(cov).step(TARGET, state(x), fixed_draws([z], [[u]]))
     expected = metropolis(x, x + chol @ z, gaussian_log_prob, u)
     np.testing.assert_allclose(acceptance[0], min(1.0, ratio), atol=1e-12)
     np.testing.assert_allclose(new.x[0], expected, atol=1e-12)
     np.testing.assert_allclose(new.log_prob[0], gaussian_log_prob(expected), atol=1e-12)
+
+
+def test_a_uniform_of_zero_rejects_a_proposal_of_zero_density():
+    # random() can draw 0, whose log is -inf: the test log u < log ratio must be strict.
+    half_line = Target(lambda x: np.where(x[:, 0] > 0, 0.0, -np.inf), vectorize=True)
+    start = State(np.array([[1.0]]), np.array([0.0]))
+    draws = fixed_draws([[-5.0]], [[0.0]])
+    moved, _ = RandomWalk(np.eye(1), scale=1.0).step(half_line, start, draws)
+    assert moved.x[0, 0] == 1.0
+
+
+def test_a_nan_log_ratio_has_acceptance_probability_zero():
+    # -inf - -inf, a move between points of zero density; dual averaging needs a number.
+    probabilities = acceptance(np.array([np.nan, -np.inf, 0.5, 0.0]))
+    np.testing.assert_array_equal(probabilities, [0.0, 0.0, 1.0, 1.0])
 
 
 @pytest.mark.parametrize("gap", [3.0, 0.05, 0.0])

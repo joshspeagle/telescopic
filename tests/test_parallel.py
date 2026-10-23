@@ -23,7 +23,8 @@ from telescopic.target import Target
 from telescopic.warnings import ConvergenceWarning
 
 INIT = Normal([2.0, -1.0], [4.0, 4.0])
-SETTINGS = {"k": 3, "m": 30, "lag": 3}
+# The cap makes a bug that keeps pairs apart fail instead of hanging a worker.
+SETTINGS = {"k": 3, "m": 30, "lag": 3, "max_iter": 10_000}
 
 
 def job(log_prob=gaussian_log_prob, args=()):
