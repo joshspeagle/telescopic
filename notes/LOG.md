@@ -145,3 +145,13 @@ Append only. One entry per working session or milestone.
   the parent ignores it; a cached BLAS controller missed libraries loaded later; float
   indices were truncated; workers started before the settings were validated; a
   `multiprocessing.Pool` was sized by the CPU count. 342 fast tests in 37 s.
+
+## 2026-10-23: M8
+
+- M8 implemented: `Result.save`/`load` (DECISIONS #26), `telescopic.plotting` (meeting
+  times, TV bound, signed marginals with ±2 standard-error boxes, signed corner plots,
+  coupled paths), `telescopic.examples` (#24) and `check_coupling` (#25). The pump
+  model's quadrature gives E[β] = 2.472, against about 2.47 in the literature, and a
+  direct Gibbs run agrees on all 11 means (largest |z| 1.85). Every built-in kernel
+  passes `check_coupling`; a wrong Y marginal, a recomputed meeting and independent
+  steps are flagged. matplotlib joins the test group. 382 fast tests in 41 s.

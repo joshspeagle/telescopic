@@ -510,7 +510,7 @@ Methods:
 - **Reporting:** `summary(level=0.95)` returns a `Summary` table. `check(strict=False)` emits the warnings of §7.4, or raises if strict.
 - **Plots:** `plot_meeting_times()`, `plot_tv_bound()`, `plot_marginals(dims=None)`, `plot_corner(dims=None)` (signed 2-D histograms).
 - **Persistence and merging:**
-  - `save(path)` and `Result.load(path)` use a versioned `.npz` schema, with no pickle;
+  - `save(path)` and `Result.load(path)` use a versioned `.npz` schema, with no pickle: arrays, and the settings, names, seed and descriptions as JSON (DECISIONS #26). The engine's paths are not saved;
   - `merge(other)` joins runs with the same configuration and disjoint replicate indices.
 
 ### 7.2 `SignedMeasure` and `Estimate` (R-OUT-2)
@@ -628,7 +628,7 @@ result.plot_tv_bound()                       # with the plot extra: distance fro
 
 ## 9. Validation tools (user-facing, must)
 
-**`telescopic.examples`** provides targets with exact answers, used by the tests, tutorials and benchmarks. Each `Example` has `log_prob` (scalar and batched), `grad`, a default `initial`, `ndim`, and the exact `mean` and `cov` where known. The targets are:
+**`telescopic.examples`** provides targets with exact answers, used by the tests, tutorials and benchmarks. Each `Example` has `log_prob` and `grad` (for a point or a batch), a default `initial`, `ndim`, and the exact `mean` and `cov`; the Gibbs model also has `conditional` and `blocks` (DECISIONS #24). The targets are:
 - a correlated Gaussian;
 - the banana of Heng & Jacob, with exact moments;
 - a bimodal Gaussian mixture;
@@ -639,7 +639,7 @@ result.plot_tv_bound()                       # with the plot extra: distance fro
 - marginals: a two-proportion test of the frequency of staying put, and two-sample KS tests of the moved values on random one-dimensional projections and on the norm, Bonferroni-corrected;
 - faithfulness: equal states stay equal over 100 steps.
 
-It returns a report with p-values. Custom kernels should pass it before use. `telescopic.testing` also provides `fixed_draws` (prescribed random numbers, for draw-for-draw tests) and `random_draws` (fresh random numbers for any number of rows).
+It also counts near misses, pairs whose positions differ by less than $10^{-9}$ of their size without being equal, the mark of a coupling that recomputes $Y$ where it should copy $X$'s proposal (R-KER-3). It returns a report with p-values (DECISIONS #25). Custom kernels should pass it before use. `telescopic.testing` also provides `fixed_draws` (prescribed random numbers, for draw-for-draw tests) and `random_draws` (fresh random numbers for any number of rows).
 
 ---
 

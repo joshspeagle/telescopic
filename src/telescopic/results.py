@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import IO, Any
 
 import numpy as np
 import numpy.typing as npt
@@ -383,7 +384,7 @@ class Result:
             "m": self.m,
             "lag": self.lag,
             "thin": self.thin,
-            "kernel": repr(self.kernel),
+            "kernel": str(self.kernel),
             **self.diagnostics(),
             "interrupted": self.interrupted,
             "warnings": [issue.message for issue in diagnostics.issues(self)],
@@ -427,6 +428,93 @@ class Result:
             tuning=self.tuning,
             pilot=self.pilot,
         )
+
+    def save(self, path: str | os.PathLike[str] | IO[bytes]) -> None:
+        """Save as a versioned ``.npz`` file, without pickle (spec R-OUT-1).
+
+        The kernel and the initial distribution are saved as their descriptions.
+
+        Parameters
+        ----------
+        path : str, path-like or binary file
+        """
+        # Imported here: telescopic.io imports this module.
+        from telescopic import io
+
+        io.save(self, path)
+
+    @staticmethod
+    def load(path: str | os.PathLike[str] | IO[bytes]) -> Result:
+        """Load a result saved by :meth:`save`, with descriptions of its kernel and initial distribution.
+
+        Parameters
+        ----------
+        path : str, path-like or binary file
+
+        Returns
+        -------
+        Result
+        """
+        from telescopic import io
+
+        return io.load(path)
+
+    def plot_meeting_times(self) -> Any:
+        """Plot the meeting times and their survival function (needs matplotlib).
+
+        Returns
+        -------
+        list of two matplotlib Axes
+        """
+        # Imported here: matplotlib is optional, and telescopic.plotting imports this module.
+        from telescopic import plotting
+
+        return plotting.meeting_times(self)
+
+    def plot_tv_bound(self) -> Any:
+        """Plot the TV bound against t, with k marked (needs matplotlib).
+
+        Returns
+        -------
+        matplotlib Axes
+        """
+        from telescopic import plotting
+
+        return plotting.tv_bound(self)
+
+    def plot_marginals(self, dims: Sequence[int] | None = None, bins: int = 20) -> Any:
+        """Plot signed histograms of the marginals with their errors (needs matplotlib).
+
+        Parameters
+        ----------
+        dims : sequence of int, optional
+            Coordinates; all by default.
+        bins : int
+
+        Returns
+        -------
+        list of matplotlib Axes
+        """
+        from telescopic import plotting
+
+        return plotting.marginals(self, dims, bins)
+
+    def plot_corner(self, dims: Sequence[int] | None = None, bins: int = 20) -> Any:
+        """Plot a corner plot of signed histograms (needs matplotlib).
+
+        Parameters
+        ----------
+        dims : sequence of int, optional
+            Coordinates; all by default.
+        bins : int
+
+        Returns
+        -------
+        ndarray of matplotlib Axes
+        """
+        from telescopic import plotting
+
+        return plotting.corner(self, dims, bins)
 
     def check(self, strict: bool = False) -> None:
         """Warn about the conditions of spec section 7.4 that apply to this run.

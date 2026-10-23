@@ -1,7 +1,7 @@
 # Plan
 
-**Current position:** Phase 4, milestones M0 to M7 implemented and reviewed; M8 (IO,
-plotting, examples, `check_coupling`) is next.
+**Current position:** Phase 4, milestones M0 to M8 implemented and M0 to M7 reviewed;
+M8's review is next.
 
 ## Phases
 
@@ -28,7 +28,7 @@ plotting, examples, `check_coupling`) is next.
 | M5 | Tuning, sampler, `sample` | yes | done, fixed (with M4) | done, fixed | `notes/reviews/m4-m5.md` |
 | M6 | MALA, HMC, Gibbs | yes | done, fixed | done, fixed | `notes/reviews/m6.md` |
 | M7 | Parallel execution, interrupts, progress (budgets deferred) | yes | done, fixed | done, fixed | `notes/reviews/m7.md` |
-| M8 | IO, plotting, examples, `check_coupling` | no | | | |
+| M8 | IO, plotting, examples, `check_coupling` | yes | pending | pending | |
 | M9 | Slow statistical suite, benchmarks, warning calibration | no | | | |
 | M10 | Documentation and tutorials | no | | | |
 | M11 | Independent audit, checkpoint report | no | | | |
