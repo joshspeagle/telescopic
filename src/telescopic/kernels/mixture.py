@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -61,9 +62,12 @@ class Mixture(Kernel):
     def ndim(self) -> int | None:
         return next((kernel.ndim for kernel in self.kernels if kernel.ndim is not None), None)
 
-    def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
-        # Each component tuned by its own tune on the one pilot, which never reads initial.
-        tuned = [kernel.tune(target, None, rng, pilot=pilot) for kernel in self.kernels]
+    def _tuned(
+        self, target: Target, initial: Any, pilot: PilotRun, rng: Seed
+    ) -> tuple[Kernel, TuningReport]:
+        # Each component tuned on the one pilot by its own tune, which a kernel of one's own
+        # overrides and may read initial.
+        tuned = [kernel.tune(target, initial, rng, pilot=pilot) for kernel in self.kernels]
         ratios = [report.max_weight_ratio for _, report in tuned if report is not None]
         ratio = max((r for r in ratios if r is not None), default=None)
         # A copy keeps the class and settings of a subclass, such as HMC.

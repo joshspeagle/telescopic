@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -114,7 +115,9 @@ class Independence(Kernel):
         mean = getattr(self.proposal, "mean", None)
         return None if mean is None else len(mean)
 
-    def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
+    def _tuned(
+        self, target: Target, initial: Any, pilot: PilotRun, rng: Seed
+    ) -> tuple[Kernel, TuningReport]:
         proposal = MultivariateT(pilot.mean, pilot.cov, df=5)
         draws = pilot.samples.reshape(-1, pilot.samples.shape[2])
         log_weights = pilot.log_prob.ravel() - proposal.log_density(draws)

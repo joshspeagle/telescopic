@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -87,7 +87,9 @@ class RandomWalk(Kernel):
     def ndim(self) -> int | None:
         return None if self.cov is None else len(self.cov)
 
-    def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
+    def _tuned(
+        self, target: Target, initial: Any, pilot: PilotRun, rng: Seed
+    ) -> tuple[Kernel, TuningReport]:
         tuned = type(self)(pilot.cov, scale=self.scale, coupling=self.coupling)
         return tuned, pilot.report()
 

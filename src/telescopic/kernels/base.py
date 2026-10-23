@@ -148,9 +148,11 @@ class Kernel(ABC):
             return self, None
         self.check_target(target)
         pilot = adaptive_metropolis(target, initial, rng) if pilot is None else pilot
-        return self._tuned(target, pilot, rng)
+        return self._tuned(target, initial, pilot, rng)
 
-    def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
+    def _tuned(
+        self, target: Target, initial: Any, pilot: PilotRun, rng: Seed
+    ) -> tuple[Kernel, TuningReport]:
         raise NotImplementedError(
             f"{type(self).__name__} has unset parameters but cannot tune them"
         )
@@ -252,7 +254,9 @@ class GradientKernel(Kernel):
     def _first_step_size(self, d: int) -> float:
         raise NotImplementedError
 
-    def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
+    def _tuned(
+        self, target: Target, initial: Any, pilot: PilotRun, rng: Seed
+    ) -> tuple[Kernel, TuningReport]:
         kernel = self if self.cov is not None else self._with_cov(pilot.cov)
         if kernel.step_size is None:
             first = self._first_step_size(len(pilot.cov))
