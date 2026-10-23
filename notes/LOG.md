@@ -209,3 +209,24 @@ Append only. One entry per working session or milestone.
   against 769 and 9,186) and Heng & Jacob's banana (149 against 158 on a probe); linear
   SBC on two conjugate models. 18 tests in 150 s, the coverage test 89 s of it.
 
+- Studies (`notes/experiments/m9_*`). The tuning pilot of 10d² steps (DECISIONS #34) at
+  d = 100: k 1.31 and 1.90 times the exact covariance's, but it stored 160d³ bytes and
+  factorised at every step; the chains now refactor and keep states every ⌈d/20⌉ steps,
+  1.42 and 1.57 in 18 s and 32 MB. The README's line fit from the spec's N(0, 10I) had one
+  replicate holding most of the variance in 11 of 20 runs and some negative variances; it
+  now starts ten times wider than an optimiser's fit (DECISIONS #35; a question for Josh
+  on remedies that are new constructions). The variance warning fired on 87 of 200 clean
+  banana runs with unchanged coverage; it now needs more than half the variance, 19 runs
+  (DECISIONS #36). Automatic HMC does not couple on the banana (a question for Josh), and
+  the automatic random walk on the pump model needs k near 29,000.
+- `/simplify` (three reviewers, `notes/reviews/m9.md`): the benchmark script could never
+  finish, since its last case raises; it now measures spec §10's setups with BLAS on one
+  thread and writes after each section. The slow suite reuses shared helpers and computes
+  the exact TV curve once: 18 tests in 142 s.
+- `/code-review` at high effort: no correctness bug; six findings fixed, among them two
+  tests that catch regressions of the pilot's thinning. 423 fast tests in 43 s.
+- Benchmarks at acb12f9 (`benchmarks/results/acb12f9.json`, spec §10): lockstep 1.27 µs
+  per pair-step at 256 lanes and random streams within their targets; point-by-point
+  overhead 90.7 µs against 40, a 1 ms log-density 1.98 times faster on 4 workers against
+  3.5, and the pipeline's pilots 31% to 39% of the main run against 15%, all missed. The
+  automatic MALA, like HMC, cannot choose k on the banana.

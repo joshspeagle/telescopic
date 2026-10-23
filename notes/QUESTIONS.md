@@ -21,7 +21,8 @@ Each item has the default that work proceeds on until Josh answers.
   Heng & Jacob (2019) advise, would be a new tuning procedure (DECISIONS #1). Default:
   keep the defaults, which couple on log-concave targets, and document that other targets
   need an explicit step; the error of `choose_k` already says to give a better-tuned
-  kernel.
+  kernel. The automatic MALA fails the same way on the banana: more than 1% of its pilot
+  pairs were unmet at 10^5 (`benchmarks/results/acb12f9.json`).
 
 - [ ] **Starts far from the target.** From a π0 a hundred times wider than the posterior,
   or far from it, the recipe k = q_0.99 leaves about one replicate in a hundred averaged

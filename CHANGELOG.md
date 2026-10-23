@@ -55,3 +55,9 @@ All notable changes to this project are documented here. The format follows
   matplotlib, and the `Result.plot_*` methods, on new or given axes); example targets
   with exact moments (`telescopic.examples`); and `telescopic.testing.check_coupling`,
   which checks a custom kernel's coupling, its meetings and its cached evaluations.
+- A slow tier of statistical tests (`pytest -m ""`): unbiasedness of every kernel family,
+  interval coverage, TV bounds against exact distances, published meeting times and
+  calibration over the prior. `benchmarks/run.py` times the setups of the
+  specification's performance targets. The tuning pilot runs of order d² steps beyond 20
+  dimensions, and the variance warning needs one replicate holding more than half the
+  variance; both were measured against their alternatives.

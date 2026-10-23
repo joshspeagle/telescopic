@@ -1,0 +1,106 @@
+{
+  "commit": "acb12f9",
+  "machine": "Intel(R) Xeon(R) Processor @ 2.10GHz, 4 CPUs, Linux 6.18.44-fc-v153",
+  "available CPUs": 4,
+  "blas": [
+    {
+      "internal_api": "openblas",
+      "version": "0.3.34.106.0",
+      "num_threads": 1
+    },
+    {
+      "internal_api": "openblas",
+      "version": "0.3.31.dev",
+      "num_threads": 1
+    }
+  ],
+  "python": "3.13.16",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "telescopic": "0.1.0.dev0",
+  "lockstep, microseconds per pair-step by lanes": {
+    "main run": {
+      "1": 87.86,
+      "8": 11.51,
+      "64": 2.49,
+      "256": 1.27,
+      "1024": 1.09
+    },
+    "pilot": {
+      "1": 124.44,
+      "256": 3.81
+    }
+  },
+  "point by point, microseconds per pair-step beyond the log-density": {
+    "log-density call": 0.83,
+    "main run": 90.7,
+    "pilot": 124.6
+  },
+  "random streams, microseconds": {
+    "draws per lane-step": 0.283,
+    "set-up per replicate": 40.7
+  },
+  "pool, seconds": {
+    "in process": 6.27,
+    "4 workers": 3.16,
+    "speed-up": 1.98
+  },
+  "pipeline, seconds": {
+    "d = 10": {
+      "whole": 1.17,
+      "main run": 0.89,
+      "overhead": 0.31,
+      "k": 229
+    },
+    "d = 50": {
+      "whole": 13.77,
+      "main run": 10.07,
+      "overhead": 0.37,
+      "k": 1739
+    },
+    "d = 100": {
+      "whole": 86.34,
+      "main run": 62.14,
+      "overhead": 0.39,
+      "k": 5409
+    }
+  },
+  "efficiency": {
+    "gaussian, rwmh": {
+      "k": 202,
+      "meeting time 50%": 315.0,
+      "meeting time 99%": 450.1199999999999,
+      "inefficiency": 1.175,
+      "seconds": 1.54
+    },
+    "gaussian, mala": {
+      "k": 18,
+      "meeting time 50%": 23.0,
+      "meeting time 99%": 34.00999999999999,
+      "inefficiency": 1.141,
+      "seconds": 0.63
+    },
+    "gaussian, hmc": {
+      "k": 92,
+      "meeting time 50%": 117.0,
+      "meeting time 99%": 173.12999999999988,
+      "inefficiency": 1.146,
+      "seconds": 1.7
+    },
+    "banana, rwmh": {
+      "k": 1417,
+      "meeting time 50%": 1464.0,
+      "meeting time 99%": 2433.3799999999997,
+      "inefficiency": 1.121,
+      "seconds": 8.27
+    },
+    "banana, mala": {
+      "error": "more than 1.0% of the pilot pairs never met within their cap, so k cannot be chosen: try a wider initial distribution or a better-tuned kernel, or give k, lag and m explicitly",
+      "seconds": 59.93
+    },
+    "banana, hmc": {
+      "error": "more than 1.0% of the pilot pairs never met within their cap, so k cannot be chosen: try a wider initial distribution or a better-tuned kernel, or give k, lag and m explicitly",
+      "seconds": 119.17
+    }
+  }
+}
