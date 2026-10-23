@@ -119,12 +119,12 @@ so telescopic also counts those, and the wall time.
   - geometric tails of $\tau$ (JOA20, Prop. 3.1);
   - polynomial tails (Middleton et al. 2020);
   - $\mathbb E_{\pi\otimes\pi}[\tau^\kappa] < \infty$ with $\kappa > 1$,
-    $h \in L^p(\pi)$ with $p > \kappa/(\kappa-1)$, and $d\pi_0/d\pi \le M$ (Douc et al.,
-    Thm. 17). Under these, the variance is finite if $\kappa > 2$ and
+    $h \in L^p(\pi)$ with $p > \kappa/(\kappa-1)$, and $d\pi_0/d\pi \le M$ (Douc et al.
+    2022, Thm. 17). Under these, the variance is finite if $\kappa > 2$ and
     $p > 2\kappa/(\kappa - 2)$.
 - **Error bars:** with $R$ independent replicates and finite variance,
   $\bar H \pm z_{1-\alpha/2}\,\hat\sigma/\sqrt R$ is an asymptotically valid interval as
-  $R \to \infty$. The bounded work per replicate does not change this.
+  $R \to \infty$. That the cost of each replicate is random does not change this.
 - **Fixed $R$:** unbiasedness holds for a number of replicates fixed before any result is
   seen. Choosing $R$ after looking at results, for example extending a run until the
   error bar is small, is optional stopping: the mean stays consistent and the large-$R$
@@ -189,6 +189,12 @@ For any $L$ and $t \ge 0$ (BJV19, Thm. 2.5),
 $$d_{TV}(\pi_t, \pi) \le \mathbb E\Big[\max\Big(0, \Big\lceil \frac{\tau - L - t}{L}
 \Big\rceil\Big)\Big] = \sum_{j \ge 1} \mathbb P(\tau > t + jL).$$
 
+The argument telescopes the laws: when $\pi_s \to \pi$,
+$\pi_t - \pi = \sum_{j \ge 1} (\pi_{t+(j-1)L} - \pi_{t+jL})$. $Y_{t+(j-1)L}$ has law
+$\pi_{t+(j-1)L}$ and $X_{t+jL}$ has law $\pi_{t+jL}$, so for any set $A$ the $j$-th
+term is at most $\mathbb P(X_{t+jL} \ne Y_{t+(j-1)L}) = \mathbb P(\tau > t + jL)$ in
+absolute value, by the coupling inequality.
+
 telescopic estimates the bound by the average over replicates and reports
 $\min(1, \cdot)$. With $L = k$, its value at $t = k$ is close to
 $\mathbb P(\tau - L > k)$, the fraction of pairs that meet late. A pair still unmet at
@@ -203,18 +209,4 @@ It depends on the parametrisation of the target, through the Euclidean norm.
 
 ## References
 
-- Atchadé, Y. F. & Jacob, P. E. (2024). Unbiased Markov chain Monte Carlo: what, why,
-  and how. arXiv:2406.06851.
-- Biswas, N., Jacob, P. E. & Vanetti, P. (2019). Estimating convergence of Markov chains
-  with L-lag couplings. NeurIPS.
-- Douc, R., Jacob, P. E., Lee, A. & Vats, D. Solving the Poisson equation using coupled
-  Markov chains. arXiv:2206.05691.
-- Glynn, P. W. & Rhee, C.-H. (2014). Exact estimation for Markov chain equilibrium
-  expectations. J. Appl. Probab. 51A, 377–389.
-- Glynn, P. W. & Whitt, W. (1992). The asymptotic efficiency of simulation estimators.
-  Oper. Res. 40(3), 505–520.
-- Jacob, P. E., O'Leary, J. & Atchadé, Y. F. (2020). Unbiased Markov chain Monte Carlo
-  methods with couplings. J. R. Stat. Soc. B 82(3), 543–600.
-- Middleton, L., Deligiannidis, G., Doucet, A. & Jacob, P. E. (2020). Unbiased Markov
-  chain Monte Carlo for intractable target distributions. Electron. J. Stat. 14(2),
-  2842–2891.
+The works cited here are listed on [Citing](citing.md#references).

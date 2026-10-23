@@ -51,12 +51,10 @@ uv pip install -e . --group docs && .venv/bin/sphinx-build -W --keep-going docs 
 
 ## Adding a kernel
 
-Kernels follow the contract of `docs/design/spec.md` section 5.1: the coupled step leaves
-each chain's marginal transition exactly that of the single step, and a row's transition
-does not depend on the other rows of its batch. The engine detects meetings by comparing
-states exactly and simulates one chain after a meeting, so a kernel returns states only.
-Check a new kernel with `telescopic.testing.check_coupling`, and add the oracle, marginal
-and faithfulness tests of `docs/design/test-plan.md` section 2.4.
+A kernel follows the rules of the guide's
+[Writing a kernel](docs/guide/custom-kernels.md#the-rules) page and passes
+`telescopic.testing.check_coupling`. Add the oracle, marginal and faithfulness tests of
+`docs/design/test-plan.md` section 2.4.
 
 ## Pull requests
 

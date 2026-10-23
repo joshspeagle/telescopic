@@ -15,8 +15,8 @@ telescopic is in development; version 0.1 is a first draft.
 :caption: Using telescopic
 
 getting-started
-guide/index
 tutorials/index
+guide/index
 theory
 api
 ```
