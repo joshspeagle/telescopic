@@ -100,8 +100,8 @@ assert abs(values["late_fraction"] - values["tv_bound_at_k"]) < 0.01
 - `meeting_time_50`, `meeting_time_90`, `meeting_time_99`, `meeting_time_max` and
   `censored`: the meeting times of the pairs that met, and the number of censored pairs.
 - `tail_index`: Hill's estimate of the tail index of $\tau - L + 1$, `nan` below 500
-  replicates, or when ties at the smallest meeting time leave fewer than two pairs above
-  it ([`tail`](#heavy-tailed-meeting-times-tail)).
+  replicates, or when nine pairs in ten or more meet at the first time possible
+  ([`tail`](#heavy-tailed-meeting-times-tail)).
 - `late_fraction` and `late_fraction_upper`: the fraction of pairs that met after
   `k + lag`, censored ones included, and its one-sided 95% Clopper-Pearson upper bound,
   which stays informative when the fraction is 0. The fraction is the leading term of
@@ -163,8 +163,10 @@ checks a function of your own.
 
 **Trigger:** with at least 500 replicates, Hill's estimate of the tail index of
 $\tau - L + 1$ ({func}`telescopic.diagnostics.hill`), from its $\lfloor R/10 \rfloor$
-largest values, or from fewer when most pairs meet at the smallest time, is below 2.
-`result.diagnostics()` reports it as `tail_index` whether or not the warning fires.
+largest values, is below 2. `result.diagnostics()` reports it as `tail_index` whether or
+not the warning fires. When nine pairs in ten or more meet at the first time possible,
+the estimate is `nan` and the warning silent: above such ties, Hill's estimate reads a
+light tail as a heavy one, so a heavy tail behind them goes undetected.
 **Meaning:** unbiasedness needs moments of the meeting time, and valid error bars need a
 finite variance of the estimates ([Theory](../theory.md#guarantees-and-their-limits)).
 Meeting times with a polynomial tail can break both: a tail index below 2 means an

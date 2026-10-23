@@ -27,7 +27,7 @@ For Josh, at the end of milestone M11. Figures are measured, with their sources.
   tutorials executed at every build, the API reference and a citing page. The strict
   build, with warnings as errors and every cross-reference checked, runs in about two and
   a half minutes.
-- **Records:** 56 decisions with their reasons and alternatives (`notes/DECISIONS.md`), a
+- **Records:** 57 decisions with their reasons and alternatives (`notes/DECISIONS.md`), a
   review of every milestone (`notes/reviews/`), experiments with their outputs
   (`notes/experiments/`), the log, and benchmarks (`benchmarks/results/`).
 

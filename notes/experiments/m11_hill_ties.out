@@ -1,12 +1,36 @@
-share of runs below 2 / nan, by rule
-geometric(0.5): none 0.007 / 0.000, nan 0.007 / 0.000, package 0.007 / 0.000
-geometric(0.8): none 0.000 / 0.000, nan 0.000 / 0.000, package 0.000 / 0.000
-geometric(0.88): none 0.086 / 0.000, nan 0.000 / 0.086, package 0.000 / 0.000
-geometric(0.9): none 0.538 / 0.000, nan 0.000 / 0.548, package 0.000 / 0.000
-geometric(0.92): none 0.771 / 0.000, nan 0.000 / 0.952, package 0.000 / 0.000
-geometric(0.95): none 0.027 / 0.000, nan 0.000 / 1.000, package 0.000 / 0.000
-geometric(0.99): none 0.000 / 0.000, nan 0.000 / 1.000, package 0.000 / 0.040
-ones and 5% heavy: none 0.796 / 0.000, nan 0.000 / 1.000, package 0.656 / 0.000
-ones and 8% heavy: none 0.986 / 0.000, nan 0.036 / 0.951, package 0.691 / 0.000
-ones and 20% heavy: none 0.995 / 0.000, nan 0.995 / 0.000, package 0.995 / 0.000
+share of runs below 2 +- standard error (share nan); R = 500, 2000 runs
+geometric(0.5) from 1: none 0.007 +- 0.002 (nan 0.00), nan 0.007 +- 0.002 (nan 0.00), above 0.007 +- 0.002 (nan 0.00)
+geometric(0.5) from 2: none 0.000 +- 0.000 (nan 0.00), nan 0.000 +- 0.000 (nan 0.00), above 0.000 +- 0.000 (nan 0.00)
+geometric(0.8) from 1: none 0.000 +- 0.000 (nan 0.00), nan 0.000 +- 0.000 (nan 0.00), above 0.000 +- 0.000 (nan 0.00)
+geometric(0.8) from 2: none 0.000 +- 0.000 (nan 0.00), nan 0.000 +- 0.000 (nan 0.00), above 0.000 +- 0.000 (nan 0.00)
+geometric(0.9) from 1: none 0.535 +- 0.011 (nan 0.00), nan 0.000 +- 0.000 (nan 0.54), above 0.000 +- 0.000 (nan 0.00)
+geometric(0.9) from 2: none 0.000 +- 0.000 (nan 0.00), nan 0.000 +- 0.000 (nan 0.54), above 0.000 +- 0.000 (nan 0.00)
+geometric(0.92) from 1: none 0.765 +- 0.009 (nan 0.00), nan 0.000 +- 0.000 (nan 0.95), above 0.000 +- 0.000 (nan 0.00)
+geometric(0.92) from 2: none 0.000 +- 0.000 (nan 0.00), nan 0.000 +- 0.000 (nan 0.95), above 0.000 +- 0.000 (nan 0.00)
+geometric(0.95) from 1: none 0.029 +- 0.004 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 0.000 +- 0.000 (nan 0.00)
+geometric(0.95) from 2: none 0.000 +- 0.000 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 0.000 +- 0.000 (nan 0.00)
+geometric(0.99) from 1: none 0.000 +- 0.000 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 0.000 +- 0.000 (nan 0.04)
+geometric(0.99) from 2: none 0.000 +- 0.000 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 0.000 +- 0.000 (nan 0.05)
+ties at 1, 2% slow, heavy Pareto(1): none 0.011 +- 0.002 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 0.617 +- 0.011 (nan 0.00)
+ties at 1, 2% slow, light Geom(0.1): none 0.260 +- 0.010 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 0.990 +- 0.002 (nan 0.00)
+ties at 1, 2% slow, light Geom(0.3): none 0.006 +- 0.002 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 0.806 +- 0.009 (nan 0.00)
+ties at 1, 5% slow, heavy Pareto(1): none 0.803 +- 0.009 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 0.659 +- 0.011 (nan 0.00)
+ties at 1, 5% slow, light Geom(0.1): none 0.997 +- 0.001 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 1.000 +- 0.000 (nan 0.00)
+ties at 1, 5% slow, light Geom(0.3): none 0.861 +- 0.008 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 0.895 +- 0.007 (nan 0.00)
+ties at 1, 8% slow, heavy Pareto(1): none 0.991 +- 0.002 (nan 0.00), nan 0.037 +- 0.004 (nan 0.95), above 0.700 +- 0.010 (nan 0.00)
+ties at 1, 8% slow, light Geom(0.1): none 1.000 +- 0.000 (nan 0.00), nan 0.051 +- 0.005 (nan 0.95), above 1.000 +- 0.000 (nan 0.00)
+ties at 1, 8% slow, light Geom(0.3): none 0.999 +- 0.001 (nan 0.00), nan 0.047 +- 0.005 (nan 0.95), above 0.938 +- 0.005 (nan 0.00)
+ties at 2, 2% slow, heavy Pareto(1): none 0.000 +- 0.000 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 0.441 +- 0.011 (nan 0.00)
+ties at 2, 2% slow, light Geom(0.1): none 0.044 +- 0.005 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 0.977 +- 0.003 (nan 0.00)
+ties at 2, 2% slow, light Geom(0.3): none 0.000 +- 0.000 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 0.519 +- 0.011 (nan 0.00)
+ties at 2, 5% slow, heavy Pareto(1): none 0.248 +- 0.010 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 0.395 +- 0.011 (nan 0.00)
+ties at 2, 5% slow, light Geom(0.1): none 0.957 +- 0.005 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 1.000 +- 0.000 (nan 0.00)
+ties at 2, 5% slow, light Geom(0.3): none 0.249 +- 0.010 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 0.475 +- 0.011 (nan 0.00)
+ties at 2, 8% slow, heavy Pareto(1): none 0.896 +- 0.007 (nan 0.00), nan 0.025 +- 0.003 (nan 0.95), above 0.365 +- 0.011 (nan 0.00)
+ties at 2, 8% slow, light Geom(0.1): none 1.000 +- 0.000 (nan 0.00), nan 0.035 +- 0.004 (nan 0.97), above 1.000 +- 0.000 (nan 0.00)
+ties at 2, 8% slow, light Geom(0.3): none 0.939 +- 0.005 (nan 0.00), nan 0.021 +- 0.003 (nan 0.95), above 0.411 +- 0.011 (nan 0.00)
+Independence on 0.99 N(0, 1) + 0.01 N(3, 0.05^2), R = 500, 100 runs, 0.984 at the smallest value: none 0.010 +- 0.010 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 0.920 +- 0.027 (nan 0.02)
+Independence on 0.99 N(0, 1) + 0.01 U[3, 3.2], R = 500, 100 runs, 0.987 at the smallest value: none 0.020 +- 0.014 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 0.920 +- 0.027 (nan 0.03)
+Independence on 0.99 N(0, 1) + 0.01 N(3, 0.05^2), R = 2000, 50 runs, 0.984 at the smallest value: none 0.000 +- 0.000 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 1.000 +- 0.000 (nan 0.00)
+Independence on 0.99 N(0, 1) + 0.01 U[3, 3.2], R = 2000, 50 runs, 0.988 at the smallest value: none 0.000 +- 0.000 (nan 0.00), nan 0.000 +- 0.000 (nan 1.00), above 1.000 +- 0.000 (nan 0.00)
 exit 0
