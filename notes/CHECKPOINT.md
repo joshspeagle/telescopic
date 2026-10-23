@@ -55,9 +55,9 @@ the code (`notes/reviews/m11.md`).
   banana of Heng & Jacob (149 against 158). Simulation-based calibration passes on two
   conjugate models.
 - **Warnings:** each threshold is set from measured rates. For example, the variance
-  warning fires in 19 of 200 runs on the banana, whose 95% intervals of E[x₀²] covered at
-  0.842 against 0.961 in the others, and in all 17 runs of the bimodal failure of Jacob,
-  O'Leary & Atchadé whose replicates found the other mode (DECISIONS #36).
+  warning fires in 37 of 200 runs on the banana, whose 95% intervals of E[x₀²] covered at
+  0.892 against 0.963 in the others, and in all 17 runs of the bimodal failure of Jacob,
+  O'Leary & Atchadé whose replicates found the other mode (DECISIONS #36, #54).
 - **Performance** against the targets of spec §10 (`benchmarks/results/BENCH.json`):
   BENCH_LINES.
 

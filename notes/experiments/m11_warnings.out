@@ -1,0 +1,6 @@
+gaussian, R = 100, 100 runs: fired censored 0, late 0, variance 0, tail 0, tuning 0, slow 0, any 0; k median 230 (range 186 to 298); 0.6 s per run
+gaussian, R = 500, 50 runs: fired censored 0, late 0, variance 0, tail 0, tuning 0, slow 0, any 0; k median 229 (range 186 to 298); 2.0 s per run
+banana, R = 100, 100 runs: fired censored 0, late 0, variance 14, tail 0, tuning 0, slow 0, any 14; k median 956 (range 458 to 1938); 1.7 s per run
+banana, R = 500, 50 runs: fired censored 0, late 0, variance 4, tail 14, tuning 0, slow 0, any 17; k median 974 (range 458 to 1938); 5.1 s per run
+mixture from N(10, 1), proposal variance 1, k = 50, m = 500, R = 1000, 50 runs: 33 intervals missed 0.4207; missed and warned 0, missed and silent 33, covered and warned 17; by kind [('covered: variance', 17)]; largest variance share above 0.5 in 17 runs, 0 of them missed; 0.6 s per run
+exit 0

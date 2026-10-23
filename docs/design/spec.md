@@ -559,9 +559,9 @@ Classes: `TelescopicWarning`, with subclasses `ConvergenceWarning` and `InputWar
 5. pilot chains that disagree (§5.3);
 6. a slow pair (§6.3).
 
-Rates measured at M9, on the first two targets with `sample()`'s defaults and on the third with the settings given (`notes/experiments/m9_warnings.out`, `m9_variance_warning.out`):
-- `examples.gaussian(10)`: no warning in 50 runs at $R = 500$; at $R = 100$, the variance warning in at most 2 of 100 runs and no other.
-- The banana from $U[-5, 5]^2$: at $R = 100$, the variance warning in 19 of 200 runs, where the 95% intervals of $E[x_0^2]$ covered at 0.84 against 0.96 elsewhere; at $R = 500$, the variance warning in at most 6 of 50 runs and the tail warning in 14.
+Rates measured at M11, on the first two targets with `sample()`'s defaults and on the third with the settings given (`notes/experiments/m11_warnings.out`, `m11_variance_share.out`):
+- `examples.gaussian(10)`: no warning in 100 runs at $R = 100$ and 50 at $R = 500$.
+- The banana from $U[-5, 5]^2$: at $R = 100$, the variance warning in 37 of 200 runs, where the 95% intervals of $E[x_0^2]$ covered at 0.89 against 0.96 elsewhere; at $R = 500$, the variance warning in 4 of 50 runs and the tail warning in 14.
 - JOA20's bimodal target from $\mathcal N(10, 1)$ at $R = 1000$: 33 of 50 intervals of $P(x > 3)$ missed the truth, none with a warning; the 17 runs whose replicates found the other mode raised the variance warning and covered.
 
 The documentation explains each, with the failure cases of JOA20 §5.1, and says that a run that never left one mode cannot be detected from its own output at moderate $R$ (design review D-R9).

@@ -217,17 +217,15 @@ The warnings say that `k` may be too small: more than a quarter of the pairs met
 
 ## Measured rates
 
-When the thresholds were chosen, repeated runs measured how often each warning fires.
-All used vectorised log-densities, and the first two targets `sample()`'s default
-settings:
+Repeated runs measured how often each warning fires. All used vectorised
+log-densities, and the first two targets `sample()`'s default settings:
 
 - {func}`telescopic.examples.gaussian` in 10 dimensions, from $\mathcal N(0, 4I)$: no
-  warning in 50 runs at $R = 500$; at $R = 100$, the variance warning in at most 2 of 100
-  runs, and no other warning.
+  warning in 100 runs at $R = 100$ and 50 runs at $R = 500$.
 - The banana ({func}`telescopic.examples.banana`) from $U[-5, 5]^2$: at $R = 100$, the
-  variance warning in 19 of 200 runs, whose 95% intervals of $E[x_0^2]$ covered the truth
-  in 84% of them against 96% in the other runs; at $R = 500$, the variance warning in at
-  most 6 of 50 runs and the tail warning in 14.
+  variance warning in 37 of 200 runs, whose 95% intervals of $E[x_0^2]$ covered the truth
+  in 89% of them against 96% in the other runs; at $R = 500$, the variance warning in 4
+  of 50 runs and the tail warning in 14.
 - The bimodal mixture of Jacob, O'Leary & Atchadé (2020, §5.1),
   {func}`telescopic.examples.mixture`, from $\mathcal N(10, 1)$, with a random walk of
   proposal variance 1, `k = 50`, `m = 500`, `lag = 1` and $R = 1000$: the 95% intervals

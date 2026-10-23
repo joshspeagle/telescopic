@@ -13,7 +13,9 @@ warning fires then, and in how many runs one replicate holds more than half the 
 
 Run: python notes/experiments/m9_warnings.py [names], where names, by default all, are
 among gaussian, banana and mixture. The recorded output comes from two runs, the second
-for the mixture after a time limit stopped the first.
+for the mixture after a time limit stopped the first. `m11_warnings.out` is a run during
+the M11 code review, after the variance share moved to moments about the atoms' mean and
+Hill's threshold above ties (DECISIONS #54, #55).
 """
 
 import sys
