@@ -65,3 +65,5 @@ All notable changes to this project are documented here. The format follows
   draws tqdm's text bar, in notebooks too.
 - `Result.diagnostics()` and the summary report the values behind two warnings, the tail
   index of the meeting times and the largest share of one replicate in a variance.
+- Documentation: Getting started, a user guide, six tutorials executed when the site is
+  built, a theory page, the API reference and a citing page.

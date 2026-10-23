@@ -8,21 +8,40 @@ kernelspec:
 
 A kernel moves one chain and leaves the target invariant. Its coupling moves a pair of
 chains so that each chain, on its own, moves by the kernel, and so that the two can
-become equal ([Theory](../theory.md)). Each kernel of {mod}`telescopic.kernels` comes
-with its coupling.
+become equal ([Theory](../theory.md#coupled-chains)). Each kernel of
+{mod}`telescopic.kernels` comes with its coupling. The argument `kernel` of
+{func}`telescopic.sample` and {class}`telescopic.CoupledSampler` takes a kernel, or the
+string that names it:
 
-The argument `kernel` of {func}`telescopic.sample` and
-{class}`telescopic.CoupledSampler` takes a kernel or one of these strings:
+| Kernel | String | Needs | Coupling | `tune` sets |
+|---|---|---|---|---|
+| `RandomWalk` | `"auto"`, `"rwmh"` | log-density | reflection-maximal proposals, common uniform | `cov` |
+| `MALA` | `"mala"` | log-density, gradient | reflection-maximal proposals, common uniform | `cov`, `step_size` |
+| `HMC` | `"hmc"` | log-density, gradient | common momentum and uniform; reflection-maximal meeting step | `cov`, `step_size` |
+| `Independence` | `"independence"` | log-density | common proposal and uniform | `proposal` |
+| `Gibbs` | none | full conditionals | per block: maximal, common random numbers, or both | nothing |
+| `Mixture` | none | what its components need | common component | its components' parameters |
 
-| String | Kernel |
-|---|---|
-| `"auto"`, `"rwmh"` | `RandomWalk()` |
-| `"mala"` | `MALA()` |
-| `"hmc"` | `HMC()` |
-| `"independence"` | `Independence()` |
+`"auto"`, the default, is the random walk even when `grad` is given.
 
-`"auto"`, the default, is the random walk, with or without a gradient: gradient kernels
-are chosen by name.
+## Choosing a kernel
+
+- **The random walk**, the default, needs only the log-density and has no step size to
+  tune.
+- **MALA and HMC** need the gradient. A step evaluates the log-density and the gradient
+  once (MALA) or `n_steps` times (HMC). Their automatic step sizes can fail to couple
+  ([When the automatic step fails](#when-the-automatic-step-fails)).
+- **The independence kernel** suits a target that a Student-$t$ approximates well, such
+  as a posterior close to Gaussian.
+- **Gibbs** suits models whose full conditionals are known, such as conjugate
+  hierarchical models.
+
+Coupling does not make a kernel mix faster
+([Theory](../theory.md#guarantees-and-their-limits)): a kernel that mixes slowly meets
+slowly. To compare kernels on a target, compare their inefficiency, the variance of a
+replicate's estimate times the cost of a replicate ([Settings](settings.md#cost)).
+[Gradients](../tutorials/gradients.md) compares the random walk, MALA and HMC on a
+Gaussian.
 
 ## Tuning
 
@@ -33,7 +52,7 @@ sampler calls it once, before anything else runs, and keeps the tuned kernel:
 
 ```{code-cell} python
 import numpy as np
-from scipy import stats
+from scipy import optimize, special, stats
 
 import telescopic
 from telescopic import examples, kernels
@@ -44,15 +63,6 @@ tuned, report = kernels.HMC().tune(target, gaussian.initial, rng=0)
 tuned
 ```
 
-| Kernel | Needs | Coupling | `tune` sets |
-|---|---|---|---|
-| `RandomWalk` | log-density | reflection-maximal proposals, common uniform | `cov` |
-| `MALA` | log-density, gradient | reflection-maximal proposals, common uniform | `cov`, `step_size` |
-| `HMC` | log-density, gradient | common momentum and uniform; reflection-maximal meeting step | `cov`, `step_size` |
-| `Independence` | log-density | common proposal and uniform | `proposal` |
-| `Gibbs` | full conditionals | per block: maximal, common random numbers, or both | nothing |
-| `Mixture` | what its components need | common component | its components' parameters |
-
 ## Random walk
 
 {class}`telescopic.kernels.RandomWalk` proposes $x' = x + \lambda Cz$, with $CC^\top$ =
@@ -61,14 +71,14 @@ $\log u < \log\pi(x') - \log\pi(x)$.
 
 - `coupling="reflection"`, the default, draws the two proposals from the
   reflection-maximal coupling of their Gaussians and decides both acceptances with one
-  uniform (Jacob, O'Leary & Atchadé 2020; O'Leary 2021). A coupled step evaluates the
-  log-density at most twice per pair, once when the proposals coincide.
-- `coupling="maximal"` uses the rejection maximal coupling with independent residuals.
-  Its meeting times grow exponentially with the dimension (Jacob, O'Leary & Atchadé
+  uniform, as in Jacob, O'Leary & Atchadé (2020) and O'Leary (2021). A coupled step
+  evaluates the log-density at most twice per pair, once when the proposals coincide.
+- `coupling="maximal"` uses the rejection maximal coupling with independent residuals,
+  whose meeting times grow exponentially with the dimension (Jacob, O'Leary & Atchadé
   2020, §4.2); it is there for comparison.
 - `tune` sets `cov` to the covariance of the pilot chains. `scale` defaults to
-  $2.38/\sqrt d$, the optimal scale for a Gaussian target of covariance `cov` (Roberts,
-  Gelman & Gilks 1997), and is not tuned.
+  $2.38/\sqrt d$, the optimal scale of Roberts, Gelman & Gilks (1997) for a Gaussian
+  target of covariance `cov`, and is not tuned.
 
 ## MALA
 
@@ -78,11 +88,11 @@ $\Sigma = CC^\top$ = `cov` and $\epsilon$ = `step_size`, and accepts by the
 Metropolis-Hastings ratio, which includes the proposal densities.
 
 - The coupled step draws the two proposals from the reflection-maximal coupling of their
-  distributions, which share the covariance $\epsilon^2\Sigma$, and shares the uniform
-  (Jacob, O'Leary & Atchadé 2020, §4.4). It is MALA's only coupling.
+  distributions, which share the covariance $\epsilon^2\Sigma$, and shares the uniform,
+  as in Jacob, O'Leary & Atchadé (2020, §4.4). It is MALA's only coupling.
 - `tune` sets `cov` to the covariance of the pilot chains, then `step_size` by dual
-  averaging toward an acceptance rate of 0.574 (Roberts & Rosenthal 1998), on four
-  chains started from the pilot's last states.
+  averaging toward the acceptance rate of 0.574 that Roberts & Rosenthal (1998) found
+  optimal, on four chains started from the pilot's last states.
 
 ## HMC
 
@@ -108,15 +118,111 @@ averaging of the trajectories alone toward an acceptance rate of 0.8. `n_steps` 
 to $\lceil 1/\epsilon\rceil$, a trajectory of length about 1 in whitened coordinates,
 and at most 1,000.
 
-Settings that suit HMC alone can fail to contract when coupled (Heng & Jacob 2019, §5),
-so check the meeting times before a long run. The automatic step targets the acceptance
-rate of HMC alone. On targets that are not log-concave it can leave the coupled chains
-apart: on the banana of {func}`telescopic.examples.banana`, from its default initial
-distribution, the automatic steps of HMC and of MALA leave so many pilot pairs unmet
-that `k` cannot be chosen, and the run raises. On such targets, give an explicit,
-smaller `step_size`. On the banana, Heng & Jacob (2019, §5.2) report a mean meeting time
-of 158 with a step of 1/500 and 500 leapfrog steps, `HMC(1/500, 500, cov=np.eye(2))`.
-Worked examples: [Gradients](../tutorials/gradients.md).
+## When the automatic step fails
+
+Without `step_size`, MALA and HMC tune their step toward the acceptance rate that suits
+the kernel alone, on chains near the bulk of the target, and Heng & Jacob (2019, §5)
+show that settings that suit HMC alone can fail to bring coupled chains together. On
+targets that are not log-concave, such as the banana of
+{func}`telescopic.examples.banana` from its default initial distribution, the automatic
+steps of MALA and HMC leave pilot pairs apart. Log-concave targets can fail too, where
+the log-density curves more sharply than where the step was tuned. Where the largest
+eigenvalue of $\Sigma H$, with $\Sigma$ = `cov` and $H$ the Hessian of $-\log\pi$,
+exceeds $4/\epsilon^2$, MALA's proposals overshoot: on a Gaussian of that Hessian, the
+proposal mean lands farther from the mode than the chain. HMC's leapfrog steps are
+unstable beyond the same bound. A chain that starts in such a region can reject every
+proposal. On the logistic regression below, whose predictors nearly separate the
+outcomes, the automatic MALA leaves pilot pairs unmet. The symptom is pilot pairs still
+unmet at the cap, so that `sample` raises `ValueError` once the pilot has run, or very
+long meeting times. The remedy is an explicit `step_size`, checked as in
+[Checking a step size](#checking-a-step-size). On the banana, Heng & Jacob (2019, §5.2)
+report a mean meeting time of 158 with a step of 1/500 and 500 leapfrog steps,
+`HMC(1/500, 500, cov=np.eye(2))`.
+
+## Checking a step size
+
+Pilot pairs check a step size before a run. With every parameter of the kernel given,
+{meth}`telescopic.CoupledSampler.meeting_times` runs no tuning, only pairs with lag 1
+until they meet or reach `max_iter`. Over a few step sizes, compare the mean cost of a
+pair: the evaluations per step times the mean meeting time, infinite when a pair is
+still unmet at the cap. Keep the step with the lowest cost.
+
+The example is the logistic regression of
+[Gradients](../tutorials/gradients.md#a-logistic-regression), with coefficients that
+nearly separate the outcomes:
+
+```{code-cell} python
+rng = np.random.default_rng(1)
+X = np.column_stack([np.ones(200), rng.normal(size=(200, 5))])
+coefficients = [-0.5, 1.0, -1.0, 0.5, 0.0, 2.0]
+y = (rng.random(200) < special.expit(X @ coefficients)).astype(float)
+
+
+def log_prob(beta, X, y):
+    eta = beta @ X.T
+    return np.sum(y * eta - np.logaddexp(0, eta), axis=-1) - np.sum(beta**2, axis=-1) / 50
+
+
+def grad(beta, X, y):
+    return (y - special.expit(beta @ X.T)) @ X - beta / 25
+
+
+fit = optimize.minimize(
+    lambda beta: -log_prob(beta, X, y), np.zeros(6), jac=lambda beta: -grad(beta, X, y)
+)
+init = telescopic.initial.Normal(mean=fit.x, cov=100 * fit.hess_inv)
+```
+
+The scan starts from the automatic step, with the covariance that tuning chose. The
+samplers have the same seed, so their pilot pairs start from the same points:
+
+```{code-cell} python
+automatic = telescopic.CoupledSampler(
+    log_prob, init, args=(X, y), grad=grad, vectorize=True, kernel="mala", rng=2
+)
+automatic.tune()
+cov = automatic.kernel.cov
+per_step = 2  # a log-density and a gradient per chain and step
+costs = {}
+for step in [automatic.kernel.step_size, 1.0, 0.7, 0.5, 0.35]:
+    sampler = telescopic.CoupledSampler(
+        log_prob,
+        init,
+        args=(X, y),
+        grad=grad,
+        vectorize=True,
+        kernel=kernels.MALA(step, cov=cov),
+        rng=2,
+    )
+    tau = sampler.meeting_times(100, max_iter=3000)
+    costs[step] = per_step * tau.mean()
+    print(f"step {step:.3f}: {np.isinf(tau).sum():3} unmet, cost {costs[step]:.0f}")
+best = min(costs, key=costs.get)
+```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claims of the next paragraph.
+assert np.isinf(costs[automatic.kernel.step_size]) and np.isinf(costs[1.0])
+assert np.isfinite(costs[best]) and best < 1.0
+```
+
+The automatic step leaves pairs unmet at the cap, and so does the step of 1.0. The step
+with the lowest cost runs:
+
+```{code-cell} python
+result = telescopic.sample(
+    log_prob,
+    init,
+    args=(X, y),
+    grad=grad,
+    vectorize=True,
+    kernel=kernels.MALA(best, cov=cov),
+    rng=3,
+)
+result.summary()
+```
 
 ## Independence
 
@@ -125,7 +231,8 @@ state, and accepts when
 $\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]$.
 
 - The coupled step gives both chains the same proposal and the same uniform, so a pair
-  meets when both accept (a maximal coupling of the kernel; O'Leary, Wang & Jacob 2021).
+  meets when both accept. It is a maximal coupling of the kernel (O'Leary, Wang & Jacob
+  2021).
 - `proposal` is a {class}`telescopic.kernels.MultivariateT`, a Student-$t$ with location
   `mean`, scale matrix `cov` and `df` degrees of freedom, a positive integer (`df=None`
   gives a Gaussian).
@@ -148,15 +255,15 @@ partition the coordinates `0, ..., d - 1`. The coupled step couples each block's
 conditionals:
 
 - `coupling="maximal"`, the default: the rejection maximal coupling. With `eta` below 1
-  the meeting probability is capped at `eta` and the number of draws it takes has a
-  bounded variance (Atchadé & Jacob 2024, Algorithm 2).
+  the meeting probability is capped at `eta`, and the number of draws it takes has the
+  bounded variance of Atchadé & Jacob (2024, Algorithm 2).
 - `coupling="crn"`: common random numbers, one uniform through `ppf` for a block of one
   coordinate, or common standard normals for a multivariate normal conditional (an
   object with `mean` and `cov`). They can bring the chains together, but make them equal
   only by rounding; `"two-scale"` adds the maximal coupling.
 - `coupling="two-scale"`: common random numbers for pairs farther apart than `threshold`
-  at the start of a sweep, the maximal coupling for the others (Biswas, Bhattacharya,
-  Jacob & Johndrow 2022).
+  at the start of a sweep, and the maximal coupling for the others, as in Biswas,
+  Bhattacharya, Jacob & Johndrow (2022).
 
 Where the two chains agree on every coordinate outside a block, both get the same draw.
 A Gibbs kernel needs no log-density, so `log_prob` can be `None`, and has nothing to
@@ -186,41 +293,6 @@ example: [Gibbs](../tutorials/gibbs.md).
 
 {class}`telescopic.kernels.Mixture` applies at each step one of its `kernels`, chosen by
 a uniform with probabilities `weights`. Coupled chains take the same component and its
-coupling. The choice never depends on the states, so each chain moves by the mixture
-(Atchadé & Jacob 2024, §4.2). `tune` tunes the untuned components on one pilot. HMC is a
-mixture of its trajectories and its meeting step.
-
-## Choosing a kernel
-
-- **The random walk**, the default, needs only the log-density and has no step size to
-  tune.
-- **MALA and HMC** need the gradient. A step evaluates the log-density and the gradient
-  once (MALA) or `n_steps` times (HMC). Check their meeting times: the automatic steps
-  can fail to couple.
-- **The independence kernel** suits a target that a Student-$t$ approximates well, such
-  as a posterior close to Gaussian.
-- **Gibbs** suits models whose full conditionals are known, such as conjugate
-  hierarchical models.
-
-Coupling does not make a kernel mix faster ([Theory](../theory.md)): a kernel that mixes
-slowly meets slowly. To compare kernels on a target, compare the cost of a given
-precision: the variance of a replicate's estimate times the cost of a replicate, counted
-here in evaluations of the log-density and the gradient. A run of each gives both:
-
-```{code-cell} python
-for name in ["rwmh", "mala", "hmc", "independence"]:
-    result = telescopic.sample(
-        gaussian.log_prob, gaussian.initial, grad=gaussian.grad, vectorize=True,
-        kernel=name, rng=1,
-    )
-    evaluations = (result.n_log_prob + result.n_grad) / result.n_replicates
-    variance = result.n_replicates * result.mean().standard_error[0] ** 2
-    print(
-        f"{name:>12}: k = {result.k:3}, {evaluations:5.0f} evaluations and variance "
-        f"{variance:.4f} per replicate, product {evaluations * variance:5.1f}"
-    )
-```
-
-On this Gaussian the random walk takes the most evaluations for a given precision of the
-mean of $x_0$. On other targets the order can change, and the variance of other
-estimates can rank the kernels differently.
+coupling. The choice never depends on the states, which keeps each chain's moves those
+of the mixture (Atchadé & Jacob 2024, §4.2). `tune` tunes the untuned components on one
+pilot. HMC is a mixture of its trajectories and its meeting step.

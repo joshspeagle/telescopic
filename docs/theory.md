@@ -166,7 +166,7 @@ $\bar a$ and sample covariance $S_a$ (divisor $R - 1$).
   $\beta$-quantile is the smallest atom whose projected cumulative weight is at least
   $\beta$. This is consistent as $R \to \infty$ but not unbiased (JOA20, Prop. 3.2).
 
-## Choosing $k$, $m$ and $L$
+## Choosing k, m and L
 
 The settings change the cost and the variance, never the bias. telescopic follows AJ24:
 from the meeting times of $R_0 = 100$ pilot pairs with $L = 1$,

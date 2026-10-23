@@ -24,15 +24,12 @@ result = telescopic.sample(
 )
 ```
 
-## Meeting times and censored pairs
+## Meeting times
 
 `result.meeting_times` holds each pair's meeting time $\tau$
-([Theory](../theory.md#coupled-chains)), `result.costs` its kernel applications and
-`result.index` its replicate index. Without a cap, the default, every pair runs until it
-meets. With `max_iter`, a pair still unmet when $t$ reaches `max_iter` is censored: its
-meeting time is `inf`, and it is left out of the estimates, of $R$ and of the signed
-measure, which biases the estimates ([Pitfalls](pitfalls.md#capping-the-run-length)).
-`result.n_censored` counts them.
+([Theory](../theory.md#coupled-chains)), `inf` for a pair censored at `max_iter`
+([`censored`](#censored-pairs-censored)); `result.costs` holds its kernel applications
+and `result.index` its replicate index.
 
 {meth}`telescopic.Result.plot_meeting_times` draws a histogram of $\tau - L$ and its
 survival function on a log scale, where a straight tail means geometric meeting times. A
@@ -77,24 +74,42 @@ censored pair given as its cap.
 
 ## The diagnostics of a run
 
-{meth}`telescopic.Result.diagnostics` gathers the diagnostics that the summary prints:
+{meth}`telescopic.Result.diagnostics` returns the diagnostics that the summary prints, as
+a dictionary; [Results](results.md#the-summary) defines each line of the summary.
 
 ```{code-cell} python
 result.diagnostics()
 ```
 
-- `meeting_time_50`, `meeting_time_90`, `meeting_time_99` and `meeting_time_max`: the
-  quantiles and the maximum of the meeting times of the pairs that met; `censored`: the
-  number of censored pairs.
-- `late_fraction`: the fraction of pairs that met after `k + lag`, $\tau - L > k$,
-  censored ones included. Only a replicate whose pair meets that late carries a bias
-  correction ([Theory](../theory.md#the-time-averaged-estimator)). The fraction is the
-  leading term of the TV bound at $k$, `tv_bound_at_k`, and with `lag = k` the two are
-  close. `late_fraction_upper` is its one-sided 95% Clopper-Pearson upper bound, which
-  stays informative when the fraction is 0.
-- `mean_cost`, `seconds_per_replicate` and `relative_cost`: the mean number of kernel
-  applications per replicate, the wall time per replicate, and the mean cost over
-  $m - k + 1$ ([Settings](settings.md#cost)).
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claims of the next paragraph.
+values = result.diagnostics()
+assert set(values) == {
+    "meeting_time_50", "meeting_time_90", "meeting_time_99", "meeting_time_max",
+    "censored", "tail_index", "late_fraction", "late_fraction_upper", "tv_bound_at_k",
+    "variance_share", "variance_share_of", "mean_cost", "seconds_per_replicate",
+    "relative_cost",
+}
+assert result.lag == result.k
+assert abs(values["late_fraction"] - values["tv_bound_at_k"]) < 0.01
+```
+
+- `meeting_time_50`, `meeting_time_90`, `meeting_time_99`, `meeting_time_max` and
+  `censored`: the meeting times of the pairs that met, and the number of censored pairs.
+- `tail_index`: Hill's estimate of the tail index of $\tau - L + 1$, `nan` below 500
+  replicates ([`tail`](#heavy-tailed-meeting-times-tail)).
+- `late_fraction` and `late_fraction_upper`: the fraction of pairs that met after
+  `k + lag`, censored ones included, and its one-sided 95% Clopper-Pearson upper bound,
+  which stays informative when the fraction is 0. The fraction is the leading term of
+  `tv_bound_at_k`, the TV bound at $k$, and with `lag = k` the two are close.
+- `variance_share` and `variance_share_of`: the largest share of one replicate in the
+  variance of the estimate of a coordinate's mean or second moment, and that estimate,
+  such as `"the second moment of x1"`; `nan` and `None` below 2 replicates
+  ([`variance`](#one-replicate-dominating-the-variance-variance)).
+- `mean_cost`, `seconds_per_replicate` and `relative_cost`: the cost of a replicate
+  ([Settings](settings.md#cost)).
 
 ## Warnings
 
@@ -105,15 +120,20 @@ tuning chains warn instead when the kernel is tuned, and a slow pair when it is 
 it happens in this process, or when the run ends on a pool. {meth}`telescopic.Result.check`
 emits the warnings that apply to any result, and {func}`telescopic.diagnostics.issues`
 returns them, without warning, as a list of {class}`telescopic.diagnostics.Issue` with
-the `kind` named in each heading below and a `message`. They are heuristics, with
-thresholds set so that clean Gaussian runs at the default settings rarely trigger them;
-the measured rates below show how often they fire elsewhere.
+the `kind` named in each heading below and a `message`. An empty list means only that
+none of them holds, not that the run is right. They are heuristics, with thresholds set
+so that clean Gaussian runs at the default settings rarely trigger them; the measured
+rates below show how often they fire elsewhere.
 
 ### Censored pairs (`censored`)
 
-**Trigger:** a pair reached `max_iter` without meeting. **Meaning:** the estimates leave
-it out, which biases them. **Remedy:** run again without a cap or with a larger one; a
-sampler keeps the cap of its first run, so this needs a new one.
+**Trigger:** a pair reached `max_iter` without meeting. Without a cap, the default, every
+pair runs until it meets. With `max_iter`, a pair still unmet when $t$ reaches it is
+censored: its meeting time is `inf`, and it is left out of the estimates, of $R$ and of
+the signed measure. `result.n_censored` counts them. **Meaning:** leaving them out biases
+the estimates, since they are the replicates whose chains take longest to meet.
+**Remedy:** a new sampler with a larger `max_iter`, or none; a sampler keeps the cap of
+its first run.
 
 ### Late pairs (`late`)
 
@@ -125,25 +145,31 @@ which make the variance high. **Remedy:** a new sampler with a larger `k`
 ### One replicate dominating the variance (`variance`)
 
 **Trigger:** with at least 100 replicates, one replicate holds more than half of the
-sample variance of the estimate of some coordinate's mean or second moment
-({func}`telescopic.diagnostics.variance_share`). **Meaning:** heavy tails or rare
-excursions make the error bars unreliable. A replicate whose chain is still on its way to
-the target at `k` does this, as from a start far wider than the target
-([Pitfalls](pitfalls.md#an-initial-distribution-far-wider-than-the-target)), and so does a
-replicate that found a mode that the others missed. **Remedy:** find the replicate in the
-`replicates` of the estimate, check the initial distribution, and look for a mode the
-other replicates missed. The warning looks at the first two moments of each coordinate
-only; `variance_share(result.estimate(h).replicates)` checks a function of your own.
+sample variance of the estimate of some coordinate's mean or second moment.
+`result.diagnostics()` reports the largest share as `variance_share`, and the estimate
+that holds it as `variance_share_of`, whether or not the warning fires. **Meaning:**
+heavy tails or rare excursions make the error bars unreliable. A replicate whose chain is
+still on its way to the target at `k` does this, as from a start far wider than the
+target ([Initial distributions](targets.md#choosing-one)), and so does a replicate that
+found a mode that the others missed. **Remedy:** find the replicate in the `replicates`
+of the estimate, check the initial distribution, and look for a mode the other
+replicates missed. The warning looks at the first two moments of each coordinate only;
+{func}`telescopic.diagnostics.variance_share` applied to `result.estimate(h).replicates`
+checks a function of your own.
 
 ### Heavy-tailed meeting times (`tail`)
 
 **Trigger:** with at least 500 replicates, Hill's estimate of the tail index of
-$\tau - L + 1$ ({func}`telescopic.diagnostics.hill`), from its
-$\max(10, \lfloor R/10 \rfloor)$ largest values, is below 2. **Meaning:** meeting times
-with a tail index below 2 have an infinite variance, and the estimates may too
-([Pitfalls](pitfalls.md#heavy-tails)). **Remedy:** look at the survival function of
-`plot_meeting_times`, whose tail is straight on its log scale for geometric meeting times,
-and at the kernel ([Kernels](kernels.md)).
+$\tau - L + 1$ ({func}`telescopic.diagnostics.hill`), from its $\lfloor R/10 \rfloor$
+largest values, is below 2. `result.diagnostics()` reports it as `tail_index` whether or
+not the warning fires. **Meaning:** unbiasedness needs moments of the meeting time, and
+valid error bars need a finite variance of the estimates
+([Theory](../theory.md#guarantees-and-their-limits)). Meeting times with a polynomial
+tail can break both: a tail index below 2 means an infinite variance of the meeting
+times, the estimates may have one too, and then their error bars are not reliable at any
+number of replicates. **Remedy:** look at the survival function of `plot_meeting_times`,
+whose tail is straight on its log scale for geometric meeting times, and at the kernel
+([Kernels](kernels.md)).
 
 ### Disagreeing tuning chains (`tuning`)
 
@@ -152,7 +178,7 @@ and at the kernel ([Kernels](kernels.md)).
 widely than the chains themselves. **Meaning:** the target may have several modes, which
 make the meeting times heavy-tailed, and pairs that never leave one mode miss the others.
 **Remedy:** an initial distribution that covers every mode
-([Pitfalls](pitfalls.md#an-initial-distribution-that-misses-a-mode)).
+([Initial distributions](targets.md#choosing-one)).
 
 ### Slow pairs (`slow`)
 
@@ -162,10 +188,9 @@ heavy-tailed, and the run waits for that pair. **Remedy:** look at the kernel an
 initial distribution. In the meeting-time pilot, whose own cap is on
 [Settings](settings.md#the-automatic-pipeline), the threshold is $10^4$.
 
-### A run that warns
+## A run that warns
 
-On the banana from its wide default start, a `k` set by hand too small for the target
-triggers two warnings:
+The banana from its wide default start, with `k`, `lag` and `m` set by hand:
 
 ```{code-cell} python
 banana = examples.banana()
@@ -178,11 +203,21 @@ short = telescopic.sample(
 [issue.kind for issue in telescopic.diagnostics.issues(short)]
 ```
 
-### Measured rates
+```{code-cell} python
+:tags: [remove-cell]
 
-Spec section 7.4 ([Specification](../design/spec.md)) records how often each warning
-fired in the measurements of milestone M9, with vectorised log-densities and, on the
-first two targets, `sample()`'s defaults:
+# The claims of the next paragraph.
+assert [issue.kind for issue in telescopic.diagnostics.issues(short)] == ["late", "variance"]
+```
+
+The warnings say that `k` may be too small: more than a quarter of the pairs met after
+`k + lag`, and one replicate holds more than half of the variance of an estimate.
+
+## Measured rates
+
+When the thresholds were chosen, repeated runs measured how often each warning fires.
+All used vectorised log-densities, and the first two targets `sample()`'s default
+settings:
 
 - {func}`telescopic.examples.gaussian` in 10 dimensions, from $\mathcal N(0, 4I)$: no
   warning in 50 runs at $R = 500$; at $R = 100$, the variance warning in at most 2 of 100
@@ -198,14 +233,13 @@ first two targets, `sample()`'s defaults:
   replicates found the other mode raised the variance warning, and their intervals
   covered the truth.
 
-### A run that never left one mode
+## A run that never left one mode
 
 The last case shows the limit of every diagnostic here: a run whose pairs all met in one
 mode cannot be detected from its own output, since nothing in its meeting times or
 estimates shows the mode that no replicate visited. The remedy is an initial
-distribution that covers every mode
-([Pitfalls](pitfalls.md#an-initial-distribution-that-misses-a-mode)).
-[Failure modes](../tutorials/failure-modes.md) works through such runs.
+distribution that covers every mode ([Initial distributions](targets.md#choosing-one)).
+[When unbiased is not enough](../tutorials/failure-modes.md) works through such runs.
 
 ## Warning classes
 
@@ -215,25 +249,27 @@ of `UserWarning`, is the base class of telescopic's warnings. A
 a result may be unreliable: the conditions above. An
 {class}`telescopic.InputWarning <telescopic.warnings.InputWarning>` says that an input is
 legal but questionable: replicates whose initial draws have zero target density, and a
-run whose atoms would take more than 1 GB ([Settings](settings.md#memory-and-thinning)). Each
-warning points at the line of your code that called telescopic.
+run whose atoms would take more than 1 GB ([Settings](settings.md#memory-and-thinning)).
+Each warning points at the line of your code that called telescopic.
 
 The filters of the `warnings` module select them by class:
 `warnings.simplefilter("ignore", telescopic.InputWarning)` silences the input warnings,
-and `"error"` turns warnings into exceptions:
+and `"error"` turns warnings into exceptions. Under such a filter, `sample` or `run`
+raises at its first warning instead of returning its result:
 
 ```{code-cell} python
 with warnings.catch_warnings():
     warnings.simplefilter("error", telescopic.ConvergenceWarning)
     try:
-        short.check()
+        telescopic.sample(
+            banana.log_prob, banana.initial, vectorize=True, k=200, lag=200, m=2000, rng=0
+        )
     except telescopic.ConvergenceWarning as error:
         print("raised:", error)
 ```
 
-With such a filter in place during `sample` or `run`, the call raises at its first
-warning instead of returning its result. `check(strict=True)` raises a `RuntimeError`
-that lists every condition, and leaves the result in hand:
+`check(strict=True)` raises a `RuntimeError` that lists every condition, and leaves the
+result in hand:
 
 ```{code-cell} python
 try:
@@ -247,5 +283,5 @@ except RuntimeError as error:
 {func}`telescopic.testing.check_coupling` checks a kernel's coupling as the engine uses
 it: one coupled step against steps of the kernel alone, the fraction of pairs that meet,
 stale cached log-densities and pairs that nearly meet. A kernel of your own should pass
-it before use; [Custom kernels](custom-kernels.md#testing) describes its tests and runs
+it before use; [Writing a kernel](custom-kernels.md#testing) describes its tests and runs
 it on a new kernel.

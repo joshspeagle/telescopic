@@ -10,5 +10,4 @@ results
 diagnostics
 parallel
 custom-kernels
-pitfalls
 ```

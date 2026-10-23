@@ -6,10 +6,9 @@ kernelspec:
 
 # Choosing k, m and the lag
 
-The burn-in $k$, the run length $m$ and the lag $L$ change the cost and the variance of
-the estimates, never their bias ([Theory](../theory.md)). This page applies the automatic
-recipe of Atchadé & Jacob (2024) step by step, then measures what other settings cost.
-[Settings](../guide/settings.md) describes the options.
+This page applies the automatic recipe of Atchadé & Jacob (2024) step by step on a
+correlated Gaussian, then measures the cost and the variance that other settings give.
+[Settings](../guide/settings.md) describes `k`, `m` and the lag.
 
 ## The pilot
 
@@ -20,17 +19,12 @@ proposal covariance of a random walk from adaptive Metropolis chains, and freeze
 kernel:
 
 ```{code-cell} python
-import warnings
-
 import matplotlib.pyplot as plt
 import numpy as np
-from myst_nb import glue
 
 import telescopic
-from telescopic import examples
-from telescopic.tuning import choose_k
 
-example = examples.gaussian(10)
+example = telescopic.examples.gaussian(10)
 sampler = telescopic.CoupledSampler(
     example.log_prob, example.initial, vectorize=True, rng=0
 )
@@ -44,15 +38,12 @@ $k$:
 
 ```{code-cell} python
 times = sampler.meeting_times()
-k = choose_k(times)
-glue("k", int(k), display=False)
-glue("pilot_late", float(np.mean(times - 1 > k)), display=False)
+k = telescopic.tuning.choose_k(times)
 print(f"k = {k}; pairs with tau - 1 > k: {np.sum(times - 1 > k)} of {len(times)}")
 ```
 
-{glue:text}`pilot_late:.0%` of the pilot pairs met after $k + 1$, and the survival
-function of $\tau - 1$ falls to that fraction at $k$. The recipe then sets the lag to $k$
-and $m$ to $10k$.
+The recipe then sets the lag to $k$ and $m$ to $10k$. The pilot's meeting times, with $k$
+dashed and the level 0.01 dotted:
 
 ```{code-cell} python
 shifted = np.sort(times - 1)
@@ -79,32 +70,19 @@ recipe = sampler.run(500)
 recipe.summary()
 ```
 
-A replicate whose pair meets before $m$ costs $m$ plus its coupled steps
-([Theory](../theory.md)), here {glue:text}`recipe_cost:,.0f` kernel applications on
-average. The relative cost, that cost over the $m - k + 1$ averaged states, is
-{glue:text}`recipe_relative_cost:.2f`; the theory gives about 10/9 to 11/9 when
-$\tau - L \le k$. {glue:text}`recipe_late:.1%` of the pairs met after $k + L$ and carry
-a bias correction, against {glue:text}`pilot_late:.0%` of the pilot's pairs after
-$k + 1$: the lag changes the law of $\tau - L$.
+The footer gives the cost of a replicate, its relative cost, and the fraction of pairs
+that met after $k + L$, the ones that carry a bias correction
+([Results](../guide/results.md#the-summary) defines each entry). That fraction need not
+equal the pilot's fraction after $k + 1$: the lag changes the law of $\tau - L$.
 
 ## Other settings
 
-A sampler keeps the settings of its first run, so each setting below gets a sampler of
-its own, with its own seed. They share the tuned kernel and so skip the tuning; with `k`
-given, they skip the pilot too. `run_with_warnings` prints the warnings that a run emits
-under its name; [Diagnostics](../guide/diagnostics.md) explains them:
+Each setting below gets a sampler of its own, with its own seed, since a sampler keeps
+the settings of its first run. The samplers share the tuned kernel and so skip the
+tuning; with `k` given, they skip the pilot too. A run warns as it ends when a condition
+of [Diagnostics and warnings](../guide/diagnostics.md) holds:
 
 ```{code-cell} python
-def run_with_warnings(sampler, n_replicates, **settings):
-    # Runs the sampler and prints the warnings that the run emits.
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        result = sampler.run(n_replicates, **settings)
-    for warning in caught:
-        print(f"{warning.category.__name__}: {warning.message}")
-    return result
-
-
 choices = {
     "lag_1": dict(k=k, m=10 * k, lag=1),
     "m_2k": dict(k=k, m=2 * k, lag=k),
@@ -112,16 +90,16 @@ choices = {
 }
 results = {"recipe": recipe}
 for seed, (name, settings) in enumerate(choices.items(), start=1):
-    print(f"{name}:")
     other = telescopic.CoupledSampler(
         example.log_prob, example.initial, vectorize=True, kernel=sampler.kernel, rng=seed
     )
-    results[name] = run_with_warnings(other, 500, **settings)
+    results[name] = other.run(500, **settings)
 ```
 
 For each run: the estimate of $\mathbb E[x_0^2] = 1$, the mean cost of a replicate in
-kernel applications, the relative cost, the fraction of pairs that met after $k + L$, the
-variance of one replicate's estimate, and that variance times the cost:
+kernel applications, the relative cost, the fraction of pairs that met after $k + L$,
+the inefficiency ([Theory](../theory.md#cost)), and the kinds of the warnings that
+apply, from {func}`telescopic.diagnostics.issues`:
 
 ```{code-cell} python
 def second_moment(x):
@@ -129,73 +107,89 @@ def second_moment(x):
 
 
 print(
-    f"{'':8}{'k':>5}{'lag':>5}{'m':>6}{'E[x0^2]':>16}{'cost':>8}"
-    f"{'rel.':>8}{'late':>7}{'variance':>10}{'var. x cost':>13}"
+    f"{'':8}{'k':>5}{'lag':>5}{'m':>6}{'E[x0^2]':>16}{'cost':>7}"
+    f"{'rel.':>6}{'late':>7}{'ineff.':>10}  issues"
 )
-efficiency, errors = {}, []
+rows = {}
 for name, result in results.items():
     estimate = result.estimate(second_moment)
-    variance = float(np.var(estimate.replicates, ddof=1))
-    measured = result.diagnostics()
-    efficiency[name] = variance * measured["mean_cost"]
-    errors.append(float(abs(estimate.value - 1) / estimate.standard_error))
+    row = result.diagnostics()
+    row["inefficiency"] = np.var(estimate.replicates, ddof=1) * row["mean_cost"]
+    row["issues"] = [issue.kind for issue in telescopic.diagnostics.issues(result)]
+    row["estimate"] = estimate
+    rows[name] = row
     print(
         f"{name:8}{result.k:5}{result.lag:5}{result.m:6}"
-        f"{estimate.value:9.3f} ± {estimate.standard_error:<5.3f}{measured['mean_cost']:8.0f}"
-        f"{measured['relative_cost']:8.2f}{measured['late_fraction']:7.1%}"
-        f"{variance:10.3g}{efficiency[name]:13.3g}"
+        f"{estimate.value:9.3f} ± {estimate.standard_error:<5.3f}{row['mean_cost']:7.0f}"
+        f"{row['relative_cost']:6.2f}{row['late_fraction']:7.1%}"
+        f"{row['inefficiency']:10.3g}  {row['issues']}"
     )
-    glue(f"{name}_cost", measured["mean_cost"], display=False)
-    glue(f"{name}_relative_cost", measured["relative_cost"], display=False)
-    glue(f"{name}_late", measured["late_fraction"], display=False)
-    glue(f"{name}_relative", efficiency[name] / efficiency["recipe"], display=False)
-glue("largest_error", max(errors), display=False)
 ```
 
-The estimate farthest from 1 lies {glue:text}`largest_error:.1f` standard errors from it:
-the settings change the variance, not the bias. With a budget of $B$ kernel applications,
-$B/\text{cost}$ replicates estimate $\mathbb E[x_0^2]$ with variance
-$\text{variance} \times \text{cost}/B$, so the last column compares the settings at equal
-compute. The recipe's is the lowest:
+```{code-cell} python
+:tags: [remove-cell]
 
-- **$m = 2k$**: a replicate costs {glue:text}`m_2k_cost:,.0f` kernel applications,
-  against the recipe's {glue:text}`recipe_cost:,.0f`, but only $k + 1$ of them give
-  averaged states. The relative cost is {glue:text}`m_2k_relative_cost:.2f`, and variance
-  times cost {glue:text}`m_2k_relative:.1f` times the recipe's.
-- **Lag 1** has the recipe's $k$ and $m$, and about its cost,
-  {glue:text}`lag_1_cost:,.0f` kernel applications, but variance times cost
-  {glue:text}`lag_1_relative:.1f` times the recipe's.
-- **$k = 50$**: {glue:text}`k_50_late:.0%` of the pairs met after $k + L$ and carry a
-  bias correction (telescopic warns above 25% that $k$ may be too small), and variance
-  times cost is {glue:text}`k_50_relative:,.0f` times the recipe's.
+# The claims of the next paragraph.
+recipe_row = rows["recipe"]
+others = [row for name, row in rows.items() if name != "recipe"]
+assert all(
+    abs(row["estimate"].value - 1) < 2 * row["estimate"].standard_error
+    for row in rows.values()
+)
+assert all(row["inefficiency"] > recipe_row["inefficiency"] for row in others)
+assert rows["m_2k"]["mean_cost"] < recipe_row["mean_cost"]
+assert rows["m_2k"]["relative_cost"] > recipe_row["relative_cost"]
+assert abs(rows["lag_1"]["mean_cost"] / recipe_row["mean_cost"] - 1) < 0.05
+assert rows["lag_1"]["variance_share"] > 0.5
+assert rows["k_50"]["late_fraction"] > 0.5
+assert rows["k_50"]["inefficiency"] > 100 * recipe_row["inefficiency"]
+assert "late" in rows["k_50"]["issues"]
+```
+
+Every estimate lies within two standard errors of 1: the settings change the variance,
+not the bias ([Settings](../guide/settings.md)).
+The inefficiency compares settings at equal compute, and the recipe's is the lowest:
+
+- **$m = 2k$** costs less per replicate, but averages only $k + 1$ states: its relative
+  cost and its inefficiency are higher than the recipe's.
+- **Lag 1** has the recipe's $k$ and $m$, and about its cost, but a higher inefficiency,
+  and one replicate holds most of the variance of an estimate.
+- **$k = 50$** leaves most pairs to meet after $k + L$, so that most replicates carry a
+  bias correction: its inefficiency is orders of magnitude above the recipe's, and the
+  run warns that $k$ may be too small.
 
 The variance of lag 1 comes from its late pairs. A difference $\Delta_t$ enters a
-replicate's estimate with the weight $v_t/(m - k + 1)$ of the [theory](../theory.md),
-and $v_t$ grows by one every $L$ steps from $t = k + L$ to $t = m + L$. A pair that meets
-at $\tau = k + L + 100$ carries weights up to $100/(m - k + 1)$ with lag 1, and
-$1/(m - k + 1)$ with lag $k$:
+replicate's estimate with the weight $v_t/(m - k + 1)$ of the
+[theory](../theory.md#the-time-averaged-estimator), and $v_t$ grows by one every $L$
+steps from $t = k + L$ to $t = m + L$. A pair that meets at $\tau = k + L + 100$ carries
+weights up to $100/(m - k + 1)$ with lag 1, and $1/(m - k + 1)$ with lag $k$:
 
 ```{code-cell} python
+spreads = {}
 for name in ("recipe", "lag_1"):
     result = results[name]
     values = result.estimate(second_moment).replicates
     late = result.meeting_times - result.lag > result.k
-    spread = float(np.var(values[late], ddof=1) / np.var(values[~late], ddof=1))
-    print(f"{name}: {late.sum()} late pairs, with {spread:.3g} times the others' variance")
-    glue(f"{name}_late_count", int(late.sum()), display=False)
-    glue(f"{name}_late_spread", spread, display=False)
+    spreads[name] = np.var(values[late], ddof=1) / np.var(values[~late], ddof=1)
+    print(f"{name}: {late.sum()} late pairs, with {spreads[name]:.3g} times the others' variance")
 ```
 
-With lag 1, the estimates of the {glue:text}`lag_1_late_count:d` late pairs have
-{glue:text}`lag_1_late_spread:.0f` times the variance of the others'; with lag $k$, those
-of the {glue:text}`recipe_late_count:d` late pairs have
-{glue:text}`recipe_late_spread:.1f` times.
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claims of the next paragraph.
+assert spreads["lag_1"] > 10
+assert 0.5 < spreads["recipe"] < 2
+```
+
+With lag 1, the estimates of the late pairs vary far more than the others'; with lag
+$k$, about as much.
 
 ## Distance to stationarity
 
-Each chain of a pair is a Markov chain with the kernel's transitions from $\pi_0$,
-whatever the lag, so the runs with lag 1 and lag $k$ bound the same distances
-$d_{TV}(\pi_t, \pi)$ ([Theory](../theory.md)), at about the same cost:
+The lag does not change the law of $X_t$, so the runs with lag 1 and lag $k$ bound the
+same distance between it and the target
+([Theory](../theory.md#distance-to-stationarity)), at about the same cost:
 
 ```{code-cell} python
 t = np.arange(2 * k)
@@ -211,20 +205,22 @@ ax.legend();
 ```{code-cell} python
 lag_one, lag_k = results["lag_1"].tv_bound([k])[0], recipe.tv_bound([k])[0]
 print(f"at t = k: lag 1, {lag_one:.3f}; lag {k}, {lag_k:.3f}")
-glue("tv_lag_k", float(lag_k), display=False)
-glue("tv_ratio", float(lag_one / lag_k), display=False)
 ```
 
-At $t = k$ the lag-$k$ bound, {glue:text}`tv_lag_k:.3f`, is about the fraction of the
-recipe's pairs that met after $k + L$, and the lag-1 bound is
-{glue:text}`tv_ratio:.0f` times larger: lag $k$ gives the sharper bound (Biswas, Jacob &
-Vanetti 2019).
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claims of the next paragraph.
+assert lag_one > 10 * lag_k
+```
+
+At $t = k$ the lag-1 bound is far larger than the lag-$k$ bound: lag $k$ gives the
+sharper bound, as in Biswas, Jacob & Vanetti (2019).
 
 ## Partial "auto"
 
-Any of `k`, `m` and `lag` can be given, with the others left at `"auto"`. A given value
-is kept, a missing lag is $\max(1, k)$ and a missing $m$ is $10k$, and the pilot runs
-only when `k` is `"auto"`. With `k` given, no pilot runs:
+Any of `k`, `m` and `lag` can be given, with the others left at `"auto"`, by the rule
+that [Settings](../guide/settings.md) states. With `k` given:
 
 ```{code-cell} python
 given_k = telescopic.CoupledSampler(
@@ -235,22 +231,26 @@ print("pilot:", given_k.pilot)
 given_k.settings
 ```
 
-With `m` given, the pilot chooses $k$, and the lag follows it:
+With `m` given:
 
 ```{code-cell} python
 given_m = telescopic.CoupledSampler(
     example.log_prob, example.initial, vectorize=True, kernel=sampler.kernel, rng=5
 )
 given_m.run(20, m=5000)
-glue("given_m_k", int(given_m.settings.k), display=False)
-print("pilot pairs:", len(given_m.pilot))
+print(f"pilot pairs: {len(given_m.pilot)}; k = {given_m.settings.k}, against {k} above")
 given_m.settings
 ```
 
-This sampler's own pilot chose {glue:text}`given_m_k:d` for $k$, against
-{glue:text}`k:d` above: $k$ varies between pilots of 100 pairs, which changes the cost
-and the variance, not the bias. On later runs of a sampler, `"auto"` keeps the first
-run's settings, and another value raises:
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claims of the next paragraph.
+assert given_m.settings.k != k
+```
+
+This sampler's pilot and the first one chose different values of $k$: $k$ varies
+between pilots of 100 pairs. Another value on a later run of a sampler raises:
 
 ```{code-cell} python
 try:
@@ -258,5 +258,3 @@ try:
 except ValueError as error:
     print(error)
 ```
-
-{func}`telescopic.sample` takes the same `k`, `m` and `lag`.

@@ -8,7 +8,7 @@ kernelspec:
 
 A kernel is a subclass of {class}`telescopic.kernels.Kernel` with two methods: `step`
 moves a batch of chains, and `coupled_step` moves a batch of pairs. The engine does the
-rest. This page states the interface and its rules, then writes and tests a kernel.
+rest.
 
 ## The interface
 
@@ -68,13 +68,13 @@ Other members have defaults that a kernel can override:
    batch. Use elementwise operations, and `np.einsum` without `optimize` for linear
    algebra on rows; `@` and `solve` on a batch can give a row different bits in batches
    of different sizes. A replicate's results then do not depend on how the replicates
-   are batched ([Parallel execution](parallel.md)).
+   are batched ([Parallel runs](parallel.md#reproducibility)).
 4. **Determinism.** A step is a function of its inputs and its draws alone: every random
    number comes from `draws`, and nothing is kept between calls.
 
 A coupled step need not keep equal states equal: the engine never applies it to a pair
 that has met. To run on a pool of processes, the kernel must be picklable
-([Parallel execution](parallel.md)).
+([Parallel runs](parallel.md#pickling-and-the-main-guard)).
 
 ## What the engine does
 
@@ -177,21 +177,36 @@ report, report.passed()
 
 {func}`telescopic.testing.fixed_draws` replays given random numbers, to compare a step
 with a computation by hand; a request beyond them raises `IndexError`.
-{func}`telescopic.testing.random_draws` gives fresh ones for any number of rows. With
-the same numbers, a close pair meets, and a distant one moves by reflected normals, $-z$
-for the second chain in one dimension:
+{func}`telescopic.testing.random_draws` gives fresh ones for any number of rows. A step
+from 2.0 with the normal 0.5, then coupled steps with the same numbers from 2.0 and 2.1,
+and from 2.0 and 3.0:
 
 ```{code-cell} python
 kernel = AR1(0.9)
 starts = kernel.init_state(target, np.array([[2.0], [2.1], [3.0]]))
 x, close, far = (starts.take([i]) for i in range(3))
 moved, _ = kernel.step(target, x, fixed_draws(normals=[[0.5]]))
-print(moved.x[0, 0] == 0.9 * 2.0 + np.sqrt(1 - 0.9**2) * 0.5)
+print("step:", moved.x[0, 0], "by hand:", 0.9 * 2.0 + np.sqrt(1 - 0.9**2) * 0.5)
+pairs = {}
 for name, y in [("close", close), ("far", far)]:
     draws = fixed_draws(normals=[[0.5]], uniforms=[[0.5]])
-    new_x, new_y = kernel.coupled_step(target, x, y, draws)
-    print(name, new_x.x[0, 0], new_y.x[0, 0])
+    pairs[name] = kernel.coupled_step(target, x, y, draws)
+    print(name, pairs[name][0].x[0, 0], pairs[name][1].x[0, 0])
 ```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claims of the next paragraph.
+scale = np.sqrt(1 - 0.9**2)
+assert moved.x[0, 0] == 0.9 * 2.0 + scale * 0.5
+assert pairs["close"][0].x[0, 0] == pairs["close"][1].x[0, 0]
+assert pairs["far"][1].x[0, 0] == 0.9 * 3.0 - scale * 0.5
+```
+
+The step equals the computation by hand. The close pair meets, and the distant one moves
+by reflected normals: in one dimension, the second chain moves by $-z$ where the first
+moves by $z$.
 
 Last, a run on a target with known expectations, here $E[x] = 0$ and $E[x^2] = 1$,
 checks the kernel as the sampler uses it:
@@ -201,5 +216,15 @@ init = telescopic.initial.Normal([3.0], [0.25])
 result = telescopic.sample(
     standard_normal, init, 1000, vectorize=True, kernel=AR1(0.9), rng=2
 )
-result.estimate(lambda x: np.concatenate([x, x**2], axis=1))
+moments = result.estimate(lambda x: np.concatenate([x, x**2], axis=1))
+moments
 ```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claims of the next paragraph.
+assert np.all(np.abs(moments.value - [0.0, 1.0]) < 3 * moments.standard_error)
+```
+
+Both estimates lie within three standard errors of the exact values.

@@ -10,8 +10,14 @@ With the gradient of the log-density, telescopic can run the Metropolis-adjusted
 algorithm ({class}`telescopic.kernels.MALA`) and Hamiltonian Monte Carlo
 ({class}`telescopic.kernels.HMC`), whose proposals follow the gradient. On targets like
 the Gaussian below, their pairs of chains meet sooner than those of random-walk
-Metropolis; the last section shows where their automatic settings fail. The
-[kernels guide](../guide/kernels.md) describes each kernel and its coupling.
+Metropolis. The [kernels guide](../guide/kernels.md) describes each kernel and its
+coupling.
+
+```{code-cell} python
+:tags: [remove-cell]
+
+from myst_nb import glue
+```
 
 ## A Gaussian in 50 dimensions
 
@@ -24,7 +30,6 @@ about a tenth of the atoms; thinning does not shorten a run ([Theory](../theory.
 
 ```{code-cell} python
 import numpy as np
-from myst_nb import glue
 
 import telescopic
 from telescopic import examples
@@ -44,61 +49,55 @@ for kernel in ("rwmh", "mala", "hmc"):
 ```
 
 For each kernel: the median meeting time of the 100 pilot pairs, which run with lag 1
-(`Result.pilot`); the burn-in `k`, their 99% quantile minus 1; the relative cost; and the
-evaluations of the log-density and of its gradient per replicate in the main run.
+(`Result.pilot`); the burn-in `k`, their 99% quantile minus 1; the relative cost
+([Theory](../theory.md#cost)); and the evaluations of the log-density and of its gradient
+per replicate in the main run.
 
 ```{code-cell} python
 print("kernel  median tau     k  relative cost  log_prob   grad")
-relative_cost = []
 for kernel, result in results.items():
-    median = float(np.median(result.pilot))
-    relative_cost.append(result.diagnostics()["relative_cost"])
-    glue(f"median_{kernel}", median, display=False)
     print(
-        f"{kernel:6}  {median:10.0f}  {result.k:4}  {relative_cost[-1]:13.3f}  "
+        f"{kernel:6}  {np.median(result.pilot):10.0f}  {result.k:4}  "
+        f"{result.diagnostics()['relative_cost']:13.3f}  "
         f"{result.n_log_prob / result.n_replicates:8.0f}  "
         f"{result.n_grad / result.n_replicates:5.0f}"
     )
-glue("relative_cost_low", min(relative_cost), display=False)
-glue("relative_cost_high", max(relative_cost), display=False)
 ```
 
-With gradients the pairs meet in a median of {glue:text}`median_mala:.0f` (MALA) and
-{glue:text}`median_hmc:.0f` (HMC) steps, against {glue:text}`median_rwmh:.0f` for the
-random walk. `k`, the lag and the run length `m` shrink with the meeting times, since the
-lag equals `k` and `m = 10k`. The relative cost is between
-{glue:text}`relative_cost_low:.2f` and {glue:text}`relative_cost_high:.2f` for the three
-kernels: it compares the cost of a replicate with that of the MCMC average of the same
-kernel, and with `m = 10k` it stays near 10/9 to 11/9 ([Theory](../theory.md)). The
-kernels differ in the steps a replicate takes and in what a step evaluates. MALA
-evaluates the log-density and its gradient once per chain and step, HMC at each leapfrog
-step of its trajectories, `n_steps` of them:
+With gradients the pairs meet sooner, and `k`, the lag and the run length `m` shrink with
+the meeting times, since the lag equals `k` and `m = 10k`. The relative cost is about the
+same for the three kernels. They differ in the steps a replicate takes and in what a step
+evaluates. MALA evaluates the log-density and its gradient once per chain and step, HMC
+at each leapfrog step of its trajectories, `n_steps` of them:
 
 ```{code-cell} python
 results["hmc"].kernel
 ```
 
-The replicates also differ in precision, which depends on how many states a replicate
-averages and how correlated they are. A standard error falls as $1/\sqrt R$, so the
-variance of one replicate's estimate of a mean, averaged over the 50 coordinates, gives
-the replicates, and so the evaluations, that standard errors of 0.01 would take:
+A standard error of 0.01 needs $v/0.01^2$ replicates, with $v$ one replicate's variance
+averaged over the 50 means:
 
 ```{code-cell} python
 print("kernel  replicates  log_prob")
 evaluations = {}
 for kernel, result in results.items():
-    variance = result.n_replicates * np.mean(result.mean().standard_error**2)
-    replicates = variance / 0.01**2
-    evaluations[kernel] = float(replicates * result.n_log_prob / result.n_replicates)
-    print(f"{kernel:6}  {replicates:10.0f}  {evaluations[kernel]:9,.0f}")
-for kernel in ("mala", "hmc"):
-    glue(f"fewer_{kernel}", evaluations["rwmh"] / evaluations[kernel], display=False)
+    v = result.n_replicates * np.mean(result.mean().standard_error**2)
+    evaluations[kernel] = v / 0.01**2 * result.n_log_prob / result.n_replicates
+    print(f"{kernel:6}  {v / 0.01**2:10.0f}  {evaluations[kernel]:9,.0f}")
 ```
 
-For the same error bars, MALA and HMC evaluate the log-density
-{glue:text}`fewer_mala:.0f` and {glue:text}`fewer_hmc:.0f` times less often than the
-random walk, and the gradient as often as the log-density. Whether that saves time
-depends on what a gradient costs.
+```{code-cell} python
+:tags: [remove-cell]
+
+for kernel in ("mala", "hmc"):
+    glue(f"fewer_{kernel}", float(evaluations["rwmh"] / evaluations[kernel]), display=False)
+```
+
+The last column, times $0.01^2$, is the inefficiency $\mathbb E[C]\,\mathbb V[H]$
+([Theory](../theory.md#cost)) with the cost counted in log-density evaluations. For the
+same error bars, MALA and HMC evaluate the log-density {glue:text}`fewer_mala:.0f` and
+{glue:text}`fewer_hmc:.0f` times less often than the random walk, and the gradient as
+often as the log-density. Whether that saves time depends on what a gradient costs.
 
 ## A logistic regression
 
@@ -124,8 +123,8 @@ def grad(beta, X, y):
     return (y - special.expit(beta @ X.T)) @ X - beta / 25
 ```
 
-As in [Getting started](../getting-started.md), the pairs start from a Gaussian ten times
-wider than an optimiser's error bars:
+The pairs start from a Gaussian ten times wider than an optimiser's error bars
+([Initial distributions](../guide/targets.md#choosing-one)):
 
 ```{code-cell} python
 fit = optimize.minimize(
@@ -153,24 +152,18 @@ from $\mathcal N(0, 1)$:
 ```{code-cell} python
 a, b = mala.mean(), hmc.mean()
 z = (a.value - b.value) / np.hypot(a.standard_error, b.standard_error)
-glue("largest_z", float(np.max(np.abs(z))), display=False)
 dict(zip(names, z.round(2).tolist()))
 ```
 
-The largest of the six in magnitude is {glue:text}`largest_z:.2f`.
+```{code-cell} python
+:tags: [remove-cell]
 
-## When the automatic step fails
+# The claim of the next paragraph.
+assert np.all(np.abs(z) < 3)
+```
 
-Without `step_size`, MALA and HMC tune it by dual averaging toward an acceptance rate
-that suits each kernel alone: 0.574 for MALA, 0.8 for HMC's trajectories. Settings that
-suit a kernel alone can fail to bring coupled chains together (Heng & Jacob 2019, §5).
-On {func}`telescopic.examples.banana`, whose log-density is not concave, the automatic
-MALA and HMC leave more than 1% of the pilot pairs apart after $10^5$ iterations, so
-`sample` cannot choose `k`: it raises `ValueError`, after a minute or more. A
-log-concave target can fail too, where its log-density curves more sharply than near
-the mode, around which the step was tuned: in a logistic regression whose predictors
-nearly separate the two outcomes, MALA chains that start in such a region can reject
-proposal after proposal. Such targets need a step size given explicitly, as in
-`MALA(step_size=...)` or `HMC(step_size=...)`, checked against the meeting times of
-pilot pairs from {meth}`telescopic.CoupledSampler.meeting_times`. The
-[kernels guide](../guide/kernels.md) says more.
+The differences are of the size of their standard errors: the two kernels agree. Here
+their automatic step sizes coupled; on some targets, log-concave or not, they do not
+([When the automatic step fails](../guide/kernels.md#when-the-automatic-step-fails)), and
+the step size must be given and checked against pilot meeting times
+([Checking a step size](../guide/kernels.md#checking-a-step-size)).

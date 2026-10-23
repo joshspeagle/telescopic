@@ -11,8 +11,7 @@ kernelspec:
 cost, and the settings of the run, so every estimate is computed after the run.
 
 The examples use a correlated Gaussian in two dimensions, whose moments are known
-({func}`telescopic.examples.gaussian`), and 1000 replicates, so that a few pairs meet
-after `k + lag` and carry bias corrections:
+({func}`telescopic.examples.gaussian`), and 1000 replicates:
 
 ```{code-cell} python
 import numpy as np
@@ -28,11 +27,20 @@ result = telescopic.sample(
 result.n_replicates, result.k, result.m, result.lag
 ```
 
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claims of the next paragraph.
+assert 0 < result.diagnostics()["late_fraction"] < 0.05
+```
+
+A few of the pairs met after `k + lag`, so a few replicates carry bias corrections.
+
 ## What a result holds
 
 | Attribute | Content |
 |---|---|
-| `n_replicates`, `n_censored` | $R$, the number of replicates whose pairs met, and the number of censored pairs |
+| `n_replicates`, `n_censored` | $R$, the number of replicates whose pairs met, and the number of pairs censored at `max_iter` ([Diagnostics and warnings](diagnostics.md#censored-pairs-censored)) |
 | `k`, `m`, `lag`, `thin`, `max_iter` | the settings of the run ([Settings](settings.md)) |
 | `names`, `ndim` | the parameter names and the dimension $d$ |
 | `measure` | the replicates' signed measures |
@@ -42,9 +50,6 @@ result.n_replicates, result.k, result.m, result.lag
 | `tuning`, `pilot` | the report of the tuning chains, and the meeting times of the lag-1 pilot pairs that chose `k`; `None` when not run |
 | `seed` | the root `numpy.random.SeedSequence`, which reproduces the run |
 | `interrupted` | whether a requested replicate never ran ([Parallel runs](parallel.md#interrupting-a-run)) |
-
-Censored pairs are left out of the estimates, of $R$ and of the signed measure
-([Diagnostics and warnings](diagnostics.md)).
 
 ## Expectations
 
@@ -67,19 +72,20 @@ probabilities. The exact $P(x_i > 1)$ is $1 - \Phi(1)$:
 result.estimate(lambda x: x > 1), stats.norm.sf(1)
 ```
 
-{meth}`telescopic.Result.mean` is `estimate(lambda x: x)`. The value is unbiased, and the
-interval is valid as $R$ grows when the variance is finite
-([Theory](../theory.md#guarantees-and-their-limits)). Exact unbiasedness needs a number
-of replicates fixed before any result is seen
-([Pitfalls](pitfalls.md#choosing-the-number-of-replicates-after-looking)).
+{meth}`telescopic.Result.mean` is `estimate(lambda x: x)`. The value is unbiased for a
+number of replicates fixed in advance
+([How many replicates](settings.md#how-many-replicates)), and the interval is valid as
+$R$ grows when the variance is finite
+([Theory](../theory.md#guarantees-and-their-limits)).
 
 ## Covariances and variances
 
 {meth}`telescopic.Result.cov` and {meth}`telescopic.Result.var` are unbiased estimates of
 the covariance matrix and of the variances
 ([Theory](../theory.md#estimates-from-many-replicates)). A variance estimate can be
-negative, and the covariance matrix need not be positive semi-definite
-([Pitfalls](pitfalls.md#an-initial-distribution-far-wider-than-the-target)):
+negative, and the covariance matrix need not be positive semi-definite; a start far
+wider than the target can make them so
+([Initial distributions](targets.md#choosing-one)):
 
 ```{code-cell} python
 result.cov(), gaussian.cov
@@ -110,6 +116,32 @@ result.quantile([0.05, 0.5, 0.95]), stats.norm.ppf([0.05, 0.5, 0.95])
 result.interval(0.9)
 ```
 
+`quantile` and `interval` take the coordinates of the target only. For a quantity
+derived from them, apply {func}`telescopic.estimators.weighted_quantile` to its values at
+the atoms, with each atom's weight divided by $R$. On a coordinate, this gives what
+`quantile` gives:
+
+```{code-cell} python
+levels = [0.05, 0.5, 0.95]
+weights = result.measure.weights / result.n_replicates
+x0 = result.measure.atoms[:, 0]
+np.array_equal(
+    telescopic.estimators.weighted_quantile(x0, weights, levels),
+    result.quantile(levels)[:, 0],
+)
+```
+
+The sum $x_0 + x_1$ is Gaussian, with a variance equal to the sum of the entries of the
+covariance matrix:
+
+```{code-cell} python
+total = result.measure.atoms.sum(axis=1)  # x0 + x1 at every atom
+(
+    telescopic.estimators.weighted_quantile(total, weights, levels),
+    stats.norm.ppf(levels, scale=np.sqrt(gaussian.cov.sum())),
+)
+```
+
 ## Histograms
 
 {meth}`telescopic.Result.histogram` returns the mass of each bin, its standard error and
@@ -120,7 +152,7 @@ default the bins span the atoms, so the masses sum to 1:
 
 ```{code-cell} python
 masses, errors, edges = result.histogram(0, bins=10)
-masses, errors, masses.sum()
+masses, errors, bool(np.isclose(masses.sum(), 1))
 ```
 
 A sequence of coordinates gives a joint histogram of shape `(bins,) * len(dims)`, whose
@@ -165,19 +197,51 @@ second = measure.per_replicate(lambda x: x[:, 0] ** 2)
 second.shape, np.array_equal(second, result.estimate(lambda x: x[:, 0] ** 2).replicates)
 ```
 
-Packages such as corner and ArviZ compute weighted quantiles that assume non-negative
-weights, so the atoms and their weights should not be passed to them.
+The atoms are not samples of the target, even when plotted without their weights: the
+atoms of each Y chain carry negative weights. Packages such as corner and ArviZ compute
+weighted quantiles that assume non-negative weights, so the atoms should not be passed
+to them with their weights either.
 
 ## The summary
 
-{meth}`telescopic.Result.summary` returns a {class}`telescopic.Summary`: one row per
-parameter, then the configuration, diagnostics and warnings of the run.
-[Getting started](../getting-started.md#reading-the-summary) explains each entry.
+{meth}`telescopic.Result.summary` returns a {class}`telescopic.Summary`. It prints a table
+with one row per parameter, then the settings and diagnostics of the run and the warnings
+that apply:
 
 ```{code-cell} python
 summary = result.summary()
 summary
 ```
+
+The columns of the table:
+
+- `mean`: the average of the replicates' estimates of the parameter's mean, which is
+  unbiased; `standard_error`: its Monte Carlo error, valid as the number of replicates
+  grows, however short each run.
+- `std`: $\sqrt{\max(0, \widehat{\mathrm{Var}})}$, from the unbiased estimate of the
+  variance; consistent, not unbiased.
+- `q16`, `q50` and `q84`: the 16%, 50% and 84% quantiles of the pooled signed measures;
+  consistent, not unbiased.
+
+The lines below it:
+
+- $R$, the settings `k`, `m`, `lag` and `thin` ([Settings](settings.md)), and the kernel;
+- the median, the 90% and 99% quantiles and the maximum of the meeting times of the
+  pairs that met; from 500 replicates, their tail index
+  ([`tail`](diagnostics.md#heavy-tailed-meeting-times-tail)); and the number of censored
+  pairs ([`censored`](diagnostics.md#censored-pairs-censored));
+- the mean cost of a replicate in kernel applications and in seconds, and the relative
+  cost, the mean cost over $m - k + 1$ ([Settings](settings.md#cost));
+- the fraction of pairs that met after `k + lag`, censored ones included, with a
+  one-sided 95% upper bound: only these replicates carry a bias correction, and with
+  `lag = k` the fraction is close to the bound on the total variation distance at `k`
+  ([Distance to stationarity](diagnostics.md#distance-to-stationarity));
+- the largest share of one replicate in the variance of the estimate of a coordinate's
+  mean or second moment, and that estimate
+  ([`variance`](diagnostics.md#one-replicate-dominating-the-variance-variance));
+- for an interrupted run, that its estimates are consistent but not exactly unbiased
+  ([Interrupting a run](parallel.md#interrupting-a-run));
+- each warning that applies ([Warnings](diagnostics.md#warnings)).
 
 `summary.table` holds the columns as arrays, and `summary.footer` the rest as a
 dictionary. {meth}`telescopic.Summary.to_dict` converts both to Python numbers, and
@@ -189,7 +253,7 @@ summary.to_dict()["parameters"]["x0"]
 ```
 
 {meth}`telescopic.Result.diagnostics` returns the diagnostics of the footer as a
-dictionary, which [Diagnostics and warnings](diagnostics.md) explains.
+dictionary ([The diagnostics of a run](diagnostics.md#the-diagnostics-of-a-run)).
 
 ## Merging runs
 
@@ -258,21 +322,7 @@ result.plot_corner();
 {meth}`telescopic.Result.plot_meeting_times` and {meth}`telescopic.Result.plot_tv_bound`
 are shown in [Diagnostics and warnings](diagnostics.md). Each method returns its
 matplotlib axes, and all but `plot_corner` draw on axes given as `axes` or `ax`. The
-functions of {mod}`telescopic.plotting` take the result as their first argument and do
-the same; {func}`telescopic.plotting.paths` also draws the coupled paths of a few
-replicates of an engine run with `keep_paths=True`
-([How it works](../tutorials/how-it-works.md)).
-
-## Unbiased or consistent
-
-| Output | Methods | Property |
-|---|---|---|
-| expectations | `estimate`, `mean` | unbiased, with intervals valid as $R$ grows when the variance is finite |
-| covariances and variances | `cov`, `var` | unbiased; a variance can be negative |
-| standard deviations | `std` | consistent |
-| histogram masses | `histogram` | unbiased, with standard errors; a bin can be negative |
-| quantiles and central intervals | `quantile`, `interval` | consistent, without standard errors |
-
-In the summary, `mean` is unbiased and `std` and the quantiles are consistent.
-Unbiasedness holds for a number of replicates fixed in advance, when none is censored and
-every requested replicate ran.
+functions of {mod}`telescopic.plotting`, which `import telescopic` leaves out since it
+needs matplotlib, take the result as their first argument and do the same;
+{func}`telescopic.plotting.paths` also draws the coupled paths of a few replicates of an
+engine run with `keep_paths=True` ([How it works](../tutorials/how-it-works.md)).

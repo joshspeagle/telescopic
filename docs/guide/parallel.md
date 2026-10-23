@@ -2,14 +2,15 @@
 file_format: mystnb
 kernelspec:
   name: python3
+mystnb:
+  merge_streams: true
 ---
 
 # Parallel runs
 
 Replicates are independent, so they run in parallel without communicating. The `pool`
 argument of {func}`telescopic.sample` and {class}`telescopic.CoupledSampler` decides where
-the meeting-time pilot and the replicates run; the kernel is tuned in this process. The
-[parallel tutorial](../tutorials/parallel.md) works through an example.
+the meeting-time pilot and the replicates run; the kernel is tuned in this process.
 
 ## Pools
 
@@ -24,8 +25,13 @@ the meeting-time pilot and the replicates run; the kernel is tuned in this proce
 - an object with `map`, such as a `multiprocessing.Pool` or the schwimmbad pools that
   emcee takes.
 
-`log_prob` below is defined in this notebook and evaluated one point at a time. The same
-run, in this process and on two workers:
+Starting worker processes takes time, so a pool pays off only for runs that take longer
+than the start. telescopic starts and stops only the workers of an integer pool. The
+workers of an executor or a pool of your own live as long as it does and serve every run
+given it, and you close it. The executor below spawns its workers, as telescopic does:
+forking a process that runs threads, such as a notebook's kernel or a multithreaded BLAS,
+can deadlock. With `progress=True`, the sampler shows the progress of its pilot pairs and
+of each run ([Progress](#progress)):
 
 ```{code-cell} python
 import multiprocessing
@@ -35,37 +41,42 @@ import numpy as np
 
 import telescopic
 
-
-def log_prob(theta):
-    return -0.5 * np.sum(theta**2)
-
-
-init = telescopic.initial.Normal([0.0, 0.0], [4.0, 4.0])
-here = telescopic.sample(log_prob, init, rng=3)
-there = telescopic.sample(log_prob, init, rng=3, pool=2)
-```
-
-telescopic starts and stops only the workers of an integer pool. A pool of your own
-serves as many runs as you like, without starting processes for each, and you close it.
-This executor uses the spawn method, as telescopic's workers do: forking a process that
-runs threads, such as a notebook's kernel or a multithreaded BLAS, can deadlock.
-
-```{code-cell} python
+gaussian = telescopic.examples.gaussian(2)  # evaluated one point at a time here
 spawn = multiprocessing.get_context("spawn")
 with ProcessPoolExecutor(2, mp_context=spawn) as executor:
-    runs = [telescopic.sample(log_prob, init, rng=seed, pool=executor) for seed in (3, 4)]
-[run.n_replicates for run in runs]
+    sampler = telescopic.CoupledSampler(
+        gaussian.log_prob, gaussian.initial, pool=executor, progress=True, rng=3
+    )
+    first = sampler.run(100)
+    both = sampler.run(100)
+both.n_replicates
 ```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claims of the next paragraph.
+assert (first.n_replicates, both.n_replicates) == (100, 200)
+assert (both.k, both.m, both.lag) == (first.k, first.m, first.lag)
+```
+
+The second run ran 100 more replicates on the same workers, with the settings of the
+first, and returned the result of all the replicates so far. To split a run across
+machines, run separate ranges of replicate indices with one seed and the same settings,
+and join the results ([Merging runs](results.md#merging-runs)).
 
 ## Chunks and workers
 
 A pool runs chunks of consecutive replicate indices: one per worker at least, more where
 a chunk would hold more than 64 replicates (the lanes that the engine advances together),
 and four per worker at most. An executor receives every chunk at once, in index order; a
-pool with only `map` receives them in waves of one chunk per worker. The workers are
-counted as an integer pool's number, an executor's `_max_workers`, a `multiprocessing`
-pool's `_processes` or a schwimmbad pool's `size`, and otherwise as the CPUs that this
-process may use.
+pool with only `map` receives them in waves of one chunk per worker.
+
+telescopic reads the number of workers of an integer pool, a `concurrent.futures`
+executor, a `multiprocessing` pool and a schwimmbad pool. It counts any other pool as
+having as many workers as this process may use CPUs, so the chunks of a larger pool, such
+as a cluster's, can leave workers idle. To use them all, give such a pool an attribute
+`size`, its number of workers, as schwimmbad's pools have.
 
 Each chunk carries the whole job: the target with its `args` and `kwargs`, the kernel, the
 initial distribution, the root seed and the settings. The results are joined in index
@@ -85,13 +96,15 @@ by point (`vectorize=False`, the default), the replicates are bitwise identical 
 pool, with any number of workers and chunks, on one machine with the same NumPy and SciPy
 versions; generator algorithms, SciPy's samplers and BLAS builds can change between
 versions and machines. A vectorised log-density can differ in the last bits between batch
-layouts, so there the agreement is statistical. The two runs above:
+layouts, so there the agreement is statistical. The first run above, on two workers, and
+the same run in this process:
 
 ```{code-cell} python
+here = telescopic.sample(gaussian.log_prob, gaussian.initial, rng=3)
 (
-    np.array_equal(here.meeting_times, there.meeting_times),
-    np.array_equal(here.measure.atoms, there.measure.atoms),
-    np.array_equal(here.measure.weights, there.measure.weights),
+    np.array_equal(here.meeting_times, first.meeting_times),
+    np.array_equal(here.measure.atoms, first.measure.atoms),
+    np.array_equal(here.measure.weights, first.measure.weights),
 )
 ```
 
@@ -99,10 +112,11 @@ layouts, so there the agreement is statistical. The two runs above:
 
 The workers receive the job pickled. With cloudpickle installed (the `parallel` extra),
 telescopic pickles it with cloudpickle, which also sends lambdas and functions defined in
-a notebook or a script, as `log_prob` above. Without cloudpickle, the standard pickle
-needs functions defined at the top level of an importable module: a lambda raises
-`TypeError`, and a function that a worker cannot import, such as one defined in a
-notebook, raises `RuntimeError`, each with that advice.
+a notebook or a script. Without cloudpickle, the standard pickle needs functions defined
+at the top level of an importable module, as the log-density of
+{func}`telescopic.examples.gaussian` above: a lambda raises `TypeError`, and a function
+that a worker cannot import, such as one defined in a notebook, raises `RuntimeError`,
+each with that advice.
 
 Under the spawn and forkserver start methods, the worker processes import the main
 script, and telescopic's own workers always use spawn. A script that runs on such a pool
@@ -136,7 +150,7 @@ replicates, so a run of as many as are missing completes the requested set, whic
 restores exact unbiasedness:
 
 ```python
-sampler = telescopic.CoupledSampler(log_prob, init, rng=1)
+sampler = telescopic.CoupledSampler(gaussian.log_prob, gaussian.initial, rng=1)
 result = sampler.run(1000)  # Ctrl-C once while it runs
 result.interrupted  # True: some of the 1000 replicates never started
 result = sampler.run(1000 - len(result.index))  # the missing replicates
@@ -158,14 +172,13 @@ the rest of a pool of your own reacts to Ctrl-C is up to the pool.
 
 `progress=True`, given to {func}`telescopic.sample`, to {class}`telescopic.CoupledSampler`
 or to one call of `run`, shows the progress of the meeting-time pilot and of each run, in
-replicates finished: a tqdm bar with the `progress` extra, and otherwise a line on stderr
-every 10 seconds and when the run ends. On a pool, the count moves as chunks finish.
+replicates finished: a tqdm text bar on stderr with the `progress` extra, and otherwise a
+line on stderr every 10 seconds and when the run ends. On a pool, the count moves as
+chunks finish.
 
 ## Memory
 
 The workers send the signed measures of their replicates back to this process, which
 holds them all. [Settings](settings.md#memory-and-thinning) gives their size, the
 {class}`telescopic.InputWarning <telescopic.warnings.InputWarning>` that the sampler emits
-when they would take more than 1 GB, and `thin`, which stores fewer. As a run ends,
-sorting the atoms by replicate briefly holds about three times their size (spec section
-6.6, [Specification](../design/spec.md)).
+when they would take more than 1 GB, and `thin`, which stores fewer.

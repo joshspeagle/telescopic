@@ -55,10 +55,8 @@ batch = telescopic.Target(
 one.log_prob(points), batch.log_prob(points), one.n_log_prob
 ```
 
-A vectorised function can round a point's value differently in batches of different
-sizes. A replicate's results then depend on how the replicates are batched, for instance
-on the number of workers, and runs batched differently agree in distribution, not bit
-for bit ([Parallel execution](parallel.md)).
+With `vectorize=True`, a replicate's results can depend in the last bits on how the
+replicates are batched ([Parallel runs](parallel.md#reproducibility)).
 
 ## Special values
 
@@ -66,11 +64,11 @@ for bit ([Parallel execution](parallel.md)).
   log-density should return it outside the support.
 - NaN and `+inf` raise `ValueError` with the point.
 
-SciPy returns NaN for a negative scale, so a model whose scale is not restricted fails
-at the first chain that proposes one:
+SciPy returns NaN for a negative scale, so a model of 20 observations whose scale is not
+restricted fails at the first chain that proposes one:
 
 ```{code-cell} python
-y = np.array([0.3, -1.2, 0.8])
+y = np.random.default_rng(2).normal(1.0, 2.0, size=20)
 
 
 def log_prob_unrestricted(theta, y):
@@ -110,16 +108,45 @@ For the gradient:
 
 The log-density must be deterministic: the same point must always give the same value.
 Pairs meet when their states are equal, and a log-density estimated by simulation breaks
-the couplings ([Pitfalls](pitfalls.md#a-log-density-that-is-not-a-function)).
+the couplings.
+
+## Constrained parameters
+
+A parameter with a bound, such as a scale $\sigma > 0$, can be sampled through an
+unconstrained transform, such as $s = \log\sigma$. The log-density of $s$ adds the
+logarithm of the Jacobian $d\sigma/ds = \sigma$, which is $s$. The chains then never
+reach a boundary, and every point of the initial distribution lies inside the support.
+The model above, with flat priors on the location and the scale:
+
+```{code-cell} python
+def log_prob_log_scale(theta, y):
+    location, log_scale = theta
+    log_jacobian = log_scale
+    return np.sum(stats.norm.logpdf(y, location, np.exp(log_scale))) + log_jacobian
+
+
+init = telescopic.initial.Normal([0.0, 0.0], [1.0, 1.0])
+result = telescopic.sample(
+    log_prob_log_scale, init, args=(y,), names=["location", "log_scale"], rng=0
+)
+```
+
+An expectation of $\sigma$ is an expectation of a function of $s$, so the same run gives
+it:
+
+```{code-cell} python
+result.estimate(lambda t: np.exp(t[:, 1]))
+```
+
+[Results](results.md#quantiles-and-credible-intervals) gives the quantiles of the
+sampled coordinates and of derived quantities. To sample $\sigma$ itself instead, return
+`-inf` where $\sigma \le 0$, as above, and draw the initial distribution inside the
+support ([Choosing one](#choosing-one)).
 
 ## Initial distributions
 
 Each replicate draws the starting points $X_0$ and $Y_0$ of its pair independently from
-the initial distribution $\pi_0$, with its own random stream. The estimates are unbiased
-for any $\pi_0$ ([Theory](../theory.md)), but the choice changes their variance, the
-cost, and whether the chains find every mode.
-
-`init` can be:
+the initial distribution $\pi_0$, with its own random stream. `init` can be:
 
 - an object with a method `rvs(random_state=generator)` that returns one point:
   {class}`telescopic.initial.Normal` (a mean, and a covariance matrix or the variances
@@ -134,11 +161,7 @@ cost, and whether the chains find every mode.
 
 The dimension `d` comes from a draw. Draws are converted to shape `(d,)`, since SciPy
 returns a scalar in one dimension; a draw of another shape, or with a non-finite
-coordinate, raises `ValueError`. A replicate that starts where the target density is
-zero emits an {class}`~telescopic.warnings.InputWarning`, since the initial distribution
-should lie inside the support; its chains accept their first proposal of finite density.
-
-Each form, on the Gaussian above:
+coordinate, raises `ValueError`. Each form, on the Gaussian above:
 
 ```{code-cell} python
 points = stats.multivariate_normal(mean, np.diag(sd**2)).rvs(size=50, random_state=1)
@@ -164,14 +187,36 @@ for name, init in inits.items():
 
 ## Choosing one
 
-- **Wider than the target, covering every mode.** Pairs that all start near one mode can
-  miss the others without a sign in the estimates
-  ([Pitfalls](pitfalls.md#an-initial-distribution-that-misses-a-mode)).
-- **Not wider by orders of magnitude.** With the automatic settings, a replicate whose
-  chain is still far from the target at the burn-in can dominate the estimates of
-  variances ([Pitfalls](pitfalls.md#an-initial-distribution-far-wider-than-the-target)).
+The estimates are unbiased for any initial distribution
+([Theory](../theory.md#guarantees-and-their-limits)), but the choice sets their variance
+and the cost, and decides whether the chains find every mode.
+
+- **Cover every mode.** If every pair starts near one mode and the kernel rarely crosses
+  to another, every pair meets in that mode, and the estimates and their error bars
+  describe that mode alone. Nothing in the run shows the missing mode at a moderate
+  number of replicates:
+  [the theory's list of what is not guaranteed](../theory.md#guarantees-and-their-limits)
+  cites a published case, and
+  [When unbiased is not enough](../tutorials/failure-modes.md#a-start-that-misses-a-mode)
+  runs one. The tuning chains are a first check: when their means spread more widely
+  than the chains themselves, telescopic warns that the target may have several modes
+  ([Diagnostics and warnings](diagnostics.md#disagreeing-tuning-chains-tuning)). From a
+  start that covers every mode, pairs that start in different modes take longer to meet,
+  which the meeting times show.
+- **Wider than the target, but not by orders of magnitude.** The automatic settings take
+  `k` at the 99% quantile of the pilot's meeting times and the lag equal to `k`, so
+  about one pair in a hundred meets while its chain is still on its way to the target.
+  That replicate averages states far from the target without correction, and only rarer
+  replicates whose other chain is late balance it, in expectation. From a start orders
+  of magnitude wider than the target, these replicates dominate the estimates of
+  variances, which can come out negative
+  ([When unbiased is not enough](../tutorials/failure-modes.md#a-start-far-wider-than-the-target)).
+  A start a few to ten times wider than the target avoids this.
 - **For a target with one mode,** a Gaussian centred on an optimiser's fit, with its
   inverse Hessian scaled by 100, is ten times wider than the fit's error bars
-  ([Getting started](../getting-started.md)).
+  ([Getting started](../getting-started.md#a-first-run)).
+- **Inside the support.** A replicate that starts where the target density is zero emits
+  an {class}`~telescopic.warnings.InputWarning`, and its chains stay there until they
+  accept a proposal of finite density.
 - **The last state of an ensemble** keeps the estimates unbiased, but covers only the
   modes that the ensemble found.
