@@ -4,7 +4,7 @@ For Josh, at the end of milestone M11. Figures are measured, with their sources.
 
 ## What exists
 
-- **The package** (`src/telescopic/`, 6,118 lines): unbiased MCMC with coupled chains and
+- **The package** (`src/telescopic/`, 6,131 lines): unbiased MCMC with coupled chains and
   the lag-L time-averaged estimator of Jacob, O'Leary & Atchadé (2020), with signed
   measures, so that any expectation is estimated after the run.
   - Kernels with their couplings: random-walk Metropolis (reflection-maximal and
@@ -25,8 +25,7 @@ For Josh, at the end of milestone M11. Figures are measured, with their sources.
   statistical tests in about SLOW_S s (below).
 - **Documentation:** a theory page, Getting started, a seven-page user guide, six
   tutorials executed at every build, the API reference and a citing page. The strict
-  build, with warnings as errors and every cross-reference checked, runs in about two and
-  a half minutes.
+  build, with warnings as errors and every cross-reference checked, took 1 min 43 s.
 - **Records:** 57 decisions with their reasons and alternatives (`notes/DECISIONS.md`), a
   review of every milestone (`notes/reviews/`), experiments with their outputs
   (`notes/experiments/`), the log, and benchmarks (`benchmarks/results/`).
@@ -72,6 +71,11 @@ the code (`notes/reviews/m11.md`).
   still on its way, and estimates of variances become heavy-tailed. The documentation
   recommends a start a few to ten times wider, and the variance warning catches the
   failure (question below).
+- **Heavy tails behind ties.** When nine pairs in ten or more meet at the first time
+  possible, the tail index is undefined and its warning silent: above such ties Hill's
+  estimate reads light tails as heavy. A rule that looked above the ties failed an
+  adversarial review, warning on light tails in 92% to 100% of runs of an independence
+  sampler (DECISIONS #57).
 - **Performance targets missed:** BENCH_MISSED.
 - **Deferred beyond v0.1:** a budget mode (DECISIONS #22); a bootstrap uncertainty for
   quantiles, and R-hat across the replicates' chains (#38); reprs of results and
