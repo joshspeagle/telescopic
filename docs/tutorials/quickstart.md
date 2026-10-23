@@ -19,9 +19,9 @@ from myst_nb import glue
 
 ## The data and the exact posterior
 
-The setting of emcee's line-fitting tutorial: 50 points from the line $y = -0.9x + 4.3$,
-with Gaussian errors whose standard deviations lie between 0.1 and 0.6. The log-density
-is the log-likelihood, so the prior is flat. It takes one point of shape `(2,)`, or a
+A line fit like that of emcee's tutorial, without its underestimated errors: 50 points
+from the line $y = -0.9x + 4.3$, with Gaussian errors whose standard deviations, between
+0.1 and 0.6, are known. The log-density is the log-likelihood, so the prior is flat. It takes one point of shape `(2,)`, or a
 batch of shape `(n, 2)` as both samplers pass with `vectorize=True`. `Counted` wraps it
 to count the points at which a sampler evaluates it:
 

@@ -144,7 +144,7 @@ report a mean meeting time of 158 with a step of 1/500 and 500 leapfrog steps,
 Pilot pairs check a step size before a run. With every parameter of the kernel given,
 {meth}`telescopic.CoupledSampler.meeting_times` runs no tuning, only pairs with lag 1
 until they meet or reach `max_iter`. Over a few step sizes, compare the mean cost of a
-pair: the evaluations per step times the mean meeting time, infinite when a pair is
+pair: its evaluations per step times the mean meeting time, infinite when a pair is
 still unmet at the cap. Keep the step with the lowest cost.
 
 The example is the logistic regression of
@@ -182,7 +182,7 @@ automatic = telescopic.CoupledSampler(
 )
 automatic.tune()
 cov = automatic.kernel.cov
-per_step = 2  # a log-density and a gradient per chain and step
+per_step = 4  # a pair's step: a log-density and a gradient for each chain
 costs = {}
 for step in [automatic.kernel.step_size, 1.0, 0.7, 0.5, 0.35]:
     sampler = telescopic.CoupledSampler(

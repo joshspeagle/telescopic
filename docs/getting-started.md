@@ -86,8 +86,7 @@ cost of a replicate, the fraction of pairs that met late, and the warnings that 
 [Results](guide/results.md#the-summary) defines each entry, and
 [Diagnostics and warnings](guide/diagnostics.md) says what each warning means.
 
-The default of 100 replicates is enough to check that no replicate dominates the
-variance, but telescopic checks the tail of the meeting times only from 500 replicates
+The default of 100 replicates is too few for one of the checks behind the warnings
 ([How many replicates](guide/settings.md#how-many-replicates)).
 
 ## Any function, after the run
@@ -131,11 +130,10 @@ line fit.
 
 ## A slow log-density
 
-Before the replicates run, tuning evaluates the log-density
-$4 \max(2000, 200d, 10d^2) + 4$ times in this process, 8,004 for this line fit, and the
-meeting-time pilot about twice per step of each of its 100 pairs; `result.n_log_prob`
-counts only the evaluations of the run. [Settings](guide/settings.md) says how to skip
-either step, and [Parallel runs](guide/parallel.md) how to run the pilot and the
+Before the replicates run, tuning and the meeting-time pilot evaluate the log-density
+thousands of times, and tuning does so in this process.
+[A slow log-density](guide/settings.md#a-slow-log-density) counts them and says how to
+skip either step, and [Parallel runs](guide/parallel.md) how to run the pilot and the
 replicates on several processes.
 
 ## Next
