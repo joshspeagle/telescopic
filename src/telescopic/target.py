@@ -94,14 +94,15 @@ class Target:
         if self._grad is None:
             raise ValueError("this target has no gradient; pass grad= to use this kernel")
         values = self.log_prob(x)
-        inside = (values > -np.inf).nonzero()[0]
-        if len(inside) == len(x):
+        if np.min(values, initial=np.inf) > -np.inf:  # every point inside the support
             gradients = self._call(self._grad, x, (x.shape[1],))
+            self.n_grad += len(x)
         else:
+            inside = values > -np.inf
             gradients = np.zeros(x.shape)
-            if len(inside):
+            if inside.any():
                 gradients[inside] = self._call(self._grad, x[inside], (x.shape[1],))
-        self.n_grad += len(inside)
+            self.n_grad += int(inside.sum())
         return values, gradients
 
     def _call(
@@ -113,14 +114,18 @@ class Target:
             returned_none = values is None
         else:
             values = [function(row, *self.args, **self.kwargs) for row in view]
-            returned_none = any(value is None for value in values)
-        name = getattr(function, "__name__", "the target function")
-        per_point = "a float" if not event else f"shape {event}"
-        # NumPy would read None as NaN, and the error would then blame the value.
-        if returned_none:
-            raise ValueError(f"{name} returned None; it must return {per_point} for each point")
+            returned_none = False
         out = np.asarray(values, dtype=np.float64)
-        if out.shape != (len(x), *event):
+        # NumPy reads None as NaN, and the error would then blame the value.
+        if not self.vectorize and np.isnan(out).any():
+            returned_none = any(value is None for value in values)
+        if returned_none or out.shape != (len(x), *event):
+            name = getattr(function, "__name__", "the target function")
+            per_point = "a float" if not event else f"shape {event}"
+            if returned_none:
+                raise ValueError(
+                    f"{name} returned None; it must return {per_point} for each point"
+                )
             raise ValueError(
                 f"{name} returned shape {out.shape} for {len(x)} points; expected "
                 f"{(len(x), *event)}, that is {per_point} for each point"

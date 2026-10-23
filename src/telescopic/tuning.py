@@ -182,6 +182,7 @@ def adaptive_metropolis(
     # small variances for thousands of steps.
     variance = points.reshape(-1, d).var(axis=0, ddof=1)
     mean, cov = x.mean(axis=0), np.diag(np.where(variance > 0, variance, 1.0))
+    ridge = 1 + 1e-12 * np.eye(d)
     first_kept = n_steps // 2
     stride = min(-(-d // 20), n_steps - first_kept - 1)
     n_kept = (n_steps - 1 - first_kept) // stride + 1
@@ -190,9 +191,9 @@ def adaptive_metropolis(
     accepted = np.zeros(N_CHAINS)
     for step in range(n_steps):
         if step % stride == 0:
-            # A ridge of each coordinate's variance, which keeps the factorisation
-            # independent of the coordinates' scales; the diagonal stays positive.
-            chol = np.linalg.cholesky(cov + 1e-12 * np.diag(np.diag(cov)))
+            # A ridge of 1e-12 times each coordinate's variance, which keeps the
+            # factorisation independent of the coordinates' scales.
+            chol = np.linalg.cholesky(cov * ridge)
         steps = np.exp(0.5 * log_scale)[:, None] * matvec(chol, draws.normal(d))
         proposal_log_p = target.log_prob(x + steps)
         # A NaN log ratio (-inf - -inf) is a rejection, with acceptance probability 0.
