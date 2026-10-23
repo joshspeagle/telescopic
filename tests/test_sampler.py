@@ -85,7 +85,7 @@ def test_a_seed_reproduces_a_run_and_a_generator_moves_on():
 
 def test_an_explicit_k_of_zero_gets_a_lag_of_one():
     sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=4)
-    settings = sampler._configure(0, "auto", "auto", None, None, None)
+    settings = sampler._configure(0, "auto", "auto", None, None, None, False)
     assert (settings["k"], settings["lag"], settings["m"]) == (0, 1, 0)
 
 

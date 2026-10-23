@@ -71,11 +71,13 @@ class CoupledSampler:
         Parameter names for summaries.
     pool : None, int, executor or pool
         Where the pilot pairs and the replicates run: ``None`` in this process; an
-        integer, that many worker processes, started for each run; or an object with
-        ``submit``, such as a :class:`concurrent.futures.Executor`, or with ``map``, such
-        as an emcee or schwimmbad pool. A pool runs chunks of consecutive indices, four
-        per worker, with BLAS pinned to one thread; no result depends on the pool (spec
-        section 6.4).
+        integer, that many worker processes, started for each call of :meth:`run` or
+        :meth:`meeting_times`; or an object with ``submit``, such as a
+        :class:`concurrent.futures.Executor`, or with ``map``, such as an emcee or
+        schwimmbad pool. A pool runs chunks of consecutive indices, at most four per
+        worker; a task in a worker process runs with BLAS pinned to one thread and
+        Ctrl-C ignored. With a log-density evaluated point by point, no replicate
+        depends on the pool (spec sections 6.1 and 6.4).
     progress : bool
         Show the progress of the pilot and of each run: a tqdm bar when tqdm is
         installed, lines on stderr otherwise.
@@ -160,14 +162,14 @@ class CoupledSampler:
         if n < 1:
             raise ValueError(f"n must be at least 1, not {n}")
         with opened(self.pool) as pool:
-            return self._meeting_times(n, max_iter, pool)
+            return self._meeting_times(n, max_iter, pool, self.progress)
 
-    def _meeting_times(self, n: int, max_iter: int, pool: Any) -> FloatArray:
+    def _meeting_times(self, n: int, max_iter: int, pool: Any, progress: bool) -> FloatArray:
         self.tune()
         start = 0 if self.pilot is None else len(self.pilot)
         settings = {"k": 0, "m": 0, "lag": 1, "thin": 1, "max_iter": max_iter}
         indices = np.arange(start, start + n)
-        times = self._run(PILOT, indices, settings, pool, self.progress).meeting_time
+        times = self._run(PILOT, indices, settings, pool, progress).meeting_time
         self.pilot = times if self.pilot is None else np.concatenate([self.pilot, times])
         return times
 
@@ -207,7 +209,8 @@ class CoupledSampler:
             Censor pairs still unmet at this time. ``None`` runs every pair until it
             meets on the first call, and keeps the first call's cap on later ones.
         progress : bool, optional
-            Show the run's progress; ``None`` takes the sampler's setting.
+            Show the progress of the run and of the pilot it runs; ``None`` takes the
+            sampler's setting.
 
         Returns
         -------
@@ -217,15 +220,15 @@ class CoupledSampler:
         """
         if n_replicates < 1:
             raise ValueError(f"n_replicates must be at least 1, not {n_replicates}")
+        self._check(k, m, lag, thin, max_iter)
+        show = self.progress if progress is None else progress
         # Worker processes start before tuning, which runs here meanwhile, and serve the
         # pilot and the run (DECISIONS #23).
         with opened(self.pool) as pool:
-            settings = self._configure(k, m, lag, thin, max_iter, pool)
+            settings = self.settings or self._configure(k, m, lag, thin, max_iter, pool, show)
             done = 0 if self._replicates is None else len(self._replicates.index)
             self._check_memory(settings, done + n_replicates)
-            indices = self._next_indices(n_replicates)
-            show = self.progress if progress is None else progress
-            part = self._run(MAIN, indices, settings, pool, show)
+            part = self._run(MAIN, self._next_indices(n_replicates), settings, pool, show)
         self.settings = settings
         self._replicates = (
             part if self._replicates is None else engine.merge([self._replicates, part])
@@ -302,16 +305,11 @@ class CoupledSampler:
             )
         return replicates
 
-    def _configure(
-        self,
-        k: int | str,
-        m: int | str,
-        lag: int | str,
-        thin: int | None,
-        max_iter: int | None,
-        pool: Any,
-    ) -> dict[str, Any]:
-        # The settings of every run of this sampler: fixed by the first (D-21, DECISIONS #4).
+    def _check(
+        self, k: int | str, m: int | str, lag: int | str, thin: int | None, max_iter: int | None
+    ) -> None:
+        # The checks that need no tuning, before any worker starts. Later runs keep the
+        # first run's settings (D-21, DECISIONS #4 and #8).
         if self.settings is not None:
             given = {"k": k, "m": m, "lag": lag, "thin": thin, "max_iter": max_iter}
             for name, value in given.items():
@@ -320,15 +318,27 @@ class CoupledSampler:
                         f"{name} was {self.settings[name]} in the earlier runs; a sampler "
                         f"keeps its settings, so start a new one for {name}={value}"
                     )
-            return self.settings
+            return
         for name, value in (("k", k), ("m", m), ("lag", lag)):
             if value != "auto" and not isinstance(value, int | np.integer):
                 raise ValueError(f"{name} must be an integer or 'auto', not {value!r}")
+
+    def _configure(
+        self,
+        k: int | str,
+        m: int | str,
+        lag: int | str,
+        thin: int | None,
+        max_iter: int | None,
+        pool: Any,
+        progress: bool,
+    ) -> dict[str, Any]:
+        # The first run's settings, which tune the kernel and run the pilot if needed.
         self.tune()
         if k == "auto":
             pilot = self.pilot
             if pilot is None:
-                pilot = self._meeting_times(PILOT_REPLICATES, PILOT_MAX_ITER, pool)
+                pilot = self._meeting_times(PILOT_REPLICATES, PILOT_MAX_ITER, pool, progress)
             k = choose_k(pilot)
         settings: dict[str, Any] = {
             "k": int(k),

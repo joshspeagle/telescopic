@@ -126,7 +126,7 @@ def run(
         A tuned kernel.
     initial : object with ``rvs(random_state=generator)``
     indices : array_like of int, shape (R,)
-        Replicate indices, started in this order; at least one.
+        Distinct replicate indices, at least one, started in this order.
     root : numpy.random.SeedSequence
         Root seed of the run.
     namespace : int
@@ -163,9 +163,16 @@ def run(
     check_settings(k, m, lag, thin, max_iter)
     if lanes < 1:
         raise ValueError(f"lanes must be at least 1, not {lanes}")
-    requested = np.asarray(indices, dtype=np.int64)
-    if requested.ndim != 1 or not len(requested):
-        raise ValueError("indices must be a non-empty sequence of integers")
+    requested = np.asarray(indices)
+    if (
+        requested.ndim != 1
+        or not len(requested)
+        or not np.issubdtype(requested.dtype, np.integer)
+        or requested.min() < 0
+        or len(np.unique(requested)) != len(requested)
+    ):
+        raise ValueError("indices must be a non-empty sequence of distinct integers >= 0")
+    requested = requested.astype(np.int64)
     queue = iter(requested.tolist())
     first = next(queue)
     evaluations, start = (target.n_log_prob, target.n_grad), time.perf_counter()

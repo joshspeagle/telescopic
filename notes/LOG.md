@@ -140,3 +140,8 @@ Append only. One entry per working session or milestone.
   64 lanes; the engine's monitor is the one channel for progress, slow pairs and the
   stop, and slow pilot pairs on a pool now warn (DECISIONS #23). A question for Josh on
   sizing users' pools. 333 fast tests in 36 s.
+- M7 `/code-review` at high effort (`notes/reviews/m7.md`): ten findings, nine fixed.
+  Spawned workers could die from a Ctrl-C while importing, so they are now made while
+  the parent ignores it; a cached BLAS controller missed libraries loaded later; float
+  indices were truncated; workers started before the settings were validated; a
+  `multiprocessing.Pool` was sized by the CPU count. 342 fast tests in 37 s.

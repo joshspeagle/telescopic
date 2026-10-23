@@ -7,7 +7,7 @@ Each item has the default that work proceeds on until Josh answers.
 - [ ] **Budget mode (spec §3.7).** It is a should-level feature, and an unbiased per-lane
   estimator needs per-replicate weights throughout `Result`. Default: deferred beyond
   v0.1 (DECISIONS #22); an interrupted run and its completion cover stopping early.
-- [ ] **The size of a user's pool.** Pools that do not report it (`map` pools, executors
-  without `_max_workers`, such as dask's or MPI's) are sized by this machine's CPU count,
-  so a cluster's extra workers can sit idle. Default: keep the guess. Alternative: an
+- [ ] **The size of a user's pool.** Pools that do not report it through `_max_workers`,
+  `_processes` or `size` (such as dask's executors) are sized by the CPUs this process may
+  use, so a cluster's extra workers can sit idle. Default: keep the guess. Alternative: an
   argument for it, as dynesty's `queue_size`.

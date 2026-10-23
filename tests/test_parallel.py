@@ -5,6 +5,7 @@ import signal
 import sys
 import threading
 import time
+import warnings
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
 import numpy as np
@@ -49,13 +50,20 @@ def assert_same_replicates(a, b):
 
 
 class Serial:
-    # A pool with only map, run in this process; it counts the replicates it runs.
+    # A pool with only map, run in this process; it counts the replicates it runs and
+    # the chunks of each wave.
     def __init__(self):
-        self.ran = 0
+        self.ran, self.waves = 0, []
 
     def map(self, function, items):
         self.ran += sum(len(item) for item in items)
+        self.waves.append(len(items))
         return [function(item) for item in items]
+
+
+class Sized(Serial):
+    # A pool that reports its size as multiprocessing.Pool does.
+    _processes = 2
 
 
 class Counting(ThreadPoolExecutor):
@@ -97,6 +105,13 @@ def test_a_pool_gets_chunks_of_full_lanes_and_at_most_four_per_worker(n, workers
     assert max(executor.chunks) - min(executor.chunks) <= 1
 
 
+def test_a_map_pool_that_reports_its_size_gets_waves_of_that_size():
+    # 1,000 replicates on 2 workers: 8 chunks, in waves of 2.
+    pool = Sized()
+    execute(job(), np.arange(1_000), pool, never)
+    assert pool.waves == [2, 2, 2, 2]
+
+
 def checked_log_prob(x, threads, ignores_ctrl_c):
     # Raises unless BLAS runs `threads` threads and Ctrl-C is ignored or not, as asked.
     info = threadpoolctl.threadpool_info()
@@ -121,6 +136,42 @@ def test_tasks_in_other_processes_pin_blas_and_ignore_ctrl_c(monkeypatch):
 def test_tasks_in_this_process_leave_its_settings_alone():
     with threadpoolctl.threadpool_limits(2), ThreadPoolExecutor(2) as threads:
         execute(job(checked_log_prob, (2, False)), np.arange(4), threads, never)
+
+
+def test_workers_are_made_while_ctrl_c_is_ignored(monkeypatch):
+    # A process made then starts with Ctrl-C ignored, so a press while it imports does
+    # not kill it.
+    workers = _parallel.Workers(2)
+    seen = []
+    monkeypatch.setattr(
+        workers.executor, "submit", lambda *args: seen.append(signal.getsignal(signal.SIGINT))
+    )
+    workers.start()
+    workers.executor.shutdown()
+    assert seen == [signal.SIG_IGN, signal.SIG_IGN]
+
+
+def test_workers_that_fail_to_start_are_stopped(monkeypatch):
+    stopped = []
+
+    def fail(workers):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(_parallel.Workers, "start", fail)
+    monkeypatch.setattr(_parallel.Workers, "terminate", lambda workers: stopped.append(True))
+    with pytest.raises(KeyboardInterrupt), opened(1):
+        pass
+    assert stopped == [True]
+
+
+def test_invalid_settings_raise_before_workers_start(monkeypatch):
+    def refuse(n):
+        raise AssertionError("workers started")
+
+    monkeypatch.setattr(_parallel, "Workers", refuse)
+    sampler = telescopic.CoupledSampler(gaussian_log_prob, INIT, pool=2)
+    with pytest.raises(ValueError, match="k must be an integer"):
+        sampler.run(10, k="bad")
 
 
 def nan_log_prob(x):
@@ -263,6 +314,15 @@ def test_progress_falls_back_to_lines_on_stderr_without_tqdm(pool, monkeypatch, 
     assert lines[-1].startswith("telescopic: replicates: 5 of 5 replicates finished")
 
 
+def test_the_progress_argument_of_a_run_covers_its_pilot(monkeypatch, capsys):
+    monkeypatch.setitem(sys.modules, "tqdm.auto", None)
+    sampler = telescopic.CoupledSampler(gaussian_log_prob, INIT, kernel=RandomWalk(np.eye(2)))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", ConvergenceWarning)  # a short run may meet late
+        sampler.run(5, progress=True)
+    assert capsys.readouterr().err.startswith("telescopic: pilot pairs: 100 of 100")
+
+
 def test_progress_bars_count_the_replicates_as_they_finish(capsys):
     # The pilot pairs meet at different iterations, so the bar moves by increments.
     progressing().meeting_times(4)
@@ -289,3 +349,10 @@ def test_a_worker_that_cannot_load_the_job_says_why():
 def test_invalid_pools_raise(pool, error):
     with pytest.raises(error, match="pool must be"):
         telescopic.CoupledSampler(gaussian_log_prob, INIT, pool=pool)
+
+
+def test_pools_beyond_the_platforms_limit_raise(monkeypatch):
+    # ProcessPoolExecutor takes at most 61 processes on Windows.
+    monkeypatch.setattr(_parallel, "MAX_PROCESSES", 61)
+    with pytest.raises(ValueError, match="pool must be from 1 to 61 processes"):
+        telescopic.CoupledSampler(gaussian_log_prob, INIT, pool=62)

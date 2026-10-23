@@ -14,13 +14,13 @@ TARGET = Target(gaussian_log_prob)
 FAR = Normal(mean=[3.0, -1.0], cov=[1.0, 1.0])
 
 
-def simulate(kernel=None, initial=FAR, n=20, **options):
+def simulate(kernel=None, initial=FAR, n=20, indices=None, **options):
     settings = {"k": 2, "m": 10, "lag": 1, "lanes": 8} | options
     return run(
         TARGET,
         RandomWalk(np.eye(2), scale=1.0) if kernel is None else kernel,
         initial,
-        range(n),
+        range(n) if indices is None else indices,
         root=root_seed(1),
         namespace=MAIN,
         **settings,
@@ -120,6 +120,9 @@ def test_a_cap_censors_unmet_pairs_and_drops_their_measures():
         ({"max_iter": 10}, "max_iter must exceed"),
         ({"lanes": 0}, "lanes must be"),
         ({"n": 0}, "indices must be a non-empty sequence"),
+        ({"indices": [0.5, 1.7]}, "distinct integers"),
+        ({"indices": [3, 3]}, "distinct integers"),
+        ({"indices": [-1, 0]}, "distinct integers"),
     ],
 )
 def test_invalid_settings_raise(options, message):

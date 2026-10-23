@@ -30,6 +30,9 @@ threadpoolctl = importlib.import_module("threadpoolctl")
 # At most this many chunks per worker, so that the workers finish together.
 CHUNKS_PER_WORKER = 4
 
+# The most processes that ProcessPoolExecutor accepts on Windows; elsewhere it has no limit.
+MAX_PROCESSES = 61 if sys.platform == "win32" else sys.maxsize
+
 # Seconds between the parent's calls of the monitor while it waits on a pool; Ctrl-C needs
 # them on Windows, where a blocked wait does not see it.
 POLL = 0.1
@@ -79,9 +82,14 @@ class Workers:
         self.executor = ProcessPoolExecutor(
             n, context, initializer=_start_worker, initargs=(self.stop,)
         )
-        # Started now, so that their start overlaps the parent's tuning.
-        for _ in range(n):
-            self.executor.submit(int)
+
+    def start(self) -> None:
+        # Now, so that their start overlaps the parent's tuning. A process made while the
+        # parent ignores Ctrl-C starts ignoring it on POSIX, so a Ctrl-C while it imports
+        # does not kill it.
+        with _ctrl_c_ignored():
+            for _ in range(self.n):
+                self.executor.submit(int)
 
     def terminate(self) -> None:
         # Python 3.14 has terminate_workers; before it, the processes are in _processes.
@@ -105,8 +113,8 @@ def check_pool(pool: Any) -> None:
             "pool must be None, a number of processes, an executor with submit, or an "
             f"object with map, not {type(pool).__name__}"
         )
-    if isinstance(pool, int | np.integer) and pool < 1:
-        raise ValueError(f"pool must be at least 1 process, not {pool}")
+    if isinstance(pool, int | np.integer) and not 1 <= pool <= MAX_PROCESSES:
+        raise ValueError(f"pool must be from 1 to {MAX_PROCESSES} processes, not {pool}")
 
 
 @contextmanager
@@ -118,15 +126,16 @@ def opened(pool: Any) -> Iterator[Any]:
         return
     workers = Workers(int(pool))
     try:
+        workers.start()
         yield workers
+        workers.executor.shutdown()
     except BaseException:
         workers.terminate()
         raise
-    workers.executor.shutdown()
 
 
 def execute(job: Job, indices: IntArray, pool: Any, monitor: Monitor) -> engine.Replicates:
-    # The job on indices, here or on an opened pool. Here the monitor sees every
+    # The job on sorted indices, here or on an opened pool. Here the monitor sees every
     # iteration; on a pool, the finished replicates after each chunk and every POLL
     # seconds. Once it returns true, no chunk starts but the first, and telescopic's
     # workers start no new replicate (spec sections 6.4 and 6.5).
@@ -150,9 +159,14 @@ def execute(job: Job, indices: IntArray, pool: Any, monitor: Monitor) -> engine.
 
 
 def _workers(pool: Any) -> int:
-    # The pool's size: an executor's _max_workers, or else this machine's CPUs.
-    size: int = getattr(pool, "_max_workers", None) or os.cpu_count() or 1
-    return size
+    # The pool's size, where it says: an executor's _max_workers, a multiprocessing
+    # pool's _processes, a schwimmbad pool's size; else the CPUs this process may use.
+    for name in ("_max_workers", "_processes", "size"):
+        size = getattr(pool, name, None)
+        if isinstance(size, int) and size >= 1:
+            return size
+    cpus: int | None = getattr(os, "process_cpu_count", os.cpu_count)()
+    return cpus or 1
 
 
 def _gather(
@@ -279,15 +293,20 @@ def _as_worker(parent: int) -> Iterator[None]:
     if os.getpid() == parent or threading.current_thread() is not threading.main_thread():
         yield
         return
+    # Each task scans the loaded libraries again (2.3 ms), so that one loaded by an earlier
+    # task, such as a lazily imported torch, is limited too.
+    with _ctrl_c_ignored(), threadpoolctl.threadpool_limits(1):
+        yield
+
+
+@contextmanager
+def _ctrl_c_ignored() -> Iterator[None]:
+    # Only the main thread may set handlers.
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
     previous = signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
-        with _controller().limit(limits=1):
-            yield
+        yield
     finally:
         signal.signal(signal.SIGINT, previous)
-
-
-@functools.cache
-def _controller() -> Any:
-    # One per process: building it scans the loaded libraries, 2.3 ms (M7 review).
-    return threadpoolctl.ThreadpoolController()
