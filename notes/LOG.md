@@ -89,3 +89,17 @@ Append only. One entry per working session or milestone.
   among them a slow pair that warned nowhere (an off-by-one between the live monitor
   and `issues`), `names` checked only after the whole run, and pilot chains that never
   moved silencing the disagreement warning. 226 fast tests in 16 s.
+
+## 2026-10-23: M6
+
+- M6 implemented: `MALA` (reflection-maximal coupling, both proposal densities), `HMC`
+  as a mixture of shared-momentum leapfrog trajectories and a whitened random-walk
+  meeting step, `Gibbs` with maximal, common-random-number and two-scale couplings, and
+  dual averaging (DECISIONS #13). `step` returns acceptance probabilities (DECISIONS
+  #10); gradient kernels refuse starts outside the support (#11); MALA has no coupling
+  option (#12); `Target(log_prob=None)` serves Gibbs. Each chain's one-step law matches
+  the exact one in one dimension for every kernel (MALA's and the linear leapfrog's
+  derived in the test); 12 of 13 mutants failed the tests at once, and the 13th (a
+  mixture dropping its components' acceptance probabilities) now does too. Dual
+  averaging gave stationary acceptance 0.572 to 0.608 for MALA (target 0.574) and 0.802
+  to 0.811 for HMC (target 0.8). 287 fast tests in 23 s.

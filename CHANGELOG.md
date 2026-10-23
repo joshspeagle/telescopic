@@ -35,3 +35,7 @@ All notable changes to this project are documented here. The format follows
   adaptation, set the kernels' unset parameters and warn when they disagree; the choice
   of `k`, `m` and the lag from pilot meeting times; `CoupledSampler` and
   `telescopic.sample`, whose runs warn about the conditions of the specification.
+- Gradient and Gibbs kernels: `MALA` and `HMC` (with a random-walk meeting step) with
+  the reflection-maximal coupling, tuned by dual averaging; `Gibbs` with maximal,
+  common-random-number and two-scale couplings of user-written conditionals, and
+  `Target(log_prob=None)` for it. A kernel's `step` returns acceptance probabilities.

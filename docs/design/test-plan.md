@@ -105,7 +105,7 @@ Kernel-specific tests:
   - draws per step as documented.
 - **MALA:** the acceptance ratio includes both proposal densities. Checked against a reference for a non-Gaussian target, where omitting the reverse term changes the answer.
 - **HMC:**
-  - the leapfrog integrator is reversible and volume-preserving to rounding on a Gaussian;
+  - trajectories equal an independent leapfrog implementation draw for draw, and on $\mathcal N(0, 1)$, where the leapfrog map is linear, each chain's one-step law matches the exact one, which holds only for a reversible, volume-preserving integrator with the right acceptance;
   - shared momentum contracts two chains on a Gaussian;
   - the meeting component meets with the probability of §5.2;
   - a common uniform chooses the same component for both chains.

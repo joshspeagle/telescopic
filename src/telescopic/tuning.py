@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import cached_property
+from typing import TYPE_CHECKING
 
 import numpy as np
 import numpy.typing as npt
@@ -13,6 +15,9 @@ from telescopic._random import TUNING, Streams, replicate_generator, root_seed
 from telescopic._types import Distribution, FloatArray, Seed
 from telescopic.initial import draw
 from telescopic.target import Target
+
+if TYPE_CHECKING:
+    from telescopic.kernels.base import Kernel
 
 TARGET_ACCEPTANCE = 0.234
 N_CHAINS = 4
@@ -182,6 +187,59 @@ def adaptive_metropolis(
             "half: start inside the support of the target, or give the kernel's parameters"
         )
     return PilotRun(samples, kept_log_p, accepted / samples.shape[1], n_steps)
+
+
+def dual_averaging(
+    kernel_at: Callable[[float], Kernel],
+    target: Target,
+    starts: FloatArray,
+    rng: Seed,
+    target_acceptance: float,
+    step_size: float,
+    n_steps: int = 1000,
+) -> float:
+    r"""A step size whose mean acceptance probability is ``target_acceptance`` (spec 5.4, 5.5).
+
+    Chains of ``kernel_at(step_size)`` run from ``starts``. After step :math:`t` the step
+    size becomes :math:`\epsilon_t = \exp(\mu - \sqrt t\,\bar H_t/\gamma)`, where
+    :math:`\bar H_t` averages the target acceptance minus the chains' mean acceptance
+    probability with offset :math:`t_0`; the result is :math:`\bar\epsilon`, the average
+    of :math:`\log\epsilon_t` with weights :math:`t^{-\kappa}` (Hoffman & Gelman 2014,
+    section 3.2.1, with :math:`\gamma = 0.05`, :math:`t_0 = 10`, :math:`\kappa = 0.75`
+    and :math:`\mu = \log(10\epsilon_0)`). Chain ``i`` draws from replicate ``4 + i`` of
+    the tuning namespace, after the streams of :func:`adaptive_metropolis`.
+
+    Parameters
+    ----------
+    kernel_at : callable
+        Maps a step size to a kernel.
+    target : Target
+    starts : ndarray, shape (n, d)
+        Starting points, such as the last states of the pilot chains.
+    rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
+    target_acceptance : float
+    step_size : float
+        The first step size :math:`\epsilon_0`.
+    n_steps : int
+
+    Returns
+    -------
+    float
+    """
+    root = root_seed(rng)
+    streams = Streams(len(starts))
+    for chain in range(len(starts)):
+        streams.assign(chain, replicate_generator(root, TUNING, N_CHAINS + chain))
+    draws = streams.view(np.arange(len(starts)))
+    state = kernel_at(step_size).init_state(target, starts)
+    mu, h_bar, log_average = np.log(10 * step_size), 0.0, 0.0
+    for t in range(1, n_steps + 1):
+        state, acceptance = kernel_at(step_size).step(target, state, draws)
+        h_bar += (target_acceptance - float(np.mean(acceptance)) - h_bar) / (t + 10)
+        log_step = mu - np.sqrt(t) * h_bar / 0.05
+        log_average += t**-0.75 * (log_step - log_average)
+        step_size = float(np.exp(log_step))
+    return float(np.exp(log_average))
 
 
 def choose_k(meeting_times: npt.ArrayLike, quantile: float = 0.99) -> int:

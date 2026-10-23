@@ -84,7 +84,7 @@ State(x (n, d), log_prob (n,), grad (n, d) | None)
   .take(rows) -> State;  .put(rows, other)     # engine bookkeeping
 Kernel
   needs_grad: bool
-  step(target, state, draws) -> (state, accepted (n,))
+  step(target, state, draws) -> (state, acceptance (n,))   # acceptance probabilities
   coupled_step(target, sx, sy, draws) -> (sx, sy)
   tune(target, initial, rng=None, *, pilot=None) -> (kernel, TuningReport | None)   # (self, None) when tuned
   init_state(target, x) -> State                                   # evaluates log_prob (and grad if needed)
@@ -156,7 +156,7 @@ make_chunks(indices, chunk_size) -> list[array]
 
 ```text
 adaptive_metropolis(target, initial, rng, *, n_steps=None) -> PilotRun(samples, log_prob, acceptance, n_steps)   # 4 chains, pooled adaptation
-dual_averaging(make_kernel, target, initial_states, root, target_accept, n_steps) -> step_size
+dual_averaging(kernel_at, target, starts, rng, target_acceptance, step_size, n_steps=1000) -> step_size
 choose_k(meeting_times, quantile=0.99) -> k    # spec R-TUNE-2; inverted-CDF quantile; censored = inf
 ```
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import partial
 from typing import Literal
 
 import numpy as np
@@ -9,11 +10,12 @@ import numpy.typing as npt
 
 from telescopic._linalg import covariance, inverse_lower, matvec
 from telescopic._random import Draws
-from telescopic._types import BoolArray, FloatArray, Seed
+from telescopic._types import FloatArray, Seed
 from telescopic.couplings import maximal, reflection_maximal
 from telescopic.kernels.base import (
     Kernel,
     State,
+    acceptance,
     evaluate,
     evaluate_pair,
     log_ratio,
@@ -83,12 +85,13 @@ class RandomWalk(Kernel):
     def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
         return RandomWalk(pilot.cov, scale=self.scale, coupling=self.coupling), pilot.report()
 
-    def step(self, target: Target, state: State, draws: Draws) -> tuple[State, BoolArray]:
+    def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         chol, _ = self._ready()
         x = state.x + matvec(chol, draws.normal(len(chol)))
         proposal = evaluate(target, x, state.grad is not None)
-        accepted = draws.log_uniform() < log_ratio(proposal.log_prob, state.log_prob)
-        return select(accepted, proposal, state), accepted
+        log_alpha = log_ratio(proposal.log_prob, state.log_prob)
+        accepted = draws.log_uniform() < log_alpha
+        return select(accepted, proposal, state), acceptance(log_alpha)
 
     def coupled_step(
         self, target: Target, state_x: State, state_y: State, draws: Draws
@@ -102,7 +105,9 @@ class RandomWalk(Kernel):
                 [_Gaussian(mean, chol, inverse) for mean in state_y.x],
                 draws,
             )
-        proposal_x, proposal_y = evaluate_pair(target, x, y, identical, state_x.grad is not None)
+        proposal_x, proposal_y = evaluate_pair(
+            partial(evaluate, target, need_grad=state_x.grad is not None), x, y, identical
+        )
         log_u = draws.log_uniform()
         state_x = select(
             log_u < log_ratio(proposal_x.log_prob, state_x.log_prob), proposal_x, state_x

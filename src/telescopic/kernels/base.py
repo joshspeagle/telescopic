@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -118,6 +119,9 @@ class Kernel(ABC):
     def init_state(self, target: Target, x: FloatArray) -> State:
         """Evaluate the target at the rows of ``x``, with gradients if the kernel needs them.
 
+        A kernel that needs gradients refuses points where the log-density is ``-inf``:
+        its proposals start from the gradient there (spec R-INPUT-1).
+
         Parameters
         ----------
         target : Target
@@ -133,17 +137,25 @@ class Kernel(ABC):
                 f"the kernel works in {self.ndim} dimensions, but the initial points have "
                 f"{x.shape[1]}"
             )
-        return evaluate(target, x, self.needs_grad)
+        state = evaluate(target, x, self.needs_grad)
+        if self.needs_grad and np.isneginf(state.log_prob).any():
+            row = int(np.argmax(np.isneginf(state.log_prob)))
+            raise ValueError(
+                f"log_prob is -inf at the initial point x = {x[row].tolist()}, where a "
+                "gradient kernel cannot start: use an initial distribution inside the support"
+            )
+        return state
 
     @abstractmethod
-    def step(self, target: Target, state: State, draws: Draws) -> tuple[State, BoolArray]:
+    def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         """One transition of each chain.
 
         Returns
         -------
         state : State
-        accepted : ndarray of bool, shape (n,)
-            Whether each chain moved to its proposal.
+        acceptance : ndarray, shape (n,)
+            Each chain's probability of accepting its proposal, 1 for a kernel that always
+            moves; dual averaging adapts step sizes to its mean.
         """
 
     @abstractmethod
@@ -162,8 +174,8 @@ def evaluate(target: Target, x: FloatArray, need_grad: bool) -> State:
     """The state at the rows of ``x``: log-densities, and gradients if needed.
 
     A non-finite gradient where the log-density is finite raises ``ValueError``: a cache
-    must stay valid (spec R-INPUT-1). Gradient kernels that reject such proposals call
-    the target directly.
+    must stay valid (spec R-INPUT-1). Gradient kernels reject such proposals instead,
+    with :func:`evaluate_proposal`.
 
     Parameters
     ----------
@@ -188,30 +200,75 @@ def evaluate(target: Target, x: FloatArray, need_grad: bool) -> State:
     return State(x, log_prob, grad)
 
 
-def evaluate_pair(
-    target: Target, x: FloatArray, y: FloatArray, identical: BoolArray, need_grad: bool
-) -> tuple[State, State]:
-    """States at the coupled proposals ``x`` and ``y`` in one batched call.
+def evaluate_proposal(target: Target, x: FloatArray) -> State:
+    """The states of a gradient kernel's proposals at the rows of ``x``.
 
-    Identical proposals are evaluated once and their state is shared.
+    A proposal can be accepted only where its position, its log-density and its gradient
+    are finite (spec R-INPUT-1). The others get a log-density of ``-inf``, which every
+    Metropolis test rejects, and a zero gradient; non-finite positions are not evaluated.
 
     Parameters
     ----------
     target : Target
+    x : ndarray, shape (n, d)
+
+    Returns
+    -------
+    State
+    """
+    log_prob, grad = np.full(len(x), -np.inf), np.zeros_like(x)
+    rows = np.isfinite(x).all(axis=1).nonzero()[0]
+    if len(rows):
+        log_prob[rows], grad[rows] = target.log_prob_and_grad(x[rows])
+    bad = ~np.isfinite(grad).all(axis=1)
+    log_prob[bad], grad[bad] = -np.inf, 0.0
+    return State(x, log_prob, grad)
+
+
+def evaluate_pair(
+    evaluate_rows: Callable[[FloatArray], State],
+    x: FloatArray,
+    y: FloatArray,
+    identical: BoolArray,
+) -> tuple[State, State]:
+    """States at the coupled proposals ``x`` and ``y`` from one call of ``evaluate_rows``.
+
+    Identical proposals are evaluated once and their state is shared (spec R-KER-3).
+
+    Parameters
+    ----------
+    evaluate_rows : callable
+        Maps points of shape ``(m, d)`` to their states, such as :func:`evaluate` with its
+        target and ``need_grad`` bound.
     x, y : ndarray, shape (n, d)
     identical : ndarray of bool, shape (n,)
         Rows where ``y`` is a copy of ``x``.
-    need_grad : bool
 
     Returns
     -------
     state_x, state_y : State
     """
-    distinct = np.flatnonzero(~identical)
-    both = evaluate(target, np.concatenate([x, y[distinct]]), need_grad)
+    distinct = (~identical).nonzero()[0]
+    both = evaluate_rows(np.concatenate([x, y[distinct]]))
     source = np.arange(len(x))
     source[distinct] = np.arange(len(x), len(both))
     return both.take(slice(0, len(x))), both.take(source)
+
+
+def acceptance(log_alpha: FloatArray) -> FloatArray:
+    r"""Metropolis acceptance probabilities :math:`\min(1, e^{\log\alpha})`, 0 for NaN.
+
+    Parameters
+    ----------
+    log_alpha : ndarray, shape (n,)
+        Log acceptance ratios; NaN, from ``-inf - -inf``, is a rejection.
+
+    Returns
+    -------
+    ndarray, shape (n,)
+    """
+    probability: FloatArray = np.nan_to_num(np.exp(np.minimum(log_alpha, 0.0)))
+    return probability
 
 
 def log_ratio(new: FloatArray, old: FloatArray) -> FloatArray:

@@ -8,7 +8,7 @@ import numpy as np
 import numpy.typing as npt
 
 from telescopic._random import Draws
-from telescopic._types import BoolArray, IndexArray, Seed
+from telescopic._types import FloatArray, IndexArray, Seed
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport
@@ -65,17 +65,16 @@ class Mixture(Kernel):
         ratio = max((r for r in ratios if r is not None), default=None)
         return Mixture([kernel for kernel, _ in tuned], self.weights), pilot.report(ratio)
 
-    def step(self, target: Target, state: State, draws: Draws) -> tuple[State, BoolArray]:
+    def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         component = self._choose(draws)
         state = state.take(slice(None))
-        accepted = np.zeros(len(state), dtype=bool)
+        probability = np.zeros(len(state))
         for index, kernel in enumerate(self.kernels):
             rows = np.flatnonzero(component == index)
             if len(rows):
-                new, moved = kernel.step(target, state.take(rows), draws.subset(rows))
+                new, probability[rows] = kernel.step(target, state.take(rows), draws.subset(rows))
                 state.put(rows, new)
-                accepted[rows] = moved
-        return state, accepted
+        return state, probability
 
     def coupled_step(
         self, target: Target, state_x: State, state_y: State, draws: Draws

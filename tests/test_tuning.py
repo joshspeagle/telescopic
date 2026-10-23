@@ -2,15 +2,20 @@ import numpy as np
 import pytest
 
 from telescopic.initial import Normal
-from telescopic.kernels import Independence, Mixture, RandomWalk
+from telescopic.kernels import HMC, MALA, Independence, Mixture, RandomWalk
 from telescopic.target import Target
+from telescopic.testing import random_draws
 from telescopic.tuning import TARGET_ACCEPTANCE, adaptive_metropolis, choose_k
 
 # A correlated Gaussian with condition number 100.
 _q, _ = np.linalg.qr(np.random.default_rng(3).standard_normal((5, 5)))
 COV = _q @ np.diag(np.logspace(0, 2, 5)) @ _q.T
 PRECISION = np.linalg.inv(COV)
-TARGET = Target(lambda x: -0.5 * np.einsum("ij,jk,ik->i", x, PRECISION, x), vectorize=True)
+TARGET = Target(
+    lambda x: -0.5 * np.einsum("ij,jk,ik->i", x, PRECISION, x),
+    grad=lambda x: -x @ PRECISION,
+    vectorize=True,
+)
 START = Normal(np.zeros(5), 4 * np.eye(5))
 
 
@@ -77,6 +82,16 @@ def test_tuning_freezes_kernels_with_the_pilots_mean_and_covariance():
 def test_a_tuned_kernel_returns_itself():
     kernel = RandomWalk(np.eye(5))
     assert kernel.tune(TARGET, START) == (kernel, None)
+
+
+@pytest.mark.parametrize(("kernel", "goal"), [(MALA(), 0.574), (HMC(), 0.8)])
+def test_dual_averaging_reaches_the_target_acceptance(kernel, goal):
+    tuned, _ = kernel.tune(TARGET, START, 7)
+    trajectory = tuned.kernels[0] if isinstance(tuned, HMC) else tuned
+    points = np.random.default_rng(8).multivariate_normal(np.zeros(5), COV, size=4000)
+    start = trajectory.init_state(TARGET, points)
+    _, acceptance = trajectory.step(TARGET, start, random_draws(4000, 9))
+    assert abs(acceptance.mean() - goal) < 0.05
 
 
 @pytest.mark.parametrize("lowest", [1, 4])
