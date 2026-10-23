@@ -154,7 +154,7 @@ def run(
 
     Each replicate draws :math:`X_0` and then :math:`Y_0` from ``initial`` with its own
     stream (spec section 6.1), runs :math:`X` alone for ``lag`` steps, then the coupled
-    kernel until :math:`X_t = Y_{t-L}` bitwise, then :math:`X` alone until :math:`t = m`.
+    kernel until :math:`X_t = Y_{t-L}` under ``==``, then :math:`X` alone until :math:`t = m`.
     A replicate's output depends only on the root seed, its index and the arguments,
     never on the other replicates or on ``lanes``. The engine emits no warning: it
     records what its caller needs to warn about.

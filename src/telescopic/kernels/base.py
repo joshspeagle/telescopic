@@ -59,7 +59,7 @@ class Kernel(ABC):
 
     Subclasses implement :meth:`step` and :meth:`coupled_step` on batches of chains.
     Each marginal of :meth:`coupled_step` must have exactly the law of :meth:`step`. The
-    engine declares a meeting when a pair's returned positions are bitwise equal, so a
+    engine declares a meeting when a pair's returned positions are equal under ``==``, so a
     coupling that makes the two proposals identical must give the second chain a copy of
     the first chain's proposal, never a recomputation. A row's arithmetic must not depend
     on the other rows of the batch (spec R-KER-6).
