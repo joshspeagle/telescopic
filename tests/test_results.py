@@ -242,11 +242,16 @@ def test_invalid_arguments_of_the_result_raise(call, message):
         call(RESULT)
 
 
-def test_merging_refuses_runs_of_different_kernels():
-    first = Result(gaussian_run(range(3), **SETTINGS), kernel="RandomWalk(a)")
-    second = Result(gaussian_run(range(3, 5), **SETTINGS), kernel="RandomWalk(b)")
-    with pytest.raises(ValueError, match="different kernels"):
-        first.merge(second)
+def test_runs_with_equal_scipy_initial_distributions_merge():
+    # Each prints its own address, as in two processes.
+    first, second = (
+        Result(
+            gaussian_run(indices, **SETTINGS),
+            initial=stats.multivariate_normal([2.0, -1.0], np.eye(2)),
+        )
+        for indices in (range(3), range(3, 5))
+    )
+    assert first.merge(second).n_replicates == 5
 
 
 def test_the_default_w1_times_reach_a_censored_pairs_last_distance():

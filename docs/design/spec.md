@@ -515,7 +515,7 @@ Methods:
 - **Plots:** `plot_meeting_times(axes=None)`, `plot_tv_bound(ax=None)`, `plot_marginals(dims=None, bins=20, axes=None)` and `plot_corner(dims=None, bins=20)` (signed 2-D histograms); the first three draw on given axes (DECISIONS #30).
 - **Persistence and merging:**
   - `save(path)` and `Result.load(path)` use a versioned `.npz` schema, with no pickle: arrays, and the settings, names, seed state and descriptions as JSON (DECISIONS #26, #29). The engine's paths are not saved;
-  - `merge(other)` joins runs with the same configuration and disjoint replicate indices, and refuses runs whose recorded kernels or initial distributions differ.
+  - `merge(other)` joins runs with the same seed, settings and dimension and disjoint replicate indices. It does not compare kernels or initial distributions, whose descriptions omit parameters and can hold addresses (DECISIONS #53).
 
 ### 7.2 `SignedMeasure` and `Estimate` (R-OUT-2)
 

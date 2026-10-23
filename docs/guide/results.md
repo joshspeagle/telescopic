@@ -262,9 +262,10 @@ dictionary ([The diagnostics of a run](diagnostics.md#the-diagnostics-of-a-run))
 A sampler needs no merging: each call of `run` returns the result of all its replicates
 so far. {meth}`telescopic.Result.merge` joins runs made apart, such as runs of
 {func}`telescopic.engine.run` on separate ranges of replicate indices, on one machine or
-several. The runs must have the same root seed, settings and dimension, the same kernel
-and initial distribution where both results record them, and no replicate index in
-common. Here the replicates 1000 to 1199 extend the run above:
+several. The runs must have the same root seed, settings and dimension, and no replicate
+index in common, which `merge` checks. They must also share the target, the kernel and the
+initial distribution, which it cannot check. Here the replicates 1000 to 1199 extend the
+run above:
 
 ```{code-cell} python
 more = telescopic.engine.run(

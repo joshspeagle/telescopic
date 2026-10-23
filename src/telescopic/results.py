@@ -429,7 +429,9 @@ class Result:
     def merge(self, other: Result) -> Result:
         """Join with a run of the same seed and configuration and disjoint replicates.
 
-        Spec R-OUT-1; :func:`telescopic.engine.merge` checks the runs.
+        Spec R-OUT-1; :func:`telescopic.engine.merge` checks the seeds, the settings, the
+        dimensions and the replicates. That the runs share the target, the kernel and the
+        initial distribution is the caller's to ensure: their descriptions omit parameters.
 
         Parameters
         ----------
@@ -441,11 +443,6 @@ class Result:
             The union of the replicates and of the requested indices; interrupted if a
             requested replicate ran in neither.
         """
-        for name in ("kernel", "initial"):
-            mine, theirs = getattr(self, name), getattr(other, name)
-            # A result built from the engine's output alone has neither.
-            if mine is not None and theirs is not None and str(mine) != str(theirs):
-                raise ValueError(f"the runs have different {name}s: {mine} and {theirs}")
         return type(self)(
             engine.merge([self._replicates, other._replicates]),
             names=self.names,
