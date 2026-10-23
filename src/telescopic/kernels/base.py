@@ -70,22 +70,30 @@ class Kernel(ABC):
         """Whether every parameter is set, so the kernel can run."""
         return True
 
+    @property
+    def ndim(self) -> int | None:
+        """The dimension that the kernel's parameters fix, or ``None``."""
+        return None
+
     def init_state(self, target: Target, x: FloatArray) -> State:
         """Evaluate the target at the rows of ``x``, with gradients if the kernel needs them.
 
-        A non-finite gradient where the log-density is finite raises ``ValueError`` here;
-        gradient kernels reject such a proposal instead (spec R-INPUT-1).
+        Parameters
+        ----------
+        target : Target
+        x : ndarray, shape (n, d)
+            Initial points, whose dimension must be the kernel's.
+
+        Returns
+        -------
+        State
         """
-        state = evaluate(target, x, self.needs_grad)
-        if state.grad is not None:
-            bad = np.isfinite(state.log_prob) & ~np.isfinite(state.grad).all(axis=1)
-            if bad.any():
-                row = int(np.argmax(bad))
-                raise ValueError(
-                    f"grad returned {state.grad[row].tolist()} at x = {x[row].tolist()}, "
-                    "where log_prob is finite"
-                )
-        return state
+        if self.ndim is not None and x.shape[1] != self.ndim:
+            raise ValueError(
+                f"the kernel works in {self.ndim} dimensions, but the initial points have "
+                f"{x.shape[1]}"
+            )
+        return evaluate(target, x, self.needs_grad)
 
     @abstractmethod
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, BoolArray]:
@@ -111,11 +119,33 @@ class Kernel(ABC):
 
 
 def evaluate(target: Target, x: FloatArray, need_grad: bool) -> State:
-    """The state at the rows of ``x``: log-densities, and gradients if needed."""
-    if need_grad:
-        log_prob, grad = target.log_prob_and_grad(x)
-        return State(x, log_prob, grad)
-    return State(x, target.log_prob(x))
+    """The state at the rows of ``x``: log-densities, and gradients if needed.
+
+    A non-finite gradient where the log-density is finite raises ``ValueError``: a cache
+    must stay valid (spec R-INPUT-1). Gradient kernels that reject such proposals call
+    the target directly.
+
+    Parameters
+    ----------
+    target : Target
+    x : ndarray, shape (n, d)
+    need_grad : bool
+
+    Returns
+    -------
+    State
+    """
+    if not need_grad:
+        return State(x, target.log_prob(x))
+    log_prob, grad = target.log_prob_and_grad(x)
+    bad = np.isfinite(log_prob) & ~np.isfinite(grad).all(axis=1)
+    if bad.any():
+        row = int(np.argmax(bad))
+        raise ValueError(
+            f"grad returned {grad[row].tolist()} at x = {x[row].tolist()}, where log_prob "
+            "is finite"
+        )
+    return State(x, log_prob, grad)
 
 
 def evaluate_pair(
@@ -124,6 +154,18 @@ def evaluate_pair(
     """States at the coupled proposals ``x`` and ``y`` in one batched call.
 
     Identical proposals are evaluated once and their state is shared.
+
+    Parameters
+    ----------
+    target : Target
+    x, y : ndarray, shape (n, d)
+    identical : ndarray of bool, shape (n,)
+        Rows where ``y`` is a copy of ``x``.
+    need_grad : bool
+
+    Returns
+    -------
+    state_x, state_y : State
     """
     distinct = np.flatnonzero(~identical)
     both = evaluate(target, np.concatenate([x, y[distinct]]), need_grad)
@@ -133,14 +175,34 @@ def evaluate_pair(
 
 
 def log_ratio(new: FloatArray, old: FloatArray) -> FloatArray:
-    """``new - old`` for log-densities; ``-inf - -inf`` gives NaN, which every Metropolis
-    test rejects, without a warning."""
+    """The difference ``new - old`` of log-densities, without a warning for ``-inf - -inf``.
+
+    That difference is NaN, which every Metropolis test ``log u < ratio`` rejects.
+
+    Parameters
+    ----------
+    new, old : ndarray, shape (n,)
+
+    Returns
+    -------
+    ndarray, shape (n,)
+    """
     with np.errstate(invalid="ignore"):
         return new - old
 
 
 def select(accepted: BoolArray, proposal: State, current: State) -> State:
-    """Row by row, ``proposal`` where ``accepted`` and ``current`` elsewhere."""
+    """Row by row, ``proposal`` where ``accepted`` and ``current`` elsewhere.
+
+    Parameters
+    ----------
+    accepted : ndarray of bool, shape (n,)
+    proposal, current : State
+
+    Returns
+    -------
+    State
+    """
     return State(
         np.where(accepted[:, None], proposal.x, current.x),
         np.where(accepted, proposal.log_prob, current.log_prob),

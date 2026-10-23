@@ -102,8 +102,9 @@ def test_censored_pairs_are_listed_as_infinite_and_left_out_of_the_estimates():
     assert 0 < result.n_censored == censored.sum() < 30
     assert result.n_replicates == 30 - result.n_censored
     assert result.measure.per_replicate(lambda x: x[:, 0]).shape == (result.n_replicates,)
-    with pytest.warns(ConvergenceWarning, match="reached max_iter = 4"):
+    with pytest.warns(ConvergenceWarning) as record:  # censored pairs are also late
         result.check()
+    assert any("reached max_iter = 4" in str(warning.message) for warning in record)
     with pytest.raises(RuntimeError, match="reached max_iter"):
         result.check(strict=True)
 
@@ -148,3 +149,44 @@ def test_names_must_match_the_dimension():
     )
     with pytest.raises(ValueError, match="names must have 2 entries"):
         Result(replicates, names=["a"], **SETTINGS)
+
+
+def test_merging_two_runs_equals_one_run_over_both_sets_of_replicates():
+    def part(indices):
+        replicates = run(
+            Target(lambda x: -0.5 * float(np.sum(x**2))),
+            RandomWalk(np.eye(2)),
+            Normal([2.0, -1.0], [1.0, 1.0]),
+            indices,
+            root=root_seed(4),
+            namespace=MAIN,
+            **SETTINGS,
+        )
+        return Result(replicates, **SETTINGS)
+
+    merged, whole = part(range(5)).merge(part(range(5, 12))), part(range(12))
+    np.testing.assert_array_equal(merged.meeting_times, whole.meeting_times)
+    np.testing.assert_array_equal(merged.measure.atoms, whole.measure.atoms)
+    np.testing.assert_array_equal(merged.measure.replicate, whole.measure.replicate)
+    with pytest.raises(ValueError, match="different lag"):
+        part(range(3)).merge(Result(part(range(3, 5))._replicates, k=2, m=12, lag=1))
+
+
+@pytest.mark.parametrize(
+    ("call", "message"),
+    [
+        (lambda r: r.histogram(5), "dim must be in"),
+        (lambda r: r.histogram(0, bins=0), "bins must be at least 1"),
+        (lambda r: r.tv_bound([-1]), "t must be non-negative"),
+        (lambda r: r.w1_bound([-1]), "t must be non-negative"),
+    ],
+)
+def test_invalid_arguments_of_the_result_raise(call, message):
+    with pytest.raises(ValueError, match=message):
+        call(RESULT)
+
+
+def test_the_default_bound_times_end_where_the_bound_vanishes():
+    bound = RESULT.tv_bound()
+    assert len(bound) == int(RESULT.meeting_times.max()) - RESULT.lag
+    assert bound[-1] > 0

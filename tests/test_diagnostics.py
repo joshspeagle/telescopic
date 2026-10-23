@@ -101,3 +101,14 @@ def test_no_warning_fires_on_a_clean_gaussian_run():
         lag=30,
     )
     assert issues(Result(replicates, k=30, m=300, lag=30)) == []
+
+
+def test_without_late_pairs_the_upper_bound_of_the_late_fraction_is_the_rule_of_three():
+    found = synthetic([2] * 50, np.zeros(50), k=5).diagnostics()
+    assert found["late_fraction"] == 0
+    assert abs(found["late_fraction_upper"] - (1 - 0.05 ** (1 / 50))) < 1e-12
+
+
+def test_hill_refuses_non_positive_values():
+    with pytest.raises(ValueError, match="positive"):
+        hill([0.0, 1.0, 2.0], 1)

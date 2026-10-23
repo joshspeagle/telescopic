@@ -33,7 +33,10 @@ def covariance(
         raise ValueError(f"{name} must be a square matrix, not shape {matrix.shape}")
     if ndim is not None and len(matrix) != ndim:
         raise ValueError(f"{name} must have shape {(ndim, ndim)}, not {matrix.shape}")
-    if not np.allclose(matrix, matrix.T):
+    if not np.all(np.isfinite(matrix)):
+        raise ValueError(f"{name} must be finite")
+    # Relative to each entry, so that small-scale matrices are held to the same standard.
+    if not np.allclose(matrix, matrix.T, rtol=1e-8, atol=0):
         raise ValueError(f"{name} must be symmetric")
     try:
         chol = np.linalg.cholesky(matrix)

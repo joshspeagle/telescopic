@@ -31,8 +31,13 @@ class Mixture(Kernel):
     def __init__(self, kernels: Sequence[Kernel], weights: npt.ArrayLike) -> None:
         self.kernels = list(kernels)
         weights = np.asarray(weights, dtype=np.float64)
-        if weights.shape != (len(self.kernels),) or np.any(weights < 0) or weights.sum() == 0:
-            raise ValueError("weights must be one non-negative number per kernel, not all zero")
+        valid = np.all(np.isfinite(weights) & (weights >= 0)) and weights.sum() > 0
+        if weights.shape != (len(self.kernels),) or not valid:
+            raise ValueError(
+                "weights must be one finite, non-negative number per kernel, not all zero"
+            )
+        if len({kernel.ndim for kernel in self.kernels} - {None}) > 1:
+            raise ValueError("the kernels work in different dimensions")
         self.weights = weights / weights.sum()
         self._cumulative = np.cumsum(self.weights)
 
@@ -43,6 +48,10 @@ class Mixture(Kernel):
     @property
     def is_tuned(self) -> bool:
         return all(kernel.is_tuned for kernel in self.kernels)
+
+    @property
+    def ndim(self) -> int | None:
+        return next((kernel.ndim for kernel in self.kernels if kernel.ndim is not None), None)
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, BoolArray]:
         component = self._choose(draws)

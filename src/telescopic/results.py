@@ -12,15 +12,15 @@ import numpy.typing as npt
 from numpy.random import SeedSequence
 from scipy import stats
 
-from telescopic import diagnostics
+from telescopic import diagnostics, engine
 from telescopic._types import FloatArray
 from telescopic.engine import Replicates
-from telescopic.estimators import unbiased_covariance, weighted_quantile
+from telescopic.estimators import unbiased_covariance, unbiased_variance, weighted_quantile
 from telescopic.measure import SignedMeasure
 from telescopic.warnings import ConvergenceWarning
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class Estimate:
     r"""An unbiased estimate of :math:`\pi(h)` with its Monte Carlo error (spec R-OUT-2).
 
@@ -136,6 +136,7 @@ class Result:
         )
         self.k, self.m, self.lag, self.thin, self.max_iter = k, m, lag, thin, max_iter
         self.kernel, self.initial, self.seed = kernel, initial, seed
+        self._replicates = replicates
         self.n_log_prob, self.n_grad = replicates.n_log_prob, replicates.n_grad
         self.wall_time = replicates.seconds
         self.tuning, self.pilot, self.interrupted = tuning, pilot, interrupted
@@ -163,8 +164,7 @@ class Result:
         """
         if not 0 < level < 1:
             raise ValueError(f"level must be in (0, 1), not {level}")
-        if self.n_replicates < 2:
-            raise ValueError(f"an error bar needs 2 replicates that met, not {self.n_replicates}")
+        self._require(2)
         values = self.measure.per_replicate(h)
         value = values.mean(axis=0)
         error = values.std(axis=0, ddof=1) / np.sqrt(self.n_replicates)
@@ -182,6 +182,7 @@ class Result:
         -------
         ndarray, shape (d, d)
         """
+        self._require(2)
         first = self.measure.per_replicate(lambda x: x)
         atoms, weights = self.measure.atoms, self.measure.weights
         second = atoms.T @ (weights[:, None] * atoms) / self.n_replicates
@@ -189,8 +190,11 @@ class Result:
 
     def var(self) -> FloatArray:
         """Unbiased estimates of the variances, shape ``(d,)``; they can be negative."""
-        variances: FloatArray = np.diag(self.cov()).copy()
-        return variances
+        self._require(2)
+        first = self.measure.per_replicate(lambda x: x)
+        atoms, weights = self.measure.atoms, self.measure.weights
+        second = (weights[:, None] * atoms**2).sum(axis=0) / self.n_replicates
+        return unbiased_variance(first, second)
 
     def std(self) -> FloatArray:
         r"""Standard deviations :math:`\sqrt{\max(0, \widehat{\mathrm{Var}})}`, shape ``(d,)``.
@@ -216,6 +220,7 @@ class Result:
         q = np.asarray(q, dtype=np.float64)
         if np.any((q < 0) | (q > 1)):
             raise ValueError(f"q must be in [0, 1], not {q}")
+        self._require(1)
         weights = self.measure.weights / self.n_replicates
         columns = [weighted_quantile(column, weights, q) for column in self.measure.atoms.T]
         quantiles: FloatArray = np.stack(columns, axis=-1)
@@ -259,6 +264,11 @@ class Result:
         masses, standard_errors : ndarray, shape (bins,)
         edges : ndarray, shape (bins + 1,)
         """
+        if not 0 <= dim < self.ndim:
+            raise ValueError(f"dim must be in [0, {self.ndim}), not {dim}")
+        if bins < 1:
+            raise ValueError(f"bins must be at least 1, not {bins}")
+        self._require(2)
         values = self.measure.atoms[:, dim]
         edges = np.histogram_bin_edges(values, bins=bins, range=range)
         if range is None:
@@ -283,9 +293,7 @@ class Result:
         -------
         ndarray, shape of ``t``
         """
-        if t is None:
-            t = np.arange(max(1, int(np.max(self._stopped)) - self.lag + 1))
-        return diagnostics.tv_bound(self._stopped, self.lag, t)
+        return diagnostics.tv_bound(self._stopped, self.lag, self._times() if t is None else t)
 
     def w1_bound(self, t: npt.ArrayLike | None = None) -> FloatArray:
         """Estimated upper bound on the 1-Wasserstein distance from the law of X_t to the target.
@@ -301,10 +309,12 @@ class Result:
         -------
         ndarray, shape of ``t``
         """
-        if t is None:
-            t = np.arange(max(1, int(np.max(self._stopped)) - self.lag + 1))
         return diagnostics.w1_bound(
-            self._distance_time, self._distance, len(self.index), self.lag, t
+            self._distance_time,
+            self._distance,
+            len(self.index),
+            self.lag,
+            self._times() if t is None else t,
         )
 
     def diagnostics(self) -> dict[str, Any]:
@@ -314,12 +324,18 @@ class Result:
         -------
         dict
             ``meeting_time`` quantiles (50, 90, 99) and maximum, ``censored``,
-            ``late_fraction`` (pairs with :math:`\\tau - L > k`, an estimate of the TV
-            bound at :math:`k`), ``mean_cost``, ``seconds_per_replicate`` and
-            ``inefficiency`` (mean cost over :math:`m - k + 1`; spec R-TUNE-4).
+            ``late_fraction``, the fraction of pairs with :math:`\\tau - L > k`, censored
+            ones included (the leading term of the TV bound at :math:`k`, spec section
+            3.6), with ``late_fraction_upper``, its one-sided 95% Clopper-Pearson upper
+            bound, which stays informative when the fraction is 0; ``tv_bound_at_k``;
+            ``mean_cost``, ``seconds_per_replicate`` and ``inefficiency`` (mean cost over
+            :math:`m - k + 1`; spec R-TUNE-4).
         """
         met = self.meeting_times[np.isfinite(self.meeting_times)]
         quantiles = np.quantile(met, [0.5, 0.9, 0.99]) if len(met) else np.full(3, np.nan)
+        n_late = int(np.sum(self.meeting_times - self.lag > self.k))
+        n_total = len(self.meeting_times)
+        upper = 1.0 if n_late == n_total else stats.beta.ppf(0.95, n_late + 1, n_total - n_late)
         mean_cost = float(self.costs.mean())
         return {
             "meeting_time_50": float(quantiles[0]),
@@ -327,7 +343,9 @@ class Result:
             "meeting_time_99": float(quantiles[2]),
             "meeting_time_max": float(np.max(met)) if len(met) else np.nan,
             "censored": self.n_censored,
-            "late_fraction": float(np.mean(met - self.lag > self.k)) if len(met) else np.nan,
+            "late_fraction": n_late / n_total,
+            "late_fraction_upper": float(upper),
+            "tv_bound_at_k": float(self.tv_bound([self.k])[0]),
             "mean_cost": mean_cost,
             "seconds_per_replicate": self.wall_time / len(self.index),
             "inefficiency": mean_cost / (self.m - self.k + 1),
@@ -368,6 +386,40 @@ class Result:
         }
         return Summary(self.names, table, footer)
 
+    def merge(self, other: Result) -> Result:
+        """Join with a run of the same configuration and disjoint replicates (spec R-OUT-1).
+
+        Parameters
+        ----------
+        other : Result
+
+        Returns
+        -------
+        Result
+            The union of the replicates; interrupted if either run was.
+        """
+        for name in ("k", "m", "lag", "thin", "max_iter", "ndim"):
+            if getattr(self, name) != getattr(other, name):
+                raise ValueError(
+                    f"cannot merge runs with different {name}: {getattr(self, name)} and "
+                    f"{getattr(other, name)}"
+                )
+        return Result(
+            engine.merge([self._replicates, other._replicates]),
+            k=self.k,
+            m=self.m,
+            lag=self.lag,
+            thin=self.thin,
+            names=self.names,
+            max_iter=self.max_iter,
+            kernel=self.kernel,
+            initial=self.initial,
+            seed=self.seed,
+            tuning=self.tuning,
+            pilot=self.pilot,
+            interrupted=self.interrupted or other.interrupted,
+        )
+
     def check(self, strict: bool = False) -> None:
         """Warn about the conditions of spec section 7.4 that apply to this run.
 
@@ -381,6 +433,16 @@ class Result:
             raise RuntimeError("; ".join(messages))
         for message in messages:
             warnings.warn(message, ConvergenceWarning, stacklevel=2)
+
+    def _require(self, n: int) -> None:
+        if self.n_replicates < n:
+            raise ValueError(
+                f"this needs at least {n} replicates that met, not {self.n_replicates}"
+            )
+
+    def _times(self) -> npt.NDArray[np.int64]:
+        # Every time from 0 to the last at which the bounds of section 3.6 are positive.
+        return np.arange(max(1, int(np.max(self._stopped)) - self.lag))
 
 
 class Summary:
@@ -438,7 +500,8 @@ class Summary:
                 f"cost per replicate: {footer['mean_cost']:.4g} kernel applications, "
                 f"{footer['seconds_per_replicate']:.3g} s; inefficiency "
                 f"{footer['inefficiency']:.3g}; pairs meeting after k + lag "
-                f"{footer['late_fraction']:.1%}"
+                f"{footer['late_fraction']:.1%} (at most {footer['late_fraction_upper']:.1%} "
+                "at 95%)"
             ),
         ]
         if footer["interrupted"]:

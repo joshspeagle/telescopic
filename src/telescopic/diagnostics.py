@@ -37,13 +37,12 @@ def tv_bound(meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike) -> FloatA
 
     Notes
     -----
-    Cost: :math:`O(R)` per time.
+    Computed as :math:`\sum_{j \ge 1} \hat S(t + jL)` with the empirical survival
+    function :math:`\hat S(u) = R^{-1}\#\{\tau > u\}`, in :math:`O(R + \max\tau)`.
     """
     tau = np.asarray(meeting_times, dtype=np.int64)
-    t = np.asarray(t, dtype=np.int64)
-    # ceil((tau - L - t) / L), the number of j >= 1 with tau > t + jL.
-    counts = np.maximum(0, -((t[..., None] - tau + lag) // lag))
-    bound: FloatArray = np.minimum(1.0, counts.mean(axis=-1))
+    survival = 1.0 - np.cumsum(np.bincount(tau)) / len(tau)
+    bound: FloatArray = np.minimum(1.0, _lagged_tail(survival, lag, t))
     return bound
 
 
@@ -79,15 +78,22 @@ def w1_bound(
     total = np.bincount(
         np.asarray(distance_time, dtype=np.int64), weights=np.asarray(distance, dtype=np.float64)
     )
-    # tail[i, r] sums total over the times i'L + r with i' >= i, so the bound at t is
-    # tail[t // L + 1, t % L] / R; the padding adds a last row of zeros.
-    rows = -(-len(total) // lag) + 1
-    padded = np.zeros(rows * lag)
-    padded[: len(total)] = total
-    tail = np.cumsum(padded.reshape(rows, lag)[::-1], axis=0)[::-1]
-    t = np.asarray(t, dtype=np.int64)
-    bound: FloatArray = tail[np.minimum(t // lag + 1, rows - 1), t % lag] / n_replicates
+    bound: FloatArray = _lagged_tail(total, lag, t) / n_replicates
     return bound
+
+
+def _lagged_tail(values: FloatArray, lag: int, t: npt.ArrayLike) -> FloatArray:
+    # sum_{j >= 1} values[t + jL], with values zero past the end. tail[i, r] sums values
+    # over the times i'L + r with i' >= i; the padding adds a last row of zeros.
+    t = np.asarray(t, dtype=np.int64)
+    if np.any(t < 0):
+        raise ValueError(f"t must be non-negative, not {t}")
+    rows = -(-len(values) // lag) + 1
+    padded = np.zeros(rows * lag)
+    padded[: len(values)] = values
+    tail = np.cumsum(padded.reshape(rows, lag)[::-1], axis=0)[::-1]
+    sums: FloatArray = tail[np.minimum(t // lag + 1, rows - 1), t % lag]
+    return sums
 
 
 def hill(values: npt.ArrayLike, n_tail: int) -> float:
@@ -112,6 +118,8 @@ def hill(values: npt.ArrayLike, n_tail: int) -> float:
         ``inf`` when the largest values are all equal.
     """
     x = np.sort(np.asarray(values, dtype=np.float64))
+    if not x[0] > 0:
+        raise ValueError(f"values must be positive, not as small as {x[0]}")
     if not 1 <= n_tail < len(x):
         raise ValueError(f"n_tail must be in [1, {len(x) - 1}], not {n_tail}")
     mean_log = float(np.mean(np.log(x[-n_tail:] / x[-n_tail - 1])))
@@ -161,7 +169,7 @@ def issues(result: Result) -> list[str]:
             "without meeting and are excluded, which biases the estimates; run them without "
             "a cap or with a larger one"
         )
-    late = np.mean(met - result.lag > result.k) if len(met) else 0.0
+    late = result.diagnostics()["late_fraction"]
     if late > 0.25:
         messages.append(
             f"{late:.0%} of the pairs met after k + lag, so k may be too small: the bias "

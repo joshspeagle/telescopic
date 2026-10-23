@@ -260,6 +260,28 @@ def test_random_walk_rejects_invalid_parameters(kwargs, message):
         RandomWalk(**kwargs)
 
 
+@pytest.mark.parametrize(
+    ("weights", "message"),
+    [([np.nan, 1.0], "finite, non-negative"), ([0.0, 0.0], "not all zero"), ([1.0], "per kernel")],
+)
+def test_mixture_rejects_invalid_weights(weights, message):
+    with pytest.raises(ValueError, match=message):
+        Mixture([RandomWalk(np.eye(1)), RandomWalk(np.eye(1))], weights)
+
+
+def test_mixture_refuses_components_of_different_dimensions():
+    with pytest.raises(ValueError, match="different dimensions"):
+        Mixture([RandomWalk(np.eye(1)), RandomWalk(np.eye(2))], [0.5, 0.5])
+
+
+def test_a_non_finite_gradient_at_an_accepted_proposal_raises():
+    # A gradient-free kernel whose states carry gradients must not cache a bad one.
+    target = Target(gaussian_log_prob, grad=lambda x: np.where(x > 0, np.nan, -x), vectorize=True)
+    start = State(np.full((50, 1), -1.0), np.full(50, -0.5), np.full((50, 1), 1.0))
+    with pytest.raises(ValueError, match="grad returned"):
+        RandomWalk(np.eye(1), scale=3.0).step(target, start, random_draws(50, 23))
+
+
 @pytest.mark.parametrize("df", [None, 1, 5])
 def test_multivariate_t_log_density_is_normalised(df):
     mean, cov = np.array([0.5, -1.0]), np.array([[2.0, 0.3], [0.3, 0.5]])

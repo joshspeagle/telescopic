@@ -84,6 +84,9 @@ class Independence(Kernel):
 
     Notes
     -----
+    A step and a coupled step use what the proposal's ``sample`` uses (``d + df``
+    normals for :class:`MultivariateT`, ``d`` with ``df=None``) and 1 uniform.
+
     Meeting times are geometric only when the weights :math:`\pi/q` are bounded; a
     proposal with lighter tails than the target gives heavy-tailed meeting times.
     """
@@ -94,6 +97,10 @@ class Independence(Kernel):
     @property
     def is_tuned(self) -> bool:
         return self.proposal is not None
+
+    @property
+    def ndim(self) -> int | None:
+        return None if self.proposal is None else len(self.proposal.mean)
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, BoolArray]:
         q = self._ready()

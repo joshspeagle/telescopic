@@ -72,8 +72,8 @@ class Empirical:
 
     def __init__(self, points: npt.ArrayLike) -> None:
         self.points = np.array(points, dtype=np.float64, ndmin=2)
-        if self.points.ndim != 2:
-            raise ValueError(f"points must have shape (n, d), not {self.points.shape}")
+        if self.points.ndim != 2 or len(self.points) == 0:
+            raise ValueError(f"points must have shape (n, d) with n >= 1, not {self.points.shape}")
 
     def rvs(self, *, random_state: np.random.Generator) -> FloatArray:
         """One of the points, chosen uniformly, shape ``(d,)``."""

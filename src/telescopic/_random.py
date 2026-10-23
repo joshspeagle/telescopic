@@ -19,22 +19,14 @@ PILOT = 2
 NORMAL = 0
 UNIFORM = 1
 
+# Replicate streams live under this element of the root's spawn key, far from the small
+# integers that SeedSequence.spawn gives the caller's own children ("tel" in ASCII).
+_BRANCH = 0x74656C
+
 
 def root_seed(rng: int | SeedSequence | Generator | None) -> SeedSequence:
-    """Normalise a SPEC 7 ``rng`` argument to the root seed of a run (spec section 6.1).
-
-    Parameters
-    ----------
-    rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
-        ``None`` draws fresh entropy from the operating system. A generator gives the
-        seed of four integers drawn from it, so the run depends only on the generator's
-        state, and passing the same generator twice gives two different runs.
-
-    Returns
-    -------
-    numpy.random.SeedSequence
-        The root seed. Its ``entropy`` and ``spawn_key`` reproduce the run.
-    """
+    # The root seed of a run from a SPEC 7 rng (spec section 6.1). A generator gives the
+    # seed of four integers drawn from it, so the run depends only on its state.
     if isinstance(rng, SeedSequence):
         return rng
     if isinstance(rng, Generator):
@@ -50,29 +42,22 @@ def root_seed(rng: int | SeedSequence | Generator | None) -> SeedSequence:
 
 
 def replicate_generator(root: SeedSequence, namespace: int, index: int) -> Generator:
-    """Return the generator of replicate ``index`` in ``namespace`` (spec section 6.1)."""
     seed = SeedSequence(
-        root.entropy, spawn_key=(*root.spawn_key, namespace, index), pool_size=root.pool_size
+        root.entropy,
+        spawn_key=(*root.spawn_key, _BRANCH, namespace, index),
+        pool_size=root.pool_size,
     )
     return Generator(PCG64DXSM(seed))
 
 
 class Streams:
-    """Buffered random numbers for the lanes of a lockstep batch (spec section 6.1).
-
-    The replicate in a lane draws its normals and its uniforms from two children of its
-    generator, each read in order. A request takes the lane's next unread numbers; when
-    too few remain, the buffer keeps them and is topped up. So a replicate's numbers
-    depend only on its generator and its own requests, never on the other lanes, the
-    batch size or the buffer width.
-
-    Parameters
-    ----------
-    n_lanes : int
-    width : int
-        Initial number of buffered values of each kind per lane. A request for more
-        than an eighth of a buffer widens it.
-    """
+    # Buffered random numbers for the lanes of a lockstep batch (spec section 6.1). The
+    # replicate in a lane reads its normals and its uniforms in order from two children
+    # of its generator. A request takes the lane's next unread numbers; when too few
+    # remain, the buffer keeps them and is topped up, so a replicate's numbers depend
+    # only on its generator and its own requests, never on the other lanes, the batch
+    # size or the buffer width (width: values of each kind per lane; a request for more
+    # than an eighth of a buffer widens it).
 
     def __init__(self, n_lanes: int, width: int = 512) -> None:
         self._buffers = [np.empty((n_lanes, width)) for _ in (NORMAL, UNIFORM)]
@@ -81,14 +66,13 @@ class Streams:
         self._sources: list[list[Generator]] = [[] for _ in range(n_lanes)]
 
     def assign(self, lane: int, generator: Generator) -> None:
-        """Give ``lane`` to a new replicate, whose buffers read ``generator.spawn(2)``."""
+        # A new replicate enters the lane; its buffers read generator.spawn(2).
         self._generators[lane] = generator
         self._sources[lane] = generator.spawn(2)
         for buffer, cursor in zip(self._buffers, self._cursors, strict=True):
             cursor[lane] = buffer.shape[1]
 
     def view(self, lanes: npt.ArrayLike) -> Draws:
-        """Random numbers for ``lanes``, one row per lane."""
         return Draws(self, np.asarray(lanes, dtype=np.intp))
 
     def _take(self, kind: int, lanes: IndexArray, size: int) -> FloatArray:

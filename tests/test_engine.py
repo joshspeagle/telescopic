@@ -3,7 +3,7 @@ import pytest
 
 from references import gaussian_log_prob
 from telescopic._random import MAIN, root_seed
-from telescopic.engine import Status, run
+from telescopic.engine import Status, merge, run
 from telescopic.estimators import averaging_times, correction_coefficients
 from telescopic.initial import Empirical, Normal
 from telescopic.kernels import RandomWalk, State
@@ -165,3 +165,14 @@ def test_the_run_records_its_evaluations_and_the_starts_outside_the_support():
     )
     assert replicates.n_log_prob == target.n_log_prob > 0
     assert 0 < len(replicates.zero_density) < 10
+
+
+def test_a_kernel_of_another_dimension_than_the_points_raises():
+    with pytest.raises(ValueError, match="kernel works in 1 dimensions"):
+        simulate(RandomWalk(np.eye(1)))
+
+
+def test_merging_refuses_parts_that_share_replicates():
+    part = simulate(n=3)
+    with pytest.raises(ValueError, match="share replicate indices"):
+        merge([part, part])

@@ -73,6 +73,10 @@ class RandomWalk(Kernel):
     def is_tuned(self) -> bool:
         return self.cov is not None
 
+    @property
+    def ndim(self) -> int | None:
+        return None if self.cov is None else len(self.cov)
+
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, BoolArray]:
         chol, _ = self._ready()
         x = state.x + matvec(chol, draws.normal(len(chol)))

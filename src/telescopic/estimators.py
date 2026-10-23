@@ -90,6 +90,31 @@ def unbiased_covariance(first: FloatArray, second: FloatArray) -> FloatArray:
     return covariance
 
 
+def unbiased_variance(first: FloatArray, second: FloatArray) -> FloatArray:
+    r"""Unbiased estimates of the variances of :math:`h` (spec R-EST-8).
+
+    The diagonal of :func:`unbiased_covariance`, without the off-diagonal cost:
+    :math:`\bar b_j - \bar a_j^2 + S_{a,jj}/R`.
+
+    Parameters
+    ----------
+    first : ndarray, shape (R, p)
+        The values :math:`a_r = \hat\pi_r(h)`.
+    second : ndarray, shape (p,)
+        The mean over replicates of :math:`\hat\pi_r(h^2)`.
+
+    Returns
+    -------
+    ndarray, shape (p,)
+    """
+    n = len(first)
+    if n < 2:
+        raise ValueError(f"an unbiased variance needs at least 2 replicates, not {n}")
+    mean = first.mean(axis=0)
+    variance: FloatArray = second - mean**2 + first.var(axis=0, ddof=1) / n
+    return variance
+
+
 def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike) -> FloatArray:
     r"""Quantiles of a signed measure on the line (spec section 3.4).
 
@@ -116,6 +141,6 @@ def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike)
     unique, inverse = np.unique(values, return_inverse=True)
     mass = np.bincount(inverse.ravel(), weights=weights)
     cdf = np.clip(isotonic_regression(np.cumsum(mass)).x, 0.0, 1.0)
-    position = np.searchsorted(cdf, q, side="left")
+    position = np.searchsorted(cdf, q)
     quantiles: FloatArray = unique[np.minimum(position, len(unique) - 1)]
     return quantiles

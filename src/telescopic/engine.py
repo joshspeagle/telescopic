@@ -202,6 +202,9 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
         "distance_owner": ("distance_owner", "distance_time", "distance"),
         "zero_density": ("zero_density",),
     }
+    index = np.concatenate([part.index for part in parts])
+    if len(np.unique(index)) != len(index):
+        raise ValueError("the parts share replicate indices; each replicate must run once")
     columns: dict[str, Any] = {}
     for key, names in groups.items():
         order = np.argsort(np.concatenate([getattr(part, key) for part in parts]), kind="stable")

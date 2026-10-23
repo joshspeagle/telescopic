@@ -11,7 +11,7 @@ import numpy.typing as npt
 from telescopic._types import FloatArray, IntArray
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class SignedMeasure:
     r"""The signed measures :math:`\hat\pi_r` of :math:`R` replicates (spec R-EST-6, R-OUT-2).
 
@@ -56,7 +56,9 @@ class SignedMeasure:
                 f"h must map atoms of shape (n, d) to shape (n,) or (n, p); for n = "
                 f"{len(self.atoms)} it returned shape {values.shape}"
             )
-        columns = values.reshape(len(values), -1) * self.weights[:, None]
+        columns = (
+            values.reshape(len(values), int(np.prod(values.shape[1:]))) * self.weights[:, None]
+        )
         sums = np.stack(
             [
                 np.bincount(self.replicate, weights=column, minlength=self.n_replicates)
