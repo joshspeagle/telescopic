@@ -6,11 +6,13 @@ from collections.abc import Sequence
 
 import numpy as np
 import numpy.typing as npt
+from numpy.random import Generator, SeedSequence
 
 from telescopic._random import Draws
-from telescopic._types import BoolArray, IndexArray
+from telescopic._types import BoolArray, Distribution, IndexArray
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
+from telescopic.tuning import PilotRun, TuningReport, adaptive_metropolis
 
 
 class Mixture(Kernel):
@@ -52,6 +54,26 @@ class Mixture(Kernel):
     @property
     def ndim(self) -> int | None:
         return next((kernel.ndim for kernel in self.kernels if kernel.ndim is not None), None)
+
+    def tune(
+        self,
+        target: Target,
+        initial: Distribution,
+        rng: int | SeedSequence | Generator | None = None,
+        *,
+        pilot: PilotRun | None = None,
+    ) -> tuple[Kernel, TuningReport | None]:
+        """Tune the untuned components on one set of pilot chains (see :meth:`Kernel.tune`).
+
+        The report carries the largest weight ratio of any independence component.
+        """
+        if self.is_tuned:
+            return self, None
+        pilot = adaptive_metropolis(target, initial, rng) if pilot is None else pilot
+        tuned = [kernel.tune(target, initial, rng, pilot=pilot) for kernel in self.kernels]
+        ratios = [report.max_weight_ratio for _, report in tuned if report is not None]
+        ratio = max((r for r in ratios if r is not None), default=None)
+        return Mixture([kernel for kernel, _ in tuned], self.weights), pilot.report(ratio)
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, BoolArray]:
         component = self._choose(draws)

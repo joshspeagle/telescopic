@@ -7,10 +7,12 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
+from numpy.random import Generator, SeedSequence
 
 from telescopic._random import Draws
-from telescopic._types import BoolArray, FloatArray
+from telescopic._types import BoolArray, Distribution, FloatArray
 from telescopic.target import Target
+from telescopic.tuning import PilotRun, TuningReport
 
 
 @dataclass
@@ -74,6 +76,33 @@ class Kernel(ABC):
     def ndim(self) -> int | None:
         """The dimension that the kernel's parameters fix, or ``None``."""
         return None
+
+    def tune(
+        self,
+        target: Target,
+        initial: Distribution,
+        rng: int | SeedSequence | Generator | None = None,
+        *,
+        pilot: PilotRun | None = None,
+    ) -> tuple[Kernel, TuningReport | None]:
+        """A copy with the unset parameters tuned on pilot chains (spec R-TUNE-1).
+
+        Parameters
+        ----------
+        target : Target
+        initial : object with ``rvs(random_state=generator)``
+        rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
+            Seed of the pilot chains (tuning namespace, spec section 6.1).
+        pilot : PilotRun, optional
+            Pilot chains already run, from :func:`telescopic.tuning.adaptive_metropolis`.
+
+        Returns
+        -------
+        kernel : Kernel
+        report : TuningReport or None
+            ``None``, with the kernel itself, when there is nothing to tune.
+        """
+        return self, None
 
     def init_state(self, target: Target, x: FloatArray) -> State:
         """Evaluate the target at the rows of ``x``, with gradients if the kernel needs them.

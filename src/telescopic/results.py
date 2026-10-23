@@ -17,6 +17,7 @@ from telescopic._types import FloatArray
 from telescopic.engine import Replicates
 from telescopic.estimators import unbiased_covariance, unbiased_variance, weighted_quantile
 from telescopic.measure import SignedMeasure
+from telescopic.tuning import TuningReport
 from telescopic.warnings import ConvergenceWarning
 
 
@@ -76,8 +77,10 @@ class Result:
         The frozen kernel and the initial distribution, for the record.
     seed : numpy.random.SeedSequence, optional
         The root seed, whose ``entropy`` and ``spawn_key`` reproduce the run.
-    tuning, pilot : optional
-        Reports of the pilot runs.
+    tuning : TuningReport, optional
+        The report of the tuning pilot.
+    pilot : ndarray, shape (R0,), optional
+        The pilot's lag-1 meeting times, from which ``k`` was chosen.
     interrupted : bool
         Whether the run was stopped early (spec section 6.5).
 
@@ -112,8 +115,8 @@ class Result:
         kernel: Any = None,
         initial: Any = None,
         seed: SeedSequence | None = None,
-        tuning: Any = None,
-        pilot: Any = None,
+        tuning: TuningReport | None = None,
+        pilot: FloatArray | None = None,
         interrupted: bool = False,
     ) -> None:
         met = np.isfinite(replicates.meeting_time)

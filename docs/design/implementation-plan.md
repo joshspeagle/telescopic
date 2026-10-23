@@ -30,10 +30,10 @@ telescopic/
 │   ├── estimators.py         # lag weights, thinning coefficients, unbiased covariance, quantiles, histograms
 │   ├── engine.py             # lockstep lanes with refill; Replicate records
 │   ├── parallel.py           # in-process and pool execution of index chunks; worker set-up; interrupts
-│   ├── tuning.py             # adaptive Metropolis pilot, dual averaging, choose_kml
+│   ├── tuning.py             # adaptive Metropolis pilot, TuningReport, dual averaging, choose_kml
 │   ├── measure.py            # SignedMeasure
 │   ├── diagnostics.py        # TV and W1 bounds, tail index, variance shares, warning checks
-│   ├── results.py            # Result, Estimate, Summary, MeetingTimes, TuningReport
+│   ├── results.py            # Result, Estimate, Summary
 │   ├── sampler.py            # CoupledSampler, sample
 │   ├── io.py                 # versioned .npz save and load
 │   ├── plotting.py           # matplotlib helpers (optional dependency)
@@ -86,7 +86,7 @@ Kernel
   needs_grad: bool
   step(target, state, draws) -> (state, accepted (n,))
   coupled_step(target, sx, sy, draws) -> (sx, sy)
-  tune(target, initial, rng, **options) -> (kernel, TuningReport)    # returns self when already tuned
+  tune(target, initial, rng=None, *, pilot=None) -> (kernel, TuningReport | None)   # (self, None) when tuned
   init_state(target, x) -> State                                   # evaluates log_prob (and grad if needed)
 ```
 

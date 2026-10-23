@@ -48,3 +48,27 @@ Append only. One entry per working session or milestone.
   `lag_weights` was removed: the engine needs only the thinned coefficients, and the
   tests anchor them to JOA20 equation 2.1. 146 fast tests in 18 s, coverage 96%. Nine
   mutants of the engine and the weights were all caught by the new tests.
+
+## 2026-10-23: M1 to M3 reviews, M4, the M0 to M4 code review, M5
+
+- M1 and M2 review (`notes/reviews/m1-m2.md`, 5529215): `State.take` returned views, so
+  `Mixture` wrote into its callers' states; kernels dropped carried gradients, which
+  would bias a mixture of MALA and RWMH (z = +20 on E[x^2], measured by the reviewer).
+- M3 review (`notes/reviews/m3.md`, 99768aa): engine warnings never reach the parent
+  from a pool worker, so the engine records facts and reports to a monitor, and the
+  sampler warns. Censored meeting times are `inf`.
+- M4 implemented (0e8703b): `Result`, estimates, quantiles, histograms, TV and W1
+  bounds, the warnings of spec §7.4 and the summary.
+- `/code-review` of M0 to M4 at high effort (`notes/reviews/code-review-m0-m4.md`,
+  3c8b0fd): 22 findings. One was high: a kernel of another dimension than the target ran
+  silently, broadcast by `einsum`; kernels now report `ndim` and `init_state` refuses a
+  mismatch.
+- M5 implemented: adaptive Metropolis pilots (4 chains, max(2000, 200d) steps, second
+  halves), `Kernel.tune` with a shared pilot (DECISIONS #5), `choose_kml`,
+  `CoupledSampler` and `sample`, a sampler's settings fixed by its first run, `max_iter`
+  included (DECISIONS #4), and the warning on tuning chains that disagree,
+  R-hat > sqrt 2 (DECISIONS #6). The test plan's adaptive Metropolis criterion changed:
+  over 20 seeds at d = 5 and condition number 100, the pilot covariance's relative
+  Frobenius error had median 0.14 and maximum 0.25, against a bound of 0.20; the
+  whitened condition number had median 1.48 and maximum 1.75, and the test bounds it by
+  4. Pools and progress (spec §8.1) come with M7.

@@ -187,7 +187,8 @@ Kernel-specific tests:
 
 **Tuning**
 - **Adaptive Metropolis:**
-  - on a correlated Gaussian ($d = 5$, condition number 100), the pilot covariance is within 20% of the truth in Frobenius norm;
+  - on a correlated Gaussian ($d = 5$, condition number 100), whitening by the pilot covariance brings the condition number below 4. (Over 20 seeds it was at most 1.75, while the covariance's Frobenius error reached 25%, so the first draft's 20% bound failed on some seeds; the shape, not the norm, sets the efficiency of RWMH);
+  - the chains' $\hat R$ is below 1.1 there, and exceeds $\sqrt 2$ for chains started in two separated modes;
   - the acceptance rate is within 0.05 of 0.234.
 - **`choose_kml`:**
   - gives $k$ = the inverted-CDF $q_{0.99}(\tau - 1)$, $L = k$ and $m = 10k$;
@@ -199,7 +200,7 @@ Kernel-specific tests:
 **`CoupledSampler`**
 - `run` tunes and pilots when needed, and records the reports.
 - A second `run` continues the indices; with the same seed, two runs of 50 equal one run of 100.
-- Changing `k`, `m`, `lag` or `thin` between runs raises.
+- Changing `k`, `m`, `lag`, `thin` or `max_iter` between runs raises.
 - Pilot replicates never appear in the measure.
 
 **API**

@@ -285,11 +285,12 @@ A kernel is a picklable configuration object with:
 needs_grad: bool
 step(target, state, draws) -> (state, accepted)            # one transition for n chains
 coupled_step(target, sx, sy, draws) -> (sx, sy)             # one coupled transition for n pairs
-tune(target, initial, rng, **options) -> (kernel, report)   # only if it has unset parameters
+tune(target, initial, rng=None, *, pilot=None) -> (kernel, report)   # (self, None) if nothing is unset
 ```
 
 - **States:** `State(x, log_prob, grad)` are batch-first: `x` is `(n, d)`, `log_prob` is `(n,)`, and `grad` is `(n, d)` or `None`. A kernel returns states with the fields of its input states, valid at the returned positions, so a kernel that needs no gradient still evaluates one for states that carry it: mixtures of gradient and gradient-free kernels then keep valid caches. Kernels never modify their input states.
 - **Randomness:** `draws` supplies random numbers row by row from each replicate's stream (§6.1). Its `normal(d)`, `uniform()`, `log_uniform()` and `generator(i)` give `(n, d)` normals, `(n,)` uniforms and their logarithms, and row `i`'s `numpy.random.Generator`.
+- **Tuning:** `tune` returns a tuned copy. `pilot` passes adaptive Metropolis chains already run, so a `Mixture` tunes its components on one pilot (DECISIONS #5).
 - **R-KER-2:** each marginal of `coupled_step` has exactly the law of `step`.
 - **R-KER-3:** the engine declares a meeting when the returned positions of a pair are bitwise equal (R-EST-2). A coupling that makes the two proposals identical gives $Y$ a copy of $X$'s proposal and its cached log-density, never a recomputation, so that equality is exact.
 - **R-KER-4:** the built-in couplings keep equal states equal. The engine does not rely on this: it never applies `coupled_step` to an equal pair.
@@ -349,7 +350,7 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 - **Pilot:** 4 independent adaptive Metropolis chains from $\pi_0$, each running $\max(2000, 200d)$ steps. They use Haario-type covariance adaptation with global-scale Robbins–Monro steps toward acceptance 0.234 (Andrieu & Thoms 2008, Algorithm 4).
 - **Covariance:** pooled over the second halves of the chains, plus a ridge of $10^{-10}$ times the mean variance.
 - **Scale:** the adapted scale.
-- **Report:** the pilot acceptance rates, and a warning if the chains disagree by more than their spread (a sign of multimodality).
+- **Report:** the pilot acceptance rates and $\hat R$ per coordinate. A `ConvergenceWarning` when the chains disagree: $\hat R > \sqrt 2$ in some coordinate, where the chain means spread more widely than the chains themselves, a sign of several modes (DECISIONS #6).
 
 ### 5.4 MALA (R-KER-MALA)
 
@@ -586,7 +587,7 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
 
    - `run` tunes and runs the pilot if they have not been done.
    - Each call continues the replicate indices and returns the cumulative result.
-   - Changing `k`, `m`, `lag` or `thin` between calls raises `ValueError`.
+   - Changing `k`, `m`, `lag`, `thin` or `max_iter` between calls raises `ValueError` (DECISIONS #4).
 3. **Building blocks:** `Target`, `State`, `telescopic.kernels.*`, `telescopic.couplings.*`, `telescopic.engine.run(...)`, `telescopic.estimators.*`, `telescopic.diagnostics.*` and `SignedMeasure`.
 
 ### 8.2 Conventions (R-API-2)

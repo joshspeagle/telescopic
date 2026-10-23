@@ -6,10 +6,11 @@ from typing import Literal
 
 import numpy as np
 import numpy.typing as npt
+from numpy.random import Generator, SeedSequence
 
 from telescopic._linalg import covariance, inverse_lower, matvec
 from telescopic._random import Draws
-from telescopic._types import BoolArray, FloatArray
+from telescopic._types import BoolArray, Distribution, FloatArray
 from telescopic.couplings import maximal, reflection_maximal
 from telescopic.kernels.base import (
     Kernel,
@@ -20,6 +21,7 @@ from telescopic.kernels.base import (
     select,
 )
 from telescopic.target import Target
+from telescopic.tuning import PilotRun, TuningReport, adaptive_metropolis
 
 
 class RandomWalk(Kernel):
@@ -76,6 +78,24 @@ class RandomWalk(Kernel):
     @property
     def ndim(self) -> int | None:
         return None if self.cov is None else len(self.cov)
+
+    def tune(
+        self,
+        target: Target,
+        initial: Distribution,
+        rng: int | SeedSequence | Generator | None = None,
+        *,
+        pilot: PilotRun | None = None,
+    ) -> tuple[Kernel, TuningReport | None]:
+        """Tune ``cov``, and the scale unless given, on adaptive Metropolis chains.
+
+        Spec section 5.3; see :meth:`Kernel.tune` for the parameters.
+        """
+        if self.is_tuned:
+            return self, None
+        pilot = adaptive_metropolis(target, initial, rng) if pilot is None else pilot
+        scale = pilot.scale if self.scale is None else self.scale
+        return RandomWalk(pilot.cov, scale=scale, coupling=self.coupling), pilot.report()
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, BoolArray]:
         chol, _ = self._ready()

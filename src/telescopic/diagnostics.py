@@ -11,6 +11,7 @@ from telescopic._types import FloatArray
 
 if TYPE_CHECKING:
     from telescopic.results import Result
+    from telescopic.tuning import TuningReport
 
 
 def tv_bound(meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike) -> FloatArray:
@@ -193,6 +194,9 @@ def issues(result: Result) -> list[str]:
                 f"the meeting times look heavy-tailed (tail index {alpha:.2f} < 2), so the "
                 "variance of the estimates may be infinite"
             )
+    disagreement = tuning_disagreement(result.tuning)
+    if disagreement:
+        messages.append(disagreement)
     threshold = max(10_000, 10 * max(result.lag, result.m))
     if np.any(met > threshold):
         messages.append(
@@ -200,3 +204,28 @@ def issues(result: Result) -> list[str]:
             "be heavy-tailed"
         )
     return messages
+
+
+def tuning_disagreement(tuning: TuningReport | None) -> str | None:
+    r"""The warning about tuning chains that disagree (spec section 5.3), or ``None``.
+
+    The chains disagree when, in some coordinate, their means spread more widely than the
+    chains themselves: :math:`\hat R > \sqrt 2`, a sign of several modes.
+
+    Parameters
+    ----------
+    tuning : TuningReport or None
+        The report of the tuning pilot; ``None`` when nothing was tuned.
+
+    Returns
+    -------
+    str or None
+    """
+    if tuning is None or not np.max(tuning.rhat) > np.sqrt(2):
+        return None
+    return (
+        f"the tuning chains disagree (R-hat up to {np.max(tuning.rhat):.2f}): the target "
+        "may have several modes, which make meeting times heavy-tailed, and pairs that "
+        "never leave one mode miss the others; use an initial distribution that covers "
+        "every mode"
+    )

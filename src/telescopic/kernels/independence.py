@@ -6,13 +6,15 @@ import math
 
 import numpy as np
 import numpy.typing as npt
+from numpy.random import Generator, SeedSequence
 from scipy.special import gammaln
 
 from telescopic._linalg import covariance, inverse_lower, matvec
 from telescopic._random import Draws
-from telescopic._types import BoolArray, FloatArray
+from telescopic._types import BoolArray, Distribution, FloatArray
 from telescopic.kernels.base import Kernel, State, evaluate, log_ratio, select
 from telescopic.target import Target
+from telescopic.tuning import PilotRun, TuningReport, adaptive_metropolis
 
 
 class MultivariateT:
@@ -101,6 +103,30 @@ class Independence(Kernel):
     @property
     def ndim(self) -> int | None:
         return None if self.proposal is None else len(self.proposal.mean)
+
+    def tune(
+        self,
+        target: Target,
+        initial: Distribution,
+        rng: int | SeedSequence | Generator | None = None,
+        *,
+        pilot: PilotRun | None = None,
+    ) -> tuple[Kernel, TuningReport | None]:
+        r"""Fit the default proposal on adaptive Metropolis chains (spec section 5.6, D-25).
+
+        The proposal is a Student-:math:`t_5` located at the pilot mean, with the pilot
+        covariance as its scale matrix. The report gives the largest weight
+        :math:`\pi/q` of the pilot's draws relative to their median. See
+        :meth:`Kernel.tune` for the parameters.
+        """
+        if self.is_tuned:
+            return self, None
+        pilot = adaptive_metropolis(target, initial, rng) if pilot is None else pilot
+        proposal = MultivariateT(pilot.mean, pilot.cov, df=5)
+        draws = pilot.samples.reshape(-1, pilot.samples.shape[2])
+        log_weights = pilot.log_prob.ravel() - proposal.log_density(draws)
+        ratio = float(np.exp(np.max(log_weights) - np.median(log_weights)))
+        return Independence(proposal), pilot.report(max_weight_ratio=ratio)
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, BoolArray]:
         q = self._ready()
