@@ -12,7 +12,6 @@ extensions = [
     "myst_nb",
     "numpydoc",
     "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
 ]
@@ -20,13 +19,13 @@ extensions = [
 myst_enable_extensions = ["amsmath", "colon_fence", "deflist", "dollarmath"]
 myst_heading_anchors = 3
 
-# Tutorials are MyST notebooks executed at build time; a failing cell fails the build.
-nb_execution_mode = "cache"
+# Tutorials are MyST notebooks executed at every build, since a cache keyed on their cells
+# would keep outputs computed by an older package; a failing cell fails the build.
+nb_execution_mode = "force"
 nb_execution_timeout = 300
 nb_execution_raise_on_error = True
 
 numpydoc_show_class_members = False
-autosummary_generate = True
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),

@@ -225,7 +225,7 @@ These add to the rules of `CLAUDE.md`.
 
 ## 5. Documentation plan
 
-- **Toolchain:** Sphinx, MyST-NB (MyST Markdown notebooks executed at build time, cached), numpydoc, furo and sphinx-copybutton.
+- **Toolchain:** Sphinx, MyST-NB (MyST Markdown notebooks executed at every build, DECISIONS #42), numpydoc, furo and sphinx-copybutton.
 - **Tutorials:** each runs in under 2 minutes on a laptop CPU.
 - **Pages:**
   1. *Getting started*: install, the README example expanded, and what the summary means.
@@ -247,7 +247,7 @@ These add to the rules of `CLAUDE.md`.
      5. Gibbs couplings: the pump-failure model.
      6. Parallel runs and compute budgets.
      7. When unbiased is not enough: multimodal targets and heavy tails, with the warnings they raise.
-  5. *API reference* (autosummary).
+  5. *API reference* (autodoc).
   6. *Design notes*: the spec, the plans and the landscape report.
   7. *Changelog, contributing, citing.*
 
