@@ -11,3 +11,15 @@ Each item has the default that work proceeds on until Josh answers.
   `_processes` or `size` (such as dask's executors) are sized by the CPUs this process may
   use, so a cluster's extra workers can sit idle. Default: keep the guess. Alternative: an
   argument for it, as dynesty's `queue_size`.
+- [ ] **HMC's automatic step on targets that are not log-concave.** Dual averaging toward
+  acceptance 0.8 suits ordinary HMC, but its coupled chains then rarely meet on the
+  banana from U[-5, 5]^2: 88 of 100 pilot pairs were unmet after 10^5 iterations, so
+  `sample(kernel="hmc")` cannot choose k there. A target acceptance of 0.95, or a meeting
+  scale of half the step, left 59 to 94 of 100 unmet at 20,000; steps near 0.02 couple
+  (mean meeting time 160), and on the Gaussian every variant meets within a median of 32
+  (`notes/experiments/m9_hmc_meeting.out`). Choosing the step from pilot meeting times, as
+  Heng & Jacob (2019) advise, would be a new tuning procedure (DECISIONS #1). Default:
+  keep the defaults, which couple on log-concave targets, and document that other targets
+  need an explicit step; the error of `choose_k` already says to give a better-tuned
+  kernel.
+
