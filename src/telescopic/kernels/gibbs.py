@@ -32,8 +32,8 @@ class Gibbs(Kernel):
       uniform goes through each ``ppf``. For a block of several coordinates, or of one
       without ``ppf``, ``"crn"`` takes each conditional to be the normal with its ``mean``
       and ``cov``, whatever its type, and common standard normals go through a square
-      root of each ``cov``, which may be singular. A conditional with ``mean`` and ``cov``
-      that is not normal would get the wrong law;
+      root of each ``cov``, a matrix of the block's size that may be singular. A
+      conditional with ``mean`` and ``cov`` that is not normal would get the wrong law;
     - ``"two-scale"``: common random numbers for pairs farther apart than ``threshold``
       at the start of the sweep, the maximal coupling for the others (Biswas, Bhattacharya,
       Jacob & Johndrow 2022).
@@ -215,12 +215,11 @@ def _common(p: list[Any], q: list[Any], draws: Draws, size: int) -> tuple[Any, .
             "coupling='crn' needs conditionals with ppf for blocks of one coordinate, or "
             "multivariate normal ones with mean and cov"
         )
-    z = draws.normal(len(np.atleast_1d(p[0].mean)))
+    z = draws.normal(size)
     return tuple(
         np.array(
             [
-                np.atleast_1d(c.mean)
-                + square_root("a conditional's cov", np.atleast_2d(c.cov)) @ row
+                np.atleast_1d(c.mean) + square_root("a conditional's cov", c.cov, size) @ row
                 for c, row in zip(side, z, strict=True)
             ]
         )

@@ -705,6 +705,8 @@ def test_crn_gibbs_couplings_draw_from_a_singular_multivariate_normal():
         # A correlation of 1.5 at sd 1e-4, beside a coordinate of sd 1.
         ([[1.0, 0.0, 0.0], [0.0, 1e-8, 1.5e-8], [0.0, 1.5e-8, 1e-8]], "positive semi-definite"),
         ([[1.0, 0.9], [0.2, 1.0]], "symmetric"),
+        # Variances, which the symmetry test broadcast to a matrix of ones.
+        ([1.0, 1.0], r"square matrix, not shape \(2,\)"),
     ],
 )
 def test_crn_gibbs_couplings_refuse_an_invalid_covariance(cov, message):

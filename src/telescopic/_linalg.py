@@ -28,14 +28,7 @@ def covariance(
 ) -> tuple[FloatArray, FloatArray]:
     # A validated covariance matrix, of size ndim if given, and its lower Cholesky
     # factor; errors name the argument.
-    matrix = np.array(cov, dtype=np.float64, ndmin=2)
-    if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
-        raise ValueError(f"{name} must be a square matrix, not shape {matrix.shape}")
-    if ndim is not None and len(matrix) != ndim:
-        raise ValueError(f"{name} must have shape {(ndim, ndim)}, not {matrix.shape}")
-    if not np.all(np.isfinite(matrix)):
-        raise ValueError(f"{name} must be finite")
-    matrix = _symmetric(name, matrix)
+    matrix = _symmetric(name, cov, ndim)
     try:
         chol = np.linalg.cholesky(matrix)
     except np.linalg.LinAlgError:
@@ -43,12 +36,13 @@ def covariance(
     return matrix, chol
 
 
-def square_root(name: str, cov: FloatArray) -> FloatArray:
-    # A matrix A with A A^T = cov for a covariance that may be singular: the Cholesky
-    # factor, or else A = D V sqrt(Lambda) from the eigendecomposition of the correlation
-    # matrix D^-1 cov D^-1, whose eigenvalues that rounding made negative count as 0. The
-    # test is on correlations, so it does not depend on the coordinates' scales.
-    matrix = _symmetric(name, cov)
+def square_root(name: str, cov: npt.ArrayLike, ndim: int) -> FloatArray:
+    # A matrix A with A A^T = cov for a covariance of size ndim that may be singular: the
+    # Cholesky factor, or else A = D V sqrt(Lambda) from the eigendecomposition of the
+    # correlation matrix D^-1 cov D^-1, whose eigenvalues that rounding made negative
+    # count as 0. The test is on correlations, so it does not depend on the coordinates'
+    # scales.
+    matrix = _symmetric(name, cov, ndim)
     try:
         return np.linalg.cholesky(matrix)
     except np.linalg.LinAlgError:
@@ -61,9 +55,17 @@ def square_root(name: str, cov: FloatArray) -> FloatArray:
         return root
 
 
-def _symmetric(name: str, matrix: FloatArray) -> FloatArray:
-    # The symmetric part of a matrix symmetric up to rounding: |C_ij - C_ji| <=
-    # 1e-8 sqrt(C_ii C_jj), a test that does not depend on the coordinates' scales.
+def _symmetric(name: str, cov: npt.ArrayLike, ndim: int | None) -> FloatArray:
+    # The symmetric part of a finite square matrix, of size ndim if given, symmetric up
+    # to rounding: |C_ij - C_ji| <= 1e-8 sqrt(C_ii C_jj), a test that does not depend on
+    # the coordinates' scales.
+    matrix = np.array(cov, dtype=np.float64, ndmin=2)
+    if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
+        raise ValueError(f"{name} must be a square matrix, not shape {np.shape(cov)}")
+    if ndim is not None and len(matrix) != ndim:
+        raise ValueError(f"{name} must have shape {(ndim, ndim)}, not {matrix.shape}")
+    if not np.all(np.isfinite(matrix)):
+        raise ValueError(f"{name} must be finite")
     root = np.sqrt(np.abs(np.diag(matrix)))
     if not np.all(np.abs(matrix - matrix.T) <= 1e-8 * np.outer(root, root)):
         raise ValueError(f"{name} must be symmetric")
