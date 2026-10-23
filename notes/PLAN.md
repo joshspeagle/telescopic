@@ -50,5 +50,8 @@ replicates record their run's seed and settings, and `engine.run` takes `rng`
   tests' power (mutants); and the documentation against the code.
 - Performance left open by M9: the pool benchmark with started workers, `sample()`'s fixed
   64 lanes (a second wave at R = 100), and the point-by-point overhead at one lane.
+- Found while writing the documentation: `Result.summary(level)` changes nothing;
+  `diagnostics.issues` reports a slow pair only once it met, while the live warning also
+  counts censored ones; `import telescopic` does not import `telescopic.examples`.
 - The checkpoint report to Josh: what exists, what was measured, the open questions.
 

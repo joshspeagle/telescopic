@@ -230,3 +230,17 @@ Append only. One entry per working session or milestone.
   overhead 90.7 µs against 40, a 1 ms log-density 1.98 times faster on 4 workers against
   3.5, and the pipeline's pilots 31% to 39% of the main run against 15%, all missed. The
   automatic MALA, like HMC, cannot choose k on the banana.
+
+## 2026-10-23: M10
+
+- The documentation: the theory page, the README, Getting started, eight user-guide pages,
+  seven tutorials, the API reference and a citing page. Five writers drafted the guide and
+  the tutorials from briefs; every line was read against the code before commit. The
+  pages with code are MyST-NB notebooks run when the site is built, about 2 minutes 20
+  seconds in all with warnings as errors; the figures that the prose takes from outputs
+  are glued to them. The docs group gains emcee and cloudpickle (DECISIONS #37).
+- The writers found the spec and the code apart in five places, now aligned in the spec,
+  and two should-level items never built, now deferred (DECISIONS #38); three docstrings
+  were corrected. They also found that the automatic MALA can fail on a log-concave
+  logistic regression started ten times wider than the fit (QUESTIONS), and three small
+  code issues left for M11 (`notes/PLAN.md`).
