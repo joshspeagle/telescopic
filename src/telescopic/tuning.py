@@ -3,17 +3,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import cached_property
 
 import numpy as np
 import numpy.typing as npt
-from numpy.random import Generator, SeedSequence
 
+from telescopic._linalg import matvec
 from telescopic._random import TUNING, Streams, replicate_generator, root_seed
-from telescopic._types import Distribution, FloatArray
+from telescopic._types import Distribution, FloatArray, Seed
 from telescopic.initial import draw
 from telescopic.target import Target
 
 TARGET_ACCEPTANCE = 0.234
+N_CHAINS = 4
 
 
 @dataclass(frozen=True)
@@ -24,9 +26,7 @@ class TuningReport:
     ----------
     mean, cov : ndarray, shapes (d,) and (d, d)
         Mean and covariance of the pilot chains' second halves, pooled.
-    scale : float
-        The adapted proposal scale: the proposal covariance is ``scale**2 * cov``.
-    acceptance : ndarray, shape (n_chains,)
+    acceptance : ndarray, shape (4,)
         Acceptance rates of the chains' second halves.
     rhat : ndarray, shape (d,)
         Gelman-Rubin :math:`\hat R` of the second halves; well above 1 when the chains
@@ -40,7 +40,6 @@ class TuningReport:
 
     mean: FloatArray
     cov: FloatArray
-    scale: float
     acceptance: FloatArray
     rhat: FloatArray
     n_steps: int
@@ -53,27 +52,24 @@ class PilotRun:
 
     Attributes
     ----------
-    samples : ndarray, shape (n_chains, n, d)
-    log_prob : ndarray, shape (n_chains, n)
-    acceptance : ndarray, shape (n_chains,)
-    log_scale : ndarray, shape (n_chains,)
-        The final adapted :math:`\\log\\lambda` of each chain.
+    samples : ndarray, shape (4, n, d)
+    log_prob : ndarray, shape (4, n)
+    acceptance : ndarray, shape (4,)
     n_steps : int
     """
 
     samples: FloatArray
     log_prob: FloatArray
     acceptance: FloatArray
-    log_scale: FloatArray
     n_steps: int
 
-    @property
+    @cached_property
     def mean(self) -> FloatArray:
         """The pooled mean, shape ``(d,)``."""
         mean: FloatArray = self.samples.reshape(-1, self.samples.shape[2]).mean(axis=0)
         return mean
 
-    @property
+    @cached_property
     def cov(self) -> FloatArray:
         """The pooled covariance, plus a ridge of 1e-10 times the mean variance, ``(d, d)``."""
         pooled = self.samples.reshape(-1, self.samples.shape[2])
@@ -81,12 +77,7 @@ class PilotRun:
         ridged: FloatArray = cov + 1e-10 * np.mean(np.diag(cov)) * np.eye(len(cov))
         return ridged
 
-    @property
-    def scale(self) -> float:
-        """The proposal scale :math:`\\sqrt\\lambda`, from the chains' geometric mean."""
-        return float(np.exp(0.5 * self.log_scale.mean()))
-
-    @property
+    @cached_property
     def rhat(self) -> FloatArray:
         """Gelman-Rubin :math:`\\hat R` of each coordinate, shape ``(d,)``."""
         n = self.samples.shape[1]
@@ -98,46 +89,41 @@ class PilotRun:
     def report(self, max_weight_ratio: float | None = None) -> TuningReport:
         """The :class:`TuningReport` of this run."""
         return TuningReport(
-            self.mean,
-            self.cov,
-            self.scale,
-            self.acceptance,
-            self.rhat,
-            self.n_steps,
-            max_weight_ratio,
+            self.mean, self.cov, self.acceptance, self.rhat, self.n_steps, max_weight_ratio
         )
 
 
 def adaptive_metropolis(
     target: Target,
     initial: Distribution,
-    rng: int | SeedSequence | Generator | None = None,
+    rng: Seed = None,
     *,
-    n_chains: int = 4,
     n_steps: int | None = None,
 ) -> PilotRun:
-    r"""Independent adaptive Metropolis chains with global scaling (spec section 5.3).
+    r"""Four adaptive Metropolis chains that pool their adaptation (spec section 5.3).
 
-    Each chain starts from ``initial``, proposes :math:`x' \sim \mathcal N(x, \lambda\Sigma)`,
-    and after step :math:`t = 1, 2, \dots` adapts, with :math:`\gamma_t = (t + 1)^{-0.6}`
-    and the acceptance probability :math:`\alpha_t`,
+    Chain :math:`c` proposes :math:`x' \sim \mathcal N(x_c, \lambda_c\Sigma)`. After step
+    :math:`t = 1, 2, \dots` its scale moves toward an acceptance rate of 0.234, and the
+    mean and covariance become running averages of every chain's states:
 
     .. math::
-        \log\lambda \mathrel{+}= \gamma_t(\alpha_t - 0.234), \quad
-        \mu \mathrel{+}= \gamma_t(x - \mu), \quad
-        \Sigma \mathrel{+}= \gamma_t\big((x - \mu_{\rm old})(x - \mu_{\rm old})^\top - \Sigma\big)
+        \log\lambda_c \mathrel{+}= \frac{\alpha_{c,t} - 0.234}{(t + 1)^{0.6}}, \quad
+        \mu \mathrel{+}= \frac{\bar\delta}{t + 1}, \quad
+        \Sigma \mathrel{+}= \frac{1}{t + 1}\Big(\frac14\sum_c \delta_c\delta_c^\top
+        - \Sigma\Big),
 
-    (Andrieu & Thoms 2008, section 5, after Haario, Saksman & Tamminen 2001), from
-    :math:`\lambda = 2.38^2/d` and :math:`\Sigma = I`. Chain ``i`` draws from replicate
-    ``i`` of the tuning namespace (spec section 6.1).
+    with :math:`\delta_c = x_c - \mu`, from :math:`\lambda_c = 2.38^2/d`, the mean of the
+    starting points and the diagonal of the variances of 100 draws from ``initial``
+    (Haario, Saksman & Tamminen 2001, with the global scales of Andrieu & Thoms 2008,
+    section 5, pooled across chains as in Craiu, Rosenthal & Yang 2009). Chain ``i``
+    starts from the first of its 25 draws, and draws from replicate ``i`` of the tuning
+    namespace (spec section 6.1).
 
     Parameters
     ----------
     target : Target
     initial : object with rvs(random_state=generator)
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
-    n_chains : int
-        At least 2, for :math:`\hat R`.
     n_steps : int, optional
         Steps per chain, at least 3; ``max(2000, 200 d)`` by default.
 
@@ -148,62 +134,57 @@ def adaptive_metropolis(
 
     Notes
     -----
-    Cost: ``n_chains * n_steps`` log-density evaluations and ``n_steps`` batched
-    Cholesky factorisations.
+    Cost: ``4 n_steps`` log-density evaluations and ``n_steps`` Cholesky factorisations.
     """
-    if n_chains < 2:
-        raise ValueError(f"n_chains must be at least 2, not {n_chains}")
     root = root_seed(rng)
-    generators = [replicate_generator(root, TUNING, i) for i in range(n_chains)]
-    x = np.array([draw(initial, generator) for generator in generators])
-    d = x.shape[1]
+    generators = [replicate_generator(root, TUNING, i) for i in range(N_CHAINS)]
+    points = np.array([[draw(initial, generator) for _ in range(25)] for generator in generators])
+    x, d = points[:, 0].copy(), points.shape[2]
     n_steps = max(2000, 200 * d) if n_steps is None else n_steps
     if n_steps < 3:
         # The second half of each chain needs two states for R-hat.
         raise ValueError(f"n_steps must be at least 3, not {n_steps}")
-    streams = Streams(n_chains)
+    streams = Streams(N_CHAINS)
     for chain, generator in enumerate(generators):
         streams.assign(chain, generator)
-    draws = streams.view(np.arange(n_chains))
+    draws = streams.view(np.arange(N_CHAINS))
     log_p = target.log_prob(x)
-    mean, cov = x.copy(), np.tile(np.eye(d), (n_chains, 1, 1))
-    log_scale = np.full(n_chains, np.log(2.38**2 / d))
+    log_scale = np.full(N_CHAINS, np.log(2.38**2 / d))
+    # The initial distribution's scales start the covariance; the identity would dominate
+    # small variances for thousands of steps.
+    variance = points.reshape(-1, d).var(axis=0, ddof=1)
+    mean, cov, eye = x.mean(axis=0), np.diag(np.where(variance > 0, variance, 1.0)), np.eye(d)
     first_kept = n_steps // 2
-    samples = np.empty((n_chains, n_steps - first_kept, d))
-    kept_log_p = np.empty((n_chains, n_steps - first_kept))
-    accepted = np.zeros(n_chains)
+    samples = np.empty((N_CHAINS, n_steps - first_kept, d))
+    kept_log_p = np.empty((N_CHAINS, n_steps - first_kept))
+    accepted = np.zeros(N_CHAINS)
     for step in range(n_steps):
-        proposal_cov = np.exp(log_scale)[:, None, None] * cov
-        ridge = 1e-12 * np.trace(proposal_cov, axis1=1, axis2=2)[:, None, None] * np.eye(d)
-        chol = np.linalg.cholesky(proposal_cov + ridge)
-        proposal = x + np.einsum("cij,cj->ci", chol, draws.normal(d))
-        proposal_log_p = target.log_prob(proposal)
+        chol = np.linalg.cholesky(cov + 1e-12 * np.trace(cov) * eye)
+        steps = np.exp(0.5 * log_scale)[:, None] * matvec(chol, draws.normal(d))
+        proposal_log_p = target.log_prob(x + steps)
         # A NaN log ratio (-inf - -inf) is a rejection, with acceptance probability 0.
         with np.errstate(invalid="ignore"):
             log_alpha = np.minimum(0.0, proposal_log_p - log_p)
         accept = draws.log_uniform() < log_alpha
-        x = np.where(accept[:, None], proposal, x)
+        x = np.where(accept[:, None], x + steps, x)
         log_p = np.where(accept, proposal_log_p, log_p)
-        gamma = (step + 2) ** -0.6
-        log_scale += gamma * (np.nan_to_num(np.exp(log_alpha)) - TARGET_ACCEPTANCE)
+        log_scale += (step + 2) ** -0.6 * (np.nan_to_num(np.exp(log_alpha)) - TARGET_ACCEPTANCE)
         delta = x - mean
-        mean += gamma * delta
-        cov += gamma * (delta[:, :, None] * delta[:, None, :] - cov)
+        mean += delta.mean(axis=0) / (step + 2)
+        cov += (delta.T @ delta / N_CHAINS - cov) / (step + 2)
         if step >= first_kept:
             samples[:, step - first_kept] = x
             kept_log_p[:, step - first_kept] = log_p
             accepted += accept
-    return PilotRun(samples, kept_log_p, accepted / samples.shape[1], log_scale, n_steps)
+    return PilotRun(samples, kept_log_p, accepted / samples.shape[1], n_steps)
 
 
-def choose_kml(
-    meeting_times: npt.ArrayLike, quantile: float = 0.99, multiple: int = 10
-) -> tuple[int, int, int]:
-    r"""Choose ``k``, ``m`` and the lag from lag-1 pilot meeting times (spec R-TUNE-2).
+def choose_k(meeting_times: npt.ArrayLike, quantile: float = 0.99) -> int:
+    r"""Choose ``k`` from lag-1 pilot meeting times (spec R-TUNE-2).
 
     :math:`k = \max(1, \hat q_\beta(\tau - 1))`, with :math:`\hat q_\beta` the
-    inverted-CDF sample quantile, :math:`L = k` and :math:`m` = ``multiple`` :math:`k`
-    (Atchade & Jacob 2024).
+    inverted-CDF sample quantile (Atchade & Jacob 2024). The recipe then sets
+    :math:`L = k` and :math:`m = 10k`.
 
     Parameters
     ----------
@@ -213,12 +194,10 @@ def choose_kml(
     quantile : float
         The level :math:`\beta`, at most :math:`1 - 1/R_0` so that the quantile is not
         the sample maximum.
-    multiple : int
-        :math:`m / k`.
 
     Returns
     -------
-    k, m, lag : int
+    int
     """
     tau = np.asarray(meeting_times, dtype=np.float64)
     largest = 1 - 1 / len(tau)
@@ -234,5 +213,4 @@ def choose_kml(
             "so k cannot be chosen: try a wider initial distribution or a better-tuned "
             "kernel, or give k, lag and m explicitly"
         )
-    k = max(1, int(q))
-    return k, multiple * k, k
+    return max(1, int(q))

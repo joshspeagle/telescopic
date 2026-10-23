@@ -4,7 +4,7 @@ import pytest
 from telescopic.initial import Normal
 from telescopic.kernels import Independence, Mixture, RandomWalk
 from telescopic.target import Target
-from telescopic.tuning import TARGET_ACCEPTANCE, adaptive_metropolis, choose_kml
+from telescopic.tuning import TARGET_ACCEPTANCE, adaptive_metropolis, choose_k
 
 # A correlated Gaussian with condition number 100.
 _q, _ = np.linalg.qr(np.random.default_rng(3).standard_normal((5, 5)))
@@ -24,18 +24,30 @@ def test_adaptive_metropolis_learns_the_shape_and_the_acceptance_rate():
     assert pilot.rhat.max() < 1.1
 
 
-def test_tuning_freezes_a_kernel_with_the_pilots_covariance_and_scale():
+def test_the_tuning_chains_agree_and_find_the_covariance_in_ten_dimensions():
+    # Chains adapting alone at the rate t^-0.6 gave R-hat 2 to 3 and a smallest
+    # eigenvalue of 0.25 here; over 20 seeds the pooled chains gave at most 1.09 and at
+    # least 0.58.
+    target = Target(lambda x: -0.5 * np.sum(x**2, axis=1), vectorize=True)
+    pilot = adaptive_metropolis(target, Normal(np.full(10, 3.0), np.eye(10)), 4)
+    assert pilot.rhat.max() < 1.15
+    assert np.linalg.eigvalsh(pilot.cov).min() > 0.4
+
+
+def test_tuning_freezes_kernels_with_the_pilots_mean_and_covariance():
     pilot = adaptive_metropolis(TARGET, START, 2, n_steps=500)
-    for kernel in (RandomWalk(), Mixture([RandomWalk(), RandomWalk(scale=0.1)], [0.5, 0.5])):
-        tuned, report = kernel.tune(TARGET, START, pilot=pilot)
-        assert tuned.is_tuned
-        np.testing.assert_array_equal(report.cov, pilot.cov)
-    walk, _ = RandomWalk(scale=0.1).tune(TARGET, START, pilot=pilot)
-    assert walk.scale == 0.1  # a given scale is kept
-    tuned, report = Independence().tune(TARGET, START, pilot=pilot)
-    np.testing.assert_array_equal(tuned.proposal.cov, pilot.cov)
+    walk, _ = RandomWalk().tune(TARGET, START, pilot=pilot)
+    np.testing.assert_array_equal(walk.cov, pilot.cov)
+    assert RandomWalk(scale=0.1).tune(TARGET, START, pilot=pilot)[0].scale == 0.1
+    independence, report = Independence().tune(TARGET, START, pilot=pilot)
+    np.testing.assert_array_equal(independence.proposal.mean, pilot.mean)
+    np.testing.assert_array_equal(independence.proposal.cov, pilot.cov)
     assert report.max_weight_ratio >= 1
-    _, mixed = Mixture([RandomWalk(), Independence()], [0.5, 0.5]).tune(TARGET, START, pilot=pilot)
+    mixture, mixed = Mixture([RandomWalk(), Independence()], [0.5, 0.5]).tune(
+        TARGET, START, pilot=pilot
+    )
+    np.testing.assert_array_equal(mixture.kernels[0].cov, pilot.cov)
+    np.testing.assert_array_equal(mixture.kernels[1].proposal.mean, pilot.mean)
     assert mixed.max_weight_ratio == report.max_weight_ratio
 
 
@@ -45,20 +57,18 @@ def test_a_tuned_kernel_returns_itself():
 
 
 @pytest.mark.parametrize("lowest", [1, 4])
-def test_choose_kml_follows_the_recipe(lowest):
-    tau = np.concatenate([np.full(98, lowest), [30, 50]])
-    k = max(1, int(np.quantile(tau - 1, 0.99, method="inverted_cdf")))
-    assert k == 29
-    assert choose_kml(tau) == (k, 10 * k, k)
-    assert choose_kml(np.full(100, lowest), quantile=0.5)[0] == max(1, lowest - 1)
+def test_choose_k_takes_the_inverted_cdf_quantile_of_tau_minus_one(lowest):
+    # Of 100 pilot pairs, the 99% quantile is the 99th smallest meeting time, 30.
+    assert choose_k(np.concatenate([np.full(98, lowest), [30, 50]])) == 29
+    assert choose_k(np.full(100, lowest), quantile=0.5) == max(1, lowest - 1)
 
 
-def test_choose_kml_refuses_a_quantile_beyond_the_pilot():
+def test_choose_k_refuses_a_quantile_beyond_the_pilot():
     with pytest.raises(ValueError, match="run more pilot pairs"):
-        choose_kml(np.arange(1, 101), quantile=0.999)
+        choose_k(np.arange(1, 101), quantile=0.999)
 
 
-def test_choose_kml_refuses_a_quantile_on_a_censored_pair():
+def test_choose_k_refuses_a_quantile_on_a_censored_pair():
     tau = np.concatenate([np.arange(1, 99), [np.inf, np.inf]])
     with pytest.raises(ValueError, match="never met within their cap"):
-        choose_kml(tau)
+        choose_k(tau)

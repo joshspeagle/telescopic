@@ -2,7 +2,6 @@ import itertools
 
 import numpy as np
 import pytest
-from scipy import stats
 
 import telescopic
 from telescopic import CoupledSampler, sample
@@ -41,14 +40,23 @@ def test_two_runs_of_a_sampler_equal_one_run_of_both():
 
 def test_a_sampler_keeps_its_settings():
     sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3)
-    sampler.run(5, k=4)
-    sampler.run(5)
-    with pytest.raises(ValueError, match="k was 4"):
-        sampler.run(5, k=5)
+    sampler.run(5, k=40, thin=2)
+    assert sampler.run(5).thin == 2
+    for change, message in (({"k": 41}, "k was 40"), ({"thin": 1}, "thin was 2")):
+        with pytest.raises(ValueError, match=message):
+            sampler.run(5, **change)
+
+
+def test_invalid_first_settings_are_not_kept():
+    sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3)
+    with pytest.raises(ValueError, match="0 <= k <= m"):
+        sampler.run(5, k=40, m=5)
+    assert sampler.run(5, k=40, m=50).m == 50
 
 
 @pytest.mark.parametrize(
-    ("given", "expected"), [({"k": 6}, (6, 6, 60)), ({"k": 6, "m": 40, "lag": 2}, (6, 2, 40))]
+    ("given", "expected"),
+    [({"k": 40}, (40, 40, 400)), ({"k": 40, "m": 50, "lag": 2}, (40, 2, 50))],
 )
 def test_an_explicit_k_needs_no_pilot_and_sets_the_lag_and_m(given, expected):
     sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=4)
@@ -59,23 +67,18 @@ def test_an_explicit_k_needs_no_pilot_and_sets_the_lag_and_m(given, expected):
 
 @pytest.mark.parametrize(
     "init",
-    [
-        INIT,
-        stats.multivariate_normal([0.0, 0.0], np.eye(2)),
-        lambda rng: rng.normal(size=2),
-        np.random.default_rng(5).standard_normal((6, 2)),
-    ],
-    ids=["helper", "scipy", "callable", "points"],
+    [lambda rng: rng.normal(size=2), np.random.default_rng(5).standard_normal((6, 2))],
+    ids=["callable", "points"],
 )
-def test_every_form_of_initial_distribution_runs(init):
-    assert sample(log_prob, init, 4, kernel=KERNEL, k=2, rng=6).n_replicates == 4
+def test_initial_distributions_without_rvs_run(init):
+    assert sample(log_prob, init, 4, kernel=KERNEL, k=40, rng=6).n_replicates == 4
 
 
 def test_a_seed_reproduces_a_run_and_a_generator_moves_on():
-    first, second = (sample(log_prob, INIT, 5, kernel=KERNEL, k=3, rng=7) for _ in range(2))
+    first, second = (sample(log_prob, INIT, 5, kernel=KERNEL, k=40, rng=7) for _ in range(2))
     np.testing.assert_array_equal(first.measure.atoms, second.measure.atoms)
     rng = np.random.default_rng(8)
-    third, fourth = (sample(log_prob, INIT, 5, kernel=KERNEL, k=3, rng=rng) for _ in range(2))
+    third, fourth = (sample(log_prob, INIT, 5, kernel=KERNEL, k=40, rng=rng) for _ in range(2))
     assert not np.array_equal(third.measure.atoms, fourth.measure.atoms)
 
 
@@ -103,12 +106,20 @@ def test_tuning_chains_in_separate_modes_warn():
         sampler.tune()
 
 
+def test_a_run_with_censored_pairs_warns():
+    with pytest.warns(ConvergenceWarning) as record:  # censored pairs are also late
+        sample(log_prob, INIT, 20, kernel=RandomWalk(np.eye(2), scale=0.1), k=1, m=2, max_iter=3)
+    assert any("reached max_iter = 3" in str(warning.message) for warning in record)
+
+
 def test_starts_outside_the_support_warn():
-    def half_line(x):
-        return 0.0 if x[0] > 0 else -np.inf
+    def half_normal(x):
+        return -0.5 * x[0] ** 2 if x[0] > 0 else -np.inf
 
     with pytest.warns(InputWarning, match="target density is zero"):
-        sample(half_line, Empirical([[-1.0], [1.0]]), 6, kernel=RandomWalk(np.eye(1)), k=2, rng=9)
+        sample(
+            half_normal, Empirical([[-1.0], [1.0]]), 6, kernel=RandomWalk(np.eye(1)), k=40, rng=9
+        )
 
 
 def test_a_run_that_would_store_gigabytes_warns():

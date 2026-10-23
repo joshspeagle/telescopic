@@ -6,11 +6,15 @@ from typing import Any, Protocol
 
 import numpy as np
 import numpy.typing as npt
+from numpy.random import Generator, SeedSequence
 
 FloatArray = npt.NDArray[np.float64]
 IntArray = npt.NDArray[np.int64]
 IndexArray = npt.NDArray[np.intp]
 BoolArray = npt.NDArray[np.bool_]
+
+# What every function that draws random numbers accepts as its rng (SPEC 7).
+Seed = int | SeedSequence | Generator | None
 
 
 class Distribution(Protocol):

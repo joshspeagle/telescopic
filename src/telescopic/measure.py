@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import cached_property
 
 import numpy as np
 import numpy.typing as npt
+from scipy.sparse import csr_array
 
 from telescopic._types import FloatArray, IntArray
 
@@ -48,7 +50,7 @@ class SignedMeasure:
 
         Notes
         -----
-        Cost: one call of ``h`` on all :math:`N` atoms.
+        Cost: one call of ``h`` on all :math:`N` atoms, then one sparse product.
         """
         values = np.asarray(h(self.atoms), dtype=np.float64)
         if values.ndim not in (1, 2) or len(values) != len(self.atoms):
@@ -56,18 +58,16 @@ class SignedMeasure:
                 f"h must map atoms of shape (n, d) to shape (n,) or (n, p); for n = "
                 f"{len(self.atoms)} it returned shape {values.shape}"
             )
-        columns = (
-            values.reshape(len(values), int(np.prod(values.shape[1:]))) * self.weights[:, None]
-        )
-        sums = np.stack(
-            [
-                np.bincount(self.replicate, weights=column, minlength=self.n_replicates)
-                for column in columns.T
-            ],
-            axis=1,
-        )
-        per_replicate: FloatArray = sums.reshape(self.n_replicates, *values.shape[1:])
+        per_replicate: FloatArray = self._sums @ values
         return per_replicate
+
+    @cached_property
+    def _sums(self) -> csr_array:
+        # Row r holds the weights of replicate r's atoms, so a product sums each replicate.
+        n = len(self.weights)
+        return csr_array(
+            (self.weights, (self.replicate, np.arange(n))), shape=(self.n_replicates, n)
+        )
 
     def mass(self, cell: IntArray, n_cells: int) -> FloatArray:
         """Each replicate's signed mass in each of ``n_cells`` cells, such as histogram bins.

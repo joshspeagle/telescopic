@@ -347,9 +347,9 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 - `"maximal"`: rejection maximal coupling with independent residuals, for comparison and teaching. Its meeting times grow exponentially with $d$ (JOA20 §4.2), and the documentation says so.
 
 **Tuning (R-TUNE-1):**
-- **Pilot:** 4 independent adaptive Metropolis chains from $\pi_0$, each running $\max(2000, 200d)$ steps. They use Haario-type covariance adaptation with global-scale Robbins–Monro steps toward acceptance 0.234 (Andrieu & Thoms 2008, Algorithm 4).
+- **Pilot:** 4 adaptive Metropolis chains from $\pi_0$, each running $\max(2000, 200d)$ steps. Each chain adapts its own global scale by Robbins–Monro steps of size $(t+1)^{-0.6}$ toward acceptance 0.234 (Andrieu & Thoms 2008). The chains share one proposal covariance: the running mean and covariance, with step $1/(t+1)$, of all their states, started from the variances of 100 draws from $\pi_0$ (Haario et al. 2001; pooled as in Craiu, Rosenthal & Yang 2009; DECISIONS #7).
 - **Covariance:** pooled over the second halves of the chains, plus a ridge of $10^{-10}$ times the mean variance.
-- **Scale:** the adapted scale.
+- **Scale:** $2.38/\sqrt d$, `RandomWalk`'s default (DECISIONS #7).
 - **Report:** the pilot acceptance rates and $\hat R$ per coordinate. A `ConvergenceWarning` when the chains disagree: $\hat R > \sqrt 2$ in some coordinate, where the chain means spread more widely than the chains themselves, a sign of several modes (DECISIONS #6).
 
 ### 5.4 MALA (R-KER-MALA)
@@ -540,7 +540,7 @@ Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 
 Classes: `TelescopicWarning`, with subclasses `ConvergenceWarning` and `InputWarning`.
 
-`check()` warns on these conditions. They are heuristics; the thresholds are set so that clean Gaussian runs at the defaults rarely trigger them, and M9 measures and documents each false-alarm rate (D-16):
+`check()` warns on these conditions, and so does each `run` (§8.1). They are heuristics; the thresholds are set so that clean Gaussian runs at the defaults rarely trigger them, and M9 measures and documents each false-alarm rate (D-16):
 1. any censored replicate;
 2. a fraction of replicates with $\tau - L > k$ above 0.25 ("k may be too small"). The recipe itself gives 0.02 to 0.13 (§3.6), so a lower threshold fires on clean runs;
 3. one replicate contributing more than 25% of the sample variance of any reported estimate, with $R \ge 100$ (heavy tails or rare excursions). At $R = 20$ to 30 that share is typical of Gaussian data;
@@ -568,7 +568,7 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
 
    ```python
    telescopic.sample(log_prob, init, n_replicates=100, *, args=(), kwargs=None, grad=None,
-                     vectorize=False, kernel="auto", k="auto", m="auto", lag="auto", thin=1,
+                     vectorize=False, kernel="auto", k="auto", m="auto", lag="auto", thin=None,
                      max_iter=None, pool=None, names=None, progress=False, rng=None) -> Result
    ```
 
@@ -581,14 +581,15 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
                                        progress=False, rng=None)
    sampler.tune()                                  # pilot runs; freezes sampler.kernel
    times = sampler.meeting_times(n=100)            # pilot meeting times, lag 1
-   result = sampler.run(500, k="auto", m="auto", lag="auto", thin=1, max_iter=None,
+   result = sampler.run(500, k="auto", m="auto", lag="auto", thin=None, max_iter=None,
                         progress=None)             # None: the sampler's setting
    result = sampler.run(500)                       # 500 more replicates, same k, m, lag
    ```
 
    - `run` tunes and runs the pilot if they have not been done.
    - Each call continues the replicate indices and returns the cumulative result.
-   - Changing `k`, `m`, `lag`, `thin` or `max_iter` between calls raises `ValueError` (DECISIONS #4).
+   - The first call fixes `k`, `m`, `lag`, `thin` and `max_iter` (DECISIONS #4). On the first call `"auto"` derives a value, `thin=None` means 1 and `max_iter=None` no cap; on later calls `"auto"` and `None` keep the first call's values, and any other change raises `ValueError` (DECISIONS #8).
+   - Each call ends by emitting the warnings of §7.4 that apply to the cumulative result, except slow pairs and disagreeing tuning chains, which are emitted as they happen (DECISIONS #8).
 3. **Building blocks:** `Target`, `State`, `telescopic.kernels.*`, `telescopic.couplings.*`, `telescopic.engine.run(...)`, `telescopic.estimators.*`, `telescopic.diagnostics.*` and `SignedMeasure`.
 
 ### 8.2 Conventions (R-API-2)

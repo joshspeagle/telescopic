@@ -153,12 +153,7 @@ def run(
     Memory: the stored atoms take about :math:`R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})
     (8d + 16)` bytes (spec R-EXEC-7).
     """
-    if not 0 <= k <= m:
-        raise ValueError(f"k and m must satisfy 0 <= k <= m, not k={k}, m={m}")
-    if lag < 1 or thin < 1:
-        raise ValueError(f"lag and thin must be at least 1, not lag={lag}, thin={thin}")
-    if max_iter is not None and max_iter <= max(lag, m):
-        raise ValueError(f"max_iter must exceed max(lag, m) = {max(lag, m)}, not {max_iter}")
+    check_settings(k, m, lag, thin, max_iter)
     if lanes < 1:
         raise ValueError(f"lanes must be at least 1, not {lanes}")
     queue = iter(indices)
@@ -178,11 +173,25 @@ def run(
         stopping = (monitor is not None and monitor(batch.status())) or stopping
         if not stopping:
             batch.fill(free, starts)
-    return batch.result(
-        target.n_log_prob - evaluations[0],
-        target.n_grad - evaluations[1],
-        time.perf_counter() - start,
-    )
+    return batch.result(target.n_log_prob - evaluations[0], target.n_grad - evaluations[1], start)
+
+
+def check_settings(k: int, m: int, lag: int, thin: int, max_iter: int | None) -> None:
+    r"""Raise ``ValueError`` unless the settings of a run are valid (spec section 3.2).
+
+    Parameters
+    ----------
+    k, m, lag, thin : int
+        :math:`0 \le k \le m`, :math:`L \ge 1` and ``thin`` :math:`\ge 1`.
+    max_iter : int, optional
+        Above :math:`\max(L, m)`.
+    """
+    if not 0 <= k <= m:
+        raise ValueError(f"k and m must satisfy 0 <= k <= m, not k={k}, m={m}")
+    if lag < 1 or thin < 1:
+        raise ValueError(f"lag and thin must be at least 1, not lag={lag}, thin={thin}")
+    if max_iter is not None and max_iter <= max(lag, m):
+        raise ValueError(f"max_iter must exceed max(lag, m) = {max(lag, m)}, not {max_iter}")
 
 
 def merge(parts: Sequence[Replicates]) -> Replicates:
@@ -347,7 +356,8 @@ class _Batch:
             self.n_started, self.n_finished, int(self.replicate[lane]), int(self.t[lane])
         )
 
-    def result(self, n_log_prob: int, n_grad: int, seconds: float) -> Replicates:
+    def result(self, n_log_prob: int, n_grad: int, start: float) -> Replicates:
+        # The seconds since start include this join, a large part of a run with many atoms.
         index, tau, cost = self.finished.join()
         owner, atoms, weights = self.atoms.join(keep=index[tau >= 0])
         distance_owner, distance_time, distance = self.distances.join()
@@ -364,7 +374,7 @@ class _Batch:
             zero_density=np.sort(np.array(self.zero_density, dtype=np.int64)),
             n_log_prob=n_log_prob,
             n_grad=n_grad,
-            seconds=seconds,
+            seconds=time.perf_counter() - start,
             paths={i: (np.array(x), np.array(y)) for i, (x, y) in self.paths.items()},
         )
 

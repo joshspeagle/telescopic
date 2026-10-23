@@ -77,3 +77,11 @@ Append only. One entry per working session or milestone.
   memory per stored row at one lane 519 to 103 bytes (92 of payload). Spec §10 now
   records the standing: 256 lanes met (1.2 to 1.5 µs), one lane missed (93 µs of
   overhead against 40).
+- M4 and M5 `/simplify` (`notes/reviews/m4-m5.md`): the tuning pilot did not converge
+  for d ≥ 10 (R-hat about 1.9 on N(0, I₁₀) from a stationary start), so k came out 5 to
+  50 times too large, and at d = 20 the pilot pairs never met. The four chains now share
+  one covariance at rate 1/(t + 1), started from π0's variances (DECISIONS #7): median k
+  at most 1.3 times the exact covariance's for d ≤ 20, 4.4 times at d = 50. Runs
+  now warn about censoring and the other §7.4 conditions; `thin` and `max_iter` default
+  to the first run's values (DECISIONS #8); `summary()` on 1.27 million atoms takes
+  0.44 s instead of 1.59 s.

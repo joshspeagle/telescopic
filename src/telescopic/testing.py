@@ -6,10 +6,10 @@ from collections.abc import Sequence
 
 import numpy as np
 import numpy.typing as npt
-from numpy.random import Generator, SeedSequence
+from numpy.random import Generator
 
 from telescopic._random import Draws, Streams
-from telescopic._types import FloatArray
+from telescopic._types import FloatArray, Seed
 
 
 def fixed_draws(
@@ -42,7 +42,7 @@ def fixed_draws(
     return _Replay(n_rows, arrays, generators).view(np.arange(n_rows))
 
 
-def random_draws(n_rows: int, rng: int | SeedSequence | Generator | None = None) -> Draws:
+def random_draws(n_rows: int, rng: Seed = None) -> Draws:
     """Draws whose rows read fresh numbers from one generator, for statistical tests.
 
     The rows are independent, but a row's numbers depend on the other rows' requests,

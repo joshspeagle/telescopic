@@ -6,13 +6,12 @@ from collections.abc import Sequence
 
 import numpy as np
 import numpy.typing as npt
-from numpy.random import Generator, SeedSequence
 
 from telescopic._random import Draws
-from telescopic._types import BoolArray, Distribution, IndexArray
+from telescopic._types import BoolArray, IndexArray, Seed
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
-from telescopic.tuning import PilotRun, TuningReport, adaptive_metropolis
+from telescopic.tuning import PilotRun, TuningReport
 
 
 class Mixture(Kernel):
@@ -26,6 +25,8 @@ class Mixture(Kernel):
     Parameters
     ----------
     kernels : sequence of Kernel
+        :meth:`tune` tunes the untuned ones on one set of pilot chains; its report gives
+        the largest weight ratio of any independence component.
     weights : array_like
         Non-negative weights, normalised internally.
     """
@@ -55,22 +56,11 @@ class Mixture(Kernel):
     def ndim(self) -> int | None:
         return next((kernel.ndim for kernel in self.kernels if kernel.ndim is not None), None)
 
-    def tune(
-        self,
-        target: Target,
-        initial: Distribution,
-        rng: int | SeedSequence | Generator | None = None,
-        *,
-        pilot: PilotRun | None = None,
-    ) -> tuple[Kernel, TuningReport | None]:
-        """Tune the untuned components on one set of pilot chains (see :meth:`Kernel.tune`).
-
-        The report carries the largest weight ratio of any independence component.
-        """
-        if self.is_tuned:
-            return self, None
-        pilot = adaptive_metropolis(target, initial, rng) if pilot is None else pilot
-        tuned = [kernel.tune(target, initial, rng, pilot=pilot) for kernel in self.kernels]
+    def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
+        tuned = [
+            (kernel, None) if kernel.is_tuned else kernel._tuned(target, pilot, rng)
+            for kernel in self.kernels
+        ]
         ratios = [report.max_weight_ratio for _, report in tuned if report is not None]
         ratio = max((r for r in ratios if r is not None), default=None)
         return Mixture([kernel for kernel, _ in tuned], self.weights), pilot.report(ratio)

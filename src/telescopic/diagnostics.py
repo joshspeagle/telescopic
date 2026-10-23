@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 import numpy.typing as npt
@@ -41,8 +41,12 @@ def tv_bound(meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike) -> FloatA
     Computed as :math:`\sum_{j \ge 1} \hat S(t + jL)` with the empirical survival
     function :math:`\hat S(u) = R^{-1}\#\{\tau > u\}`, in :math:`O(R + \max\tau)`.
     """
-    tau = np.asarray(meeting_times, dtype=np.int64)
-    survival = 1.0 - np.cumsum(np.bincount(tau)) / len(tau)
+    tau = np.asarray(meeting_times, dtype=np.float64)
+    if not np.all(np.isfinite(tau) & (tau >= 0)):
+        raise ValueError(
+            "meeting_times must be finite and non-negative: give a censored pair as its cap"
+        )
+    survival = 1.0 - np.cumsum(np.bincount(tau.astype(np.int64))) / len(tau)
     bound: FloatArray = np.minimum(1.0, _lagged_tail(survival, lag, t))
     return bound
 
@@ -149,8 +153,22 @@ def variance_share(values: npt.ArrayLike) -> FloatArray:
     return share
 
 
-def issues(result: Result) -> list[str]:
-    """The warnings of spec section 7.4 that apply to ``result``, as messages.
+class Issue(NamedTuple):
+    """A condition of spec section 7.4 that applies to a result.
+
+    Attributes
+    ----------
+    kind : str
+        ``"censored"``, ``"late"``, ``"variance"``, ``"tail"``, ``"tuning"`` or ``"slow"``.
+    message : str
+    """
+
+    kind: str
+    message: str
+
+
+def issues(result: Result) -> list[Issue]:
+    """The warnings of spec section 7.4 that apply to ``result``.
 
     Parameters
     ----------
@@ -158,52 +176,81 @@ def issues(result: Result) -> list[str]:
 
     Returns
     -------
-    list of str
+    list of Issue
         Empty for a run that raises no warning.
     """
-    messages = []
+    found = []
     tau = result.meeting_times
     met = tau[np.isfinite(tau)]
     if result.n_censored:
-        messages.append(
-            f"{result.n_censored} of {len(tau)} pairs reached max_iter = {result.max_iter} "
-            "without meeting and are excluded, which biases the estimates; run them without "
-            "a cap or with a larger one"
+        found.append(
+            Issue(
+                "censored",
+                f"{result.n_censored} of {len(tau)} pairs reached max_iter = {result.max_iter} "
+                "without meeting and are excluded, which biases the estimates; run them "
+                "without a cap or with a larger one",
+            )
         )
     late = result.diagnostics()["late_fraction"]
     if late > 0.25:
-        messages.append(
-            f"{late:.0%} of the pairs met after k + lag, so k may be too small: the bias "
-            "correction is large and the variance high"
+        found.append(
+            Issue(
+                "late",
+                f"{late:.0%} of the pairs met after k + lag, so k may be too small: the bias "
+                "correction is large and the variance high",
+            )
         )
     if result.n_replicates >= 100:
-        values = result.measure.per_replicate(lambda x: np.concatenate([x, x**2], axis=1))
-        shares = variance_share(values)
+        moments = [result.measure.per_replicate(h) for h in (lambda x: x, np.square)]
+        shares = variance_share(np.concatenate(moments, axis=1))
         worst = int(np.argmax(shares))
         if shares[worst] > 0.25:
             name = result.names[worst % result.ndim]
             moment = "mean" if worst < result.ndim else "second moment"
-            messages.append(
-                f"one replicate holds {shares[worst]:.0%} of the variance of the {moment} "
-                f"of {name}: heavy tails or rare excursions make the error bars unreliable"
+            found.append(
+                Issue(
+                    "variance",
+                    f"one replicate holds {shares[worst]:.0%} of the variance of the {moment} "
+                    f"of {name}: heavy tails or rare excursions make the error bars unreliable",
+                )
             )
     if result.n_replicates >= 500:
         alpha = hill(met - result.lag + 1, max(10, result.n_replicates // 10))
         if alpha < 2:
-            messages.append(
-                f"the meeting times look heavy-tailed (tail index {alpha:.2f} < 2), so the "
-                "variance of the estimates may be infinite"
+            found.append(
+                Issue(
+                    "tail",
+                    f"the meeting times look heavy-tailed (tail index {alpha:.2f} < 2), so the "
+                    "variance of the estimates may be infinite",
+                )
             )
     disagreement = tuning_disagreement(result.tuning)
     if disagreement:
-        messages.append(disagreement)
-    threshold = max(10_000, 10 * max(result.lag, result.m))
+        found.append(Issue("tuning", disagreement))
+    threshold = slow_pair_threshold(result.lag, result.m)
     if np.any(met > threshold):
-        messages.append(
-            f"a pair was still unmet after {threshold} iterations; the meeting times may "
-            "be heavy-tailed"
+        found.append(
+            Issue(
+                "slow",
+                f"a pair was still unmet after {threshold} iterations; the meeting times may "
+                "be heavy-tailed",
+            )
         )
-    return messages
+    return found
+
+
+def slow_pair_threshold(lag: int, m: int) -> int:
+    r"""The time :math:`\max(10^4, 10\max(L, m))` past which a pair is slow (spec section 6.3).
+
+    Parameters
+    ----------
+    lag, m : int
+
+    Returns
+    -------
+    int
+    """
+    return max(10_000, 10 * max(lag, m))
 
 
 def tuning_disagreement(tuning: TuningReport | None) -> str | None:

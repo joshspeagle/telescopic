@@ -7,12 +7,11 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
-from numpy.random import Generator, SeedSequence
 
 from telescopic._random import Draws
-from telescopic._types import BoolArray, Distribution, FloatArray
+from telescopic._types import BoolArray, Distribution, FloatArray, Seed
 from telescopic.target import Target
-from telescopic.tuning import PilotRun, TuningReport
+from telescopic.tuning import PilotRun, TuningReport, adaptive_metropolis
 
 
 @dataclass
@@ -81,11 +80,13 @@ class Kernel(ABC):
         self,
         target: Target,
         initial: Distribution,
-        rng: int | SeedSequence | Generator | None = None,
+        rng: Seed = None,
         *,
         pilot: PilotRun | None = None,
     ) -> tuple[Kernel, TuningReport | None]:
         """A copy with the unset parameters tuned on pilot chains (spec R-TUNE-1).
+
+        Each kernel's documentation says which parameters it tunes and how.
 
         Parameters
         ----------
@@ -94,7 +95,9 @@ class Kernel(ABC):
         rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
             Seed of the pilot chains (tuning namespace, spec section 6.1).
         pilot : PilotRun, optional
-            Pilot chains already run, from :func:`telescopic.tuning.adaptive_metropolis`.
+            Adaptive Metropolis chains already run, from
+            :func:`telescopic.tuning.adaptive_metropolis`, so that several kernels can be
+            tuned on one pilot.
 
         Returns
         -------
@@ -102,7 +105,15 @@ class Kernel(ABC):
         report : TuningReport or None
             ``None``, with the kernel itself, when there is nothing to tune.
         """
-        return self, None
+        if self.is_tuned:
+            return self, None
+        pilot = adaptive_metropolis(target, initial, rng) if pilot is None else pilot
+        return self._tuned(target, pilot, rng)
+
+    def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
+        raise NotImplementedError(
+            f"{type(self).__name__} has unset parameters but cannot tune them"
+        )
 
     def init_state(self, target: Target, x: FloatArray) -> State:
         """Evaluate the target at the rows of ``x``, with gradients if the kernel needs them.

@@ -187,11 +187,12 @@ Kernel-specific tests:
 
 **Tuning**
 - **Adaptive Metropolis:**
-  - on a correlated Gaussian ($d = 5$, condition number 100), whitening by the pilot covariance brings the condition number below 4. (Over 20 seeds it was at most 1.75, while the covariance's Frobenius error reached 25%, so the first draft's 20% bound failed on some seeds; the shape, not the norm, sets the efficiency of RWMH);
-  - the chains' $\hat R$ is below 1.1 there, and exceeds $\sqrt 2$ for chains started in two separated modes;
+  - on a correlated Gaussian ($d = 5$, condition number 100), whitening by the pilot covariance brings the condition number below 4 (over 20 seeds at most 1.54; the shape, not the norm, sets the efficiency of RWMH), and the chains' $\hat R$ is below 1.1;
+  - on $\mathcal N(0, I_{10})$ from $\mathcal N(3, I)$, $\hat R < 1.15$ and the smallest eigenvalue of the pilot covariance exceeds 0.4 (over 20 seeds at most 1.09 and at least 0.58; chains adapting alone at rate $t^{-0.6}$ gave 2 to 3 and 0.25);
+  - $\hat R$ exceeds $\sqrt 2$ for chains started in two separated modes;
   - the acceptance rate is within 0.05 of 0.234.
-- **`choose_kml`:**
-  - gives $k$ = the inverted-CDF $q_{0.99}(\tau - 1)$, $L = k$ and $m = 10k$;
+- **`choose_k`:**
+  - gives $k$ = the inverted-CDF $q_{0.99}(\tau - 1)$, and the sampler $L = k$ and $m = 10k$;
   - the floor $k \ge 1$ holds;
   - $\beta > 1 - 1/R_0$ raises, and so does a quantile that falls on a censored pilot pair;
   - explicit values are kept, and `lag` and `m` follow an explicit `k` without a pilot.
