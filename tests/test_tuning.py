@@ -1,3 +1,5 @@
+import itertools
+
 import numpy as np
 import pytest
 from scipy import linalg
@@ -83,6 +85,53 @@ def test_a_short_pilot_beyond_twenty_dimensions_keeps_two_states_per_chain():
     )
     assert pilot.samples.shape[1] == 2
     assert np.all(np.isfinite(pilot.rhat))
+
+
+def test_the_pilot_does_not_depend_on_the_scales_of_the_coordinates():
+    # Standard deviations 1e-5 and 1e5: ridges proportional to the mean variance swamped
+    # the narrow coordinate, so that sample() failed.
+    def pilot(scales):
+        target = Target(lambda x: -0.5 * np.sum((x / scales) ** 2, axis=1), vectorize=True)
+        return adaptive_metropolis(target, Normal(np.zeros(2), 4 * scales**2), 1)
+
+    scales = np.array([1e-5, 1e5])
+    unit, scaled = pilot(np.ones(2)), pilot(scales)
+    # Equal up to rounding, about 1e-14 here.
+    np.testing.assert_allclose(scaled.cov / np.outer(scales, scales), unit.cov, rtol=1e-9)
+    np.testing.assert_array_equal(scaled.acceptance, unit.acceptance)
+
+
+def test_the_pilot_refuses_draws_whose_dimension_changes():
+    lengths = itertools.cycle([2, 3])
+    with pytest.raises(ValueError, match=r"drew shape \(3,\), not \(2,\)"):
+        adaptive_metropolis(TARGET, lambda rng: rng.normal(size=next(lengths)), 1)
+
+
+@pytest.mark.parametrize(
+    "initial",
+    [np.random.default_rng(3).normal(size=(10, 5)), lambda rng: rng.normal(size=5)],
+    ids=["array", "callable"],
+)
+def test_kernels_tune_from_an_array_or_a_callable_as_sample_does(initial):
+    kernel, _ = RandomWalk().tune(TARGET, initial, 1)
+    assert kernel.ndim == 5
+
+
+@pytest.mark.parametrize(
+    "kernel", [MALA(), Mixture([RandomWalk(), MALA()], [0.5, 0.5])], ids=["mala", "mixture"]
+)
+def test_tuning_checks_the_target_before_running_the_pilot(kernel):
+    drawn = []
+
+    def initial(rng):
+        drawn.append(rng)
+        return rng.normal(size=5)
+
+    # The message shows the kernel as given, not with a tuned step size.
+    without_grad = Target(lambda x: -0.5 * np.sum(x**2, axis=1), vectorize=True)
+    with pytest.raises(ValueError, match=r"MALA\(step_size=None, cov=None\).* needs the grad"):
+        kernel.tune(without_grad, initial, 1)
+    assert drawn == []
 
 
 def test_n_steps_is_checked_before_drawing_from_the_initial_distribution():

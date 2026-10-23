@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import pytest
 
@@ -59,6 +61,28 @@ def test_gradients_come_with_the_log_densities():
     values, gradients = Target(gaussian, grad=lambda x: -x).log_prob_and_grad(x)
     np.testing.assert_allclose(values, gaussian(x))
     np.testing.assert_allclose(gradients, -x)
+
+
+def test_the_gradient_is_evaluated_only_where_the_log_density_is_finite():
+    # A gradient written for the support raised outside it.
+    target = Target(
+        lambda x: -2 * math.sqrt(x[0]) if x[0] > 0 else -np.inf,
+        grad=lambda x: np.array([-1 / math.sqrt(x[0])]),
+    )
+    values, gradients = target.log_prob_and_grad(np.array([[4.0], [-1.0]]))
+    np.testing.assert_array_equal(values, [-4.0, -np.inf])
+    np.testing.assert_array_equal(gradients, [[-0.5], [0.0]])
+    assert target.n_grad == 1
+
+
+@pytest.mark.parametrize("vectorize", [False, True])
+def test_a_function_that_returns_none_is_named(vectorize):
+    # NumPy read None as NaN, and the error blamed the value.
+    def log_prob(x):
+        pass
+
+    with pytest.raises(ValueError, match="log_prob returned None"):
+        Target(log_prob, vectorize=vectorize).log_prob(np.zeros((2, 1)))
 
 
 def test_a_target_without_gradient_refuses_gradient_requests():

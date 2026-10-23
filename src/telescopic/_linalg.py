@@ -1,4 +1,4 @@
-"""Row-independent linear algebra for kernels (spec R-KER-6)."""
+"""Row-independent linear algebra for kernels (spec R-KER-6), and validated parameters."""
 
 from __future__ import annotations
 
@@ -23,6 +23,17 @@ def inverse_lower(chol: FloatArray) -> FloatArray:
     return inverse
 
 
+def vector(values: npt.ArrayLike, name: str) -> FloatArray:
+    # A validated finite vector of shape (d,), d >= 1, or a scalar as shape (1,); errors
+    # name the argument.
+    array = np.array(values, dtype=np.float64, ndmin=1)
+    if array.ndim != 1 or len(array) == 0:
+        raise ValueError(f"{name} must have shape (d,) with d >= 1, not {array.shape}")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must be finite, not {array.tolist()}")
+    return array
+
+
 def covariance(
     cov: npt.ArrayLike, name: str, ndim: int | None = None
 ) -> tuple[FloatArray, FloatArray]:
@@ -35,9 +46,12 @@ def covariance(
         raise ValueError(f"{name} must have shape {(ndim, ndim)}, not {matrix.shape}")
     if not np.all(np.isfinite(matrix)):
         raise ValueError(f"{name} must be finite")
-    # Relative to each entry, so that small-scale matrices are held to the same standard.
-    if not np.allclose(matrix, matrix.T, rtol=1e-8, atol=0):
+    # Symmetric up to rounding: |C_ij - C_ji| <= 1e-8 sqrt(C_ii C_jj), a test that does
+    # not depend on the scales of the coordinates; the symmetric part is then used.
+    root = np.sqrt(np.abs(np.diag(matrix)))
+    if not np.all(np.abs(matrix - matrix.T) <= 1e-8 * np.outer(root, root)):
         raise ValueError(f"{name} must be symmetric")
+    matrix = (matrix + matrix.T) / 2
     try:
         chol = np.linalg.cholesky(matrix)
     except np.linalg.LinAlgError:

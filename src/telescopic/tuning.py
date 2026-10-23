@@ -5,15 +5,15 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import numpy.typing as npt
 
 from telescopic._linalg import matvec
 from telescopic._random import TUNING, Streams, replicate_generator, root_seed
-from telescopic._types import Distribution, FloatArray, Seed
-from telescopic.initial import draw
+from telescopic._types import FloatArray, Seed
+from telescopic.initial import as_initial, draw
 from telescopic.target import Target
 
 if TYPE_CHECKING:
@@ -80,10 +80,16 @@ class PilotRun:
 
     @cached_property
     def cov(self) -> FloatArray:
-        """The pooled covariance, plus a ridge of 1e-10 times the mean variance, ``(d, d)``."""
+        """The pooled covariance plus 1e-10 times each variance on its diagonal, ``(d, d)``.
+
+        A coordinate of variance 0 gets 1e-10.
+        """
         pooled = self.samples.reshape(-1, self.samples.shape[2])
         cov = np.atleast_2d(np.cov(pooled, rowvar=False))
-        ridged: FloatArray = cov + 1e-10 * np.mean(np.diag(cov)) * np.eye(len(cov))
+        # Each coordinate's own variance scales its ridge, so that tuning does not depend
+        # on the coordinates' scales.
+        variances = np.diag(cov)
+        ridged: FloatArray = cov + 1e-10 * np.diag(np.where(variances > 0, variances, 1.0))
         return ridged
 
     @cached_property
@@ -104,7 +110,7 @@ class PilotRun:
 
 def adaptive_metropolis(
     target: Target,
-    initial: Distribution,
+    initial: Any,
     rng: Seed = None,
     *,
     n_steps: int | None = None,
@@ -131,7 +137,9 @@ def adaptive_metropolis(
     Parameters
     ----------
     target : Target
-    initial : object with rvs(random_state=generator)
+    initial
+        An object with ``rvs(random_state=generator)``, a callable ``initial(rng)`` or an
+        array of points of shape ``(n, d)``, as for :func:`telescopic.initial.as_initial`.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
     n_steps : int, optional
         Steps per chain, at least 3; :math:`\max(2000, 200d, 10d^2)` by default.
@@ -151,9 +159,14 @@ def adaptive_metropolis(
         # The second half of each chain needs two states for R-hat.
         raise ValueError(f"n_steps must be at least 3, not {n_steps}")
     root = root_seed(rng)
+    initial = as_initial(initial)
     generators = [replicate_generator(root, TUNING, i) for i in range(N_CHAINS)]
-    points = np.array([[draw(initial, generator) for _ in range(25)] for generator in generators])
-    x, d = points[:, 0].copy(), points.shape[2]
+    # 25 draws per chain from its own generator, all of the first draw's dimension.
+    sources = [generator for generator in generators for _ in range(25)]
+    first = draw(initial, sources[0])
+    rest = [draw(initial, generator, len(first)) for generator in sources[1:]]
+    points = np.reshape([first, *rest], (N_CHAINS, 25, len(first)))
+    x, d = points[:, 0].copy(), len(first)
     # Learning a covariance takes of order d^2 steps. Beyond 20 dimensions, refactoring the
     # covariance and keeping states only every ceil(d/20) steps, or fewer so that each
     # chain keeps two, bounds the factorisations by 10 d^2 / ceil(d/20) and the stored
@@ -168,7 +181,7 @@ def adaptive_metropolis(
     # The initial distribution's scales start the covariance; the identity would dominate
     # small variances for thousands of steps.
     variance = points.reshape(-1, d).var(axis=0, ddof=1)
-    mean, cov, eye = x.mean(axis=0), np.diag(np.where(variance > 0, variance, 1.0)), np.eye(d)
+    mean, cov = x.mean(axis=0), np.diag(np.where(variance > 0, variance, 1.0))
     first_kept = n_steps // 2
     stride = min(-(-d // 20), n_steps - first_kept - 1)
     n_kept = (n_steps - 1 - first_kept) // stride + 1
@@ -177,7 +190,9 @@ def adaptive_metropolis(
     accepted = np.zeros(N_CHAINS)
     for step in range(n_steps):
         if step % stride == 0:
-            chol = np.linalg.cholesky(cov + 1e-12 * np.trace(cov) * eye)
+            # A ridge of each coordinate's variance, which keeps the factorisation
+            # independent of the coordinates' scales; the diagonal stays positive.
+            chol = np.linalg.cholesky(cov + 1e-12 * np.diag(np.diag(cov)))
         steps = np.exp(0.5 * log_scale)[:, None] * matvec(chol, draws.normal(d))
         proposal_log_p = target.log_prob(x + steps)
         # A NaN log ratio (-inf - -inf) is a rejection, with acceptance probability 0.

@@ -48,8 +48,8 @@ class MALA(GradientKernel):
     Notes
     -----
     A step uses ``d`` normals and 1 uniform, and a coupled step ``d`` normals and 2
-    uniforms. Each evaluates the log-density and its gradient once per chain, once per
-    pair when the proposals coincide.
+    uniforms. Each evaluates the log-density once per chain, once per pair when the
+    proposals coincide, and the gradient where the log-density is finite.
     """
 
     target_acceptance = 0.574

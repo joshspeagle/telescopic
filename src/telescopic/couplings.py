@@ -20,7 +20,8 @@ def reflection_maximal(
     With :math:`\delta = C^{-1}(\mu_x - \mu_y)`, :math:`z \sim \mathcal N(0, I)` and
     :math:`x = \mu_x + Cz`, the pair is identical when
     :math:`\log u < -z\cdot\delta - \lVert\delta\rVert^2/2`; otherwise
-    :math:`y = \mu_y + C(z - 2(e\cdot z)e)` with :math:`e = \delta/\lVert\delta\rVert`
+    :math:`y = \mu_y + C(z - 2(e\cdot z)e)` with :math:`e = \delta/\lVert\delta\rVert`, or
+    :math:`e = 0` where :math:`\lVert\delta\rVert` is 0 or not finite
     (Jacob, O'Leary & Atchadé 2020, section 4.1; spec R-CPL-1). The coupling is maximal:
     :math:`P(x = y) = 2\Phi(-\lVert\delta\rVert/2)`.
 
@@ -46,9 +47,13 @@ def reflection_maximal(
     log_u = draws.log_uniform()
     delta = matvec(inverse, mu_x - mu_y)
     squared = np.einsum("ij,ij->i", delta, delta)
-    identical = log_u < -np.einsum("ij,ij->i", z, delta) - 0.5 * squared
+    # An infinite delta, from a drift that overflowed, can give inf - inf = NaN, which
+    # fails the test as it should.
+    with np.errstate(invalid="ignore"):
+        identical = log_u < -np.einsum("ij,ij->i", z, delta) - 0.5 * squared
     norm = np.sqrt(squared)[:, None]
-    e = np.divide(delta, norm, out=np.zeros_like(delta), where=norm > 0)
+    # e = 0 where the norm is 0 or not finite: y is then mu_y + C z, which keeps its law.
+    e = np.divide(delta, norm, out=np.zeros_like(delta), where=(norm > 0) & (norm < np.inf))
     reflected = z - 2.0 * np.einsum("ij,ij->i", e, z)[:, None] * e
     x = mu_x + matvec(chol, z)
     y = np.where(identical[:, None], x, mu_y + matvec(chol, reflected))
@@ -72,7 +77,9 @@ def maximal(
     ----------
     p, q : list of distributions, length n
         Objects with ``rvs(random_state=...)`` and a normalised ``logpdf`` (or ``logpmf``),
-        such as frozen SciPy distributions. All draws have the same shape.
+        such as frozen SciPy distributions. All draws have the same shape. Values of
+        ``logpdf`` for the coordinates of a draw are summed, as the joint log-density of
+        independent coordinates; NaN or ``+inf`` raises ``ValueError``.
     draws : Draws
         Random numbers for the ``n`` rows; each row draws from its own generator.
     eta : float
@@ -94,7 +101,8 @@ def maximal(
         generator = draws.generator(row)
         x = y = p_row.rvs(random_state=generator)
         log_ratio = _log_density(q_row, x) - _log_density(p_row, x)
-        accepted = _log_uniform(generator) <= min(log_eta, log_ratio)
+        # Strict, so that u = 0 cannot make the pair identical where q(X) = 0.
+        accepted = _log_uniform(generator) < min(log_eta, log_ratio)
         while not accepted:
             y = q_row.rvs(random_state=generator)
             n_draws[row] += 1
@@ -120,7 +128,7 @@ def discrete_maximal(
     Parameters
     ----------
     log_p, log_q : ndarray, shape (n, K)
-        Log-probabilities, normalised or not.
+        Log-probabilities, normalised or not; each row needs a finite maximum and no NaN.
     draws : Draws
         Random numbers for the ``n`` rows; each row uses 3 uniforms.
 
@@ -129,6 +137,15 @@ def discrete_maximal(
     i, j : ndarray of int, shape (n,)
         The coupled indices.
     """
+    for name, log in (("log_p", log_p), ("log_q", log_q)):
+        # The maximum is NaN for a row with NaN, and infinite for one of zero or infinite mass.
+        valid = np.isfinite(np.max(log, axis=1))
+        if not valid.all():
+            row = int(np.argmin(valid))
+            raise ValueError(
+                f"each row of {name} needs a finite maximum and no NaN, but row {row} is "
+                f"{log[row].tolist()}"
+            )
     p, q = softmax(log_p, axis=1), softmax(log_q, axis=1)
     overlap = np.minimum(p, q)
     alpha = overlap.sum(axis=1)
@@ -145,8 +162,16 @@ def _log_uniform(generator: np.random.Generator) -> float:
 
 
 def _log_density(distribution: Any, value: Any) -> float:
-    log_density = getattr(distribution, "logpdf", None) or distribution.logpmf
-    return float(log_density(value))
+    name = "logpdf" if hasattr(distribution, "logpdf") else "logpmf"
+    log_density = getattr(distribution, name)(value)
+    if not isinstance(log_density, float):
+        # One value per coordinate, from array parameters: the joint log-density of
+        # independent coordinates is their sum. A float skips np.sum, which doubled the
+        # time of a coupled Gibbs sweep of examples.pumps.
+        log_density = float(np.sum(log_density))
+    if not log_density < np.inf:
+        raise ValueError(f"{name} returned {log_density} at {np.asarray(value).tolist()}")
+    return log_density
 
 
 def _categorical(weights: FloatArray, u: FloatArray) -> IndexArray:

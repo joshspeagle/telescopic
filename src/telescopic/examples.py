@@ -71,8 +71,8 @@ def gaussian(d: int = 10, rho: float = 0.9) -> Example:
     -------
     Example
     """
-    if d < 1:
-        raise ValueError(f"d must be at least 1, not {d}")
+    if not isinstance(d, int | np.integer) or d < 1:
+        raise ValueError(f"d must be an integer of at least 1, not {d!r}")
     if not -1 < rho < 1:
         raise ValueError(f"rho must be in (-1, 1), not {rho}")
     steps = np.arange(d)
@@ -138,8 +138,8 @@ def funnel(d: int = 10) -> Example:
     -------
     Example
     """
-    if d < 2:
-        raise ValueError(f"d must be at least 2, not {d}")
+    if not isinstance(d, int | np.integer) or d < 2:
+        raise ValueError(f"d must be an integer of at least 2, not {d!r}")
     cov = np.diag([9.0] + [np.exp(4.5)] * (d - 1))
     initial = Normal(np.zeros(d), cov)
     return Example("funnel", _funnel_log_prob, _funnel_grad, initial, np.zeros(d), cov)

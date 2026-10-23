@@ -299,6 +299,8 @@ def test_an_untuned_random_walk_refuses_to_step():
         ({"cov": np.ones((2, 3))}, "square"),
         ({"cov": np.eye(2), "scale": 0.0}, "scale must be positive and finite"),
         ({"cov": np.eye(2), "scale": np.inf}, "scale must be positive and finite"),
+        ({"cov": np.eye(2), "scale": "1"}, "scale must be positive and finite, not '1'"),
+        ({"cov": np.eye(2), "scale": np.array([1.0, 2.0])}, "scale must be positive and finite"),
         ({"cov": np.eye(2), "coupling": "independent"}, "coupling must be"),
     ],
 )
@@ -327,6 +329,46 @@ def test_a_non_finite_gradient_at_an_accepted_proposal_raises():
     start = State(np.full((50, 1), -1.0), np.full(50, -0.5), np.full((50, 1), 1.0))
     with pytest.raises(ValueError, match="grad returned"):
         RandomWalk(np.eye(1), scale=3.0).step(target, start, random_draws(50, 23))
+
+
+class StandardNormal:
+    """A proposal in two dimensions with only the methods that Independence documents."""
+
+    def sample(self, draws):
+        return draws.normal(2)
+
+    def log_density(self, x):
+        return -0.5 * np.sum(x**2, axis=1) - np.log(2 * np.pi)
+
+
+def test_independence_takes_any_proposal_with_sample_and_log_density():
+    # The dimension was read from a mean that the documentation never asks for.
+    kernel = Independence(StandardNormal())
+    assert kernel.ndim is None
+    assert Mixture([RandomWalk(np.eye(2)), kernel], [0.5, 0.5]).ndim == 2
+    # The weights pi / q are constant, so the proposal is accepted.
+    new, _ = kernel.step(TARGET, state([0.1, 0.2]), fixed_draws([[0.3, -0.4]], [[0.5]]))
+    np.testing.assert_array_equal(new.x[0], [0.3, -0.4])
+
+
+@pytest.mark.parametrize("proposal", ["x", stats.multivariate_normal(np.zeros(2))])
+def test_independence_refuses_a_proposal_without_sample_and_log_density(proposal):
+    with pytest.raises(TypeError, match="proposal must have sample"):
+        Independence(proposal)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"mean": [np.nan, 0.0]}, "mean must be finite"),
+        ({"mean": [[0.0, 0.0]]}, "mean must have shape"),
+        ({"df": np.inf}, "df must be a positive integer, or None for the Gaussian"),
+        ({"df": 2.5}, "df must be a positive integer"),
+    ],
+)
+def test_multivariate_t_rejects_invalid_parameters(kwargs, message):
+    with pytest.raises(ValueError, match=message):
+        MultivariateT(**({"mean": np.zeros(2), "cov": np.eye(2)} | kwargs))
 
 
 @pytest.mark.parametrize("df", [None, 1, 5])
@@ -518,7 +560,7 @@ def test_gradient_kernels_enter_the_support_from_a_start_outside_it():
         np.testing.assert_array_equal(moved.x, [[0.5], [-0.5]])
 
 
-@pytest.mark.parametrize("step_size", [0.0, -1.0, np.inf, np.nan])
+@pytest.mark.parametrize("step_size", [0.0, -1.0, np.inf, np.nan, "0.1", np.eye(2)])
 def test_gradient_kernels_refuse_step_sizes_that_are_not_positive_and_finite(step_size):
     makers = (
         lambda: MALA(step_size, cov=np.eye(1)),
@@ -623,6 +665,85 @@ def test_crn_gibbs_couplings_map_a_uniform_of_zero_to_a_finite_point():
     assert np.isfinite(new_y.x).all()
 
 
+class Equal:
+    """Two equal coordinates, N(mean, 1): a normal law whose covariance is singular."""
+
+    def __init__(self, mean, cov=((1.0, 1.0), (1.0, 1.0))):
+        self.mean, self.cov = np.full(2, mean), np.array(cov)
+
+
+def test_crn_gibbs_couplings_draw_from_a_singular_multivariate_normal():
+    # It has no Cholesky factor.
+    def given(point, block):
+        return Normal(0.5 * point[1], 1.0) if block == 0 else Equal(0.5 * point[0])
+
+    kernel = Gibbs(given, [[0], [1, 2]], coupling="crn")
+    n = 2000
+    starts = ([0.0, 1.0, 1.0], [2.0, -1.0, -1.0])
+    x, y = (gibbs_state(np.tile(start, (n, 1))) for start in starts)
+    for new in kernel.coupled_step(Target(None), x, y, random_draws(n, 42)):
+        np.testing.assert_allclose(new.x[:, 1], new.x[:, 2], rtol=0, atol=1e-12)
+        assert stats.kstest(new.x[:, 1] - 0.5 * new.x[:, 0], "norm").pvalue > P_MIN
+
+
+def test_crn_gibbs_couplings_refuse_an_indefinite_covariance():
+    def given(point, block):
+        return Normal(point[1], 1.0) if block == 0 else Equal(0.0, [[1.0, 2.0], [2.0, 1.0]])
+
+    kernel = Gibbs(given, [[0], [1, 2]], coupling="crn")
+    x, y = gibbs_state([0.0, 1.0, 1.0]), gibbs_state([0.0, -1.0, -1.0])
+    with pytest.raises(ValueError, match="positive semi-definite"):
+        kernel.coupled_step(Target(None), x, y, random_draws(1, 43))
+
+
+@pytest.mark.parametrize("coupling", ["maximal", "crn"])
+def test_gibbs_couples_conditionals_with_array_parameters_as_scalar_ones(coupling):
+    # A frozen SciPy normal located at x[[1 - b]] draws arrays of shape (1,), which both
+    # couplings refused for two rows or more. Row 2 has identical conditionals in block 0.
+    def scalar(point, block):
+        return stats.norm(RHO * point[1 - block], np.sqrt(1 - RHO**2))
+
+    def array(point, block):
+        return stats.norm(RHO * point[np.array([1 - block])], np.sqrt(1 - RHO**2))
+
+    x = gibbs_state([[0.5, -1.0], [0.2, 0.7], [0.1, 0.3]])
+    y = gibbs_state([[-0.5, 1.5], [1.0, -0.4], [2.0, 0.3]])
+    expected, moved = (
+        Gibbs(conditional, [[0], [1]], coupling=coupling).coupled_step(
+            Target(None), x, y, random_draws(3, 44)
+        )
+        for conditional in (scalar, array)
+    )
+    for first, second in zip(expected, moved, strict=True):
+        np.testing.assert_array_equal(first.x, second.x)
+
+
+class Fixed:
+    """A conditional law that always draws ``value``."""
+
+    def __init__(self, value):
+        self.value = value
+
+    def rvs(self, *, random_state):
+        return self.value
+
+    def logpdf(self, x):
+        return 0.0
+
+
+@pytest.mark.parametrize("value", [np.nan, np.inf])
+def test_a_gibbs_conditional_that_draws_a_non_finite_value_raises(value):
+    # A NaN never meets, so a run without log_prob hung or returned NaN. The chains agree
+    # after block 0, so block 1 draws once for both.
+    kernel = Gibbs(lambda point, block: Fixed(value if block else 0.5), [[0], [1]])
+    x, y = gibbs_state([0.0, 1.0]), gibbs_state([0.0, 2.0])
+    message = rf"conditional of block 1 given x = \[0.5, 1.0\] drew \[{value}\]"
+    with pytest.raises(ValueError, match=message):
+        kernel.step(Target(None), x, random_draws(1, 45))
+    with pytest.raises(ValueError, match=message):
+        kernel.coupled_step(Target(None), x, y, random_draws(1, 46))
+
+
 def test_two_scale_gibbs_couplings_switch_at_the_threshold():
     kernel = Gibbs(conditional, [[0], [1]], coupling="two-scale", threshold=1.0)
     far, near = (np.array([[0.5, -1.0], [0.6, -1.1]]), np.array([[-0.5, 1.5], [0.6, -1.0]]))
@@ -653,6 +774,7 @@ def test_identical_conditionals_give_both_chains_the_same_draw():
         ({"coupling": "independent"}, "coupling must be one of"),
         ({"threshold": 1.0}, "threshold is required"),
         ({"eta": 0.0}, "eta must be in"),
+        ({"eta": "1"}, "eta must be in"),
         ({"coupling": "crn", "eta": 0.5}, "eta applies to the maximal coupling"),
     ],
 )

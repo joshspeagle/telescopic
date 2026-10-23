@@ -13,6 +13,7 @@ from telescopic._random import Draws
 from telescopic._types import FloatArray, Seed
 from telescopic.couplings import maximal, reflection_maximal
 from telescopic.kernels.base import (
+    REAL,
     Kernel,
     State,
     acceptance,
@@ -67,8 +68,8 @@ class RandomWalk(Kernel):
     ) -> None:
         if coupling not in ("reflection", "maximal"):
             raise ValueError(f"coupling must be 'reflection' or 'maximal', not {coupling!r}")
-        if scale is not None and not 0 < scale < np.inf:
-            raise ValueError(f"scale must be positive and finite, not {scale}")
+        if scale is not None and not (isinstance(scale, REAL) and 0 < scale < np.inf):
+            raise ValueError(f"scale must be positive and finite, not {scale!r}")
         self.scale = scale
         self.coupling = coupling
         self.cov: FloatArray | None = None

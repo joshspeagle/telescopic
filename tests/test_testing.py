@@ -5,7 +5,7 @@ from references import P_MIN
 from telescopic import examples
 from telescopic.kernels import MALA, Gibbs, RandomWalk, State
 from telescopic.target import Target
-from telescopic.testing import check_coupling
+from telescopic.testing import check_coupling, random_draws
 
 GAUSSIAN = examples.gaussian(2, 0.5)
 TARGET = Target(GAUSSIAN.log_prob, grad=GAUSSIAN.grad, vectorize=True)
@@ -120,8 +120,18 @@ def test_check_coupling_flags_a_coupling_that_never_meets():
 
 @pytest.mark.parametrize(
     ("x", "y", "n", "message"),
-    [([0.0, 0.0], [0.0], 10, "x and y must be points"), ([0.0], [0.0], 1, "n must be at least 2")],
+    [
+        ([0.0, 0.0], [0.0], 10, "x and y must be points"),
+        ([0.0], [0.0], 1, "n must be an integer of at least 2"),
+        ([0.0], [0.0], 1e4, "n must be an integer of at least 2, not 10000.0"),
+    ],
 )
 def test_check_coupling_rejects_invalid_arguments(x, y, n, message):
     with pytest.raises(ValueError, match=message):
         check_coupling(RandomWalk(np.eye(len(x))), TARGET, x, y, n=n)
+
+
+@pytest.mark.parametrize("n_rows", [0, 2.5])
+def test_random_draws_need_a_positive_integer_number_of_rows(n_rows):
+    with pytest.raises(ValueError, match="n_rows must be an integer of at least 1"):
+        random_draws(n_rows)

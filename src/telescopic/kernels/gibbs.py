@@ -8,11 +8,12 @@ from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
+from scipy import linalg
 
 from telescopic._random import Draws
 from telescopic._types import FloatArray
 from telescopic.couplings import maximal
-from telescopic.kernels.base import Kernel, State, evaluate, evaluate_pair
+from telescopic.kernels.base import REAL, Kernel, State, evaluate, evaluate_pair
 from telescopic.target import Target
 
 COUPLINGS = ("maximal", "crn", "two-scale")
@@ -27,9 +28,13 @@ class Gibbs(Kernel):
 
     - ``"maximal"``: the rejection maximal coupling, with ``eta``;
     - ``"crn"``: common random numbers, which contract the chains but make them equal only
-      by rounding: one uniform through ``ppf`` for a block of one coordinate, common
-      standard normals for a multivariate normal conditional (an object with ``mean`` and
-      ``cov``, such as ``scipy.stats.multivariate_normal``);
+      by rounding. For a block of one coordinate whose conditionals have ``ppf``, one
+      uniform goes through each ``ppf``. For a block of several coordinates, or of one
+      without ``ppf``, ``"crn"`` takes each conditional to be the normal with its ``mean``
+      and ``cov``, whatever its type, and common standard normals go through a square
+      root of each ``cov``, which may be singular. A conditional with ``mean`` and ``cov``
+      that is not normal, such as a multivariate Student-:math:`t`, would get the wrong
+      law;
     - ``"two-scale"``: common random numbers for pairs farther apart than ``threshold``
       at the start of the sweep, the maximal coupling for the others (Biswas, Bhattacharya,
       Jacob & Johndrow 2022).
@@ -43,7 +48,8 @@ class Gibbs(Kernel):
         ``conditional(x, b)`` returns the full conditional of block ``b`` given the other
         coordinates of ``x``, a read-only point of shape ``(d,)``: a frozen distribution
         with ``rvs(random_state=...)`` and a normalised ``logpdf`` or ``logpmf``, such as
-        ``scipy.stats.norm(mean, sd)``.
+        ``scipy.stats.norm(mean, sd)``. One value of ``logpdf`` per coordinate, as with
+        array parameters, is summed: the joint log-density of independent coordinates.
     blocks : sequence of array_like of int
         Index arrays that partition the coordinates ``0, ..., d - 1``.
     coupling : {"maximal", "crn", "two-scale"}
@@ -59,10 +65,10 @@ class Gibbs(Kernel):
     SciPy distribution takes 250 to 300 µs to build, which can dominate a step; a small
     class with the methods used is faster, as in :mod:`telescopic.examples`. A step draws
     each block from the row's generator. A coupled step does the same for the maximal
-    coupling and for identical conditionals, and reads 1 uniform (a block of one
-    coordinate) or the block's size of normals (multivariate normal) per row and block for
-    common random numbers. With ``log_prob=None`` the target has no log-density, and
-    states carry 0.
+    coupling and for identical conditionals, and reads 1 uniform (through ``ppf``) or the
+    block's size of normals (through ``cov``) per row and block for common random numbers.
+    A conditional that draws a non-finite value raises ``ValueError``. With
+    ``log_prob=None`` the target has no log-density, and states carry 0.
     """
 
     def __init__(
@@ -82,8 +88,8 @@ class Gibbs(Kernel):
             raise ValueError("threshold is required by coupling='two-scale', and only by it")
         if threshold is not None and not threshold > 0:
             raise ValueError(f"threshold must be positive, not {threshold}")
-        if not 0 < eta <= 1:
-            raise ValueError(f"eta must be in (0, 1], not {eta}")
+        if not (isinstance(eta, REAL) and 0 < eta <= 1):
+            raise ValueError(f"eta must be in (0, 1], not {eta!r}")
         if coupling == "crn" and eta != 1:
             raise ValueError(
                 "eta applies to the maximal coupling, which coupling='crn' never uses"
@@ -116,8 +122,10 @@ class Gibbs(Kernel):
         generators = [draws.generator(row) for row in range(len(x))]
         for b, block in enumerate(self.blocks):
             points = _read_only(x)
+            drawn = np.empty((len(x), len(block)))
             for row, generator in enumerate(generators):
-                x[row, block] = self.conditional(points[row], b).rvs(random_state=generator)
+                drawn[row] = self.conditional(points[row], b).rvs(random_state=generator)
+            x[:, block] = _finite(drawn, b, points)
         return evaluate(target, x, state.grad is not None), np.ones(len(x))
 
     def coupled_step(
@@ -146,7 +154,7 @@ class Gibbs(Kernel):
                         [self.conditional(points_y[row], b) for row in rows],
                         draws.subset(rows),
                     )
-            x[:, block], y[:, block] = new_x, new_y
+            x[:, block], y[:, block] = _finite(new_x, b, points_x), _finite(new_y, b, points_y)
         identical = np.all(x == y, axis=1)
         return evaluate_pair(
             partial(evaluate, target, need_grad=state_x.grad is not None), x, y, identical
@@ -167,6 +175,19 @@ def _read_only(points: FloatArray) -> FloatArray:
     return view
 
 
+def _finite(drawn: FloatArray, b: int, points: FloatArray) -> FloatArray:
+    # The draws of block b, one row per chain, if finite: a NaN would never meet, and
+    # would spread to the other blocks through their conditionals.
+    bad = ~np.isfinite(drawn).all(axis=1)
+    if bad.any():
+        row = int(np.argmax(bad))
+        raise ValueError(
+            f"the conditional of block {b} given x = {points[row].tolist()} drew "
+            f"{drawn[row].tolist()}"
+        )
+    return drawn
+
+
 def _maximal(p: list[Any], q: list[Any], draws: Draws, eta: float) -> tuple[FloatArray, ...]:
     x, y, _, _ = maximal(p, q, draws, eta)
     return x.reshape(len(p), -1), y.reshape(len(p), -1)
@@ -174,12 +195,13 @@ def _maximal(p: list[Any], q: list[Any], draws: Draws, eta: float) -> tuple[Floa
 
 def _common(p: list[Any], q: list[Any], draws: Draws, size: int) -> tuple[FloatArray, ...]:
     # Common random numbers: a uniform through each ppf for a block of one coordinate, or
-    # normals through each multivariate normal's Cholesky factor.
+    # normals through a square root of each conditional's covariance, taken as normal.
     if size == 1 and all(hasattr(conditional, "ppf") for conditional in p + q):
         # A uniform of 0, drawn with probability 2^-53, would give ppf = -inf.
         u = np.maximum(draws.uniform(), np.finfo(np.float64).tiny)
+        # Each ppf gives a scalar, or an array for array parameters.
         return tuple(
-            np.array([c.ppf(value) for c, value in zip(side, u, strict=True)])[:, None]
+            np.reshape([c.ppf(value) for c, value in zip(side, u, strict=True)], (len(side), size))
             for side in (p, q)
         )
     if not all(
@@ -193,9 +215,25 @@ def _common(p: list[Any], q: list[Any], draws: Draws, size: int) -> tuple[FloatA
     return tuple(
         np.array(
             [
-                np.atleast_1d(c.mean) + np.linalg.cholesky(np.atleast_2d(c.cov)) @ row
+                np.atleast_1d(c.mean) + _root(np.atleast_2d(c.cov)) @ row
                 for c, row in zip(side, z, strict=True)
             ]
         )
         for side in (p, q)
     )
+
+
+def _root(cov: FloatArray) -> FloatArray:
+    # A matrix A with A A^T = cov: the Cholesky factor, or for a singular cov the
+    # eigenvectors scaled by the square roots of the eigenvalues, those that rounding has
+    # made negative taken as 0.
+    try:
+        return np.linalg.cholesky(cov)
+    except np.linalg.LinAlgError:
+        values, vectors = linalg.eigh(cov)
+        if values[0] < -1e-8 * values[-1]:
+            raise ValueError(
+                f"coupling='crn' needs a positive semi-definite cov, not {cov.tolist()}"
+            ) from None
+        root: FloatArray = vectors * np.sqrt(np.maximum(values, 0.0))
+        return root

@@ -161,8 +161,10 @@ def test_an_uncorrelated_gaussian_has_a_float_covariance():
     ("make", "kwargs"),
     [
         (examples.gaussian, {"d": 0}),
+        (examples.gaussian, {"d": 2.0}),
         (examples.gaussian, {"rho": 1.0}),
         (examples.funnel, {"d": 1}),
+        (examples.funnel, {"d": 2.5}),
     ],
 )
 def test_invalid_example_parameters_raise(make, kwargs):

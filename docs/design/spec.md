@@ -249,7 +249,7 @@ Averaging only the replicates completed by a deadline is biased by $-\mathbb E[H
 
 - **Log-density:** `log_prob(x, *args, **kwargs)` returns a float for `x` of shape `(d,)`. With `vectorize=True` it takes `(n, d)` and returns `(n,)`.
 - **Gradient:** an optional `grad` with the same signature returns $\nabla \log\pi$, of shape `(d,)` or `(n, d)`. A kernel that needs a gradient raises `ValueError` without one.
-- **Special values:** `-inf` is a valid value and is rejected by every Metropolis step. NaN or `+inf` raises `ValueError` with the offending point. Where the log-density is `-inf`, the gradient may be non-finite, and states there carry a gradient of 0: a gradient kernel proposes from such a point without drift and accepts any proposal of finite density, as RWMH does (DECISIONS #14). Where it is finite, a non-finite gradient raises wherever a cached state would keep it (initial states, and proposals of gradient-free kernels whose states carry gradients); gradient kernels, HMC's meeting step included, reject a proposal that has one.
+- **Special values:** `-inf` is a valid value and is rejected by every Metropolis step. NaN or `+inf` raises `ValueError` with the offending point. Where the log-density is `-inf`, the gradient is not evaluated, and states there carry a gradient of 0: a gradient kernel proposes from such a point without drift and accepts any proposal of finite density, as RWMH does (DECISIONS #14, #49). Where it is finite, a non-finite gradient raises wherever a cached state would keep it (initial states, and proposals of gradient-free kernels whose states carry gradients); gradient kernels, HMC's meeting step included, reject a proposal that has one.
 - **Gibbs:** with a kernel that needs no log-density, a Gibbs kernel or a mixture of them, `log_prob` may be `None` (§5.7).
 - **Determinism:** the log-density must return the same value at the same point. A stochastic log-density can split chains that have met. The documentation says so.
 - **Layer C:** a `Target` object wraps these functions, counts evaluations, and presents a batched interface `(n, d) -> (n,)` to kernels, whether or not the user's function is vectorised.
@@ -257,7 +257,7 @@ Averaging only the replicates completed by a deadline is biased by $-\mathbb E[H
 ### 4.2 Initial distribution (R-INPUT-2)
 
 `init` may be any of:
-- an object with `rvs(random_state=rng)`: a frozen SciPy distribution, or a helper (`telescopic.initial.Normal`, `Uniform`, `Empirical`). A draw is normalised to shape `(d,)` (SciPy returns shape `()` for a one-dimensional multivariate normal);
+- an object with `rvs(random_state=rng)`: a frozen SciPy distribution, or a helper (`telescopic.initial.Normal`, `Uniform`, `Empirical`). A draw is normalised to shape `(d,)` with $d \ge 1$: SciPy returns shape `()` for a one-dimensional multivariate normal, and `(1, d)` for a Dirichlet;
 - a callable `init(rng) -> array (d,)`;
 - an array of points of shape `(n, d)`, used as the uniform distribution over its rows. This lets emcee users start from an existing ensemble without losing unbiasedness.
 
@@ -314,17 +314,20 @@ else:  e = delta / |delta|;  z_y = z - 2 (e . z) e;  y' = mu_y + C z_y
 - It is maximal: $\mathbb P(x' = y') = 2\Phi(-\lVert\delta\rVert/2)$.
 - Its cost is deterministic: $d$ normals and 1 uniform.
 - $\delta = 0$ gives `identical` with probability 1, so $e$ is needed, and computed, only on rows with $\lVert\delta\rVert > 0$. The test is exact: a threshold would copy $Y = X$ for a small non-zero $\delta$ and bias $Y$'s marginal.
+- A $\delta$ that is not finite, from a drift that overflowed, always fails the test; there $e = 0$, so $y' = \mu_y + Cz$, which keeps $Y$'s marginal.
 
 **Rejection maximal coupling** of distributions $p$ and $q$ with samplers and normalised log-densities (R-CPL-2). This is JOA20 Algorithm 2 (Thorisson):
 
 ```text
 X ~ p;  u ~ U(0, 1)
-if log u + log p(X) <= log q(X):  return (X, X)
+if log u + log p(X) < log q(X):  return (X, X)
 repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y)
 ```
+- The first test is strict, so that $u = 0$ cannot copy $X$ to $Y$ where $q(X) = 0$.
+- A log-density with one value per coordinate, as from array parameters, is summed: the joint log-density of independent coordinates. NaN or $+\infty$ raises `ValueError`.
 - The expected number of draws is 2, with variance $2(1 - \mathrm{TV})/\mathrm{TV}$ (research note `mh_couplings.md` §1).
 - **Option $\eta \in (0, 1]$** (Gerber & Lee; AJ24 Algorithm 2):
-  - the first test becomes $u \le \min(\eta, q(X)/p(X))$;
+  - the first test becomes $u < \min(\eta, q(X)/p(X))$;
   - the loop condition becomes $u' > \eta\, p(Y)/q(Y)$;
   - the meeting probability is $\int \min(\eta p, q)$;
   - the variance of the draw count is at most $2\eta/(1-\eta)$.
@@ -332,6 +335,7 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 **Maximal coupling of finite discrete distributions** $p, q$ on $\{1, \dots, K\}$ (R-CPL-3). This is JOA20 §5.4, computed in log space:
 - With probability $\alpha = \sum_i \min(p_i, q_i)$, draw $i \sim \min(p, q)/\alpha$ and return $(i, i)$.
 - Otherwise draw $i$ and $j$ independently from the normalised residuals.
+- Each row of log-probabilities needs a finite maximum and no NaN; otherwise `ValueError`.
 - The cost is deterministic.
 
 ### 5.3 Random-walk Metropolis–Hastings (R-KER-RW)
@@ -350,7 +354,7 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 
 **Tuning (R-TUNE-1):**
 - **Pilot:** 4 adaptive Metropolis chains from $\pi_0$, each running $\max(2000, 200d, 10d^2)$ steps; beyond 20 dimensions they refactor the covariance and keep their states every $\lceil d/20\rceil$ steps (DECISIONS #34). Each chain adapts its own global scale by Robbins–Monro steps of size $(t+1)^{-0.6}$ toward acceptance 0.234 (Andrieu & Thoms 2008). The chains share one proposal covariance: the running mean and covariance, with step $1/(t+1)$, of all their states, started from the variances of 100 draws from $\pi_0$ (Haario et al. 2001; pooled as in Craiu, Rosenthal & Yang 2009; DECISIONS #7).
-- **Covariance:** pooled over the second halves of the chains, plus a ridge of $10^{-10}$ times the mean variance.
+- **Covariance:** pooled over the second halves of the chains, plus $10^{-10}$ times each coordinate's variance on the diagonal, or $10^{-10}$ for a coordinate of variance 0. The pilot's own factorisations add $10^{-12}$ times each variance (DECISIONS #47).
 - **Scale:** $2.38/\sqrt d$, `RandomWalk`'s default (DECISIONS #7).
 - **Report:** the pilot acceptance rates and $\hat R$ per coordinate. A `ConvergenceWarning` when the chains disagree: $\hat R > \sqrt 2$ in some coordinate, where the chain means spread more widely than the chains themselves, a sign of several modes (DECISIONS #6).
 
@@ -402,11 +406,11 @@ The documentation says that settings optimal for HMC alone can fail to contract 
 
 `Gibbs(conditional, blocks, *, coupling="maximal", eta=1.0, threshold=None)`.
 - **Blocks:** a sequence of integer index arrays that partition the coordinates.
-- **Conditionals:** `conditional(x, b)` receives one state `x` of shape `(d,)` and a block number `b`, and returns the full conditional of block `b` given the rest of `x`. It is a frozen SciPy-like distribution with `rvs(random_state=...)` and a normalised `logpdf` (or `logpmf` for discrete ones). Sweeps loop over rows.
+- **Conditionals:** `conditional(x, b)` receives one state `x` of shape `(d,)` and a block number `b`, and returns the full conditional of block `b` given the rest of `x`. It is a frozen SciPy-like distribution with `rvs(random_state=...)` and a normalised `logpdf` (or `logpmf` for discrete ones); one value per coordinate, as from array parameters, is summed. A draw that is not finite raises `ValueError`. Sweeps loop over rows.
 - **Sweep:** blocks are updated in the given order.
 - **Couplings, per block:**
   - `"maximal"`: rejection maximal coupling (§5.2), with the $\eta$ option;
-  - `"crn"`: common random numbers, which contract but do not meet on their own (an `eta` other than 1 raises: DECISIONS #16): a common uniform through `ppf` for blocks of one coordinate, and common standard normals for multivariate normal conditionals (objects with `mean` and `cov`, such as `scipy.stats.multivariate_normal`);
+  - `"crn"`: common random numbers, which contract but do not meet on their own (an `eta` other than 1 raises: DECISIONS #16): a common uniform through each `ppf` for a block of one coordinate whose conditionals have one; otherwise common standard normals through a square root of each conditional's `cov`, which may be singular, added to its `mean`. Such a conditional is taken to be the normal with that mean and covariance, whatever its type (DECISIONS #48);
   - `"two-scale"`: CRN while $\lVert x - y\rVert >$ `threshold`, maximal otherwise (Biswas et al. 2022). The switch depends only on the pair at the start of each sweep, and both branches couple the same conditional, so it is valid (AJ24 §4.2). `threshold` is required.
 - **Identical conditionals:** when the coordinates outside block `b` are equal in the two chains, their conditionals are identical, and both chains receive the same draw. This identity coupling is a valid state-dependent choice; it also keeps equal states equal when $\eta < 1$, which the rejection coupling alone would split with probability $1 - \eta$ (design review D-R2).
 - **Meeting:** the engine's exact comparison after each sweep (R-EST-2). Blocks updated by CRN can become equal without a coupling event.

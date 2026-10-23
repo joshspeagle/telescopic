@@ -13,9 +13,12 @@ import numpy.typing as npt
 
 from telescopic._linalg import covariance
 from telescopic._random import Draws
-from telescopic._types import BoolArray, Distribution, FloatArray, Seed
+from telescopic._types import BoolArray, FloatArray, Seed
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport, adaptive_metropolis, dual_averaging
+
+# The types of a real parameter, Python's and NumPy's, for checks that name the parameter.
+REAL = int | float | np.integer | np.floating
 
 
 @dataclass
@@ -100,7 +103,7 @@ class Kernel(ABC):
     def tune(
         self,
         target: Target,
-        initial: Distribution,
+        initial: Any,
         rng: Seed = None,
         *,
         pilot: PilotRun | None = None,
@@ -112,7 +115,11 @@ class Kernel(ABC):
         Parameters
         ----------
         target : Target
-        initial : object with ``rvs(random_state=generator)``
+            Checked with :meth:`check_target` before the pilot runs.
+        initial
+            An object with ``rvs(random_state=generator)``, a callable ``initial(rng)`` or
+            an array of points of shape ``(n, d)``, as for
+            :func:`telescopic.initial.as_initial`.
         rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
             Seed of the tuning, in the tuning namespace (spec section 6.1): the pilot
             chains, unless ``pilot`` is given, and dual averaging.
@@ -129,6 +136,7 @@ class Kernel(ABC):
         """
         if self.is_tuned:
             return self, None
+        self.check_target(target)
         pilot = adaptive_metropolis(target, initial, rng) if pilot is None else pilot
         return self._tuned(target, pilot, rng)
 
@@ -250,8 +258,8 @@ class GradientKernel(Kernel):
 
 
 def _checked_step_size(step_size: float) -> float:
-    if not 0 < step_size < np.inf:
-        raise ValueError(f"step_size must be positive and finite, not {step_size}")
+    if not (isinstance(step_size, REAL) and 0 < step_size < np.inf):
+        raise ValueError(f"step_size must be positive and finite, not {step_size!r}")
     return float(step_size)
 
 
@@ -260,9 +268,9 @@ def evaluate(target: Target, x: FloatArray, need_grad: bool) -> State:
 
     A non-finite gradient where the log-density is finite raises ``ValueError``: a cache
     must stay valid (spec R-INPUT-1). Gradient kernels reject such proposals instead,
-    with :func:`evaluate_proposal`. Where the log-density is ``-inf`` the gradient is set
-    to 0, so a gradient kernel proposes from there without drift, and accepts any
-    proposal of finite density, as random-walk Metropolis does.
+    with :func:`evaluate_proposal`. Where the log-density is ``-inf`` the target gives a
+    gradient of 0, so a gradient kernel proposes from there without drift, and accepts
+    any proposal of finite density, as random-walk Metropolis does.
 
     Parameters
     ----------
@@ -277,16 +285,13 @@ def evaluate(target: Target, x: FloatArray, need_grad: bool) -> State:
     if not need_grad:
         return State(x, target.log_prob(x))
     log_prob, grad = target.log_prob_and_grad(x)
-    outside = np.isneginf(log_prob)
-    bad = ~outside & ~np.isfinite(grad).all(axis=1)
+    bad = ~np.isfinite(grad).all(axis=1)
     if bad.any():
         row = int(np.argmax(bad))
         raise ValueError(
             f"grad returned {grad[row].tolist()} at x = {x[row].tolist()}, where log_prob "
             "is finite"
         )
-    if outside.any():
-        grad = np.where(outside[:, None], 0.0, grad)
     return State(x, log_prob, grad)
 
 
