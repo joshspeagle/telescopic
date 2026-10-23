@@ -9,10 +9,10 @@ import numpy as np
 import numpy.typing as npt
 
 from telescopic._random import Draws
-from telescopic._types import FloatArray, IndexArray, Seed
+from telescopic._types import Distribution, FloatArray, IndexArray, Seed
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
-from telescopic.tuning import PilotRun, TuningReport
+from telescopic.tuning import PilotRun, TuningReport, adaptive_metropolis
 
 
 class Mixture(Kernel):
@@ -26,7 +26,7 @@ class Mixture(Kernel):
     Parameters
     ----------
     kernels : sequence of Kernel
-        :meth:`tune` tunes the untuned ones on one set of pilot chains; its report gives
+        :meth:`~telescopic.kernels.Kernel.tune` tunes the untuned ones on one set of pilot chains; its report gives
         the largest weight ratio of any independence component.
     weights : array_like
         Non-negative weights, normalised internally.
@@ -61,11 +61,22 @@ class Mixture(Kernel):
     def ndim(self) -> int | None:
         return next((kernel.ndim for kernel in self.kernels if kernel.ndim is not None), None)
 
-    def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
-        tuned = [
-            (kernel, None) if kernel.is_tuned else kernel._tuned(target, pilot, rng)
-            for kernel in self.kernels
-        ]
+    def tune(
+        self,
+        target: Target,
+        initial: Distribution,
+        rng: Seed = None,
+        *,
+        pilot: PilotRun | None = None,
+    ) -> tuple[Kernel, TuningReport | None]:
+        """A copy whose components are tuned by their own ``tune`` on one pilot.
+
+        The parameters and returns are those of :meth:`Kernel.tune`.
+        """
+        if self.is_tuned:
+            return self, None
+        pilot = adaptive_metropolis(target, initial, rng) if pilot is None else pilot
+        tuned = [kernel.tune(target, initial, rng, pilot=pilot) for kernel in self.kernels]
         ratios = [report.max_weight_ratio for _, report in tuned if report is not None]
         ratio = max((r for r in ratios if r is not None), default=None)
         # A copy keeps the class and settings of a subclass, such as HMC.
