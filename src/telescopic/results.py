@@ -125,9 +125,7 @@ class Result:
         if self.n_censored and replicates.settings.max_iter is None:
             raise ValueError("replicates with censored pairs need the max_iter of their run")
         self.ndim = replicates.atoms.shape[1]
-        self.names = [f"x{i}" for i in range(self.ndim)] if names is None else list(names)
-        if len(self.names) != self.ndim:
-            raise ValueError(f"names must have {self.ndim} entries, not {len(self.names)}")
+        self.names = parameter_names(names, self.ndim)
         self.index = replicates.index
         self.meeting_times = replicates.meeting_time
         self.costs = replicates.cost
@@ -620,6 +618,30 @@ class Result:
         # Every time from 0 to the last at which a bound of section 3.6 can be positive,
         # given the first time after the last that enters it.
         return np.arange(max(1, last - self.lag))
+
+
+def parameter_names(names: Sequence[str] | None, ndim: int) -> list[str]:
+    """Distinct names of the ``ndim`` coordinates; ``x0``, ``x1``, ... by default.
+
+    Parameters
+    ----------
+    names : sequence of str or None
+    ndim : int
+
+    Returns
+    -------
+    list of str
+    """
+    if names is None:
+        return [f"x{i}" for i in range(ndim)]
+    if isinstance(names, str) or not all(isinstance(name, str) for name in names):
+        raise TypeError(f"names must be a sequence of strings, not {names!r}")
+    names = list(names)
+    if len(names) != ndim:
+        raise ValueError(f"names must have {ndim} entries, not {len(names)}")
+    if len(set(names)) != ndim:
+        raise ValueError(f"names must be distinct, not {names}")
+    return names
 
 
 @dataclass(eq=False)

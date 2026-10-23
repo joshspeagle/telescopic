@@ -148,9 +148,18 @@ def test_a_result_missing_requested_replicates_is_interrupted_until_they_run():
     assert not interrupted.merge(rest).interrupted
 
 
-def test_names_must_match_the_dimension():
-    with pytest.raises(ValueError, match="names must have 2 entries"):
-        Result(RESULT._replicates, names=["a"])
+@pytest.mark.parametrize(
+    ("names", "error", "message"),
+    [
+        (["a"], ValueError, "names must have 2 entries"),
+        (["a", "a"], ValueError, "names must be distinct"),
+        ([0, 1], TypeError, "names must be a sequence of strings"),
+        ("ab", TypeError, "names must be a sequence of strings"),
+    ],
+)
+def test_names_must_be_distinct_strings_one_per_coordinate(names, error, message):
+    with pytest.raises(error, match=message):
+        Result(RESULT._replicates, names=names)
 
 
 def test_merging_two_runs_equals_one_run_over_both_sets_of_replicates():

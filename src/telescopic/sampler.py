@@ -16,7 +16,7 @@ from telescopic._random import MAIN, PILOT, namespace_seed, replicate_generator,
 from telescopic._types import FloatArray, IntArray, Seed
 from telescopic.initial import as_initial, draw
 from telescopic.kernels import HMC, MALA, Independence, Kernel, RandomWalk
-from telescopic.results import Result
+from telescopic.results import Result, parameter_names
 from telescopic.target import Target
 from telescopic.tuning import TuningReport, choose_k
 from telescopic.warnings import ConvergenceWarning, InputWarning, warn
@@ -129,9 +129,7 @@ class CoupledSampler:
                 f"kernel works in {self.kernel.ndim} dimensions, but init draws points in "
                 f"{self.ndim}"
             )
-        self.names = None if names is None else list(names)
-        if self.names is not None and len(self.names) != self.ndim:
-            raise ValueError(f"names must have {self.ndim} entries, not {len(self.names)}")
+        self.names = None if names is None else parameter_names(names, self.ndim)
         self.tuning: TuningReport | None = None
         self.pilot: FloatArray | None = None
         self._replicates: engine.Replicates | None = None
