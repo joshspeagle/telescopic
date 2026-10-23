@@ -343,8 +343,8 @@ class Result:
             fraction is 0; ``tv_bound_at_k``; ``variance_share``, the largest share of one
             replicate in the sample variance of the estimate of a coordinate's mean or
             second moment, ``nan`` below 2 replicates, and ``variance_share_of``, that
-            estimate; ``mean_cost``, ``seconds_per_replicate`` and ``inefficiency`` (mean
-            cost over :math:`m - k + 1`; spec R-TUNE-4).
+            estimate; ``mean_cost``, ``seconds_per_replicate`` and ``relative_cost``, the
+            mean cost over :math:`m - k + 1` (spec R-TUNE-4).
         """
         met = self.meeting_times[np.isfinite(self.meeting_times)]
         quantiles = np.quantile(met, [0.5, 0.9, 0.99]) if len(met) else np.full(3, np.nan)
@@ -377,7 +377,7 @@ class Result:
             "variance_share_of": share_of,
             "mean_cost": mean_cost,
             "seconds_per_replicate": self.wall_time / len(self.index),
-            "inefficiency": mean_cost / (self.m - self.k + 1),
+            "relative_cost": mean_cost / (self.m - self.k + 1),
         }
 
     def summary(self) -> Summary:
@@ -645,8 +645,8 @@ class Summary:
             ),
             (
                 f"cost per replicate: {footer['mean_cost']:.4g} kernel applications, "
-                f"{footer['seconds_per_replicate']:.3g} s; inefficiency "
-                f"{footer['inefficiency']:.3g}; pairs meeting after k + lag "
+                f"{footer['seconds_per_replicate']:.3g} s; relative cost "
+                f"{footer['relative_cost']:.3g}; pairs meeting after k + lag "
                 f"{footer['late_fraction']:.1%} (at most {footer['late_fraction_upper']:.1%} "
                 "at 95%)"
             ),

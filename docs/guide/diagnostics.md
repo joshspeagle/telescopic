@@ -92,9 +92,9 @@ result.diagnostics()
   leading term of the TV bound at $k$, `tv_bound_at_k`, and with `lag = k` the two are
   close. `late_fraction_upper` is its one-sided 95% Clopper-Pearson upper bound, which
   stays informative when the fraction is 0.
-- `mean_cost`, `seconds_per_replicate` and `inefficiency`: the mean number of kernel
+- `mean_cost`, `seconds_per_replicate` and `relative_cost`: the mean number of kernel
   applications per replicate, the wall time per replicate, and the mean cost over
-  $m - k + 1$ ([Settings](settings.md#cost-and-inefficiency)).
+  $m - k + 1$ ([Settings](settings.md#cost)).
 
 ## Warnings
 

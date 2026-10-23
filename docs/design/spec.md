@@ -212,7 +212,7 @@ Let $a_r = \hat\pi_r(h) \in \mathbb R^p$ for replicates $r = 1, \dots, R$. Write
   - **Partial `"auto"` (D-21):** a value given explicitly is kept. A missing `lag` or `m` is derived from `k` ($L = \max(1, k)$, $m = 10k$) without a pilot, and the pilot runs only when `k` is `"auto"`.
   - **Evidence:** E01 (Appendix A) used a 2000-replicate pilot; the design review measured the 100-replicate pilot.
 - **R-TUNE-3:** pilots draw from their own random-stream namespaces (§6.1). Their replicates never enter estimates; they are reported.
-- **R-TUNE-4:** the result records every tuned value, the pilot meeting times, and the measured inefficiency: the mean cost per replicate divided by $m - k + 1$. (JOA20 §3.1 approximates it by $1 + (k + \mathbb E[\tau - L])/(m - k)$; with $\bar\tau$ in place of $\mathbb E[\tau - L]$ the approximation is too high by $L/(m-k)$ when $L > 1$.)
+- **R-TUNE-4:** the result records every tuned value, the pilot meeting times, and the measured relative cost: the mean cost per replicate divided by $m - k + 1$ (DECISIONS #41). (JOA20 §3.1 approximates it by $1 + (k + \mathbb E[\tau - L])/(m - k)$; with $\bar\tau$ in place of $\mathbb E[\tau - L]$ the approximation is too high by $L/(m-k)$ when $L > 1$.)
 
 ### 3.6 Coupling bounds (R-DIAG-1)
 
@@ -534,7 +534,7 @@ Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 - meeting-time median, 90th and 99th percentiles, maximum, and number censored;
 - the tail index of warning 4 of §7.4, from 500 replicates (DECISIONS #40);
 - mean cost per replicate, in kernel applications and in seconds;
-- the measured inefficiency, mean cost / $(m - k + 1)$ (R-TUNE-4);
+- the relative cost, mean cost / $(m - k + 1)$ (R-TUNE-4);
 - the fraction of replicates with a non-zero bias correction, which estimates the TV bound at $k$ (§3.6);
 - the largest share of warning 3 of §7.4, and the estimate that holds it (DECISIONS #40);
 - for an interrupted run, that its estimates are consistent but not exactly unbiased (§6.5);

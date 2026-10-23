@@ -197,7 +197,7 @@ def pipeline():
 
 def efficiency():
     # sample() with each automatic kernel on two examples, R = 200: k, meeting-time
-    # quantiles and inefficiency (mean cost over m - k + 1), or why k could not be chosen.
+    # quantiles and relative cost (mean cost over m - k + 1), or why k could not be chosen.
     out = {}
     for example in (examples.gaussian(10), examples.banana()):
         for kernel in ("rwmh", "mala", "hmc"):
@@ -225,7 +225,7 @@ def efficiency():
                 "k": result.k,
                 "meeting time 50%": diagnostics["meeting_time_50"],
                 "meeting time 99%": diagnostics["meeting_time_99"],
-                "inefficiency": round(diagnostics["inefficiency"], 3),
+                "relative cost": round(diagnostics["relative_cost"], 3),
                 "seconds": round(time.perf_counter() - start, 2),
             }
     return out

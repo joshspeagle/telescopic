@@ -81,8 +81,8 @@ recipe.summary()
 
 A replicate whose pair meets before $m$ costs $m$ plus its coupled steps
 ([Theory](../theory.md)), here {glue:text}`recipe_cost:,.0f` kernel applications on
-average. The inefficiency, that cost over the $m - k + 1$ averaged states, is
-{glue:text}`recipe_inefficiency:.2f`; the theory gives about 10/9 to 11/9 when
+average. The relative cost, that cost over the $m - k + 1$ averaged states, is
+{glue:text}`recipe_relative_cost:.2f`; the theory gives about 10/9 to 11/9 when
 $\tau - L \le k$. {glue:text}`recipe_late:.1%` of the pairs met after $k + L$ and carry
 a bias correction, against {glue:text}`pilot_late:.0%` of the pilot's pairs after
 $k + 1$: the lag changes the law of $\tau - L$.
@@ -120,7 +120,7 @@ for seed, (name, settings) in enumerate(choices.items(), start=1):
 ```
 
 For each run: the estimate of $\mathbb E[x_0^2] = 1$, the mean cost of a replicate in
-kernel applications, the inefficiency, the fraction of pairs that met after $k + L$, the
+kernel applications, the relative cost, the fraction of pairs that met after $k + L$, the
 variance of one replicate's estimate, and that variance times the cost:
 
 ```{code-cell} python
@@ -130,7 +130,7 @@ def second_moment(x):
 
 print(
     f"{'':8}{'k':>5}{'lag':>5}{'m':>6}{'E[x0^2]':>16}{'cost':>8}"
-    f"{'ineff.':>8}{'late':>7}{'variance':>10}{'var. x cost':>13}"
+    f"{'rel.':>8}{'late':>7}{'variance':>10}{'var. x cost':>13}"
 )
 efficiency, errors = {}, []
 for name, result in results.items():
@@ -142,11 +142,11 @@ for name, result in results.items():
     print(
         f"{name:8}{result.k:5}{result.lag:5}{result.m:6}"
         f"{estimate.value:9.3f} ± {estimate.standard_error:<5.3f}{measured['mean_cost']:8.0f}"
-        f"{measured['inefficiency']:8.2f}{measured['late_fraction']:7.1%}"
+        f"{measured['relative_cost']:8.2f}{measured['late_fraction']:7.1%}"
         f"{variance:10.3g}{efficiency[name]:13.3g}"
     )
     glue(f"{name}_cost", measured["mean_cost"], display=False)
-    glue(f"{name}_inefficiency", measured["inefficiency"], display=False)
+    glue(f"{name}_relative_cost", measured["relative_cost"], display=False)
     glue(f"{name}_late", measured["late_fraction"], display=False)
     glue(f"{name}_relative", efficiency[name] / efficiency["recipe"], display=False)
 glue("largest_error", max(errors), display=False)
@@ -160,7 +160,7 @@ compute. The recipe's is the lowest:
 
 - **$m = 2k$**: a replicate costs {glue:text}`m_2k_cost:,.0f` kernel applications,
   against the recipe's {glue:text}`recipe_cost:,.0f`, but only $k + 1$ of them give
-  averaged states. The inefficiency is {glue:text}`m_2k_inefficiency:.2f`, and variance
+  averaged states. The relative cost is {glue:text}`m_2k_relative_cost:.2f`, and variance
   times cost {glue:text}`m_2k_relative:.1f` times the recipe's.
 - **Lag 1** has the recipe's $k$ and $m$, and about its cost,
   {glue:text}`lag_1_cost:,.0f` kernel applications, but variance times cost

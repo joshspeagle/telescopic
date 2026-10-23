@@ -121,22 +121,22 @@ Ctrl-C during `run` lets the replicates in progress finish and returns a result 
   from 100 replicates, and the tail of the meeting times from 500
   ([Diagnostics and warnings](diagnostics.md)).
 
-## Cost and inefficiency
+## Cost
 
 The cost of a replicate is the number of times it applies the kernel, a coupled step
-before the meeting counting as two. The inefficiency is the mean cost over the
+before the meeting counting as two. The relative cost is the mean cost over the
 $m - k + 1$ steps of the MCMC average alone ([Theory](../theory.md#cost)); with the
 automatic settings it is about 10/9 to 11/9. The result ([Results](results.md)) records
 `costs` per replicate, the evaluations `n_log_prob` and `n_grad`, and `wall_time` in
 seconds; `result.diagnostics()` gives the mean cost, the seconds per replicate and the
-inefficiency:
+relative cost:
 
 ```{code-cell} python
 diagnostics = result.diagnostics()
-diagnostics["mean_cost"], diagnostics["inefficiency"]
+diagnostics["mean_cost"], diagnostics["relative_cost"]
 ```
 
-A larger `m` relative to `k` brings the inefficiency closer to 1 and usually lowers the
+A larger `m` relative to `k` brings the relative cost closer to 1 and usually lowers the
 variance of each replicate, but makes each replicate longer, so fewer fit in a budget of
 time.
 

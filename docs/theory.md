@@ -100,10 +100,13 @@ $|S| + 2\max(0, \tau - \min S - L)$ atoms, since atoms with $c_t = 0$ are droppe
 ## Cost
 
 A replicate uses $C = L + 2(\tau - L) + \max(0, m - \tau)$ applications of the kernel,
-counting a coupled step before the meeting as two. Its **inefficiency** is the mean cost
-divided by $m - k + 1$, the cost of the MCMC average alone. Kernels differ in the
-log-density and gradient evaluations per application, so telescopic also counts those,
-and the wall time.
+counting a coupled step before the meeting as two. Its **relative cost** is the mean cost
+divided by $m - k + 1$, the cost of the MCMC average alone. The **inefficiency** of the
+estimator is $\mathbb E[C]\,\mathbb V[H_{k:m}]$ (Glynn & Whitt 1992; JOA20 §3.1): at a
+fixed budget of kernel applications, the variance of the average over replicates is the
+inefficiency divided by the budget, so it is the figure to minimise when comparing kernels
+or settings. Kernels differ in the log-density and gradient evaluations per application,
+so telescopic also counts those, and the wall time.
 
 ## Guarantees and their limits
 
@@ -175,8 +178,8 @@ from the meeting times of $R_0 = 100$ pilot pairs with $L = 1$,
 
 With $L = k$ most pairs meet within $k + L$ steps, so $\mathrm{BC}_{k:m}$ is usually zero
 and the estimator is an ordinary MCMC average after a burn-in of $k$. A pair that meets
-before $m$ costs $m + \tau - L$, so with $m = 10k$ and $\tau - L \le k$ the
-inefficiency is about $10/9$ to $11/9$. $\beta \le 1 - 1/R_0$ is required, so that
+before $m$ costs $m + \tau - L$, so with $m = 10k$ and $\tau - L \le k$ the relative
+cost is about $10/9$ to $11/9$. $\beta \le 1 - 1/R_0$ is required, so that
 $\hat q_\beta$ is not the sample maximum.
 
 ## Distance to stationarity
@@ -208,6 +211,8 @@ It depends on the parametrisation of the target, through the Euclidean norm.
   Markov chains. arXiv:2206.05691.
 - Glynn, P. W. & Rhee, C.-H. (2014). Exact estimation for Markov chain equilibrium
   expectations. J. Appl. Probab. 51A, 377–389.
+- Glynn, P. W. & Whitt, W. (1992). The asymptotic efficiency of simulation estimators.
+  Oper. Res. 40(3), 505–520.
 - Jacob, P. E., O'Leary, J. & Atchadé, Y. F. (2020). Unbiased Markov chain Monte Carlo
   methods with couplings. J. R. Stat. Soc. B 82(3), 543–600.
 - Middleton, L., Deligiannidis, G., Doucet, A. & Jacob, P. E. (2020). Unbiased Markov

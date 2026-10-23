@@ -44,30 +44,30 @@ for kernel in ("rwmh", "mala", "hmc"):
 ```
 
 For each kernel: the median meeting time of the 100 pilot pairs, which run with lag 1
-(`Result.pilot`); the burn-in `k`, their 99% quantile minus 1; the inefficiency; and the
+(`Result.pilot`); the burn-in `k`, their 99% quantile minus 1; the relative cost; and the
 evaluations of the log-density and of its gradient per replicate in the main run.
 
 ```{code-cell} python
-print("kernel  median tau     k  inefficiency  log_prob   grad")
-inefficiency = []
+print("kernel  median tau     k  relative cost  log_prob   grad")
+relative_cost = []
 for kernel, result in results.items():
     median = float(np.median(result.pilot))
-    inefficiency.append(result.diagnostics()["inefficiency"])
+    relative_cost.append(result.diagnostics()["relative_cost"])
     glue(f"median_{kernel}", median, display=False)
     print(
-        f"{kernel:6}  {median:10.0f}  {result.k:4}  {inefficiency[-1]:12.3f}  "
+        f"{kernel:6}  {median:10.0f}  {result.k:4}  {relative_cost[-1]:13.3f}  "
         f"{result.n_log_prob / result.n_replicates:8.0f}  "
         f"{result.n_grad / result.n_replicates:5.0f}"
     )
-glue("inefficiency_low", min(inefficiency), display=False)
-glue("inefficiency_high", max(inefficiency), display=False)
+glue("relative_cost_low", min(relative_cost), display=False)
+glue("relative_cost_high", max(relative_cost), display=False)
 ```
 
 With gradients the pairs meet in a median of {glue:text}`median_mala:.0f` (MALA) and
 {glue:text}`median_hmc:.0f` (HMC) steps, against {glue:text}`median_rwmh:.0f` for the
 random walk. `k`, the lag and the run length `m` shrink with the meeting times, since the
-lag equals `k` and `m = 10k`. The inefficiency is between
-{glue:text}`inefficiency_low:.2f` and {glue:text}`inefficiency_high:.2f` for the three
+lag equals `k` and `m = 10k`. The relative cost is between
+{glue:text}`relative_cost_low:.2f` and {glue:text}`relative_cost_high:.2f` for the three
 kernels: it compares the cost of a replicate with that of the MCMC average of the same
 kernel, and with `m = 10k` it stays near 10/9 to 11/9 ([Theory](../theory.md)). The
 kernels differ in the steps a replicate takes and in what a step evaluates. MALA

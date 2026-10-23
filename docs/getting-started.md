@@ -75,8 +75,8 @@ The lines below describe the run:
 
 - the number of replicates `R`, the settings `k`, `m`, `lag` and `thin`, and the kernel;
 - the meeting times, which a long tail or censored pairs would make suspect;
-- the cost of a replicate in kernel applications and seconds, and the inefficiency: that
-  cost over the `m - k + 1` states each replicate averages;
+- the cost of a replicate in kernel applications and seconds, and the relative cost:
+  that cost over the `m - k + 1` states each replicate averages;
 - the fraction of pairs that met after `k + lag`, with a one-sided 95% upper bound; with
   `lag = k` it is close to the bound on the total variation distance between the chains
   at `k` and the posterior ([Theory](theory.md));
