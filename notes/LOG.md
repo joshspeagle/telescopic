@@ -112,3 +112,11 @@ Append only. One entry per working session or milestone.
   step size at d = 10 takes 83 ms instead of 174 for MALA and 118 instead of 195 for
   HMC. Engine cost per pair-step at one lane fell from 223 to 153 µs for HMC and from 135
   to 114 µs for MALA, with identical meeting times. 289 fast tests in 22 s.
+- M6 `/code-review` at high effort (`notes/reviews/m6.md`): ten findings. Among them, the
+  common-random-number coupling gave every coordinate of a multi-coordinate block the
+  same uniform when its conditional had `ppf`, a wrong law without an error; HMC's
+  `tune` hung on a wrong gradient, its default trajectory growing as 1/ε (now at most
+  1,000 steps, DECISIONS #17); HMC's meeting step raised where its trajectories reject
+  (#18). `Kernel.check_target` holds the checks of what a kernel needs (#19). A
+  reference implementation of Hoffman & Gelman's dual averaging pins ours to 1e-12.
+  304 fast tests in 23 s.

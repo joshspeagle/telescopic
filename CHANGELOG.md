@@ -38,5 +38,7 @@ All notable changes to this project are documented here. The format follows
 - Gradient and Gibbs kernels: `MALA` and `HMC` (with a random-walk meeting step) with
   the reflection-maximal coupling, tuned by dual averaging; `Gibbs` with maximal,
   common-random-number and two-scale couplings of user-written conditionals, and
-  `Target(log_prob=None)` for kernels that need no log-density (`Kernel.needs_log_prob`).
+  `Target(log_prob=None)` for kernels that need no log-density. Kernels declare what
+  they evaluate (`needs_grad`, `needs_log_prob`) and check a target for it
+  (`check_target`).
   A kernel's `step` returns acceptance probabilities.

@@ -89,12 +89,7 @@ class CoupledSampler:
         self.target = Target(log_prob, grad, args=args, kwargs=kwargs, vectorize=vectorize)
         self.initial = as_initial(init)
         self.kernel = _kernel(kernel)
-        if self.kernel.needs_grad and not self.target.has_grad:
-            raise ValueError(f"{self.kernel!r} needs the gradient of log_prob: pass grad=")
-        if self.kernel.needs_log_prob and not self.target.has_log_prob:
-            raise ValueError(
-                f"{self.kernel!r} needs a log-density; log_prob=None is for Gibbs kernels"
-            )
+        self.kernel.check_target(self.target)
         self.seed = root_seed(rng)
         # One draw from a throwaway generator gives the dimension, so that names are
         # checked now rather than after the runs.

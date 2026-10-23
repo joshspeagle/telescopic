@@ -55,6 +55,9 @@ class RandomWalk(Kernel):
     one when the proposals coincide.
     """
 
+    # Evaluates proposals; HMC's meeting step rejects where its trajectories do.
+    _evaluate = staticmethod(evaluate)
+
     def __init__(
         self,
         cov: npt.ArrayLike | None = None,
@@ -64,8 +67,8 @@ class RandomWalk(Kernel):
     ) -> None:
         if coupling not in ("reflection", "maximal"):
             raise ValueError(f"coupling must be 'reflection' or 'maximal', not {coupling!r}")
-        if scale is not None and not scale > 0:
-            raise ValueError(f"scale must be positive, not {scale}")
+        if scale is not None and not 0 < scale < np.inf:
+            raise ValueError(f"scale must be positive and finite, not {scale}")
         self.scale = scale
         self.coupling = coupling
         self.cov: FloatArray | None = None
@@ -83,12 +86,13 @@ class RandomWalk(Kernel):
         return None if self.cov is None else len(self.cov)
 
     def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
-        return RandomWalk(pilot.cov, scale=self.scale, coupling=self.coupling), pilot.report()
+        tuned = type(self)(pilot.cov, scale=self.scale, coupling=self.coupling)
+        return tuned, pilot.report()
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         chol, _ = self._ready()
         x = state.x + matvec(chol, draws.normal(len(chol)))
-        proposal = evaluate(target, x, state.grad is not None)
+        proposal = self._evaluate(target, x, state.grad is not None)
         log_alpha = log_ratio(proposal.log_prob, state.log_prob)
         accepted = draws.log_uniform() < log_alpha
         return select(accepted, proposal, state), acceptance(log_alpha)
@@ -106,7 +110,7 @@ class RandomWalk(Kernel):
                 draws,
             )
         proposal_x, proposal_y = evaluate_pair(
-            partial(evaluate, target, need_grad=state_x.grad is not None), x, y, identical
+            partial(self._evaluate, target, need_grad=state_x.grad is not None), x, y, identical
         )
         log_u = draws.log_uniform()
         state_x = select(

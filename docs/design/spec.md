@@ -249,7 +249,7 @@ Averaging only the replicates completed by a deadline is biased by $-\mathbb E[H
 
 - **Log-density:** `log_prob(x, *args, **kwargs)` returns a float for `x` of shape `(d,)`. With `vectorize=True` it takes `(n, d)` and returns `(n,)`.
 - **Gradient:** an optional `grad` with the same signature returns $\nabla \log\pi$, of shape `(d,)` or `(n, d)`. A kernel that needs a gradient raises `ValueError` without one.
-- **Special values:** `-inf` is a valid value and is rejected by every Metropolis step. NaN or `+inf` raises `ValueError` with the offending point. Where the log-density is `-inf`, the gradient may be non-finite, and states there carry a gradient of 0: a gradient kernel proposes from such a point without drift and accepts any proposal of finite density, as RWMH does (DECISIONS #14). Where it is finite, a non-finite gradient raises wherever a cached state would keep it (initial states, and proposals of gradient-free kernels whose states carry gradients); gradient kernels reject a proposal that has one.
+- **Special values:** `-inf` is a valid value and is rejected by every Metropolis step. NaN or `+inf` raises `ValueError` with the offending point. Where the log-density is `-inf`, the gradient may be non-finite, and states there carry a gradient of 0: a gradient kernel proposes from such a point without drift and accepts any proposal of finite density, as RWMH does (DECISIONS #14). Where it is finite, a non-finite gradient raises wherever a cached state would keep it (initial states, and proposals of gradient-free kernels whose states carry gradients); gradient kernels, HMC's meeting step included, reject a proposal that has one.
 - **Gibbs:** with a kernel that needs no log-density, a Gibbs kernel or a mixture of them, `log_prob` may be `None` (§5.7).
 - **Determinism:** the log-density must return the same value at the same point. A stochastic log-density can split chains that have met. The documentation says so.
 - **Layer C:** a `Target` object wraps these functions, counts evaluations, and presents a batched interface `(n, d) -> (n,)` to kernels, whether or not the user's function is vectorised.
@@ -284,6 +284,7 @@ A kernel is a picklable configuration object with:
 ```text
 needs_grad: bool                                            # evaluates the gradient
 needs_log_prob: bool                                        # evaluates the log-density; false for Gibbs kernels (DECISIONS #15)
+check_target(target)                                        # raises ValueError if the target lacks either (DECISIONS #19)
 step(target, state, draws) -> (state, acceptance)          # one transition for n chains; acceptance probabilities
 coupled_step(target, sx, sy, draws) -> (sx, sy)             # one coupled transition for n pairs
 tune(target, initial, rng=None, *, pilot=None) -> (kernel, report)   # (self, None) if nothing is unset
@@ -373,7 +374,7 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 - accept on the change in $\log\pi(x) - \tfrac12\lVert\nu\rVert^2$;
 - a trajectory that reaches a non-finite position, a point with $\log\pi = -\infty$ or a non-finite gradient stops there and is rejected, without raising.
 
-With probability $\gamma$, take a RWMH step with proposal covariance $\sigma^2\Sigma$, where $\sigma$ = `meeting_scale`. Heng & Jacob use $\sigma^2 I$; the whitened $\sigma^2\Sigma$ makes the component invariant to the scale of each coordinate (D-24).
+With probability $\gamma$, take a RWMH step with proposal covariance $\sigma^2\Sigma$, where $\sigma$ = `meeting_scale`; like the trajectories, it rejects a proposal with a non-finite gradient (DECISIONS #18). Heng & Jacob use $\sigma^2 I$; the whitened $\sigma^2\Sigma$ makes the component invariant to the scale of each coordinate (D-24).
 
 **Coupling:**
 - a common uniform chooses the component, so both chains use the same one;
@@ -385,7 +386,7 @@ Heng & Jacob used the rejection maximal coupling for this step. Both couplings a
 **Tuning:**
 - `cov` from the RWMH pilot;
 - $\epsilon$ by dual averaging toward acceptance 0.8 of the trajectories alone, as for MALA but from $\epsilon_0 = d^{-1/4}$ (DECISIONS #13);
-- `n_steps` $= \lceil 1/\epsilon \rceil$, a trajectory of length about 1 in whitened coordinates, as in Heng & Jacob. For a Gaussian direction of whitened frequency $\omega$ the difference between the chains scales by $\cos(\omega\,\epsilon\,n)$, which stays below 1 in magnitude for $\omega < \pi$. A length of $\pi/2$ would contract most at $\omega = 1$ but not at all at $\omega = 2$, a direction whose variance the pilot underestimates fourfold (design review D-R12; D-24).
+- `n_steps` $= \lceil 1/\epsilon \rceil$, a trajectory of length about 1 in whitened coordinates, as in Heng & Jacob, and at most 1,000 (DECISIONS #17). For a Gaussian direction of whitened frequency $\omega$ the difference between the chains scales by $\cos(\omega\,\epsilon\,n)$, which stays below 1 in magnitude for $\omega < \pi$. A length of $\pi/2$ would contract most at $\omega = 1$ but not at all at $\omega = 2$, a direction whose variance the pilot underestimates fourfold (design review D-R12; D-24).
 
 The documentation says that settings optimal for HMC alone can fail to contract when coupled (Heng & Jacob §5), and that meeting times should be checked.
 
@@ -405,7 +406,7 @@ The documentation says that settings optimal for HMC alone can fail to contract 
 - **Sweep:** blocks are updated in the given order.
 - **Couplings, per block:**
   - `"maximal"`: rejection maximal coupling (§5.2), with the $\eta$ option;
-  - `"crn"`: common random numbers, which contract but do not meet on their own (an `eta` other than 1 raises: DECISIONS #16): a common uniform through `ppf` for univariate conditionals, and common standard normals for multivariate normal ones (objects with `mean` and `cov`, such as `scipy.stats.multivariate_normal`);
+  - `"crn"`: common random numbers, which contract but do not meet on their own (an `eta` other than 1 raises: DECISIONS #16): a common uniform through `ppf` for blocks of one coordinate, and common standard normals for multivariate normal conditionals (objects with `mean` and `cov`, such as `scipy.stats.multivariate_normal`);
   - `"two-scale"`: CRN while $\lVert x - y\rVert >$ `threshold`, maximal otherwise (Biswas et al. 2022). The switch depends only on the pair at the start of each sweep, and both branches couple the same conditional, so it is valid (AJ24 §4.2). `threshold` is required.
 - **Identical conditionals:** when the coordinates outside block `b` are bitwise equal in the two chains, their conditionals are identical, and both chains receive the same draw. This identity coupling is a valid state-dependent choice; it also keeps equal states equal when $\eta < 1$, which the rejection coupling alone would split with probability $1 - \eta$ (design review D-R2).
 - **Meeting:** the engine's exact comparison after each sweep (R-EST-2). Blocks updated by CRN can become equal without a coupling event.

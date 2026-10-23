@@ -16,6 +16,10 @@ from telescopic.kernels.mixture import Mixture
 from telescopic.kernels.random_walk import RandomWalk
 from telescopic.target import Target
 
+# The most leapfrog steps of a default trajectory, so that a step size that dual averaging
+# drives toward 0 cannot make a trajectory's cost grow without bound (DECISIONS #17).
+MAX_STEPS = 1000
+
 
 class HMC(Mixture):
     r"""Hamiltonian Monte Carlo with a random-walk meeting step (spec R-KER-HMC).
@@ -32,7 +36,8 @@ class HMC(Mixture):
     :math:`\log\pi(x) - \tfrac12\lVert\nu\rVert^2`. A trajectory that reaches a non-finite
     position, a log-density of ``-inf`` or a non-finite gradient stops there and is
     rejected. With probability :math:`\gamma` (``meeting_weight``), a random-walk step with
-    proposal covariance :math:`\sigma^2\Sigma` (``meeting_scale`` :math:`= \sigma`).
+    proposal covariance :math:`\sigma^2\Sigma` (``meeting_scale`` :math:`= \sigma`), which
+    also rejects a proposal with a non-finite gradient.
 
     Coupled chains take the same component. Their trajectories share the momentum and the
     uniform, so the chains contract; the random-walk step couples them by the
@@ -47,7 +52,7 @@ class HMC(Mixture):
         :math:`\epsilon_0 = d^{-1/4}` (spec section 5.5; Beskos et al. 2013).
     n_steps : int, optional
         Leapfrog steps per trajectory; :math:`\lceil 1/\epsilon\rceil` by default, a
-        trajectory of length about 1 in whitened coordinates.
+        trajectory of length about 1 in whitened coordinates, and at most 1,000.
     cov : array_like, shape (d, d), optional
         :math:`\Sigma`; ``None`` leaves it to :meth:`tune`, which takes the covariance of
         adaptive Metropolis pilot chains.
@@ -74,10 +79,10 @@ class HMC(Mixture):
     ) -> None:
         if not 0 < meeting_weight < 1:
             raise ValueError(f"meeting_weight must be in (0, 1), not {meeting_weight}")
-        if not meeting_scale > 0:
-            raise ValueError(f"meeting_scale must be positive, not {meeting_scale}")
+        if not 0 < meeting_scale < np.inf:
+            raise ValueError(f"meeting_scale must be positive and finite, not {meeting_scale}")
         leapfrog = _Leapfrog(step_size, n_steps, cov)
-        walk = RandomWalk(leapfrog.cov, scale=meeting_scale)
+        walk = _Meeting(leapfrog.cov, scale=meeting_scale)
         super().__init__([leapfrog, walk], [1 - meeting_weight, meeting_weight])
         self.meeting_weight, self.meeting_scale = meeting_weight, meeting_scale
 
@@ -124,10 +129,10 @@ class _Leapfrog(GradientKernel):
     @property
     def n_steps(self) -> int | None:
         # The given count, or ceil(1 / step_size): a trajectory of length about 1 in
-        # whitened coordinates (spec section 5.5).
+        # whitened coordinates (spec section 5.5), of at most MAX_STEPS steps.
         if self._n_steps is not None or self.step_size is None:
             return self._n_steps
-        return math.ceil(1 / self.step_size)
+        return math.ceil(1 / max(self.step_size, 1 / MAX_STEPS))
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         end, log_alpha = self._trajectory(target, state, draws.normal(state.x.shape[1]))
@@ -183,3 +188,9 @@ class _Leapfrog(GradientKernel):
             # From a start outside the support (log pi = -inf) any finite end is accepted.
             log_alpha = log_prob - 0.5 * np.einsum("ij,ij->i", momentum, momentum) - start
         return State(x, log_prob, grad), np.where(going, log_alpha, -np.inf)
+
+
+class _Meeting(RandomWalk):
+    # HMC's meeting step. It rejects a proposal with a non-finite gradient, as the
+    # trajectories do, where a random walk whose states carry gradients raises.
+    _evaluate = staticmethod(lambda target, x, need_grad: evaluate_proposal(target, x))

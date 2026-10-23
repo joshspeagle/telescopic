@@ -16,10 +16,14 @@ from telescopic.kernels import (
 )
 from telescopic.target import Target
 from telescopic.testing import fixed_draws, random_draws
+from telescopic.tuning import PilotRun
+
+# The fields of a PilotRun after its samples.
+PILOT_REST = (np.zeros((4, 50)), np.full(4, 0.3), 100)
 
 # N(0, I); gradient-free kernels evaluate the gradient only for states that carry one.
 TARGET = Target(gaussian_log_prob, grad=lambda x: -x, vectorize=True)
-NAMES = ["reflection", "maximal", "independence", "mixture", "mala", "hmc", "gibbs"]
+NAMES = ["reflection", "maximal", "independence", "mixture", "mala", "hmc", "gibbs", "gibbs-crn"]
 
 
 def state(points, grad=False):
@@ -27,9 +31,10 @@ def state(points, grad=False):
     return State(points, gaussian_log_prob(points), -points if grad else None)
 
 
-def standard_normal(point, block):
-    # The full conditional of any coordinate of N(0, I).
-    return Normal(0.0, 1.0)
+def shifted(point, block):
+    # Depends on the other coordinates, so that coupled chains draw from different laws;
+    # in one dimension it is N(0, 1), the target.
+    return Normal(0.5 * (point.sum() - point[block]), 1.0)
 
 
 def kernels(cov):
@@ -41,7 +46,8 @@ def kernels(cov):
         "mixture": Mixture([RandomWalk(cov, scale=0.5), RandomWalk(cov, scale=2.0)], [0.3, 0.7]),
         "mala": MALA(0.9, cov=cov),
         "hmc": HMC(0.3, 4, cov=cov, meeting_weight=0.3, meeting_scale=0.5),
-        "gibbs": Gibbs(standard_normal, [[i] for i in range(d)], eta=0.5),
+        "gibbs": Gibbs(shifted, [[i] for i in range(d)], eta=0.5),
+        "gibbs-crn": Gibbs(shifted, [[i] for i in range(d)], coupling="crn"),
     }
 
 
@@ -167,10 +173,12 @@ def one_step_law(kernel, x):
     return max(0.0, 1 - cdf[-1]), lambda t: np.interp(t, grid, cdf / cdf[-1])
 
 
-# One-dimensional Gibbs conditionals do not depend on the state, so one gap covers them.
+# In one dimension a Gibbs conditional does not depend on the state, and both chains get
+# the same draw, so one gap and one coupling cover Gibbs.
 @pytest.mark.parametrize(
     ("name", "gap"),
-    [(name, gap) for name in NAMES for gap in (0.0, 0.1, 3.0) if name != "gibbs" or gap == 0],
+    [(name, gap) for name in NAMES if "gibbs" not in name for gap in (0.0, 0.1, 3.0)]
+    + [("gibbs", 0.0)],
 )
 def test_each_chain_of_a_coupled_step_has_the_exact_one_step_law(name, gap):
     kernel = kernels(np.eye(1))[name]
@@ -186,7 +194,9 @@ def test_each_chain_of_a_coupled_step_has_the_exact_one_step_law(name, gap):
         assert stats.kstest(new[~stayed], cdf).pvalue > P_MIN
 
 
-@pytest.mark.parametrize("name", ["reflection", "independence", "mixture", "mala", "hmc"])
+@pytest.mark.parametrize(
+    "name", ["reflection", "independence", "mixture", "mala", "hmc", "gibbs", "gibbs-crn"]
+)
 def test_coupled_marginals_match_single_steps_in_three_dimensions(name):
     kernel = kernels(dense(3))[name]
     n = 20_000
@@ -261,7 +271,7 @@ def test_a_rows_transition_does_not_depend_on_the_rest_of_the_batch(name):
     kernel = kernels(0.25 * dense(d))[name]
     rng = np.random.default_rng(15)
     x, y = rng.standard_normal((n, d)), rng.standard_normal((n, d))
-    normals, uniforms = rng.standard_normal((n, 2 * d + 5)), rng.random((n, 3))
+    normals, uniforms = rng.standard_normal((n, 2 * d + 5)), rng.random((n, d + 3))
 
     def draws(rows):
         generators = [np.random.default_rng([16, row]) for row in rows]
@@ -294,7 +304,8 @@ def test_an_untuned_random_walk_refuses_to_step():
         ({"cov": [[1.0, 2.0], [2.0, 1.0]]}, "positive definite"),
         ({"cov": [[1.0, 0.5], [0.0, 1.0]]}, "symmetric"),
         ({"cov": np.ones((2, 3))}, "square"),
-        ({"cov": np.eye(2), "scale": 0.0}, "scale must be positive"),
+        ({"cov": np.eye(2), "scale": 0.0}, "scale must be positive and finite"),
+        ({"cov": np.eye(2), "scale": np.inf}, "scale must be positive and finite"),
         ({"cov": np.eye(2), "coupling": "independent"}, "coupling must be"),
     ],
 )
@@ -468,10 +479,10 @@ def test_the_hmc_meeting_step_meets_with_the_reflection_probability():
 @pytest.mark.parametrize(
     ("kwargs", "message"),
     [
-        ({"step_size": 0.0}, "step_size must be positive"),
         ({"n_steps": 0}, "n_steps must be a positive integer"),
         ({"meeting_weight": 0.0}, "meeting_weight must be in"),
-        ({"meeting_scale": -1.0}, "scale must be positive"),
+        ({"meeting_scale": -1.0}, "meeting_scale must be positive and finite"),
+        ({"meeting_scale": np.inf}, "meeting_scale must be positive and finite"),
     ],
 )
 def test_hmc_rejects_invalid_parameters(kwargs, message):
@@ -480,12 +491,18 @@ def test_hmc_rejects_invalid_parameters(kwargs, message):
 
 
 def test_gradient_kernels_reject_proposals_without_a_finite_gradient():
-    # The gradient is NaN beyond x = 1; proposals there are rejected, never raised on.
+    # The gradient is NaN beyond x = 1; proposals there are rejected, never raised on,
+    # including by HMC's meeting step, here wide enough to propose there, after tuning.
     target = Target(gaussian_log_prob, grad=lambda x: np.where(x > 1, np.nan, -x), vectorize=True)
     start = State(np.zeros((500, 1)), np.zeros(500), np.zeros((500, 1)))
-    for kernel in (MALA(2.0, cov=np.eye(1)), HMC(0.5, 4, cov=np.eye(1))):
+    other = State(np.full((500, 1), 0.5), np.full(500, -0.125), np.full((500, 1), -0.5))
+    pilot = PilotRun(np.random.default_rng(32).standard_normal((4, 50, 1)), *PILOT_REST)
+    meeting, _ = HMC(0.5, 4, meeting_weight=0.5, meeting_scale=2.0).tune(target, None, pilot=pilot)
+    for kernel in (MALA(2.0, cov=np.eye(1)), HMC(0.5, 4, cov=np.eye(1)), meeting):
         moved, _ = kernel.step(target, start, random_draws(500, 33))
-        assert np.all(moved.x <= 1)
+        new_x, new_y = kernel.coupled_step(target, start, other, random_draws(500, 34))
+        for result in (moved, new_x, new_y):
+            assert np.all(result.x <= 1)
         assert np.any(moved.x != 0)
 
 
@@ -506,6 +523,26 @@ def test_gradient_kernels_enter_the_support_from_a_start_outside_it():
         draws = fixed_draws([[1.0], [-1.0]], [[0.1, 0.5], [0.1, 0.5]])
         moved, _ = kernel.step(target, start, draws)
         np.testing.assert_array_equal(moved.x, [[0.5], [-0.5]])
+
+
+@pytest.mark.parametrize("step_size", [0.0, -1.0, np.inf, np.nan])
+def test_gradient_kernels_refuse_step_sizes_that_are_not_positive_and_finite(step_size):
+    makers = (
+        lambda: MALA(step_size, cov=np.eye(1)),
+        lambda: HMC(step_size, cov=np.eye(1)),
+        lambda: MALA(0.5, cov=np.eye(1)).with_step_size(step_size),
+    )
+    for make in makers:
+        with pytest.raises(ValueError, match="step_size must be positive and finite"):
+            make()
+
+
+def test_hmc_trajectories_take_at_most_1000_steps_unless_told_otherwise():
+    # Dual averaging can drive the step size toward 0; the default length then stops
+    # growing (DECISIONS #17).
+    assert HMC(0.3, cov=np.eye(1)).n_steps == 4
+    assert HMC(1e-4, cov=np.eye(1)).n_steps == 1000
+    assert HMC(1e-4, 5000, cov=np.eye(1)).n_steps == 5000
 
 
 # Gibbs, on a bivariate Gaussian with correlation 0.8.
@@ -567,6 +604,30 @@ def test_crn_gibbs_couplings_give_multivariate_normal_conditionals_common_normal
         first = np.array([0.5 * start[2], -0.3 * start[2]]) + shift
         np.testing.assert_allclose(new.x[0, :2], first)
         np.testing.assert_allclose(new.x[0, 2], 0.2 * first.sum() + stats.norm.ppf(u))
+
+
+def test_crn_gibbs_couplings_need_a_multivariate_normal_for_a_block_of_several():
+    # A univariate distribution with two means has ppf, but one uniform through it would
+    # give both coordinates the same draw.
+    def two_means(point, block):
+        return stats.norm([point[2], 0.0]) if block == 0 else Normal(0.0, 1.0)
+
+    kernel = Gibbs(two_means, [[0, 1], [2]], coupling="crn")
+    x, y = gibbs_state([0.0, 0.0, 1.0]), gibbs_state([0.0, 0.0, -1.0])
+    with pytest.raises(TypeError, match="blocks of one coordinate"):
+        kernel.coupled_step(Target(None), x, y, fixed_draws(uniforms=[[0.5, 0.5]]))
+
+
+def test_crn_gibbs_couplings_map_a_uniform_of_zero_to_a_finite_point():
+    kernel = Gibbs(conditional, [[0], [1]], coupling="crn")
+    new_x, new_y = kernel.coupled_step(
+        Target(None),
+        gibbs_state([0.5, -1.0]),
+        gibbs_state([-0.5, 1.5]),
+        fixed_draws(uniforms=[[0.0, 0.5]]),
+    )
+    assert np.isfinite(new_x.x).all()
+    assert np.isfinite(new_y.x).all()
 
 
 def test_two_scale_gibbs_couplings_switch_at_the_threshold():

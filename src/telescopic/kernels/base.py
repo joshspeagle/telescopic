@@ -85,6 +85,18 @@ class Kernel(ABC):
         """The dimension that the kernel's parameters fix, or ``None``."""
         return None
 
+    def check_target(self, target: Target) -> None:
+        """Raise ``ValueError`` if ``target`` lacks a function that the kernel evaluates.
+
+        Parameters
+        ----------
+        target : Target
+        """
+        if self.needs_log_prob and not target.has_log_prob:
+            raise ValueError(f"{self!r} needs a log-density; log_prob=None is for Gibbs kernels")
+        if self.needs_grad and not target.has_grad:
+            raise ValueError(f"{self!r} needs the gradient of log_prob: pass grad=")
+
     def tune(
         self,
         target: Target,
@@ -102,7 +114,8 @@ class Kernel(ABC):
         target : Target
         initial : object with ``rvs(random_state=generator)``
         rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
-            Seed of the pilot chains (tuning namespace, spec section 6.1).
+            Seed of the tuning, in the tuning namespace (spec section 6.1): the pilot
+            chains, unless ``pilot`` is given, and dual averaging.
         pilot : PilotRun, optional
             Adaptive Metropolis chains already run, from
             :func:`telescopic.tuning.adaptive_metropolis`, so that several kernels can be
@@ -142,8 +155,7 @@ class Kernel(ABC):
                 f"the kernel works in {self.ndim} dimensions, but the initial points have "
                 f"{x.shape[1]}"
             )
-        if self.needs_log_prob and not target.has_log_prob:
-            raise ValueError(f"{self!r} needs a log-density; log_prob=None is for Gibbs kernels")
+        self.check_target(target)
         return evaluate(target, x, self.needs_grad)
 
     @abstractmethod
@@ -186,9 +198,7 @@ class GradientKernel(Kernel):
     target_acceptance: float
 
     def __init__(self, step_size: float | None, cov: npt.ArrayLike | None) -> None:
-        if step_size is not None and not step_size > 0:
-            raise ValueError(f"step_size must be positive, not {step_size}")
-        self.step_size = step_size
+        self.step_size = None if step_size is None else _checked_step_size(step_size)
         self.cov: FloatArray | None = None
         self._chol: FloatArray | None = None
         if cov is not None:
@@ -207,9 +217,19 @@ class GradientKernel(Kernel):
         return None if self.cov is None else len(self.cov)
 
     def with_step_size(self, step_size: float) -> GradientKernel:
-        """A copy with another step size, without validating the covariance again."""
+        """A copy with another step size, without validating the covariance again.
+
+        Parameters
+        ----------
+        step_size : float
+            Positive and finite.
+
+        Returns
+        -------
+        GradientKernel
+        """
         kernel = copy.copy(self)
-        kernel.step_size = step_size
+        kernel.step_size = _checked_step_size(step_size)
         return kernel
 
     def _with_cov(self, cov: FloatArray) -> GradientKernel:
@@ -227,6 +247,12 @@ class GradientKernel(Kernel):
             )
             kernel = kernel.with_step_size(step_size)
         return kernel, pilot.report()
+
+
+def _checked_step_size(step_size: float) -> float:
+    if not 0 < step_size < np.inf:
+        raise ValueError(f"step_size must be positive and finite, not {step_size}")
+    return float(step_size)
 
 
 def evaluate(target: Target, x: FloatArray, need_grad: bool) -> State:

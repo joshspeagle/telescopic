@@ -27,9 +27,9 @@ class Gibbs(Kernel):
 
     - ``"maximal"``: the rejection maximal coupling, with ``eta``;
     - ``"crn"``: common random numbers, which contract the chains but do not make them
-      meet on their own: one uniform through ``ppf`` for a univariate conditional, common
-      standard normals for a multivariate normal one (an object with ``mean`` and ``cov``,
-      such as ``scipy.stats.multivariate_normal``);
+      meet on their own: one uniform through ``ppf`` for a block of one coordinate, common
+      standard normals for a multivariate normal conditional (an object with ``mean`` and
+      ``cov``, such as ``scipy.stats.multivariate_normal``);
     - ``"two-scale"``: common random numbers for pairs farther apart than ``threshold``
       at the start of the sweep, the maximal coupling for the others (Biswas, Bhattacharya,
       Jacob & Johndrow 2022).
@@ -57,9 +57,9 @@ class Gibbs(Kernel):
     -----
     Sweeps loop over rows in Python. A step draws each block from the row's generator. A
     coupled step does the same for the maximal coupling and for identical conditionals,
-    and reads 1 uniform (univariate) or the block's size of normals (multivariate normal)
-    per row and block for common random numbers. With ``log_prob=None`` the target has no
-    log-density, and states carry 0.
+    and reads 1 uniform (a block of one coordinate) or the block's size of normals
+    (multivariate normal) per row and block for common random numbers. With
+    ``log_prob=None`` the target has no log-density, and states carry 0.
     """
 
     def __init__(
@@ -134,7 +134,7 @@ class Gibbs(Kernel):
                 drawn = self.conditional(points_x[row], b).rvs(random_state=draws.generator(row))
                 new_x[row] = new_y[row] = drawn
             for rows, couple in (
-                ((~same & common).nonzero()[0], _common),
+                ((~same & common).nonzero()[0], partial(_common, size=len(block))),
                 ((~same & ~common).nonzero()[0], partial(_maximal, eta=self.eta)),
             ):
                 if len(rows):
@@ -169,11 +169,12 @@ def _maximal(p: list[Any], q: list[Any], draws: Draws, eta: float) -> tuple[Floa
     return x.reshape(len(p), -1), y.reshape(len(p), -1)
 
 
-def _common(p: list[Any], q: list[Any], draws: Draws) -> tuple[FloatArray, ...]:
-    # Common random numbers: a uniform through each ppf, or normals through each
-    # multivariate normal's Cholesky factor.
-    if all(hasattr(conditional, "ppf") for conditional in p + q):
-        u = draws.uniform()
+def _common(p: list[Any], q: list[Any], draws: Draws, size: int) -> tuple[FloatArray, ...]:
+    # Common random numbers: a uniform through each ppf for a block of one coordinate, or
+    # normals through each multivariate normal's Cholesky factor.
+    if size == 1 and all(hasattr(conditional, "ppf") for conditional in p + q):
+        # A uniform of 0, drawn with probability 2^-53, would give ppf = -inf.
+        u = np.maximum(draws.uniform(), np.finfo(np.float64).tiny)
         return tuple(
             np.array([c.ppf(value) for c, value in zip(side, u, strict=True)])[:, None]
             for side in (p, q)
@@ -182,8 +183,8 @@ def _common(p: list[Any], q: list[Any], draws: Draws) -> tuple[FloatArray, ...]:
         hasattr(conditional, "mean") and hasattr(conditional, "cov") for conditional in p + q
     ):
         raise TypeError(
-            "coupling='crn' needs univariate conditionals with ppf, or multivariate normal "
-            "ones with mean and cov"
+            "coupling='crn' needs conditionals with ppf for blocks of one coordinate, or "
+            "multivariate normal ones with mean and cov"
         )
     z = draws.normal(len(np.atleast_1d(p[0].mean)))
     return tuple(
