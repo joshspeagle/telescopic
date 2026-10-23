@@ -21,8 +21,8 @@ For Josh, at the end of milestone M11. Figures are measured, with their sources.
     output depends only on the seed and its index; process pools and executors; Ctrl-C
     that returns a partial result, which the next run completes; progress bars.
   - `telescopic.testing.check_coupling` for kernels written by users.
-- **Tests:** FAST fast tests in about FAST_S s, with warnings as errors, and 18 slow
-  statistical tests in about SLOW_S s (below).
+- **Tests:** 554 fast tests in 39 s, with warnings as errors, and 18 slow statistical
+  tests in 109 s (below).
 - **Documentation:** a theory page, Getting started, a seven-page user guide, six
   tutorials executed at every build, the API reference and a citing page. The strict
   build, with warnings as errors and every cross-reference checked, took 1 min 43 s.
@@ -57,8 +57,11 @@ the code (`notes/reviews/m11.md`).
   warning fires in 37 of 200 runs on the banana, whose 95% intervals of E[x₀²] covered at
   0.892 against 0.963 in the others, and in all 17 runs of the bimodal failure of Jacob,
   O'Leary & Atchadé whose replicates found the other mode (DECISIONS #36, #54).
-- **Performance** against the targets of spec §10 (`benchmarks/results/BENCH.json`):
-  BENCH_LINES.
+- **Performance** against the targets of spec §10 (`benchmarks/results/20b262b.json`):
+  1.30 µs per pair-step for lockstep coupled random-walk Metropolis at 256 lanes, against
+  a target of 2; per-replicate random streams at 0.275 µs per lane-step and 40.2 µs of
+  set-up, against 0.5 and 50; a log-density of 1 ms 3.89 times faster on 4 started
+  workers, against 3.5.
 
 ## What did not work, or not yet
 
@@ -76,7 +79,12 @@ the code (`notes/reviews/m11.md`).
   estimate reads light tails as heavy. A rule that looked above the ties failed an
   adversarial review, warning on light tails in 92% to 100% of runs of an independence
   sampler (DECISIONS #57).
-- **Performance targets missed:** BENCH_MISSED.
+- **Performance targets missed:** the overhead of a log-density called point by point at
+  one lane, 90.4 µs per pair-step against 40, which needs a scalar path that v0.1 does
+  not have; a pool's speed-up with the start of its workers included, 2.28 against 3.5;
+  and the automatic pipeline's pilots, 63%, 47% and 43% of the main run at d = 10, 50 and
+  100 against 15%. The main run got faster with 256 lanes, and the tuning pilot of 10d²
+  steps dominates beyond d = 20.
 - **Deferred beyond v0.1:** a budget mode (DECISIONS #22); a bootstrap uncertainty for
   quantiles, and R-hat across the replicates' chains (#38); reprs of results and
   samplers; histograms in memory proportional to the atoms; evaluation counts that
