@@ -682,7 +682,7 @@ class Equal:
     """Two equal coordinates, N(mean, 1): a normal law whose covariance is singular."""
 
     def __init__(self, mean, cov=((1.0, 1.0), (1.0, 1.0))):
-        self.mean, self.cov = np.full(2, mean), np.array(cov)
+        self.mean, self.cov = np.full(len(cov), mean), np.array(cov)
 
 
 def test_crn_gibbs_couplings_draw_from_a_singular_multivariate_normal():
@@ -699,13 +699,22 @@ def test_crn_gibbs_couplings_draw_from_a_singular_multivariate_normal():
         assert stats.kstest(new.x[:, 1] - 0.5 * new.x[:, 0], "norm").pvalue > P_MIN
 
 
-def test_crn_gibbs_couplings_refuse_an_indefinite_covariance():
+@pytest.mark.parametrize(
+    ("cov", "message"),
+    [
+        ([[1.0, 2.0], [2.0, 1.0]], "positive semi-definite"),
+        # A correlation of 1.5 at sd 1e-4, beside a coordinate of sd 1.
+        ([[1.0, 0.0, 0.0], [0.0, 1e-8, 1.5e-8], [0.0, 1.5e-8, 1e-8]], "positive semi-definite"),
+        ([[1.0, 0.9], [0.2, 1.0]], "symmetric"),
+    ],
+)
+def test_crn_gibbs_couplings_refuse_an_invalid_covariance(cov, message):
     def given(point, block):
-        return Normal(point[1], 1.0) if block == 0 else Equal(0.0, [[1.0, 2.0], [2.0, 1.0]])
+        return Normal(point[1], 1.0) if block == 0 else Equal(0.0, cov)
 
-    kernel = Gibbs(given, [[0], [1, 2]], coupling="crn")
-    x, y = gibbs_state([0.0, 1.0, 1.0]), gibbs_state([0.0, -1.0, -1.0])
-    with pytest.raises(ValueError, match="positive semi-definite"):
+    kernel = Gibbs(given, [[0], list(range(1, len(cov) + 1))], coupling="crn")
+    x, y = (gibbs_state([0.0] + [value] * len(cov)) for value in (1.0, -1.0))
+    with pytest.raises(ValueError, match=message):
         kernel.coupled_step(Target(None), x, y, random_draws(1, 43))
 
 
@@ -755,6 +764,17 @@ def test_a_gibbs_conditional_that_draws_a_non_finite_value_raises(value):
         kernel.step(Target(None), x, random_draws(1, 45))
     with pytest.raises(ValueError, match=message):
         kernel.coupled_step(Target(None), x, y, random_draws(1, 46))
+
+
+def test_a_gibbs_conditional_must_draw_a_point_of_its_blocks_size():
+    # One value for a block of two was broadcast to both coordinates.
+    kernel = Gibbs(lambda point, block: Fixed(0.5), [[0, 1]])
+    x, y = gibbs_state([0.0, 1.0]), gibbs_state([0.0, 2.0])
+    message = r"drew \[0.5\], not a finite point of shape \(2,\)"
+    with pytest.raises(ValueError, match=message):
+        kernel.step(Target(None), x, random_draws(1, 47))
+    with pytest.raises(ValueError, match=message):
+        kernel.coupled_step(Target(None), x, y, random_draws(1, 48))
 
 
 def test_two_scale_gibbs_couplings_switch_at_the_threshold():

@@ -406,7 +406,7 @@ The documentation says that settings optimal for HMC alone can fail to contract 
 
 `Gibbs(conditional, blocks, *, coupling="maximal", eta=1.0, threshold=None)`.
 - **Blocks:** a sequence of integer index arrays that partition the coordinates.
-- **Conditionals:** `conditional(x, b)` receives one state `x` of shape `(d,)` and a block number `b`, and returns the full conditional of block `b` given the rest of `x`. It is a frozen SciPy-like distribution with `rvs(random_state=...)` and a normalised `logpdf` (or `logpmf` for discrete ones); one value per coordinate, as from array parameters, is summed. A draw that is not finite raises `ValueError`. Sweeps loop over rows.
+- **Conditionals:** `conditional(x, b)` receives one state `x` of shape `(d,)` and a block number `b`, and returns the full conditional of block `b` given the rest of `x`. It is a frozen SciPy-like distribution with `rvs(random_state=...)` and a normalised `logpdf` (or `logpmf` for discrete ones); one value per coordinate, as from array parameters, is summed. A draw that is not finite, or not of the block's size, raises `ValueError`. Sweeps loop over rows.
 - **Sweep:** blocks are updated in the given order.
 - **Couplings, per block:**
   - `"maximal"`: rejection maximal coupling (§5.2), with the $\eta$ option;

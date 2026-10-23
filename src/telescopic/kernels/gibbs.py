@@ -8,8 +8,8 @@ from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
-from scipy import linalg
 
+from telescopic._linalg import square_root
 from telescopic._random import Draws
 from telescopic._types import FloatArray, read_only, real
 from telescopic.couplings import maximal
@@ -66,8 +66,9 @@ class Gibbs(Kernel):
     each block from the row's generator. A coupled step does the same for the maximal
     coupling and for identical conditionals, and reads 1 uniform (through ``ppf``) or the
     block's size of normals (through ``cov``) per row and block for common random numbers.
-    A conditional that draws a non-finite value raises ``ValueError``. With
-    ``log_prob=None`` the target has no log-density, and states carry 0.
+    A conditional that draws a point that is not finite, or not of its block's size,
+    raises ``ValueError``. With ``log_prob=None`` the target has no log-density, and states
+    carry 0.
     """
 
     def __init__(
@@ -124,10 +125,11 @@ class Gibbs(Kernel):
         generators = [draws.generator(row) for row in range(len(x))]
         for b, block in enumerate(self.blocks):
             points = read_only(x)
-            drawn = np.empty((len(x), len(block)))
-            for row, generator in enumerate(generators):
-                drawn[row] = self.conditional(points[row], b).rvs(random_state=generator)
-            x[:, block] = _finite(drawn, b, points)
+            drawn = [
+                self.conditional(points[row], b).rvs(random_state=generator)
+                for row, generator in enumerate(generators)
+            ]
+            x[:, block] = _block(drawn, b, points, len(block))
         return evaluate(target, x, state.grad is not None), np.ones(len(x))
 
     def coupled_step(
@@ -140,8 +142,8 @@ class Gibbs(Kernel):
             outside = np.ones(x.shape[1], dtype=bool)
             outside[block] = False
             same = np.all(x[:, outside] == y[:, outside], axis=1)
-            new_x = np.empty((len(x), len(block)))
-            new_y = np.empty_like(new_x)
+            new_x: list[Any] = [None] * len(x)
+            new_y: list[Any] = [None] * len(x)
             # Identical conditionals: one draw for both chains (spec section 5.7).
             for row in same.nonzero()[0].tolist():
                 drawn = self.conditional(points_x[row], b).rvs(random_state=draws.generator(row))
@@ -151,12 +153,15 @@ class Gibbs(Kernel):
                 ((~same & ~common).nonzero()[0], partial(_maximal, eta=self.eta)),
             ):
                 if len(rows):
-                    new_x[rows], new_y[rows] = couple(
+                    drawn_x, drawn_y = couple(
                         [self.conditional(points_x[row], b) for row in rows],
                         [self.conditional(points_y[row], b) for row in rows],
                         draws.subset(rows),
                     )
-            x[:, block], y[:, block] = _finite(new_x, b, points_x), _finite(new_y, b, points_y)
+                    for row, value_x, value_y in zip(rows.tolist(), drawn_x, drawn_y, strict=True):
+                        new_x[row], new_y[row] = value_x, value_y
+            x[:, block] = _block(new_x, b, points_x, len(block))
+            y[:, block] = _block(new_y, b, points_y, len(block))
         identical = np.all(x == y, axis=1)
         return evaluate_pair(
             partial(evaluate, target, need_grad=state_x.grad is not None), x, y, identical
@@ -170,35 +175,39 @@ class Gibbs(Kernel):
         )
 
 
-def _finite(drawn: FloatArray, b: int, points: FloatArray) -> FloatArray:
-    # The draws of block b, one row per chain, if finite: a NaN would never meet, and
+def _block(drawn: list[Any], b: int, points: FloatArray, size: int) -> FloatArray:
+    # The draws of block b, one per chain, if each is a finite point of the block's size:
+    # one value would be broadcast to the whole block, and a NaN would never meet and
     # would spread to the other blocks through their conditionals.
-    bad = ~np.isfinite(drawn).all(axis=1)
-    if bad.any():
-        row = int(np.argmax(bad))
-        raise ValueError(
-            f"the conditional of block {b} given x = {points[row].tolist()} drew "
-            f"{drawn[row].tolist()}"
-        )
-    return drawn
+    values = [np.ravel(value) for value in drawn]
+    if all(len(value) == size for value in values):
+        block = np.array(values, dtype=np.float64)
+        if np.isfinite(block).all():
+            return block
+    row = next(
+        row
+        for row, value in enumerate(values)
+        if len(value) != size or not np.isfinite(value).all()
+    )
+    raise ValueError(
+        f"the conditional of block {b} given x = {points[row].tolist()} drew "
+        f"{values[row].tolist()}, not a finite point of shape ({size},)"
+    )
 
 
 def _maximal(p: list[Any], q: list[Any], draws: Draws, eta: float) -> tuple[FloatArray, ...]:
     x, y, _, _ = maximal(p, q, draws, eta)
-    return x.reshape(len(p), -1), y.reshape(len(p), -1)
+    return x, y
 
 
-def _common(p: list[Any], q: list[Any], draws: Draws, size: int) -> tuple[FloatArray, ...]:
+def _common(p: list[Any], q: list[Any], draws: Draws, size: int) -> tuple[Any, ...]:
     # Common random numbers: a uniform through each ppf for a block of one coordinate, or
     # normals through a square root of each conditional's covariance, taken as normal.
     if size == 1 and all(hasattr(conditional, "ppf") for conditional in p + q):
         # A uniform of 0, drawn with probability 2^-53, would give ppf = -inf.
         u = np.maximum(draws.uniform(), np.finfo(np.float64).tiny)
         # Each ppf gives a scalar, or an array for array parameters.
-        return tuple(
-            np.reshape([c.ppf(value) for c, value in zip(side, u, strict=True)], (len(side), size))
-            for side in (p, q)
-        )
+        return tuple([c.ppf(value) for c, value in zip(side, u, strict=True)] for side in (p, q))
     if not all(
         hasattr(conditional, "mean") and hasattr(conditional, "cov") for conditional in p + q
     ):
@@ -210,25 +219,10 @@ def _common(p: list[Any], q: list[Any], draws: Draws, size: int) -> tuple[FloatA
     return tuple(
         np.array(
             [
-                np.atleast_1d(c.mean) + _root(np.atleast_2d(c.cov)) @ row
+                np.atleast_1d(c.mean)
+                + square_root("a conditional's cov", np.atleast_2d(c.cov)) @ row
                 for c, row in zip(side, z, strict=True)
             ]
         )
         for side in (p, q)
     )
-
-
-def _root(cov: FloatArray) -> FloatArray:
-    # A matrix A with A A^T = cov: the Cholesky factor, or for a singular cov the
-    # eigenvectors scaled by the square roots of the eigenvalues, those that rounding has
-    # made negative taken as 0.
-    try:
-        return np.linalg.cholesky(cov)
-    except np.linalg.LinAlgError:
-        values, vectors = linalg.eigh(cov)
-        if values[0] < -1e-8 * values[-1]:
-            raise ValueError(
-                f"coupling='crn' needs a positive semi-definite cov, not {cov.tolist()}"
-            ) from None
-        root: FloatArray = vectors * np.sqrt(np.maximum(values, 0.0))
-        return root

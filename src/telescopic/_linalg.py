@@ -35,14 +35,37 @@ def covariance(
         raise ValueError(f"{name} must have shape {(ndim, ndim)}, not {matrix.shape}")
     if not np.all(np.isfinite(matrix)):
         raise ValueError(f"{name} must be finite")
-    # Symmetric up to rounding: |C_ij - C_ji| <= 1e-8 sqrt(C_ii C_jj), a test that does
-    # not depend on the scales of the coordinates; the symmetric part is then used.
-    root = np.sqrt(np.abs(np.diag(matrix)))
-    if not np.all(np.abs(matrix - matrix.T) <= 1e-8 * np.outer(root, root)):
-        raise ValueError(f"{name} must be symmetric")
-    matrix = (matrix + matrix.T) / 2
+    matrix = _symmetric(name, matrix)
     try:
         chol = np.linalg.cholesky(matrix)
     except np.linalg.LinAlgError:
         raise ValueError(f"{name} must be positive definite") from None
     return matrix, chol
+
+
+def square_root(name: str, cov: FloatArray) -> FloatArray:
+    # A matrix A with A A^T = cov for a covariance that may be singular: the Cholesky
+    # factor, or else A = D V sqrt(Lambda) from the eigendecomposition of the correlation
+    # matrix D^-1 cov D^-1, whose eigenvalues that rounding made negative count as 0. The
+    # test is on correlations, so it does not depend on the coordinates' scales.
+    matrix = _symmetric(name, cov)
+    try:
+        return np.linalg.cholesky(matrix)
+    except np.linalg.LinAlgError:
+        variances = np.diag(matrix)
+        scale = np.sqrt(np.where(variances > 0, variances, 1.0))
+        values, vectors = np.linalg.eigh(matrix / np.outer(scale, scale))
+        if np.any(variances < 0) or values[0] < -1e-8 * values[-1]:
+            raise ValueError(f"{name} must be positive semi-definite") from None
+        root: FloatArray = scale[:, None] * vectors * np.sqrt(np.maximum(values, 0.0))
+        return root
+
+
+def _symmetric(name: str, matrix: FloatArray) -> FloatArray:
+    # The symmetric part of a matrix symmetric up to rounding: |C_ij - C_ji| <=
+    # 1e-8 sqrt(C_ii C_jj), a test that does not depend on the coordinates' scales.
+    root = np.sqrt(np.abs(np.diag(matrix)))
+    if not np.all(np.abs(matrix - matrix.T) <= 1e-8 * np.outer(root, root)):
+        raise ValueError(f"{name} must be symmetric")
+    symmetric: FloatArray = (matrix + matrix.T) / 2
+    return symmetric
