@@ -1,3 +1,4 @@
+import dataclasses
 import io
 import tempfile
 import warnings
@@ -55,13 +56,14 @@ def reloaded(result):
 
 def assert_same(loaded, original, name):
     # Compares seeds by their state, and the fields of the replicates, the measure and the
-    # tuning report one by one.
+    # tuning report one by one; cached properties are not fields.
     if isinstance(original, np.random.SeedSequence):
         assert loaded.state == original.state, name
-    elif hasattr(original, "__dataclass_fields__"):
-        for field, value in vars(original).items():
-            if field != "paths":
-                assert_same(getattr(loaded, field), value, f"{name}.{field}")
+    elif dataclasses.is_dataclass(original):
+        for field in dataclasses.fields(original):
+            if field.name != "paths":
+                value = getattr(original, field.name)
+                assert_same(getattr(loaded, field.name), value, f"{name}.{field.name}")
     else:
         np.testing.assert_array_equal(loaded, original, err_msg=name)
 

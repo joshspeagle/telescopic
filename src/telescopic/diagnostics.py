@@ -180,55 +180,47 @@ def issues(result: Result) -> list[Issue]:
         Empty for a run that raises no warning.
     """
     found = []
-    tau = result.meeting_times
-    met = tau[np.isfinite(tau)]
+    values = result.diagnostics()
     if result.n_censored:
         found.append(
             Issue(
                 "censored",
-                f"{result.n_censored} of {len(tau)} pairs reached max_iter = {result.max_iter} "
-                "without meeting and are excluded, which biases the estimates; run them "
-                "without a cap or with a larger one",
+                f"{result.n_censored} of {len(result.meeting_times)} pairs reached max_iter = "
+                f"{result.max_iter} without meeting and are excluded, which biases the "
+                "estimates; run a new sampler with a larger max_iter, or none",
             )
         )
-    late = result.diagnostics()["late_fraction"]
-    if late > 0.25:
+    if values["late_fraction"] > 0.25:
         found.append(
             Issue(
                 "late",
-                f"{late:.0%} of the pairs met after k + lag, so k may be too small: the bias "
-                "correction is large and the variance high",
+                f"{values['late_fraction']:.0%} of the pairs met after k + lag, so k may be "
+                "too small: the bias correction is large and the variance high",
             )
         )
-    if result.n_replicates >= 100:
-        moments = [result.measure.per_replicate(h) for h in (lambda x: x, np.square)]
-        shares = variance_share(np.concatenate(moments, axis=1))
-        worst = int(np.argmax(shares))
-        if shares[worst] > 0.5:
-            name = result.names[worst % result.ndim]
-            moment = "mean" if worst < result.ndim else "second moment"
-            found.append(
-                Issue(
-                    "variance",
-                    f"one replicate holds {shares[worst]:.0%} of the variance of the {moment} "
-                    f"of {name}: heavy tails or rare excursions make the error bars unreliable",
-                )
+    if result.n_replicates >= 100 and values["variance_share"] > 0.5:
+        found.append(
+            Issue(
+                "variance",
+                f"one replicate holds {values['variance_share']:.0%} of the variance of "
+                f"{values['variance_share_of']}: heavy tails or rare excursions make the "
+                "error bars unreliable",
             )
-    if result.n_replicates >= 500:
-        alpha = hill(met - result.lag + 1, max(10, result.n_replicates // 10))
-        if alpha < 2:
-            found.append(
-                Issue(
-                    "tail",
-                    f"the meeting times look heavy-tailed (tail index {alpha:.2f} < 2), so the "
-                    "variance of the estimates may be infinite",
-                )
+        )
+    # The tail index is nan, which compares false, below 500 replicates.
+    if values["tail_index"] < 2:
+        found.append(
+            Issue(
+                "tail",
+                f"the meeting times look heavy-tailed (tail index {values['tail_index']:.2f} "
+                "< 2), so the variance of the estimates may be infinite",
             )
+        )
     disagreement = tuning_disagreement(result.tuning)
     if disagreement:
         found.append(Issue("tuning", disagreement))
     threshold = slow_pair_threshold(result.lag, result.m)
-    if np.any(met > threshold):
+    if values["meeting_time_max"] > threshold:
         found.append(
             Issue(
                 "slow",

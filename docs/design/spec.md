@@ -507,7 +507,7 @@ Methods:
   - `mean()`, `cov()`, `var()`, `std()` follow §3.4.
 - **Quantiles and histograms:** `quantile(q)`, `interval(mass=0.68)` (the central interval holding that mass of $\pi$; `level` is reserved for confidence levels) and `histogram(dims, bins=20, range=None)`, of one coordinate or a joint histogram of several, with standard errors (DECISIONS #30).
 - **Diagnostics:** `tv_bound(t=None)`, `w1_bound(t=None)` (should), and `diagnostics()` (a dict).
-- **Reporting:** `summary(level=0.95)` returns a `Summary` table. `check(strict=False)` emits the warnings of §7.4, or raises if strict.
+- **Reporting:** `summary()` returns a `Summary` table (DECISIONS #40). `check(strict=False)` emits the warnings of §7.4, or raises if strict.
 - **Plots:** `plot_meeting_times(axes=None)`, `plot_tv_bound(ax=None)`, `plot_marginals(dims=None, bins=20, axes=None)` and `plot_corner(dims=None, bins=20)` (signed 2-D histograms); the first three draw on given axes (DECISIONS #30).
 - **Persistence and merging:**
   - `save(path)` and `Result.load(path)` use a versioned `.npz` schema, with no pickle: arrays, and the settings, names, seed state and descriptions as JSON (DECISIONS #26, #29). The engine's paths are not saved;
@@ -532,9 +532,11 @@ Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 - $R$, $k$, $m$, $L$, `thin`;
 - the kernel and its coupling;
 - meeting-time median, 90th and 99th percentiles, maximum, and number censored;
+- the tail index of warning 4 of §7.4, from 500 replicates (DECISIONS #40);
 - mean cost per replicate, in kernel applications and in seconds;
 - the measured inefficiency, mean cost / $(m - k + 1)$ (R-TUNE-4);
 - the fraction of replicates with a non-zero bias correction, which estimates the TV bound at $k$ (§3.6);
+- the largest share of warning 3 of §7.4, and the estimate that holds it (DECISIONS #40);
 - for an interrupted run, that its estimates are consistent but not exactly unbiased (§6.5);
 - (should; deferred beyond v0.1, DECISIONS #38) $\hat R$ across the replicates' X-chains;
 - warnings raised.
@@ -549,7 +551,7 @@ Classes: `TelescopicWarning`, with subclasses `ConvergenceWarning` and `InputWar
 1. any censored replicate;
 2. a fraction of replicates with $\tau - L > k$ above 0.25 ("k may be too small"). The recipe itself gives 0.02 to 0.13 (§3.6), so a lower threshold fires on clean runs;
 3. one replicate contributing more than half of the sample variance of the estimate of a coordinate's mean or second moment, with $R \ge 100$ (heavy tails or rare excursions). A quarter, the first draft's threshold, is typical of Gaussian data at $R = 20$ to 30 and was exceeded in 87 of 200 clean runs on the banana at $R = 100$, whose intervals covered as often as the others (DECISIONS #36);
-4. a Hill estimate of the tail index of $\tau - L + 1$ below 2 (finite variance in doubt), from the $\max(10, \lfloor R/10\rfloor)$ largest values, with $R \ge 500$. Applied to $\tau$ itself with $L = k$, the shift by $L$ removes almost all its power;
+4. a Hill estimate of the tail index of $\tau - L + 1$ below 2 (finite variance in doubt), from the $\lfloor R/10\rfloor$ largest values, with $R \ge 500$. Applied to $\tau$ itself with $L = k$, the shift by $L$ removes almost all its power;
 5. pilot chains that disagree (§5.3);
 6. a slow pair (§6.3).
 
@@ -633,7 +635,7 @@ fit = optimize.minimize(lambda theta: -log_prob(theta, x, y, yerr), [0.0, 0.0])
 init = telescopic.initial.Normal(mean=fit.x, cov=100 * fit.hess_inv)
 result = telescopic.sample(log_prob, init, args=(x, y, yerr), names=["slope", "intercept"],
                            rng=42)
-print(result.summary())                      # unbiased means, standard errors, intervals
+print(result.summary())                      # unbiased means, standard errors, quantiles
 result.estimate(lambda t: t[:, 0] * t[:, 1])  # any function, after the run
 result.plot_tv_bound()                       # with the plot extra: distance from stationarity
 ```

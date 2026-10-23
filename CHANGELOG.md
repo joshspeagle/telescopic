@@ -63,3 +63,5 @@ All notable changes to this project are documented here. The format follows
   variance; both were measured against their alternatives.
 - `import telescopic` imports every public submodule but `plotting`, and `progress=True`
   draws tqdm's text bar, in notebooks too.
+- `Result.diagnostics()` and the summary report the values behind two warnings, the tail
+  index of the meeting times and the largest share of one replicate in a variance.

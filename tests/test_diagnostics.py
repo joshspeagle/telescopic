@@ -25,7 +25,7 @@ def synthetic(meeting_times, values, *, k=0, lag=1, max_iter=None, tuning=None):
             index=np.arange(len(tau)),
             meeting_time=tau,
             cost=np.ones(len(tau), dtype=np.int64),
-            atoms=values[met, None],
+            atoms=values[met].reshape(len(met), -1),
             weights=np.ones(len(met)),
             owner=met,
             distance_owner=np.zeros(0, dtype=np.int64),
@@ -122,6 +122,24 @@ def test_no_warning_fires_on_a_clean_gaussian_run():
         lag=30,
     )
     assert issues(Result(replicates)) == []
+
+
+def test_the_variance_share_names_the_moment_and_coordinate_that_hold_it():
+    # x1 is +-1 but for one replicate at 3, whose square, the only one apart from the 99
+    # others, holds the share 1 - 1/R of their variance; it holds less of the mean's.
+    rng = np.random.default_rng(7)
+    normal = rng.standard_normal((100, 2))
+    values = np.column_stack([normal[:, 0], np.r_[rng.choice([-1, 1], 99), 3], normal[:, 1]])
+    found = synthetic([2] * 100, values, k=5).diagnostics()
+    assert found["variance_share_of"] == "the second moment of x1"
+    assert found["variance_share"] == pytest.approx(0.99)
+
+
+def test_the_tail_index_needs_500_replicates():
+    tau = np.random.default_rng(8).geometric(0.1, size=500) + 1
+    assert np.isnan(synthetic(tau[:499], np.zeros(499)).diagnostics()["tail_index"])
+    expected = hill(tau, 50)  # tau - L + 1 with L = 1
+    assert synthetic(tau, np.zeros(500)).diagnostics()["tail_index"] == expected
 
 
 def test_without_late_pairs_the_upper_bound_of_the_late_fraction_is_the_rule_of_three():

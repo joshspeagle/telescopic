@@ -49,7 +49,7 @@ fit = optimize.minimize(lambda theta: -log_prob(theta, x, y, yerr), [0.0, 0.0])
 init = telescopic.initial.Normal(mean=fit.x, cov=100 * fit.hess_inv)
 result = telescopic.sample(log_prob, init, args=(x, y, yerr), names=["slope", "intercept"],
                            rng=42)
-print(result.summary())                      # unbiased means, standard errors, intervals
+print(result.summary())                      # unbiased means, standard errors, quantiles
 result.estimate(lambda t: t[:, 0] * t[:, 1])  # any function, after the run
 result.plot_tv_bound()                       # with the plot extra: distance from stationarity
 ```
