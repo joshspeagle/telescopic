@@ -69,7 +69,9 @@ for truth in ([-0.5, 1.0, -1.0, 0.5, 0.0, 2.0], [0.5, 1.0, -0.5, 0.25, 0.0, -1.0
     X = np.column_stack([np.ones(200), rng.normal(size=(200, 5))])
     y = (rng.random(200) < special.expit(X @ truth)).astype(float)
     fit = optimize.minimize(
-        lambda beta: -log_prob(beta, X, y), np.zeros(6), jac=lambda beta: -grad(beta, X, y)
+        lambda beta, X=X, y=y: -log_prob(beta, X, y),
+        np.zeros(6),
+        jac=lambda beta, X=X, y=y: -grad(beta, X, y),
     )
     init = telescopic.initial.Normal(mean=fit.x, cov=100 * fit.hess_inv)
     print(f"coefficients {truth}: {y.mean():.3f} of the outcomes are 1", flush=True)
@@ -113,6 +115,4 @@ for truth in ([-0.5, 1.0, -1.0, 0.5, 0.0, 2.0], [0.5, 1.0, -0.5, 0.25, 0.0, -1.0
         outcome = f"ValueError: {error}"
     else:
         outcome = "a result"
-    print(
-        f"  sample(kernel='mala'): {outcome}; {time.perf_counter() - start:.1f} s", flush=True
-    )
+    print(f"  sample(kernel='mala'): {outcome}; {time.perf_counter() - start:.1f} s", flush=True)
