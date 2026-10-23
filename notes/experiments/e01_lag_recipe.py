@@ -81,11 +81,7 @@ def run(R, d, k, m, lag, rng, mu0=3.0, hs=(lambda x: x[:, 0], lambda x: x[:, 0] 
                 H += (
                     np.where(
                         still,
-                        v
-                        * (
-                            np.array([h(x) for h in hs])
-                            - np.array([h(ynew) for h in hs])
-                        ),
+                        v * (np.array([h(x) for h in hs]) - np.array([h(ynew) for h in hs])),
                         0.0,
                     )
                     / n
@@ -104,9 +100,7 @@ if __name__ == "__main__":
         _, tau, _ = run(2000, d, 0, 0, 1, rng)
         k = int(np.quantile(tau - 1, 0.99))
         m = 10 * k
-        print(
-            f"d={d}: pilot tau mean {tau.mean():.1f}, q99(tau-1) = {k} -> k={k}, m={m}"
-        )
+        print(f"d={d}: pilot tau mean {tau.mean():.1f}, q99(tau-1) = {k} -> k={k}, m={m}")
         for lag in (1, k):
             H, tau, cost = run(4000, d, k, m, lag, rng)
             mean, sd = H.mean(axis=1), H.std(axis=1, ddof=1)
