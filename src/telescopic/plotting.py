@@ -70,9 +70,9 @@ def tv_bound(result: Result, ax: Axes | None = None) -> Axes:
     """
     ax = plt.subplots(figsize=(5, 3.5))[1] if ax is None else ax
     # At most 4,000 times draw the step function, however long the tail of meeting times.
-    times = result._times(int(np.max(result._stopped)))
-    t = times[:: max(1, len(times) // 2000)]
-    bound = result.tv_bound(t)
+    bound = result.tv_bound()
+    step = max(1, len(bound) // 2000)
+    t, bound = np.arange(len(bound))[::step], bound[::step]
     positive = bound > 0
     ax.plot(t[positive], bound[positive])
     ax.axvline(result.k, color="grey", linestyle="--", label="$k$")

@@ -606,10 +606,10 @@ class Result:
                 f"this needs at least {n} replicates that met, not {self.n_replicates}"
             )
 
-    def _times(self, last: int) -> npt.NDArray[np.int64]:
-        # Every time from 0 to the last at which a bound of section 3.6 can be positive,
-        # given the first time after the last that enters it.
-        return np.arange(max(1, last - self.lag))
+    def _times(self, end: int) -> npt.NDArray[np.int64]:
+        # The times t from 0 at which a bound of section 3.6 can be positive when no time
+        # from end on enters it: t + L < end.
+        return np.arange(max(1, end - self.lag))
 
 
 @dataclass(eq=False)
