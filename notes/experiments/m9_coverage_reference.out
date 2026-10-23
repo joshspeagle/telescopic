@@ -1,0 +1,9 @@
+stationary N(0, 1): k = L = 38, m = 380, 10000 intervals of R = 200
+  h = x  : coverage 0.9509 (binomial se 0.0022)
+  h = x^2: coverage 0.9489 (binomial se 0.0022)
+near-stationary N(1, 1): k = L = 38, m = 380, 10000 intervals of R = 200
+  h = x  : coverage 0.9480 (binomial se 0.0022)
+  h = x^2: coverage 0.9477 (binomial se 0.0022)
+far N(3, 1), recorded, not asserted: k = L = 38, m = 380, 10000 intervals of R = 200
+  h = x  : coverage 0.9512 (binomial se 0.0022)
+  h = x^2: coverage 0.9479 (binomial se 0.0022)

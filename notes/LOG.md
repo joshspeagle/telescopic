@@ -197,3 +197,15 @@ Append only. One entry per working session or milestone.
   replicates, censored pairs again need a cap, and `merge([])` names its argument. 419
   fast tests in 38 s.
 
+## 2026-10-23: M9
+
+- The slow statistical suite, `tests/test_statistics.py` (DECISIONS #33): unbiasedness in
+  nine cases, each with R from a pilot so that removing the bias correction shows at
+  |z| >= 5 (every case fails without it; largest first-run |z| 2.6); coverage of the AR(1)
+  chain against a reference of 10^4 intervals from an independent implementation (0.9509
+  and 0.9489, standard error 0.0022; from a far start 0.9512 and 0.9479); TV bounds above
+  the exact distance; O'Leary's d = 10 random walk (mean tau - 1 31.2 against 30), JOA20's
+  bimodal regimes (18.7 and 100 against 20 and 105; from the wide start 733 and 8,903
+  against 769 and 9,186) and Heng & Jacob's banana (149 against 158 on a probe); linear
+  SBC on two conjugate models. 18 tests in 150 s, the coverage test 89 s of it.
+
