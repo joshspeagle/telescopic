@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 import references
+from telescopic import examples
 from telescopic.initial import Normal
 from telescopic.kernels import HMC, MALA, Independence, Kernel, Mixture, RandomWalk
 from telescopic.target import Target
@@ -44,6 +45,17 @@ def test_the_tuning_chains_agree_and_find_the_covariance_in_ten_dimensions():
     pilot = adaptive_metropolis(target, Normal(np.full(10, 3.0), np.eye(10)), 4)
     assert pilot.rhat.max() < 1.15
     assert np.linalg.eigvalsh(pilot.cov).min() > 0.4
+
+
+def test_the_default_pilot_learns_a_correlated_covariance_in_fifty_dimensions():
+    # With 200 d steps the whitened target's condition number stayed at 76 to 106, and k
+    # came out 11 to 17 times too large; 10 d^2 steps give 3.5 to 3.8 over 3 seeds
+    # (notes/experiments/m9_pilot_length.out).
+    example = examples.gaussian(50)
+    pilot = adaptive_metropolis(Target(example.log_prob, vectorize=True), example.initial, 0)
+    inverse = np.linalg.inv(np.linalg.cholesky(pilot.cov))
+    eigenvalues = np.linalg.eigvalsh(inverse @ example.cov @ inverse.T)
+    assert eigenvalues.max() / eigenvalues.min() < 10
 
 
 def test_n_steps_is_checked_before_drawing_from_the_initial_distribution():

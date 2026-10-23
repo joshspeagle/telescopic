@@ -1,0 +1,8 @@
+seed 0, pilot of 200 d = 10000 steps: k 15685 against 1259, ratio 12.46; pilot 1.3 s
+seed 0, pilot of 500 d = 25000 steps: k 1654 against 1259, ratio 1.31; pilot 3.1 s
+seed 0, pilot of 1000 d = 50000 steps: k 1623 against 1259, ratio 1.29; pilot 6.6 s
+seed 0, pilot of 2000 d = 100000 steps: k 1432 against 1259, ratio 1.14; pilot 13.4 s
+seed 1, pilot of 200 d = 10000 steps: k 17289 against 1205, ratio 14.35; pilot 1.5 s
+seed 1, pilot of 500 d = 25000 steps: k 1564 against 1205, ratio 1.30; pilot 3.1 s
+seed 1, pilot of 1000 d = 50000 steps: k 1663 against 1205, ratio 1.38; pilot 5.6 s
+seed 1, pilot of 2000 d = 100000 steps: k 1542 against 1205, ratio 1.28; pilot 14.3 s

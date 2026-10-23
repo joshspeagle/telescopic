@@ -131,7 +131,7 @@ def adaptive_metropolis(
     initial : object with rvs(random_state=generator)
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
     n_steps : int, optional
-        Steps per chain, at least 3; ``max(2000, 200 d)`` by default.
+        Steps per chain, at least 3; :math:`\max(2000, 200d, 10d^2)` by default.
 
     Returns
     -------
@@ -149,7 +149,8 @@ def adaptive_metropolis(
     generators = [replicate_generator(root, TUNING, i) for i in range(N_CHAINS)]
     points = np.array([[draw(initial, generator) for _ in range(25)] for generator in generators])
     x, d = points[:, 0].copy(), points.shape[2]
-    n_steps = max(2000, 200 * d) if n_steps is None else n_steps
+    # Learning a covariance takes of order d^2 steps (DECISIONS #34).
+    n_steps = max(2000, 200 * d, 10 * d * d) if n_steps is None else n_steps
     streams = Streams(N_CHAINS)
     for chain, generator in enumerate(generators):
         streams.assign(chain, generator)
