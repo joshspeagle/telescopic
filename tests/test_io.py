@@ -2,6 +2,7 @@ import dataclasses
 import io
 import tempfile
 import warnings
+from functools import cached_property
 from pathlib import Path
 
 import numpy as np
@@ -68,10 +69,16 @@ def assert_same(loaded, original, name):
         np.testing.assert_array_equal(loaded, original, err_msg=name)
 
 
+def stored(result):
+    # A result's attributes, without the values cached from them.
+    cached = {name for name, member in vars(Result).items() if isinstance(member, cached_property)}
+    return {name: value for name, value in vars(result).items() if name not in cached}
+
+
 def test_save_and_load_round_trip_every_field(result):
     loaded = reloaded(result)
-    assert vars(loaded).keys() == vars(result).keys()
-    for name, value in vars(result).items():
+    assert stored(loaded).keys() == stored(result).keys()
+    for name, value in stored(result).items():
         if name in ("kernel", "initial"):
             assert getattr(loaded, name) == (None if value is None else str(value))
         else:

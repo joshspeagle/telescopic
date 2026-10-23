@@ -99,6 +99,12 @@ def test_a_pair_censored_after_the_slow_threshold_is_slow():
     assert {"censored", "slow"} <= {issue.kind for issue in found}
 
 
+def test_changing_the_diagnostics_returned_leaves_the_results_own():
+    result = synthetic([2] * 50, np.zeros(50), k=5)
+    result.diagnostics()["late_fraction"] = 1.0
+    assert result.diagnostics()["late_fraction"] == 0
+
+
 def test_the_variance_warning_needs_one_replicate_to_hold_more_than_half_the_variance():
     # Shares of 0.5 and 0.58 in the variance of the mean or the second moment.
     assert issues(synthetic([2] * 100, [0.0] * 98 + [10.0, -10.0], k=5)) == []

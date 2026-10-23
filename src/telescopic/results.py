@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import os
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -59,8 +60,8 @@ class Estimate:
 class Result:
     r"""The output of a run of coupled chains (spec R-OUT-1).
 
-    Censored pairs appear in :attr:`meeting_times` as ``inf`` and are excluded from the
-    estimates, from :attr:`n_replicates` and from :attr:`measure`.
+    Censored pairs appear in ``meeting_times`` as ``inf`` and are excluded from the
+    estimates, from ``n_replicates`` and from ``measure``.
 
     Parameters
     ----------
@@ -342,10 +343,15 @@ class Result:
             one-sided 95% Clopper-Pearson upper bound, which stays informative when the
             fraction is 0; ``tv_bound_at_k``; ``variance_share``, the largest share of one
             replicate in the sample variance of the estimate of a coordinate's mean or
-            second moment, ``nan`` below 2 replicates, and ``variance_share_of``, that
-            estimate; ``mean_cost``, ``seconds_per_replicate`` and ``relative_cost``, the
-            mean cost over :math:`m - k + 1` (spec R-TUNE-4).
+            second moment, and ``variance_share_of``, that estimate, ``nan`` and ``None``
+            below 2 replicates; ``mean_cost``, ``seconds_per_replicate`` and
+            ``relative_cost``, the mean cost over :math:`m - k + 1` (spec R-TUNE-4).
         """
+        return dict(self._diagnostics)
+
+    @functools.cached_property
+    def _diagnostics(self) -> dict[str, Any]:
+        # Computed once: each run's warnings, the summary and check all read it.
         met = self.meeting_times[np.isfinite(self.meeting_times)]
         quantiles = np.quantile(met, [0.5, 0.9, 0.99]) if len(met) else np.full(3, np.nan)
         tail_index = np.nan
