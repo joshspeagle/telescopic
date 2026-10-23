@@ -452,7 +452,7 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
   - it is excluded from the estimates, from $R$ and from the signed measure;
   - it is reported by a `ConvergenceWarning` stating that the estimates are biased.
 - Censored pairs are never dropped silently, and never averaged as if they had met.
-- **Slow-pair warning:** when a pair passes $t = \max(10^4, 10\max(L, m))$, the sampler emits one `ConvergenceWarning` naming the replicate, from the engine's progress reports. With the recipe of R-TUNE-2 and $m \ge 1000$ this is 100 times the pilot's $\hat q_\beta$; it needs no pilot, and in the meeting-time pilot ($L = 1$, $m = 0$) it is $10^4$.
+- **Slow-pair warning:** when a pair passes $t = \max(10^4, 10\max(L, m))$, the sampler emits one `ConvergenceWarning` naming the replicate: in this process from the engine's progress reports, as it happens; on a pool, whose workers' reports do not reach the parent, from the meeting times when the run ends. With the recipe of R-TUNE-2 and $m \ge 1000$ this is 100 times the pilot's $\hat q_\beta$; it needs no pilot, and in the meeting-time pilot ($L = 1$, $m = 0$) it is $10^4$.
 - **Meeting-time pilot:** it is capped at `pilot_max_iter` (default $10^5$). Capped pairs are censored and sort above every finite meeting time; if $\hat q_\beta$ falls on a censored pair, the pilot raises `ValueError` with advice (a wider $\pi_0$, a better kernel, or explicit `k`, `lag` and `m`). So `sample()` cannot run forever on a target where the coupling never meets (D-23).
 
 ### 6.4 Parallel execution (R-EXEC-5)
@@ -461,19 +461,19 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
   - `None` runs in-process;
   - an integer creates that many worker processes;
   - an object with `submit` (a `concurrent.futures.Executor`), or with `map` (emcee/dynesty/schwimmbad style), is used as given.
-- **Tasks:** chunks of consecutive replicate indices, four per worker: the pool's size, an executor's `_max_workers`, or else the number of CPUs. Each worker runs the engine on its chunk. Chunks are submitted at once, in index order; a pool with only `map` runs them in waves of one per worker (DECISIONS #21).
+- **Tasks:** chunks of consecutive replicate indices, one per worker at least, more where a chunk would exceed a full set of 64 lanes, and four per worker at most. The workers are counted by the pool's size, an executor's `_max_workers`, or else the number of CPUs. Each worker runs the engine on its chunk. Chunks are submitted at once, in index order; a pool with only `map` runs them in waves of one per worker. The job (target, kernel, initial distribution, root and settings) travels with each task (DECISIONS #23).
 - **Results:** reduced in index order. The wall time of a pool run is the parent's.
 - **Worker hygiene:**
-  - every task in another process runs under `threadpool_limits(1)`, so BLAS is pinned to one thread in user pools too. Tasks in the parent process, on a thread pool, leave BLAS settings alone: they belong to the process, and concurrent threads would restore each other's;
-  - pools that telescopic creates start their workers with the spawn method, which behaves alike on every platform; forking a process whose BLAS runs threads can deadlock;
-  - in pools that telescopic creates, the target is shipped once per worker and workers ignore SIGINT. With a user executor the target travels with each task.
+  - a task in the main thread of another process pins BLAS to one thread and ignores Ctrl-C, in user pools too. Tasks in the parent process, as on a thread pool, or in other threads leave those settings alone: they belong to the process, and concurrent tasks would restore each other's;
+  - pools that telescopic creates start their workers with the spawn method, which behaves alike on every platform; forking a process whose BLAS runs threads can deadlock. Their workers ignore Ctrl-C between tasks too;
+  - the workers of an integer pool live for one call of `run` or `meeting_times`: they start before tuning, so that their start overlaps it, and serve the pilot and the run.
 - **Picklability:** telescopic ships the target, the initial distribution and the kernel (which can hold user functions, such as Gibbs conditionals) to the workers it creates with `cloudpickle` when it is installed (the `parallel` extra), so functions defined in a notebook work under the spawn and forkserver start methods (D-27). Otherwise they must be picklable, and the error says how to fix it. The documentation covers the `if __name__ == "__main__"` guard.
 - **Counters:** each task returns its own numbers of log-density and gradient evaluations, since the `Target` counters of a worker process are not the parent's.
 
 ### 6.5 Interruption (R-EXEC-6)
 
-- **First Ctrl-C:** no new replicate starts, the ones in progress finish, and the result is flagged `interrupted`. It contains every started replicate. Process pools that telescopic creates finish their running chunks and cancel the others, except the first; a `.map` pool returns its completed waves only. Ctrl-C reaches the workers of a user's pool too, and how they react is up to the pool.
-- **Requested indices:** a result records the indices it was asked for, and `interrupted` is true while one of them has not run. In-process, and on pools that start tasks in order, the started replicates form a prefix of the indices. The sampler's next run starts with the missing indices, and `merge` joins the requests, so a run that completes an interrupted one clears the flag (DECISIONS #20).
+- **First Ctrl-C:** no new replicate starts, the ones in progress finish, and the result is flagged `interrupted`. It contains every started replicate. The workers that telescopic creates hear of it through an event: they start no new replicate, and a chunk that starts afterwards runs nothing, except the first, so that a run returns a replicate. On a user's executor the chunks not started are cancelled and the running ones finish; a `.map` pool returns its completed waves only. How the rest of a user's pool reacts to Ctrl-C is up to the pool.
+- **Requested indices:** a result records the indices it was asked for, and `interrupted` is true while one of them has not run. In this process the started replicates form a prefix of the indices; on a pool they need not. The sampler's next run starts with the missing indices, and `merge` joins the requests, so a run that completes an interrupted one clears the flag (DECISIONS #20).
 - **Its estimates are consistent, not exactly unbiased:** the number of replicates depends on their costs, which correlate with $h$ through $\tau$, so the mean is a ratio estimator (Glynn & Heidelberger 1991). The bias is visible with few lanes (one lane: $z = -12.9$ in design review D-R3) and was not detectable with 16 or more. `summary()` says so. Running the remaining replicates of the requested $R$ restores exact unbiasedness, because $R$ is then fixed in advance (D-22).
 - **Second Ctrl-C:** raises `KeyboardInterrupt` at once, without a result, and stops the workers that telescopic started.
 - **Scope:** tuning and the meeting-time pilot have no result to return early: Ctrl-C there raises `KeyboardInterrupt`.
@@ -594,7 +594,7 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
    - `run` tunes and runs the pilot if they have not been done.
    - Each call continues the replicate indices and returns the cumulative result.
    - The first call fixes `k`, `m`, `lag`, `thin` and `max_iter` (DECISIONS #4). On the first call `"auto"` derives a value, `thin=None` means 1 and `max_iter=None` no cap; on later calls `"auto"` and `None` keep the first call's values, and any other change raises `ValueError` (DECISIONS #8).
-   - Each call ends by emitting the warnings of §7.4 that apply to the cumulative result, except slow pairs and disagreeing tuning chains, which are emitted as they happen (DECISIONS #8).
+   - Each call ends by emitting the warnings of §7.4 that apply to the cumulative result, except slow pairs and disagreeing tuning chains, which are emitted as they happen, or for slow pairs on a pool as each run ends (§6.3, DECISIONS #8).
 3. **Building blocks:** `Target`, `State`, `telescopic.kernels.*`, `telescopic.couplings.*`, `telescopic.engine.run(...)`, `telescopic.estimators.*`, `telescopic.diagnostics.*` and `SignedMeasure`.
 
 ### 8.2 Conventions (R-API-2)

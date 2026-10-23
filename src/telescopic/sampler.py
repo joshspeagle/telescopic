@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import nullcontext
 from typing import Any
@@ -9,7 +10,7 @@ from typing import Any
 import numpy as np
 
 from telescopic import diagnostics, engine
-from telescopic._parallel import Interrupt, Job, check_pool, execute
+from telescopic._parallel import Interrupt, check_pool, execute, opened
 from telescopic._progress import Progress
 from telescopic._random import MAIN, PILOT, replicate_generator, root_seed
 from telescopic._types import FloatArray, IntArray, Seed
@@ -30,6 +31,9 @@ KERNELS: dict[str, Callable[[], Kernel]] = {
 }
 PILOT_REPLICATES = 100
 PILOT_MAX_ITER = 100_000
+# The warnings of spec section 7.4 that a run emits as they happen, not at its end, or as
+# it ends for slow pairs on a pool.
+_LIVE = ("slow", "tuning")
 
 
 class CoupledSampler:
@@ -155,13 +159,15 @@ class CoupledSampler:
         """
         if n < 1:
             raise ValueError(f"n must be at least 1, not {n}")
+        with opened(self.pool) as pool:
+            return self._meeting_times(n, max_iter, pool)
+
+    def _meeting_times(self, n: int, max_iter: int, pool: Any) -> FloatArray:
         self.tune()
         start = 0 if self.pilot is None else len(self.pilot)
         settings = {"k": 0, "m": 0, "lag": 1, "thin": 1, "max_iter": max_iter}
         indices = np.arange(start, start + n)
-        times = self._run(
-            PILOT, indices, settings, store=False, progress=self.progress
-        ).meeting_time
+        times = self._run(PILOT, indices, settings, pool, self.progress).meeting_time
         self.pilot = times if self.pilot is None else np.concatenate([self.pilot, times])
         return times
 
@@ -211,16 +217,15 @@ class CoupledSampler:
         """
         if n_replicates < 1:
             raise ValueError(f"n_replicates must be at least 1, not {n_replicates}")
-        settings = self._configure(k, m, lag, thin, max_iter)
-        done = 0 if self._replicates is None else len(self._replicates.index)
-        self._check_memory(settings, done + n_replicates)
-        part = self._run(
-            MAIN,
-            self._next_indices(n_replicates),
-            settings,
-            progress=self.progress if progress is None else progress,
-            interruptible=True,
-        )
+        # Worker processes start before tuning, which runs here meanwhile, and serve the
+        # pilot and the run (DECISIONS #23).
+        with opened(self.pool) as pool:
+            settings = self._configure(k, m, lag, thin, max_iter, pool)
+            done = 0 if self._replicates is None else len(self._replicates.index)
+            self._check_memory(settings, done + n_replicates)
+            indices = self._next_indices(n_replicates)
+            show = self.progress if progress is None else progress
+            part = self._run(MAIN, indices, settings, pool, show)
         self.settings = settings
         self._replicates = (
             part if self._replicates is None else engine.merge([self._replicates, part])
@@ -236,11 +241,8 @@ class CoupledSampler:
             **settings,
         )
         for issue in diagnostics.issues(result):
-            # Disagreeing tuning chains, and slow pairs in this process, were warned about
-            # as they happened.
-            if issue.kind == "tuning" or (issue.kind == "slow" and self.pool is None):
-                continue
-            warn(issue.message, ConvergenceWarning)
+            if issue.kind not in _LIVE:
+                warn(issue.message, ConvergenceWarning)
         return result
 
     def _next_indices(self, n: int) -> IntArray:
@@ -249,7 +251,7 @@ class CoupledSampler:
         if self._replicates is None:
             return np.arange(n)
         requested = self._replicates.requested
-        missing = np.setdiff1d(requested, self._replicates.index)
+        missing = np.setdiff1d(requested, self._replicates.index, assume_unique=True)
         top = int(requested[-1]) + 1
         return np.concatenate([missing, np.arange(top, top + n)])[:n]
 
@@ -258,34 +260,39 @@ class CoupledSampler:
         namespace: int,
         indices: IntArray,
         settings: dict[str, Any],
-        *,
-        store: bool = True,
-        progress: bool = False,
-        interruptible: bool = False,
+        pool: Any,
+        progress: bool,
     ) -> engine.Replicates:
-        # The engine on the given replicates, here or on the pool. In this process it warns
-        # about slow pairs as they happen; a main run stops on Ctrl-C (spec section 6.5).
-        job = Job(self.target, self.kernel, self.initial, self.seed, namespace, settings, store)
-        slow = _slow_pairs(settings["lag"], settings["m"])
-        description = "pilot pairs" if namespace == PILOT else "replicates"
-        bar = Progress(len(indices), description) if progress else None
+        # The engine on the given replicates, here or on the opened pool. A main run stores
+        # its measures and stops on Ctrl-C (spec section 6.5); a pilot run does neither.
+        main = namespace == MAIN
+        job = functools.partial(
+            engine.run,
+            self.target,
+            self.kernel,
+            self.initial,
+            root=self.seed,
+            namespace=namespace,
+            store=main,
+            **settings,
+        )
+        slow = _SlowPairs(settings["lag"], settings["m"])
+        bar = Progress(len(indices), "replicates" if main else "pilot pairs") if progress else None
         interrupt = Interrupt()
 
         def monitor(status: engine.Status) -> bool:
             if bar is not None:
                 bar.update(status.finished)
-            return slow(status)
+            slow(status)
+            return interrupt.stopping
 
-        def on_part(part: engine.Replicates) -> None:
-            if bar is not None:
-                bar.update(bar.finished + len(part.index))
-
-        with interrupt.catching() if interruptible else nullcontext():
+        with interrupt.catching() if main else nullcontext():
             try:
-                replicates = execute(job, indices, self.pool, interrupt, monitor, on_part)
+                replicates = execute(job, indices, pool, monitor)
             finally:
                 if bar is not None:
                     bar.close()
+        slow.after(replicates, settings["max_iter"])
         if len(replicates.zero_density):
             warn(
                 f"{len(replicates.zero_density)} replicates start where the target density "
@@ -302,6 +309,7 @@ class CoupledSampler:
         lag: int | str,
         thin: int | None,
         max_iter: int | None,
+        pool: Any,
     ) -> dict[str, Any]:
         # The settings of every run of this sampler: fixed by the first (D-21, DECISIONS #4).
         if self.settings is not None:
@@ -318,7 +326,10 @@ class CoupledSampler:
                 raise ValueError(f"{name} must be an integer or 'auto', not {value!r}")
         self.tune()
         if k == "auto":
-            k = choose_k(self.pilot if self.pilot is not None else self.meeting_times())
+            pilot = self.pilot
+            if pilot is None:
+                pilot = self._meeting_times(PILOT_REPLICATES, PILOT_MAX_ITER, pool)
+            k = choose_k(pilot)
         settings: dict[str, Any] = {
             "k": int(k),
             "m": 10 * int(k) if m == "auto" else int(m),
@@ -392,24 +403,34 @@ def sample(
     return sampler.run(n_replicates, k=k, m=m, lag=lag, thin=thin, max_iter=max_iter)
 
 
-def _slow_pairs(lag: int, m: int) -> Callable[[engine.Status], bool]:
-    # A monitor that warns once when a pair passes the slow-pair threshold (spec section
-    # 6.3); it never stops the run.
-    threshold = diagnostics.slow_pair_threshold(lag, m)
-    warned = False
+class _SlowPairs:
+    # Warns once about a pair still unmet at the slow-pair threshold (spec section 6.3):
+    # from the engine's status as it happens, or from the meeting times after a run on a
+    # pool, whose workers' statuses do not reach the parent.
+    def __init__(self, lag: int, m: int) -> None:
+        self.threshold = diagnostics.slow_pair_threshold(lag, m)
+        self.warned = False
 
-    def monitor(status: engine.Status) -> bool:
-        nonlocal warned
-        if not warned and status.t >= threshold:
-            warned = True
+    def __call__(self, status: engine.Status) -> None:
+        if status.t >= self.threshold:
+            self._warn(status.slowest)
+
+    def after(self, replicates: engine.Replicates, max_iter: int | None) -> None:
+        # A pair is unmet at the threshold when it meets, or is censored, after it.
+        tau = replicates.meeting_time
+        stopped = tau if max_iter is None else np.minimum(tau, max_iter)
+        slow = replicates.index[stopped > self.threshold]
+        if len(slow):
+            self._warn(int(slow[0]))
+
+    def _warn(self, replicate: int) -> None:
+        if not self.warned:
+            self.warned = True
             warn(
-                f"replicate {status.slowest} has not met after {threshold} iterations; the "
+                f"replicate {replicate} has not met after {self.threshold} iterations; the "
                 "meeting times may be heavy-tailed",
                 ConvergenceWarning,
             )
-        return False
-
-    return monitor
 
 
 def _kernel(kernel: Kernel | str) -> Kernel:

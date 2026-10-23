@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import itertools
 import time
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from typing import Any, NamedTuple
 
@@ -18,6 +18,9 @@ from telescopic.estimators import averaging_times, correction_coefficients
 from telescopic.initial import draw
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
+
+# Replicates advanced together by default.
+LANES = 64
 
 
 @dataclass
@@ -93,7 +96,7 @@ def run(
     target: Target,
     kernel: Kernel,
     initial: Distribution,
-    indices: Iterable[int],
+    indices: npt.ArrayLike,
     *,
     root: SeedSequence,
     namespace: int,
@@ -102,7 +105,7 @@ def run(
     lag: int,
     thin: int = 1,
     max_iter: int | None = None,
-    lanes: int = 64,
+    lanes: int = LANES,
     store: bool = True,
     keep_paths: bool = False,
     monitor: Callable[[Status], bool] | None = None,
@@ -122,7 +125,7 @@ def run(
     kernel : Kernel
         A tuned kernel.
     initial : object with ``rvs(random_state=generator)``
-    indices : iterable of int
+    indices : array_like of int, shape (R,)
         Replicate indices, started in this order; at least one.
     root : numpy.random.SeedSequence
         Root seed of the run.
@@ -160,9 +163,9 @@ def run(
     check_settings(k, m, lag, thin, max_iter)
     if lanes < 1:
         raise ValueError(f"lanes must be at least 1, not {lanes}")
-    requested = np.fromiter(indices, dtype=np.int64)
-    if not len(requested):
-        raise ValueError("indices must not be empty")
+    requested = np.asarray(indices, dtype=np.int64)
+    if requested.ndim != 1 or not len(requested):
+        raise ValueError("indices must be a non-empty sequence of integers")
     queue = iter(requested.tolist())
     first = next(queue)
     evaluations, start = (target.n_log_prob, target.n_grad), time.perf_counter()

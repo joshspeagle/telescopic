@@ -141,18 +141,19 @@ Status(started, finished, slowest, t)                       # given to the monit
 ### 2.7 Parallel execution (`_parallel.py`)
 
 ```text
-Job(target, kernel, initial, root, namespace, settings, store)    # job(indices, monitor) runs the engine
-execute(job, indices, pool, interrupt, monitor=None, on_part=None) -> Replicates   # requested = indices
-Interrupt().catching()                                            # the first Ctrl-C sets .stopping; the second raises
+opened(pool)                                 # context: an integer becomes spawned Workers for the block
+execute(job, indices, pool, monitor) -> Replicates   # job: a partial of engine.run; requested = indices
+Interrupt().catching()                       # the first Ctrl-C sets .stopping; the second raises
 ```
 
 - **Pool forms:**
   - `pool=None` runs in-process;
-  - `pool=int` creates a spawn `ProcessPoolExecutor` whose initializer loads the job once and ignores SIGINT;
+  - `pool=int` opens a spawn `ProcessPoolExecutor` for one call of `run` or `meeting_times`, whose initializer ignores SIGINT and keeps a stop event;
   - an `Executor` is used through `submit`;
   - a `.map`-only pool runs in waves.
-- **Interrupts:** the first Ctrl-C in the parent cancels the chunks not yet started, except the first, and awaits the running ones (spec §6.5). A `.map` pool returns its completed waves. The second raises, and terminates the workers that telescopic started.
-- **Hygiene:** each task in another process runs under `threadpool_limits(1)`. Jobs are pickled with `cloudpickle` when it is installed.
+- **Monitor:** the engine's monitor is the one channel: in-process it sees every iteration; on a pool, the finished replicates after each chunk and every 0.1 s. It drives progress and slow-pair warnings, and its return value stops the run.
+- **Interrupts:** the first Ctrl-C sets the workers' stop event and cancels the chunks not yet started, except the first (spec §6.5). A `.map` pool returns its completed waves. The second raises, and terminates the workers that telescopic started.
+- **Hygiene:** a task in the main thread of another process pins BLAS to one thread and ignores SIGINT. Jobs are pickled with `cloudpickle` when it is installed.
 
 ### 2.8 Tuning (`tuning.py`)
 

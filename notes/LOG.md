@@ -133,3 +133,10 @@ Append only. One entry per working session or milestone.
   a 2-dimensional Gaussian, a `sample` of 40 replicates took 0.23 s in-process and
   1.25 s with 2 spawned workers, whose start dominates (Intel Xeon @ 2.10 GHz, 4 cores,
   Python 3.13.16, NumPy 2.5.4, one measurement). 323 fast tests in 30 s.
+- M7 `/simplify` (`notes/reviews/m7.md`): the first Ctrl-C on a pool now reaches the
+  workers through an event, so the result came 0.85 to 1.15 s after it instead of 13.6
+  to 15.6 s on 2 workers; workers live for one call, start before tuning and serve the
+  pilot and the run (`sample` on 4 workers: 4.1 to 1.8-2.0 s); chunks fill the engine's
+  64 lanes; the engine's monitor is the one channel for progress, slow pairs and the
+  stop, and slow pilot pairs on a pool now warn (DECISIONS #23). A question for Josh on
+  sizing users' pools. 333 fast tests in 36 s.

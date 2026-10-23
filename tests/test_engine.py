@@ -119,7 +119,7 @@ def test_a_cap_censors_unmet_pairs_and_drops_their_measures():
         ({"thin": 0}, "at least 1"),
         ({"max_iter": 10}, "max_iter must exceed"),
         ({"lanes": 0}, "lanes must be"),
-        ({"n": 0}, "indices must not be empty"),
+        ({"n": 0}, "indices must be a non-empty sequence"),
     ],
 )
 def test_invalid_settings_raise(options, message):
