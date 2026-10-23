@@ -1,0 +1,10 @@
+exact checks: marginals and faithfulness hold to machine precision
+L= 1: exact E[tau-L]=5.2427; bound>=TV for t in [0,60): True; t=0: TV=0.9375 bound=5.2427; t=5: TV=0.1464 bound=2.1092; t=10: TV=0.0483 bound=0.8921; t=20: TV=0.0083 bound=0.1631
+L= 5: exact E[tau-L]=4.9698; bound>=TV for t in [0,60): True; t=0: TV=0.9375 bound=1.5363; t=5: TV=0.1464 bound=0.5363; t=10: TV=0.0483 bound=0.2232; t=20: TV=0.0083 bound=0.0404
+L=20: exact E[tau-L]=5.2422; bound>=TV for t in [0,60): True; t=0: TV=0.9375 bound=1.0252; t=5: TV=0.1464 bound=0.3453; t=10: TV=0.0483 bound=0.1408; t=20: TV=0.0083 bound=0.0252
+lag-1 meeting times: N=20000, mean(sim)=5.2521 vs exact 5.2427; chi-square p=0.866 (49 bins)
+H_(k=2:m=10) bug=None               mean=2.8859 pi(h)=2.8750 sd=11.112 z=+0.14 (R=20000)
+H_(k=2:m=10) bug=weight_off_by_one  mean=3.1090 pi(h)=2.8750 sd=12.045 z=+2.75 (R=20000)
+H_(k=2:m=10) bug=no_cap             mean=2.6977 pi(h)=2.8750 sd=17.346 z=-1.45 (R=20000)
+H_(k=2:m=10) bug=wrong_lag_index    mean=3.0961 pi(h)=2.8750 sd=10.682 z=+2.93 (R=20000)
+H_(k=2:m=10) bug=drop_correction    mean=2.9207 pi(h)=2.8750 sd=1.186 z=+5.45 (R=20000)

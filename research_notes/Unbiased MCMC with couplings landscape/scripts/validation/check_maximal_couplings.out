@@ -1,0 +1,20 @@
+=== 1. Meeting probability = 1 - TV (equal covariance) ===
+[Alg2 1-D] Delta= 0.1 exact P(meet)=0.96012 empirical=0.95998 binom p=0.745 KS(x) p=0.174 KS(y) p=0.311 mean units=1.9890 var units=46.28
+[Alg2 1-D] Delta= 0.5 exact P(meet)=0.80259 empirical=0.80265 binom p=0.946 KS(x) p=0.843 KS(y) p=0.959 mean units=2.0001 var units=8.14
+[Alg2 1-D] Delta= 1.0 exact P(meet)=0.61708 empirical=0.61881 binom p=0.112 KS(x) p=0.167 KS(y) p=0.828 mean units=1.9970 var units=3.23
+[Alg2 1-D] Delta= 2.0 exact P(meet)=0.31731 empirical=0.31744 binom p=0.904 KS(x) p=0.876 KS(y) p=0.541 mean units=1.9970 var units=0.92
+[Alg2 1-D] Delta= 4.0 exact P(meet)=0.04550 empirical=0.04551 binom p=0.983 KS(x) p=0.217 KS(y) p=0.773 mean units=2.0002 var units=0.10
+[Refl-max d=10] Mahalanobis=0.185 exact P(meet)=0.92637 empirical=0.00382 binom p=0.000 min KS p (6 projections)=0.220
+[Refl-max d=10] Mahalanobis=0.602 exact P(meet)=0.76356 empirical=0.00169 binom p=0.000 min KS p (6 projections)=0.334
+[Refl-max d=10] Mahalanobis=2.428 exact P(meet)=0.22466 empirical=0.00007 binom p=0.000 min KS p (6 projections)=0.062
+
+=== 2. Cost of Algorithm 2 as TV -> 0 (units: one draw + two evals) ===
+Delta= 2.00 TV=0.6827 mean=2.0007 sd=0.96 max=14
+Delta= 0.50 TV=0.1974 mean=1.9952 sd=2.84 max=65
+Delta= 0.10 TV=0.0399 mean=2.0020 sd=6.90 max=220
+Delta= 0.02 TV=0.0080 mean=2.0020 sd=16.15 max=1070
+
+=== 3. Detecting a 'forgot the rejection loop' bug in the Y marginal ===
+Delta=0.5: TV=0.197 KS distance(buggy, q)=0.0957; n=1000: power=0.99; n=10000: power=1.00; n=100000: power=1.00
+Delta=1.0: TV=0.383 KS distance(buggy, q)=0.1499; n=1000: power=1.00; n=10000: power=1.00; n=100000: power=1.00
+Delta=2.0: TV=0.683 KS distance(buggy, q)=0.1533; n=1000: power=1.00; n=10000: power=1.00; n=100000: power=1.00

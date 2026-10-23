@@ -124,7 +124,7 @@ The randomized-truncation estimators of McLeish and Rhee–Glynn are the general
   - $m=k$ gives $1$ if $L\mid(t-k)$ and $0$ otherwise, recovering $H^{(L)}_k$.
   - $m=k+L-1$ makes every bias-correction coefficient equal to 1. This gives Vanetti–Doucet's estimator $L^{-1}[\sum_{t=k}^{k+L-1}h(X_t)+\sum_{t=k+L}^{\tau-1}\Delta_t]$.
   - Biswas et al.'s inner upper limit $\lceil(\tau-L-t)/L\rceil$ equals $\lfloor(\tau-1-t)/L\rfloor$ for integers, so it agrees with summing up to $\tau-1$.
-- [OWN] The rejoinder's lag-$L$ weight is wrong for $L\ge2$, while the floor/ceil weight is correct. I simulated a 3-state chain with a maximal coupling of transition rows, $\pi_0=\delta_0$, $h=(0,1,5)$ and $\pi(h)=1.67857$, using $2\times10^5$ replicates per configuration (script: `/tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/theory/scripts/check_lag_weights.py`).
+- [OWN] The rejoinder's lag-$L$ weight is wrong for $L\ge2$, while the floor/ceil weight is correct. I simulated a 3-state chain with a maximal coupling of transition rows, $\pi_0=\delta_0$, $h=(0,1,5)$ and $\pi(h)=1.67857$, using $2\times10^5$ replicates per configuration (script: `scripts/theory/check_lag_weights.py`).
   - The definition-based average of $H_l$ equalled the floor/ceil formula to $\le 2\times10^{-15}$ in every replicate.
   - Mean of the correct formula versus mean of the rejoinder formula (standard errors ≈0.002–0.006):
 

@@ -1,0 +1,5 @@
+exact acceptance prob from x=1.0: a(x)=0.465399
+n= 10000 correct      : A: 0.00  B: 0.00  C(alpha=1e-3 floor): 0.00
+n= 10000 bug 5% scale : A: 0.22  B: 0.00  C(alpha=1e-3 floor): 0.00
+n=100000 correct      : A: 0.00  B: 0.00  C(alpha=1e-3 floor): 0.02
+n=100000 bug 5% scale : A: 1.00  B: 0.74  C(alpha=1e-3 floor): 0.54

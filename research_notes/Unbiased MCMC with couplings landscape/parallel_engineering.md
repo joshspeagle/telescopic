@@ -1,6 +1,6 @@
 # Engineering the execution layer for coupled-chain replicates in Python: budgets, parallelism, random-number streams, memory
 
-Scope: how to run many independent coupled-chain replicates (Jacob, O'Leary & Atchadé 2020) efficiently, reproducibly and without bias in a pure-Python (NumPy/SciPy, optional JAX) package (`telescopic`). Facts are as of 2026-10-23. "Own experiment" findings were measured for this note in a 4-vCPU Intel Xeon @ 2.10 GHz VM with Python 3.13.16, NumPy 2.5.3 and OpenBLAS 0.3.34 (the scipy-openblas build bundled in the NumPy wheel). The scripts and raw outputs are in `/tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/`; that directory is session scratch, so copy it if it should be kept. The toy used for the bias experiments is a coupled random-walk Metropolis sampler with a reflection-maximal coupling and lag 1, on target N(0,1), started from N(3,1), with proposal sd 1, h(x)=x and (k,m)=(2,10). It is exactly unbiased: the mean over 2×10⁶ replicates was −0.0056 with sd(H)=14.4. Its cost C=max(τ,m) has E[C]=11.05, P(C>m)=0.178, max 72 and corr(H,C)=−0.195.
+Scope: how to run many independent coupled-chain replicates (Jacob, O'Leary & Atchadé 2020) efficiently, reproducibly and without bias in a pure-Python (NumPy/SciPy, optional JAX) package (`telescopic`). Facts are as of 2026-10-23. "Own experiment" findings were measured for this note in a 4-vCPU Intel Xeon @ 2.10 GHz VM with Python 3.13.16, NumPy 2.5.3 and OpenBLAS 0.3.34 (the scipy-openblas build bundled in the NumPy wheel). The scripts and raw outputs are archived in `scripts/parallel/`. The toy used for the bias experiments is a coupled random-walk Metropolis sampler with a reflection-maximal coupling and lag 1, on target N(0,1), started from N(3,1), with proposal sd 1, h(x)=x and (k,m)=(2,10). It is exactly unbiased: the mean over 2×10⁶ replicates was −0.0056 with sd(H)=14.4. Its cost C=max(τ,m) has E[C]=11.05, P(C>m)=0.178, max 72 and corr(H,C)=−0.195.
 
 Package versions on PyPI on 2026-10-23 (queried through the PyPI JSON API; pages at `https://pypi.org/project/<name>/`):
 
@@ -66,14 +66,14 @@ Under a time budget, averaging "whatever has finished" is biased, and pooling ac
   - Per-lane natural average, dropping empty lanes or counting them as 0: +0.67 / +0.62 at T=1.4·E[C], +0.07 (z≈10) at 2.7·E[C], undetectable at 9·E[C]. This is the exponentially decaying E[H; C>T] bias.
   - "First R completed" with refill: +0.217 (z=58) for B=64, R=256; +0.645 (z=221) for B=R=1024.
   - No detectable bias (|z| ≤ 1.3 in every configuration) for: fixed R chosen by index, per-lane GH (μ̃₁ = Jacob et al.'s H̃), GH91 preselect with P₁=B/4, and pooled-with-completion (μ̄₂).
-  - Source: [own experiment exp1_policies.py / exp1_policies.out](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp1_policies.out)
+  - Source: own experiment exp1_policies.py / exp1_policies.out (`scripts/parallel/exp1_policies.out`)
 - **Own experiment: trade-offs among the unbiased or consistent budget estimators.**
   - Mean makespan:
     - B=64, T=15: per-lane GH 25.9 vs pooled-with-completion 36.5.
     - B=1024, T=15: 38.7 vs 49.2.
     - B=1024, T=30: 38.8 vs 67.3.
   - Standard deviation: per-lane GH is 1.15–1.7× larger than pooled-with-completion, because the latter also uses the finished in-progress replicates on every lane. Ratios: 1.40 (T=15), 1.67 (T=30), 1.15 (T=100) at B=64. GH91 preselect with P₁=B/4 had about 2.6× the pooled-with-completion sd at T=15 (1.9× the per-lane GH sd).
-  - Source: [own experiment](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp1_policies.out)
+  - Source: own experiment (`scripts/parallel/exp1_policies.out`)
 
 ### Inferences
 - **Implementation algorithms for `telescopic` (derived from GH91 and Jacob et al. §3.3).**
@@ -103,19 +103,19 @@ Refilling lanes in a lockstep batch never biases anything by itself; only the ru
 - **Lockstep throughput (own experiment, d=10 Gaussian target, reflection-maximal coupled random-walk Metropolis, one batched log-density per chain per step).**
   - Per pair-iteration: 38.5 µs at B=1; 4.4 µs at B=10; 0.74 µs at B=100; 0.37 µs at B=1000; 0.43 µs at B=10⁴; 0.60 µs at B=10⁵ (cache effects).
   - The same pair run alone in a Python loop over small NumPy arrays costs 11.7 µs per coupled iteration. A 1-D pure-scalar loop costs 0.7–1.2 µs.
-  - Source: [own experiment exp3_overhead.out](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp3_overhead.out); [exp3b_rng_steady.out](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp3b_rng_steady.out)
+  - Source: own experiment exp3_overhead.out (`scripts/parallel/exp3_overhead.out`); exp3b_rng_steady.out (`scripts/parallel/exp3b_rng_steady.out`)
 - **Padding waste without refill (own experiment).** The waste factor E[max over B lanes of C]/E[C]:
   - Toy C=max(τ,m): 1.46 (B=8), 2.34 (B=64), 3.21 (B=512), 4.08 (B=4096), 4.95 (B=32768).
   - τ alone: 2.51 → 8.73 over the same range of B.
   - Geometric meeting times with mean 50: 2.70 (B=8), 4.70 (B=64), 6.75 (B=512), 8.87 (B=4096), 10.95 (B=32768).
-  - Source: [own experiment exp2_padding.out](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp2_padding.out)
+  - Source: own experiment exp2_padding.out (`scripts/parallel/exp2_padding.out`)
 - **Lockstep with refill (own experiment).** Lane utilisation with a fixed R (no starts beyond R, so the batch drains at the end):
   - Toy cost, B=64: 0.45 / 0.74 / 0.92 / 0.97 for R/B = 1 / 4 / 16 / 64.
   - Toy cost, B=1024: 0.30 / 0.59 / 0.84 / 0.96.
   - Geometric(1/50), B=1024: 0.12 / 0.37 / 0.73 / 0.91.
   - Compacting the active set during the drain removes the arithmetic waste but not the fixed per-step overhead.
-  - Source: [own experiment](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp2_padding.out)
-- **Bias of refill and stopping rules.** See the previous section. Index-fixed R and the GH per-lane rules are unbiased with refilling. "First R completed" and "pooled completed by deadline" are biased — [own experiment](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp1_policies.out); [Atchadé & Jacob 2024](https://arxiv.org/abs/2406.06851)
+  - Source: own experiment (`scripts/parallel/exp2_padding.out`)
+- **Bias of refill and stopping rules.** See the previous section. Index-fixed R and the GH per-lane rules are unbiased with refilling. "First R completed" and "pooled completed by deadline" are biased — own experiment (`scripts/parallel/exp1_policies.out`); [Atchadé & Jacob 2024](https://arxiv.org/abs/2406.06851)
 - **JAX `while_loop` under `vmap`.**
   - With a batched predicate, the batching rule batches all of the carry: "If the predicate is batched, we have to batch *all* of the carry regardless of if the body needs it".
   - The lowering reduces the predicate with `lax.reduce_or`, so the loop continues while any lane is unfinished. It merges each lane's new carry with `_pred_bcast_select_hlo`, which freezes finished lanes while still computing them.
@@ -134,7 +134,7 @@ Refilling lanes in a lockstep batch never biases anything by itself; only the ru
   - `InterpreterPoolExecutor` runs each task in its own subinterpreter with its own GIL, pickling callables and arguments.
   - Free-threaded Python is officially supported (PEP 779), with a single-thread penalty of "roughly 5-10%".
   - Source: [What's New in Python 3.14](https://docs.python.org/3/whatsnew/3.14.html); [concurrent.futures docs](https://docs.python.org/3/library/concurrent.futures.html)
-- **Process-pool overheads (own experiment, 4 forkserver workers).** Trivial tasks cost 218 µs each (submit + as_completed), 199 µs each (`map`, chunksize=1) and 2.9 µs each (`map`, chunksize=64) — [own experiment exp4_pool.out](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp4_pool.out)
+- **Process-pool overheads (own experiment, 4 forkserver workers).** Trivial tasks cost 218 µs each (submit + as_completed), 199 µs each (`map`, chunksize=1) and 2.9 µs each (`map`, chunksize=64) — own experiment exp4_pool.out (`scripts/parallel/exp4_pool.out`)
 - **joblib.**
   - `Parallel(return_as='list'|'generator'|'generator_unordered')`; with the generator variants, "output order is not deterministic".
   - Arrays above `max_nbytes='1M'` are memory-mapped for the loky and multiprocessing backends.
@@ -192,7 +192,7 @@ Give every replicate its own stream, addressed by its index: SeedSequence(root_e
   - For ad-hoc integer IDs, the varying ID should go *before* the root, e.g. `default_rng([worker_id, root_seed])`, and `root_seed + worker_id` is "UNSAFE".
   - Source: [NumPy parallel RNG docs (v2.5)](https://numpy.org/doc/stable/reference/random/parallel.html)
 - **Generator.spawn / BitGenerator.spawn.** Added in NumPy 1.25.0 — [Generator.spawn](https://numpy.org/doc/stable/reference/random/generated/numpy.random.Generator.spawn.html)
-- **Index-addressed streams (own check).** `SeedSequence(root).spawn(5)[i]` produces the same stream as `SeedSequence(root, spawn_key=(i,))`, so any replicate's stream can be built directly without spawning all of them. Building one Generator costs about 11.5 µs (PCG64) or 12.4 µs (Philox) — [own experiment exp3_overhead.out](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp3_overhead.out)
+- **Index-addressed streams (own check).** `SeedSequence(root).spawn(5)[i]` produces the same stream as `SeedSequence(root, spawn_key=(i,))`, so any replicate's stream can be built directly without spawning all of them. Building one Generator costs about 11.5 µs (PCG64) or 12.4 µs (Philox) — own experiment exp3_overhead.out (`scripts/parallel/exp3_overhead.out`)
 - **PCG64 vs PCG64DXSM.**
   - "Uses of the PCG64 BitGenerator in a massively-parallel context have been shown to have statistical weaknesses".
   - Thousands of `SeedSequence.spawn` streams are "negligibly small" risk. With millions of streams, each drawing a lot, the risk is "non-negligible, if still small", and such cases "should consider using PCG64DXSM explicitly or another modern BitGenerator like SFC64 or Philox".
@@ -227,16 +227,16 @@ Give every replicate its own stream, addressed by its index: SeedSequence(root_e
   - Setup: 400 replicates, each seeded by `SeedSequence(ROOT, spawn_key=(i,))`, run on 1 vs 4 workers.
   - Per-index results were bitwise identical, but completion order differed.
   - Summing in completion order differed in the last digits (−210.88381624233094 vs −210.8838162423308). Summing in index order, or with `math.fsum`, was identical.
-  - Source: [own experiment exp4_pool.out](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp4_pool.out)
+  - Source: own experiment exp4_pool.out (`scripts/parallel/exp4_pool.out`)
 - **Own experiment: per-replicate streams inside a lockstep batch.** Per-step RNG cost, d+2=12 normals per lane:
   - B=1000: batch Generator 141 µs; one Generator per lane, drawn every step, 1099 µs (7.8×); per-lane blocks of K=64 steps, 195 µs (1.4×).
   - B=10⁴: 1545 / 11233 / 4061 µs.
   - For comparison, a full d=10 lockstep step was about 370–400 µs at B=1000.
-  - Source: [own experiment exp3b_rng_steady.out](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp3b_rng_steady.out)
+  - Source: own experiment exp3b_rng_steady.out (`scripts/parallel/exp3b_rng_steady.out`)
 - **Own experiment: batch-layout reproducibility.**
   - Identical rows within one batched quadratic-form call gave identical bits (0/38 mismatches for d=3–257).
   - The same point evaluated in a batched call versus one at a time differed bitwise in 8–25 of 38 cases for d ≥ 7.
-  - Source: [own experiment exp6_rowrepro.out](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp6_rowrepro.out)
+  - Source: own experiment exp6_rowrepro.out (`scripts/parallel/exp6_rowrepro.out`)
 
 ### Inferences
 - **Stream design.** Use the stream SeedSequence(entropy=root.entropy, spawn_key=root.spawn_key + (NS, i)). Namespaces NS separate main replicates, pilot or tuning runs, and anything else, so that extending R or adding a pilot never collides with existing streams. Draw the initial states (X₀, Y₀) from the replicate's own stream. Store `root.entropy` in the results so any run, or any single replicate, can be recomputed.
@@ -289,7 +289,7 @@ Streaming accumulators cost O(dim h) per replicate and are the right default. St
   - Concurrent writes are safe when "Different processes write to different chunks" and the store supports atomic writes; threads writing overlapping regions need synchronisation.
   - Source: [zarr performance guide](https://zarr.readthedocs.io/en/stable/user-guide/performance/)
 - **.npz.** "A `.npz` file is a zip file containing multiple `.npy` files". Memory-mapping applies to `.npy` (`open_memmap`) — [numpy.lib.format (v2.5)](https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html)
-- **Own check: RNG state round-trips.** A pickled `Generator` resumes the identical stream; the blob was 495 bytes for PCG64. So does assigning `bit_generator.state`, a dict with keys `bit_generator`, `state`, `has_uint32`, `uinteger` — [own experiment rng_state_check.out](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/rng_state_check.out)
+- **Own check: RNG state round-trips.** A pickled `Generator` resumes the identical stream; the blob was 495 bytes for PCG64. So does assigning `bit_generator.state`, a dict with keys `bit_generator`, `state`, `has_uint32`, `uinteger` — own experiment rng_state_check.out (`scripts/parallel/rng_state_check.out`)
 - **Pigeons.jl.** Pigeons has a dedicated Checkpoints feature (linked from its parallel docs); not examined in detail — [Pigeons parallel docs](https://pigeons.run/stable/parallel/)
 
 ### Inferences
@@ -321,7 +321,7 @@ For cheap targets, overhead is everything. A single coupled pair costs about 12 
   - A d=10 lockstep step costs 38.5 µs at B=1, almost all of it NumPy call overhead.
   - Per pair-iteration it falls to 0.37 µs at B=1000.
   - A per-pair loop over small NumPy arrays costs 11.7 µs per iteration; pure 1-D scalar code costs 0.70 µs (stdlib `random`) to 1.21 µs (NumPy Generator scalars).
-  - Source: [own experiment exp3_overhead.out](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp3_overhead.out); [exp3b_rng_steady.out](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp3b_rng_steady.out)
+  - Source: own experiment exp3_overhead.out (`scripts/parallel/exp3_overhead.out`); exp3b_rng_steady.out (`scripts/parallel/exp3b_rng_steady.out`)
 - **emcee `vectorize=True`.** The log-probability receives all positions at once and `pool` is ignored — [emcee ensemble.py](https://github.com/dfm/emcee/blob/main/src/emcee/ensemble.py)
 - **emcee's parallel tutorial.**
   - It sets `os.environ["OMP_NUM_THREADS"] = "1"` because MKL or other threading "can cause problems when used with the parallelization methods described here".
@@ -332,7 +332,7 @@ For cheap targets, overhead is everything. A single coupled pair costs about 12 
   - It creates a `spawn`-context `multiprocessing` pool whose initializer caches `loglike`, `prior_transform` and their args in a module-level singleton, "as this way they will not need to be pickled and unpickled every function call".
   - `map` uses `chunksize=1`, and `__exit__` calls `terminate()`.
   - Source: [dynesty pool.py](https://github.com/joshspeagle/dynesty/blob/master/py/dynesty/pool.py)
-- **Own experiment: pickling a closure carrying 8 MB of data.** Pickling took 11.2 ms. Each task then cost 17.7 ms when the closure was shipped with it, versus 0.28 ms with an initializer-held global (4 forkserver workers) — [own experiment exp4_pool.out](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp4_pool.out)
+- **Own experiment: pickling a closure carrying 8 MB of data.** Pickling took 11.2 ms. Each task then cost 17.7 ms when the closure was shipped with it, versus 0.28 ms with an initializer-held global (4 forkserver workers) — own experiment exp4_pool.out (`scripts/parallel/exp4_pool.out`)
 - **Start methods.** With forkserver (the default on Linux since 3.14) or spawn, workers re-import `__main__`, so lambdas and REPL-defined functions fail with `ProcessPoolExecutor` — [Python docs](https://docs.python.org/3/library/concurrent.futures.html); [What's New 3.14](https://docs.python.org/3/whatsnew/3.14.html). Pools that use dill can pickle such functions; schwimmbad's `MultiPool` builds on `multiprocess` — [schwimmbad](https://github.com/adrn/schwimmbad)
 - **joblib/loky thread limiting.** Loky caps BLAS/OpenMP threads in each worker at `max(cpu_count() // effective_n_jobs, 1)`, overridable via `inner_max_num_threads`. Explicitly set environment variables such as OMP_NUM_THREADS take precedence — [joblib parallel guide](https://joblib.readthedocs.io/en/stable/parallel.html); [scikit-learn parallelism guide](https://scikit-learn.org/1.4/computing/parallelism.html)
 - **threadpoolctl.** `with threadpool_limits(limits=1, user_api='blas'):`, a `ThreadpoolController` API, and a decorator via `.wrap`.
@@ -344,7 +344,7 @@ For cheap targets, overhead is everything. A single coupled pair costs about 12 
   - Workload: 4 processes × 8 jobs of 150 matmuls at 400×400.
   - Times: default threads 42.6 s; OPENBLAS_NUM_THREADS=4, 34.0 s; =2, 5.87 s; =1, 1.05–1.29 s.
   - Caveat on magnitude: even a single process with 4 threads was 10× slower than with 1 thread at n=400 (19.7 s vs 1.91 s), although it was 1.8× faster at n=2000 (0.47 s vs 0.84 s). So the size of the effect is specific to this VM; the direction is not.
-  - Source: [own experiment exp5_blas.out](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp5_blas.out); [exp5b_blas.out](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp5b_blas.out)
+  - Source: own experiment exp5_blas.out (`scripts/parallel/exp5_blas.out`); exp5b_blas.out (`scripts/parallel/exp5b_blas.out`)
 - **Numba.**
   - "As of version 0.56, users can pass individual NumPy Generator objects into Numba functions and use their methods". It uses the same algorithms as NumPy, though results may differ by many ULPs on some platforms.
   - Numba's Generator support "is not thread-safe" and should not be used with parallel execution logic.
@@ -386,7 +386,7 @@ Use `submit`/`as_completed` (or a lockstep loop) so progress can be reported per
   - emcee: `progress=True`, a string such as `'notebook'`, or `progress_kwargs` passed to tqdm — [emcee ensemble.py](https://github.com/dfm/emcee/blob/main/src/emcee/ensemble.py)
   - dynesty: `print_progress=True` — [dynesty sampler.py](https://github.com/joshspeagle/dynesty/blob/master/py/dynesty/sampler.py)
   - NumPyro: disabling the progress bar "will improve the speed for many cases" — [NumPyro MCMC](https://num.pyro.ai/en/stable/mcmc.html)
-- **Interrupted or partial runs are biased budget runs.** "Retaining the C estimators that are first completed would introduce a bias" — [Atchadé & Jacob 2024](https://arxiv.org/abs/2406.06851). "Completed by t" averages are biased when pooled — [GH 1991](https://web.stanford.edu/~glynn/papers/1991/GH91a.pdf); [own experiment](file:///tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/exp1_policies.out)
+- **Interrupted or partial runs are biased budget runs.** "Retaining the C estimators that are first completed would introduce a bias" — [Atchadé & Jacob 2024](https://arxiv.org/abs/2406.06851). "Completed by t" averages are biased when pooled — [GH 1991](https://web.stanford.edu/~glynn/papers/1991/GH91a.pdf); own experiment (`scripts/parallel/exp1_policies.out`)
 
 ### Inferences
 - **Progress model.**
@@ -466,7 +466,7 @@ Build one core, a "replicate stream", with three executors that all obey the sam
   - [concurrent.futures](https://docs.python.org/3/library/concurrent.futures.html) / [What's New 3.14](https://docs.python.org/3/whatsnew/3.14.html) (pools, forkserver default, cancellation);
   - [jax loops.py](https://github.com/jax-ml/jax/blob/main/jax/_src/lax/control_flow/loops.py) (vmap waste);
   - [dynesty pool.py](https://github.com/joshspeagle/dynesty/blob/master/py/dynesty/pool.py) / [schwimmbad](https://github.com/adrn/schwimmbad) / [threadpoolctl](https://github.com/joblib/threadpoolctl) (worker hygiene);
-  - the own experiments in `/tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/parallel/experiments/` (bias of policies, waste factors, overheads, invariance).
+  - the own experiments in `scripts/parallel/` (bias of policies, waste factors, overheads, invariance).
 
 ### Inferences
 1. **Estimator contract (non-negotiable).**

@@ -1,0 +1,20 @@
+=== One-step meeting probability vs exact (x - y fixed) ===
+|x-y|=0.1: exact=0.91777 empirical=0.91899 binom p=0.048 KS(x') p=0.828 KS(y') p=0.379
+|x-y|=0.5: exact=0.60572 empirical=0.60475 binom p=0.372 KS(x') p=0.217 KS(y') p=0.929
+|x-y|=1.0: exact=0.30190 empirical=0.30118 binom p=0.488 KS(x') p=0.088 KS(y') p=0.030
+|x-y|=2.0: exact=0.03895 empirical=0.03893 binom p=0.982 KS(x') p=0.616 KS(y') p=0.616
+
+=== L-lag TV bound (Biswas et al. 2019) vs exact TV ===
+L= 1 mean(tau-L)=5.28: t=0: TV=1.0000 bound=5.2778+-0.0716; t=10: TV=0.9282 bound=1.3824+-0.0483; t=20: TV=0.4582 bound=0.4688+-0.0284; t=30: TV=0.1679 bound=0.1564+-0.0159; t=40: TV=0.0589 bound=0.0461+-0.0084; t=60: TV=0.0072 bound=0.0040+-0.0023
+L=10 mean(tau-L)=18.06: t=0: TV=1.0000 bound=2.2482+-0.0108; t=10: TV=0.9282 bound=1.2482+-0.0108; t=20: TV=0.4582 bound=0.4806+-0.0087; t=30: TV=0.1679 bound=0.1687+-0.0056; t=40: TV=0.0589 bound=0.0583+-0.0033; t=60: TV=0.0072 bound=0.0063+-0.0010
+L=50 mean(tau-L)=21.92: t=0: TV=1.0000 bound=1.0202+-0.0014; t=10: TV=0.9282 bound=0.9343+-0.0027; t=20: TV=0.4582 bound=0.4635+-0.0050; t=30: TV=0.1679 bound=0.1686+-0.0038; t=40: TV=0.0589 bound=0.0577+-0.0023; t=60: TV=0.0072 bound=0.0070+-0.0008
+
+=== Unbiased estimation of E[x] = 0 and E[x^2] = 1: coverage and inefficiency ===
+pilot meeting times: mean=5.97 q90=13 q99=35 max=76
+k=  1 m=   1: mean Hx=-0.0934 (SE 0.1400) mean Hx2=0.4692 (SE 0.8725) E[cost]=11.8 Var(Hx)=392.1310 ineff/asvar=244.446 kurtosis(Hx)=25.4
+k= 13 m=  13: mean Hx=+0.1499 (SE 0.0875) mean Hx2=1.3762 (SE 0.1841) E[cost]=19.4 Var(Hx)=153.2676 ineff/asvar=156.265 kurtosis(Hx)=86.1
+k= 13 m=  65: mean Hx=-0.0317 (SE 0.0284) mean Hx2=0.9644 (SE 0.0237) E[cost]=70.5 Var(Hx)=16.0908 ineff/asvar=59.686 kurtosis(Hx)=324.6
+k= 13 m= 130: mean Hx=-0.0051 (SE 0.0136) mean Hx2=1.0052 (SE 0.0106) E[cost]=135.3 Var(Hx)=3.7024 ineff/asvar=26.373 kurtosis(Hx)=477.2
+k= 35 m= 350: mean Hx=+0.0006 (SE 0.0022) mean Hx2=1.0005 (SE 0.0017) E[cost]=355.3 Var(Hx)=0.1012 ineff/asvar=1.893 kurtosis(Hx)=268.4
+coverage k=1 m=1, R=50, B=1000: h=x 0.896 (binom p vs 0.95: 0.000); h=x^2 0.926 (binom p vs 0.95: 0.001)
+coverage k=13 m=130, R=50, B=1000: h=x 0.696 (binom p vs 0.95: 0.000); h=x^2 0.840 (binom p vs 0.95: 0.000)

@@ -1,0 +1,5 @@
+(a) 4 forkserver workers, 4000 trivial tasks: submit+as_completed 218 us/task; map chunksize=1 199 us/task; chunksize=64 2.9 us/task
+(b) closure with 8 MB array: pickle 8.0 MB in 11.2 ms; per task 17.66 ms when shipped with every task vs 0.280 ms with initializer-held global
+(c) R=400 replicates, 1 vs 4 workers: per-index values bitwise identical: True; completion order identical: False
+    sum in completion order: 1w=-210.88381624233094 4w=-210.8838162423308 equal=False
+    sum in index order:      1w=-210.88381624233085 4w=-210.88381624233085 equal=True; fsum equal=True

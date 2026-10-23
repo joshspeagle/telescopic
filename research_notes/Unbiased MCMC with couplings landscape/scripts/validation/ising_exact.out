@@ -1,0 +1,11 @@
+Onsager critical inverse temperature (infinite lattice): 0.440687
+n=3 theta=0.1000: E[t]=2.0274 Var[t]=23.2130 E|m|=0.3434
+n=3 theta=0.3000: E[t]=8.8891 Var[t]=45.0289 E|m|=0.6365
+n=3 theta=0.4000: E[t]=13.1591 Var[t]=36.7331 E|m|=0.8169
+n=3 theta=0.4407: E[t]=14.5012 Var[t]=29.1374 E|m|=0.8711
+n=3 theta=0.5000: E[t]=15.9091 Var[t]=18.7079 E|m|=0.9260
+n=4 theta=0.1000: E[t]=3.2914 Var[t]=34.8695 E|m|=0.2495
+n=4 theta=0.3000: E[t]=13.5049 Var[t]=78.3987 E|m|=0.5204
+n=4 theta=0.4000: E[t]=22.0659 Var[t]=81.2515 E|m|=0.7647
+n=4 theta=0.4407: E[t]=25.0500 Var[t]=64.5312 E|m|=0.8439
+n=4 theta=0.5000: E[t]=28.0861 Var[t]=38.7541 E|m|=0.9189

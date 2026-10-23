@@ -6,7 +6,7 @@ Scope: how each sampler family has been coupled for unbiased MCMC (Jacob, O'Lear
 - **[Code]**: a repository I inspected or found.
 - **[Unpublished: this note]**: my own analysis or my own small simulation. These are feasibility evidence, not literature, and must be labelled as experiments in `telescopic`.
 
-Simulation scripts for the unpublished experiments are NumPy-only and live in the session scratchpad (`/tmp/claude-0/-home-user-telescopic/901acb40-2335-5d56-b8d5-e448f1cd801d/scratchpad/research/advanced/sims/`: `ensemble_coupling_sim.py`, `coupling_sim2.py`, `rwmh_baseline.py`). Each experiment's setup is described in full below so it can be reproduced without them.
+Simulation scripts for the unpublished experiments are NumPy-only and are archived in `scripts/advanced/` (`ensemble_coupling_sim.py`, `coupling_sim2.py`, `rwmh_baseline.py`). Each experiment's setup is described in full below so it can be reproduced without them.
 
 ## 1. Hamiltonian Monte Carlo (Metropolis HMC, multinomial HMC) and NUTS
 

@@ -1,0 +1,56 @@
+pool: n=2000000 truth(pool mean)=-0.00561 sd(H)=14.411 E[C]=11.05 P(C>m)=0.178 max C=72 corr(H,C)=-0.195 [5.5s]
+
+B=64 lanes, budget T=15 iters (=1.4 x E[C]), macro-reps=40000, R_first=256 [0.6s]
+  pooled_naive         bias=+0.6691 (se 0.0041, z=+164.5)  <-- biased
+  pooled_np1           bias=-0.0076 (se 0.0065, z=-1.2)
+  lane_drop_empty      bias=+0.6691 (se 0.0041, z=+164.5)  <-- biased
+  lane_zero_empty      bias=+0.6204 (se 0.0038, z=+164.7)  <-- biased
+  lane_GH_unbiased     bias=-0.0089 (se 0.0091, z=-1.0)
+  GH91_preselect       bias=-0.0192 (se 0.0169, z=-1.1)
+  first_R_completed    bias=+0.2174 (se 0.0037, z=+58.1)  <-- biased
+  index_fixed_R        bias=-0.0001 (se 0.0045, z=-0.0)
+  makespan_np1=36.5, makespan_GH=25.9, first_R_mean_used=269.9
+
+B=64 lanes, budget T=30 iters (=2.7 x E[C]), macro-reps=40000, R_first=256 [0.8s]
+  pooled_naive         bias=+0.4116 (se 0.0040, z=+102.2)  <-- biased
+  pooled_np1           bias=-0.0005 (se 0.0048, z=-0.1)
+  lane_drop_empty      bias=+0.0722 (se 0.0071, z=+10.1)  <-- biased
+  lane_zero_empty      bias=+0.0720 (se 0.0071, z=+10.1)  <-- biased
+  lane_GH_unbiased     bias=+0.0091 (se 0.0080, z=+1.1)
+  GH91_preselect       bias=+0.0136 (se 0.0103, z=+1.3)
+  first_R_completed    bias=+0.2171 (se 0.0037, z=+58.6)  <-- biased
+  index_fixed_R        bias=-0.0011 (se 0.0045, z=-0.2)
+  makespan_np1=54.6, makespan_GH=31.0, first_R_mean_used=269.9
+
+B=64 lanes, budget T=100 iters (=9.0 x E[C]), macro-reps=20000, R_first=256 [0.6s]
+  pooled_naive         bias=+0.0990 (se 0.0040, z=+24.6)  <-- biased
+  pooled_np1           bias=+0.0041 (se 0.0041, z=+1.0)
+  lane_drop_empty      bias=+0.0057 (se 0.0047, z=+1.2)
+  lane_zero_empty      bias=+0.0057 (se 0.0047, z=+1.2)
+  lane_GH_unbiased     bias=+0.0057 (se 0.0047, z=+1.2)
+  GH91_preselect       bias=+0.0057 (se 0.0047, z=+1.2)
+  first_R_completed    bias=+0.2244 (se 0.0053, z=+42.7)  <-- biased
+  index_fixed_R        bias=+0.0030 (se 0.0064, z=+0.5)
+  makespan_np1=122.7, makespan_GH=100.0, first_R_mean_used=269.9
+
+B=1024 lanes, budget T=15 iters (=1.4 x E[C]), macro-reps=4000, R_first=1024 [1.3s]
+  pooled_naive         bias=+0.6713 (se 0.0032, z=+210.8)  <-- biased
+  pooled_np1           bias=+0.0035 (se 0.0051, z=+0.7)
+  lane_drop_empty      bias=+0.6713 (se 0.0032, z=+210.8)  <-- biased
+  lane_zero_empty      bias=+0.6222 (se 0.0029, z=+211.0)  <-- biased
+  lane_GH_unbiased     bias=+0.0032 (se 0.0071, z=+0.5)
+  GH91_preselect       bias=+0.0023 (se 0.0133, z=+0.2)
+  first_R_completed    bias=+0.6452 (se 0.0029, z=+220.8)  <-- biased
+  index_fixed_R        bias=-0.0038 (se 0.0071, z=-0.5)
+  makespan_np1=49.2, makespan_GH=38.7, first_R_mean_used=1687.9
+
+B=1024 lanes, budget T=30 iters (=2.7 x E[C]), macro-reps=4000, R_first=4096 [1.8s]
+  pooled_naive         bias=+0.4123 (se 0.0032, z=+127.8)  <-- biased
+  pooled_np1           bias=-0.0013 (se 0.0038, z=-0.3)
+  lane_drop_empty      bias=+0.0687 (se 0.0058, z=+11.9)  <-- biased
+  lane_zero_empty      bias=+0.0685 (se 0.0058, z=+11.9)  <-- biased
+  lane_GH_unbiased     bias=+0.0003 (se 0.0064, z=+0.0)
+  GH91_preselect       bias=-0.0048 (se 0.0080, z=-0.6)
+  first_R_completed    bias=+0.2191 (se 0.0030, z=+73.9)  <-- biased
+  index_fixed_R        bias=-0.0022 (se 0.0035, z=-0.6)
+  makespan_np1=67.3, makespan_GH=38.8, first_R_mean_used=4318.1
