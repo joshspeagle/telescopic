@@ -3,7 +3,7 @@ import pytest
 
 from telescopic._random import root_seed
 from telescopic.diagnostics import hill, issues, tv_bound, variance_share, w1_bound
-from telescopic.engine import Replicates, run
+from telescopic.engine import Replicates, Settings, run
 from telescopic.initial import Normal
 from telescopic.kernels import RandomWalk
 from telescopic.results import Result
@@ -20,12 +20,8 @@ def synthetic(meeting_times, values, *, k=0, lag=1, max_iter=None, tuning=None):
     values = np.asarray(values, dtype=np.float64)
     return Result(
         Replicates(
-            root=root_seed(0),
-            k=k,
-            m=k,
-            lag=lag,
-            thin=1,
-            max_iter=max_iter,
+            seed=root_seed(0),
+            settings=Settings(k, k, lag, max_iter=max_iter),
             index=np.arange(len(tau)),
             meeting_time=tau,
             cost=np.ones(len(tau), dtype=np.int64),

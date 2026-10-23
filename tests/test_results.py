@@ -153,10 +153,11 @@ def test_merging_two_runs_equals_one_run_over_both_sets_of_replicates():
     np.testing.assert_array_equal(merged.meeting_times, whole.meeting_times)
     np.testing.assert_array_equal(merged.measure.atoms, whole.measure.atoms)
     np.testing.assert_array_equal(merged.measure.replicate, whole.measure.replicate)
-    with pytest.raises(ValueError, match="different lag"):
-        part(range(3)).merge(Result(gaussian_run(range(3, 5), 4, k=2, m=12, lag=1)))
-    with pytest.raises(ValueError, match="different seeds"):
-        part(range(3)).merge(part(range(3, 5), seed=5))
+
+
+def test_a_result_needs_the_signed_measures_of_its_replicates():
+    with pytest.raises(ValueError, match="store=True"):
+        Result(gaussian_run(range(3), store=False, **SETTINGS))
 
 
 def test_results_from_equal_array_seeds_merge():

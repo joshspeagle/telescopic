@@ -1,4 +1,4 @@
-"""Reference implementations, written independently of the package, for oracle tests."""
+"""Reference implementations, written independently of the package, and shared test helpers."""
 
 import numpy as np
 from scipy import special
@@ -7,6 +7,13 @@ from scipy import special
 # family-wise false-positive rate below about 1e-3 (CLAUDE.md: tolerances from the Monte
 # Carlo error).
 P_MIN = 1e-5
+
+
+def assert_same_replicates(a, b):
+    # Every field but the wall time; the seed enters every array.
+    for name, value in vars(a).items():
+        if name not in ("seed", "seconds"):
+            np.testing.assert_array_equal(value, getattr(b, name), err_msg=name)
 
 
 def assert_z_scores(z_scores, n, seed):

@@ -9,7 +9,7 @@ from typing import IO, Any
 import numpy as np
 from numpy.random import SeedSequence
 
-from telescopic.engine import SETTINGS, Replicates
+from telescopic.engine import Replicates, Settings
 from telescopic.results import Result
 from telescopic.tuning import TuningReport
 
@@ -43,8 +43,8 @@ def save(result: Result, path: str | os.PathLike[str] | IO[bytes]) -> None:
         arrays["pilot"] = result.pilot
     metadata = {
         "schema": SCHEMA,
-        "settings": {name: getattr(replicates, name) for name in SETTINGS},
-        "seed": replicates.root.state,
+        "settings": replicates.settings._asdict(),
+        "seed": replicates.seed.state,
         "names": result.names,
         "kernel": None if result.kernel is None else str(result.kernel),
         "initial": None if result.initial is None else str(result.initial),
@@ -75,8 +75,8 @@ def load(path: str | os.PathLike[str] | IO[bytes], cls: type[Result]) -> Result:
                 f"{SCHEMA}: upgrade telescopic to load it"
             )
         replicates = Replicates(
-            root=SeedSequence(**metadata["seed"]),
-            **metadata["settings"],
+            seed=SeedSequence(**metadata["seed"]),
+            settings=Settings(**metadata["settings"]),
             **{name: data[f"replicates.{name}"] for name in REPLICATE_ARRAYS},
             **metadata["counts"],
         )

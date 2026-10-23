@@ -13,7 +13,7 @@ import pytest
 import threadpoolctl
 
 import telescopic
-from references import gaussian_log_prob
+from references import assert_same_replicates, gaussian_log_prob
 from telescopic import _parallel, _progress, engine
 from telescopic._parallel import Interrupt, execute, opened
 from telescopic.initial import Normal
@@ -39,13 +39,6 @@ def job(log_prob=gaussian_log_prob, args=()):
 
 def never(status):
     return False
-
-
-def assert_same_replicates(a, b):
-    assert a.root.state == b.root.state
-    for name, value in vars(a).items():
-        if name not in ("root", "seconds"):
-            np.testing.assert_array_equal(value, getattr(b, name), err_msg=name)
 
 
 class Serial:

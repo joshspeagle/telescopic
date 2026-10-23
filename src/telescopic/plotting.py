@@ -195,7 +195,7 @@ def paths(
         x, y = replicates.paths[index]
         if x.shape[1] == 1:
             line = ax.plot(np.arange(len(x)), x[:, 0])[0]
-            shifted = replicates.lag + np.arange(len(y))
+            shifted = replicates.settings.lag + np.arange(len(y))
             ax.plot(shifted, y[:, 0], linestyle="--", color=line.get_color())
         else:
             line = ax.plot(x[:, dims[0]], x[:, dims[1]])[0]

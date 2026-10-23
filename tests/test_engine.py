@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from references import gaussian_log_prob
+from references import assert_same_replicates, gaussian_log_prob
 from telescopic.engine import Status, merge, run
 from telescopic.estimators import averaging_times, correction_coefficients
 from telescopic.initial import Empirical, Normal
@@ -76,10 +76,7 @@ def test_a_replicates_output_does_not_depend_on_the_lanes(coupling):
     runs = [simulate(kernel, n=30, k=3, m=8, lag=2, lanes=lanes) for lanes in (1, 7, 64)]
     np.testing.assert_array_equal(runs[0].index, np.arange(30))
     for other in runs[1:]:
-        assert other.root.state == runs[0].root.state
-        for name, value in vars(other).items():
-            if name not in ("root", "seconds"):
-                np.testing.assert_array_equal(value, getattr(runs[0], name))
+        assert_same_replicates(other, runs[0])
 
 
 class Tagged(RandomWalk):
@@ -178,15 +175,23 @@ def test_merging_refuses_parts_that_share_replicates():
         merge([part, part])
 
 
-def test_merging_refuses_parts_of_another_dimension():
-    other = simulate(RandomWalk(np.eye(1)), Normal([3.0], [[1.0]]), indices=[3, 4])
-    with pytest.raises(ValueError, match="dimensions 2 and 1"):
-        merge([simulate(n=3), other])
+@pytest.mark.parametrize(
+    ("options", "message"),
+    [
+        ({"rng": 2}, "different seeds"),
+        ({"lag": 2}, "different settings"),
+        (
+            {"kernel": RandomWalk(np.eye(1)), "initial": Normal([3.0], [[1.0]])},
+            "dimensions 2 and 1",
+        ),
+    ],
+    ids=["seed", "settings", "dimension"],
+)
+def test_merging_refuses_parts_of_another_run(options, message):
+    with pytest.raises(ValueError, match=message):
+        merge([simulate(n=3), simulate(indices=[3, 4], **options)])
 
 
-@pytest.mark.parametrize("rng", [1, np.random.SeedSequence(1)], ids=["int", "seed sequence"])
-def test_replicates_record_the_settings_and_root_seed_of_their_run(rng):
-    replicates = simulate(n=4, k=2, m=10, lag=3, thin=2, max_iter=40, rng=rng)
-    settings = [getattr(replicates, name) for name in ("k", "m", "lag", "thin", "max_iter")]
-    assert settings == [2, 10, 3, 2, 40]
-    assert replicates.root.state == np.random.SeedSequence(1).state
+def test_the_recorded_seed_reproduces_a_run_from_a_generator():
+    first = simulate(n=4, rng=np.random.default_rng(1))
+    assert_same_replicates(simulate(n=4, rng=first.seed), first)

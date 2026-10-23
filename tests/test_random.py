@@ -4,7 +4,15 @@ from hypothesis import given
 from hypothesis import strategies as st
 from numpy.random import PCG64DXSM, Generator, SeedSequence
 
-from telescopic._random import MAIN, PILOT, Streams, replicate_generator, root_seed
+from telescopic._random import (
+    MAIN,
+    PILOT,
+    TUNING,
+    Streams,
+    namespace_seed,
+    replicate_generator,
+    root_seed,
+)
 from telescopic.testing import fixed_draws
 
 
@@ -16,9 +24,11 @@ def test_root_seed_from_none_draws_fresh_entropy():
     assert root_seed(None).entropy != root_seed(None).entropy
 
 
-def test_root_seed_keeps_a_seed_sequence():
+def test_root_seed_copies_a_seed_sequence_that_its_owner_spawns_from_later():
     seed = SeedSequence(3)
-    assert root_seed(seed) is seed
+    root = root_seed(seed)
+    seed.spawn(2)
+    assert root.state == SeedSequence(3).state
 
 
 def test_root_seed_from_a_generator_follows_its_state():
@@ -38,6 +48,8 @@ def test_replicate_generator_follows_the_spawn_key_convention():
     root = SeedSequence(11, spawn_key=(2,))
     expected = Generator(PCG64DXSM(SeedSequence(11, spawn_key=(2, 0x74656C, MAIN, 4))))
     assert replicate_generator(root, MAIN, 4).random() == expected.random()
+    pilot = SeedSequence(11, spawn_key=(2, 0x74656C, PILOT))
+    assert namespace_seed(root, PILOT).state == pilot.state
 
 
 def test_replicate_streams_avoid_the_callers_own_spawned_streams():
@@ -47,9 +59,11 @@ def test_replicate_streams_avoid_the_callers_own_spawned_streams():
 
 
 def test_namespaces_and_indices_give_different_streams():
+    # Main replicates, tuning chains, and the replicates of the meeting-time pilot.
     root = root_seed(1)
-    draws = {replicate_generator(root, ns, i).random() for ns in (MAIN, PILOT) for i in (0, 1)}
-    assert len(draws) == 4
+    seeds = [(root, MAIN), (root, TUNING), (namespace_seed(root, PILOT), MAIN)]
+    draws = {replicate_generator(seed, ns, i).random() for seed, ns in seeds for i in (0, 1)}
+    assert len(draws) == 6
 
 
 N_LANES = 4

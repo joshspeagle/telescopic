@@ -22,8 +22,27 @@ from telescopic.target import Target
 # Replicates advanced together by default.
 LANES = 64
 
-# The settings of a run, which Replicates record.
-SETTINGS = ("k", "m", "lag", "thin", "max_iter")
+
+class Settings(NamedTuple):
+    r"""The settings of a run (spec section 3.2).
+
+    Attributes
+    ----------
+    k, m : int
+        First and last averaged times, :math:`0 \le k \le m`.
+    lag : int
+        The lag :math:`L \ge 1`.
+    thin : int
+        Average every ``thin``-th time from ``k`` (spec R-EST-5).
+    max_iter : int or None
+        The cap: a pair still unmet when :math:`t` reaches it is censored.
+    """
+
+    k: int
+    m: int
+    lag: int
+    thin: int = 1
+    max_iter: int | None = None
 
 
 @dataclass
@@ -34,13 +53,10 @@ class Replicates:
 
     Attributes
     ----------
-    root : numpy.random.SeedSequence
+    seed : numpy.random.SeedSequence
         The root seed of the run, from which each replicate's stream derives (spec
         section 6.1).
-    k, m, lag, thin : int
-        The settings of the estimator (spec section 3.2).
-    max_iter : int or None
-        The cap of the run.
+    settings : Settings
     index : ndarray of int, shape (R,)
         Replicate indices.
     meeting_time : ndarray of float, shape (R,)
@@ -68,12 +84,8 @@ class Replicates:
         shapes ``(T + 1, d)`` and ``(T_Y + 1, d)``, where :math:`Y` stops at the meeting.
     """
 
-    root: SeedSequence
-    k: int
-    m: int
-    lag: int
-    thin: int
-    max_iter: int | None
+    seed: SeedSequence
+    settings: Settings
     index: IntArray
     meeting_time: FloatArray
     cost: IntArray
@@ -89,6 +101,13 @@ class Replicates:
     n_grad: int = 0
     seconds: float = 0.0
     paths: dict[int, tuple[FloatArray, FloatArray]] = field(default_factory=dict)
+
+    @property
+    def stopped(self) -> FloatArray:
+        """The time each pair stopped, shape (R,): its meeting time, or the cap if censored."""
+        cap = self.settings.max_iter
+        stopped: FloatArray = np.minimum(self.meeting_time, np.inf if cap is None else cap)
+        return stopped
 
 
 class Status(NamedTuple):
@@ -122,7 +141,6 @@ def run(
     thin: int = 1,
     max_iter: int | None = None,
     rng: Seed = None,
-    namespace: int = MAIN,
     lanes: int = LANES,
     store: bool = True,
     keep_paths: bool = False,
@@ -157,8 +175,6 @@ def run(
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
         The root seed (spec section 6.1), recorded in the output. Runs of other indices
         with the same ``SeedSequence`` or integer can be merged.
-    namespace : int
-        The streams' namespace; telescopic's pilots use their own (spec section 6.1).
     lanes : int
         Number of replicates advanced together.
     store : bool
@@ -192,14 +208,15 @@ def run(
     ):
         raise ValueError("indices must be a non-empty sequence of distinct integers >= 0")
     requested = requested.astype(np.int64)
-    root = root_seed(rng)
+    seed = root_seed(rng)
     queue = iter(requested.tolist())
     first = next(queue)
     evaluations, start = (target.n_log_prob, target.n_grad), time.perf_counter()
-    head = _Start(first, initial, root, namespace, None)
+    head = _Start(first, initial, seed, None)
     ndim = len(head.x0)
-    starts = itertools.chain([head], (_Start(i, initial, root, namespace, ndim) for i in queue))
-    batch = _Batch(target, kernel, ndim, lanes, k, m, lag, thin, max_iter, store, keep_paths)
+    starts = itertools.chain([head], (_Start(i, initial, seed, ndim) for i in queue))
+    settings = Settings(k, m, lag, thin, max_iter)
+    batch = _Batch(target, kernel, ndim, lanes, settings, store, keep_paths)
     batch.fill(np.arange(lanes), starts)
     stopping = False
     while batch.active.any():
@@ -209,7 +226,7 @@ def run(
         if not stopping:
             batch.fill(free, starts)
     return batch.result(
-        root,
+        seed,
         np.sort(requested),
         target.n_log_prob - evaluations[0],
         target.n_grad - evaluations[1],
@@ -249,16 +266,16 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
     -------
     Replicates
     """
-    first = parts[0]
+    first, identity = parts[0], _seed_key(parts[0].seed)
     for part in parts[1:]:
-        if _seed_key(part.root) != _seed_key(first.root):
+        if _seed_key(part.seed) != identity:
             raise ValueError(
                 "cannot merge runs with different seeds: their indices differ in meaning"
             )
-        for name in SETTINGS:
-            mine, theirs = getattr(first, name), getattr(part, name)
-            if mine != theirs:
-                raise ValueError(f"cannot merge runs with different {name}: {mine} and {theirs}")
+        if part.settings != first.settings:
+            raise ValueError(
+                f"cannot merge runs with different settings: {first.settings} and {part.settings}"
+            )
         if part.atoms.shape[1] != first.atoms.shape[1]:
             raise ValueError(
                 f"cannot merge runs of dimensions {first.atoms.shape[1]} and {part.atoms.shape[1]}"
@@ -278,8 +295,8 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
         for name in names:
             columns[name] = np.concatenate([getattr(part, name) for part in parts])[order]
     return Replicates(
-        root=first.root,
-        **{name: getattr(first, name) for name in SETTINGS},
+        seed=first.seed,
+        settings=first.settings,
         **columns,
         requested=np.unique(np.concatenate([part.requested for part in parts])),
         n_log_prob=sum(part.n_log_prob for part in parts),
@@ -297,15 +314,10 @@ def _seed_key(seed: SeedSequence) -> tuple[Any, ...]:
 class _Start:
     # A replicate's generator and initial states, drawn X_0 first (spec section 6.1).
     def __init__(
-        self,
-        index: int,
-        initial: Distribution,
-        root: SeedSequence,
-        namespace: int,
-        ndim: int | None,
+        self, index: int, initial: Distribution, seed: SeedSequence, ndim: int | None
     ) -> None:
         self.index = index
-        self.generator: Generator = replicate_generator(root, namespace, index)
+        self.generator: Generator = replicate_generator(seed, MAIN, index)
         self.x0 = draw(initial, self.generator, ndim)
         self.y0 = draw(initial, self.generator, len(self.x0))
 
@@ -318,18 +330,14 @@ class _Batch:
         kernel: Kernel,
         ndim: int,
         lanes: int,
-        k: int,
-        m: int,
-        lag: int,
-        thin: int,
-        max_iter: int | None,
+        settings: Settings,
         store: bool,
         keep_paths: bool,
     ) -> None:
-        self.target, self.kernel = target, kernel
-        self.k, self.m, self.lag, self.thin, self.max_iter = k, m, lag, thin, max_iter
+        self.target, self.kernel, self.settings = target, kernel, settings
+        self.k, self.m, self.lag, self.thin, self.max_iter = settings
         self.store, self.keep_paths = store, keep_paths
-        self.weight = 1.0 / len(averaging_times(k, m, thin))
+        self.weight = 1.0 / len(averaging_times(self.k, self.m, self.thin))
         self.streams = Streams(lanes)
         self.replicate = np.full(lanes, -1, dtype=np.int64)
         self.t = np.zeros(lanes, dtype=np.int64)
@@ -423,19 +431,15 @@ class _Batch:
         )
 
     def result(
-        self, root: SeedSequence, requested: IntArray, n_log_prob: int, n_grad: int, start: float
+        self, seed: SeedSequence, requested: IntArray, n_log_prob: int, n_grad: int, start: float
     ) -> Replicates:
         # The seconds since start include this join, a large part of a run with many atoms.
         index, tau, cost = self.finished.join()
         owner, atoms, weights = self.atoms.join(keep=index[tau >= 0])
         distance_owner, distance_time, distance = self.distances.join()
         return Replicates(
-            root=root,
-            k=self.k,
-            m=self.m,
-            lag=self.lag,
-            thin=self.thin,
-            max_iter=self.max_iter,
+            seed=seed,
+            settings=self.settings,
             index=index,
             meeting_time=np.where(tau >= 0, tau, np.inf),
             cost=cost,

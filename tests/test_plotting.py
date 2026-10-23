@@ -114,3 +114,20 @@ def test_paths_need_the_paths_of_the_engine():
     assert len(ax.lines) == 6
     with pytest.raises(ValueError, match="keep_paths=True"):
         plotting.paths(RESULT._replicates)
+
+
+def test_paths_in_one_dimension_shift_y_by_the_lag():
+    initial = Normal([3.0], [[1.0]])
+    replicates = run(
+        Target(gaussian_log_prob),
+        RandomWalk(np.eye(1)),
+        initial,
+        [0],
+        rng=3,
+        k=1,
+        m=5,
+        lag=3,
+        keep_paths=True,
+    )
+    x, y = plotting.paths(replicates).lines
+    assert (x.get_xdata()[0], y.get_xdata()[0]) == (0, 3)

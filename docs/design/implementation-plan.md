@@ -120,12 +120,14 @@ SignedMeasure(atoms (N, d), weights (N,), replicate (N,), n_replicates)
 ### 2.6 Engine (`engine.py`)
 
 ```text
-Replicates(root, k, m, lag, thin, max_iter, index, meeting_time, cost, atoms, weights, owner,
-           distance_owner, distance_time, distance, zero_density, requested, n_log_prob,
-           n_grad, seconds, paths)                          # inf = censored
-merge(parts) -> Replicates                                  # same root, settings and dimension
+Settings(k, m, lag, thin=1, max_iter=None)                  # spec §3.2
+Replicates(seed, settings, index, meeting_time, cost, atoms, weights, owner, distance_owner,
+           distance_time, distance, zero_density, requested, n_log_prob, n_grad, seconds,
+           paths)                                           # inf = censored
+  .stopped                                                  # censored pairs at the cap
+merge(parts) -> Replicates                                  # same seed, settings and dimension
 run(target, kernel, initial, indices, *, k, m, lag, thin=1, max_iter=None, rng=None,
-    namespace=MAIN, lanes=64, store=True, keep_paths=False, monitor=None) -> Replicates
+    lanes=64, store=True, keep_paths=False, monitor=None) -> Replicates
 Status(started, finished, slowest, t)                       # given to the monitor every iteration
 ```
 
@@ -137,7 +139,7 @@ Status(started, finished, slowest, t)                       # given to the monit
   4. refill.
 - **Storage:** atoms from $t = k$, with weights from `averaging_times` and `correction_coefficients`.
 - **Monitoring:** the engine emits no warning. It records the facts (censoring, starts with zero density, evaluations, time) and passes a `Status` to `monitor` every iteration; the sampler warns about slow pairs from it, shows progress, and stops new replicates on an interrupt by returning true. Results and facts reach the parent from pool workers, which warnings would not.
-- **Pilot use:** the meeting-time pilot calls `run(k=0, m=0, lag=1, store=False)`.
+- **Pilot use:** the meeting-time pilot calls `run(k=0, m=0, lag=1, store=False)` with the root's pilot seed (spec §6.1).
 
 ### 2.7 Parallel execution (`_parallel.py`)
 

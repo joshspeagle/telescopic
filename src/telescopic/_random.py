@@ -25,10 +25,12 @@ _BRANCH = 0x74656C
 
 
 def root_seed(rng: Seed) -> SeedSequence:
-    # The root seed of a run from a SPEC 7 rng (spec section 6.1). A generator gives the
-    # seed of four integers drawn from it, so the run depends only on its state.
+    # The root seed of a run from a SPEC 7 rng (spec section 6.1). A seed sequence is
+    # copied, so that a record of it does not change when its owner spawns from it; a
+    # generator gives the seed of four integers drawn from it, so the run depends only on
+    # its state.
     if isinstance(rng, SeedSequence):
-        return rng
+        return SeedSequence(**rng.state)
     if isinstance(rng, Generator):
         return SeedSequence(rng.integers(2**63, size=4).tolist())
     if rng is None:
@@ -38,6 +40,13 @@ def root_seed(rng: Seed) -> SeedSequence:
     raise TypeError(
         "rng must be None, an integer, a numpy.random.SeedSequence or a "
         f"numpy.random.Generator, not {type(rng).__name__}"
+    )
+
+
+def namespace_seed(root: SeedSequence, namespace: int) -> SeedSequence:
+    # The seed of a pilot's engine runs, whose streams then never meet the main run's.
+    return SeedSequence(
+        root.entropy, spawn_key=(*root.spawn_key, _BRANCH, namespace), pool_size=root.pool_size
     )
 
 

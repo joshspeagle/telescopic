@@ -6,7 +6,7 @@ from scipy import stats
 
 import telescopic
 from telescopic import CoupledSampler, sample
-from telescopic.engine import Status
+from telescopic.engine import Settings, Status
 from telescopic.initial import Empirical, Normal
 from telescopic.kernels import HMC, MALA, Gibbs, Mixture, RandomWalk
 from telescopic.sampler import _SlowPairs
@@ -83,10 +83,19 @@ def test_a_seed_reproduces_a_run_and_a_generator_moves_on():
     assert not np.array_equal(third.measure.atoms, fourth.measure.atoms)
 
 
+def test_the_pilot_draws_from_streams_of_its_own():
+    # Sharing the main run's streams, a lag-1 run would repeat its meeting times (R-TUNE-3).
+    sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3)
+    pilot = sampler.meeting_times(10)
+    with pytest.warns(ConvergenceWarning, match="k may be too small"):
+        result = sampler.run(10, k=1, m=2, lag=1)
+    assert not np.array_equal(pilot, result.meeting_times)
+
+
 def test_an_explicit_k_of_zero_gets_a_lag_of_one():
     sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=4)
     settings = sampler._configure(0, "auto", "auto", None, None, None, False)
-    assert (settings["k"], settings["lag"], settings["m"]) == (0, 1, 0)
+    assert (settings.k, settings.lag, settings.m) == (0, 1, 0)
 
 
 @pytest.mark.parametrize(
@@ -193,7 +202,7 @@ def test_starts_outside_the_support_warn():
 def test_a_run_that_would_store_gigabytes_warns():
     sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=10)
     with pytest.warns(InputWarning, match="GB of atoms"):
-        sampler._check_memory({"k": 0, "m": 10**6, "thin": 1}, 1000)
+        sampler._check_memory(Settings(0, 10**6, 1), 1000)
 
 
 def test_the_specification_example_runs():

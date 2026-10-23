@@ -12,7 +12,7 @@ import numpy as np
 from telescopic import diagnostics, engine
 from telescopic._parallel import Interrupt, check_pool, execute, opened
 from telescopic._progress import Progress
-from telescopic._random import MAIN, PILOT, replicate_generator, root_seed
+from telescopic._random import MAIN, PILOT, namespace_seed, replicate_generator, root_seed
 from telescopic._types import FloatArray, IntArray, Seed
 from telescopic.estimators import averaging_times
 from telescopic.initial import as_initial, draw
@@ -86,8 +86,8 @@ class CoupledSampler:
 
     Attributes
     ----------
-    settings : dict or None
-        ``k``, ``m``, ``lag``, ``thin`` and ``max_iter``, fixed by the first run.
+    settings : telescopic.engine.Settings or None
+        The settings, fixed by the first run.
     """
 
     def __init__(
@@ -120,7 +120,7 @@ class CoupledSampler:
             raise ValueError(f"names must have {self.ndim} entries, not {len(self.names)}")
         self.tuning: TuningReport | None = None
         self.pilot: FloatArray | None = None
-        self.settings: dict[str, Any] | None = None
+        self.settings: engine.Settings | None = None
         self._replicates: engine.Replicates | None = None
 
     def tune(self) -> TuningReport | None:
@@ -167,7 +167,7 @@ class CoupledSampler:
     def _meeting_times(self, n: int, max_iter: int, pool: Any, progress: bool) -> FloatArray:
         self.tune()
         start = 0 if self.pilot is None else len(self.pilot)
-        settings = {"k": 0, "m": 0, "lag": 1, "thin": 1, "max_iter": max_iter}
+        settings = engine.Settings(0, 0, 1, 1, max_iter)
         indices = np.arange(start, start + n)
         times = self._run(PILOT, indices, settings, pool, progress).meeting_time
         self.pilot = times if self.pilot is None else np.concatenate([self.pilot, times])
@@ -260,7 +260,7 @@ class CoupledSampler:
         self,
         namespace: int,
         indices: IntArray,
-        settings: dict[str, Any],
+        settings: engine.Settings,
         pool: Any,
         progress: bool,
     ) -> engine.Replicates:
@@ -272,12 +272,11 @@ class CoupledSampler:
             self.target,
             self.kernel,
             self.initial,
-            rng=self.seed,
-            namespace=namespace,
+            rng=self.seed if main else namespace_seed(self.seed, namespace),
             store=main,
-            **settings,
+            **settings._asdict(),
         )
-        slow = _SlowPairs(settings["lag"], settings["m"])
+        slow = _SlowPairs(settings.lag, settings.m)
         bar = Progress(len(indices), "replicates" if main else "pilot pairs") if progress else None
         interrupt = Interrupt()
 
@@ -311,10 +310,11 @@ class CoupledSampler:
         if self.settings is not None:
             given = {"k": k, "m": m, "lag": lag, "thin": thin, "max_iter": max_iter}
             for name, value in given.items():
-                if value not in ("auto", None) and value != self.settings[name]:
+                kept = getattr(self.settings, name)
+                if value not in ("auto", None) and value != kept:
                     raise ValueError(
-                        f"{name} was {self.settings[name]} in the earlier runs; a sampler "
-                        f"keeps its settings, so start a new one for {name}={value}"
+                        f"{name} was {kept} in the earlier runs; a sampler keeps its "
+                        f"settings, so start a new one for {name}={value}"
                     )
             return
         for name, value in (("k", k), ("m", m), ("lag", lag)):
@@ -330,7 +330,7 @@ class CoupledSampler:
         max_iter: int | None,
         pool: Any,
         progress: bool,
-    ) -> dict[str, Any]:
+    ) -> engine.Settings:
         # The first run's settings, which tune the kernel and run the pilot if needed.
         self.tune()
         if k == "auto":
@@ -338,25 +338,25 @@ class CoupledSampler:
             if pilot is None:
                 pilot = self._meeting_times(PILOT_REPLICATES, PILOT_MAX_ITER, pool, progress)
             k = choose_k(pilot)
-        settings: dict[str, Any] = {
-            "k": int(k),
-            "m": 10 * int(k) if m == "auto" else int(m),
-            "lag": max(1, int(k)) if lag == "auto" else int(lag),
-            "thin": 1 if thin is None else thin,
-            "max_iter": max_iter,
-        }
-        engine.check_settings(**settings)
+        settings = engine.Settings(
+            k=int(k),
+            m=10 * int(k) if m == "auto" else int(m),
+            lag=max(1, int(k)) if lag == "auto" else int(lag),
+            thin=1 if thin is None else thin,
+            max_iter=max_iter,
+        )
+        engine.check_settings(*settings)
         return settings
 
-    def _check_memory(self, settings: dict[str, Any], n_replicates: int) -> None:
+    def _check_memory(self, settings: engine.Settings, n_replicates: int) -> None:
         # Spec R-EXEC-7: estimate the atoms to store before running, and warn above 1 GB.
         # The pilot's meeting times stand in for those of the run.
         d = self.ndim
-        n_averaged = len(averaging_times(settings["k"], settings["m"], settings["thin"]))
+        n_averaged = len(averaging_times(settings.k, settings.m, settings.thin))
         late = 0.0
         if self.pilot is not None and np.isfinite(self.pilot).any():
             met = self.pilot[np.isfinite(self.pilot)]
-            late = float(np.mean(np.maximum(0, met - 1 - settings["k"])))
+            late = float(np.mean(np.maximum(0, met - 1 - settings.k)))
         size = n_replicates * (n_averaged + 2 * late) * (8 * d + 16)
         if size > 1e9:
             warn(
@@ -425,8 +425,7 @@ class _SlowPairs:
 
     def after(self, replicates: engine.Replicates) -> None:
         # A pair is unmet at the threshold when it meets, or is censored, after it.
-        cap = np.inf if replicates.max_iter is None else replicates.max_iter
-        slow = replicates.index[np.minimum(replicates.meeting_time, cap) > self.threshold]
+        slow = replicates.index[replicates.stopped > self.threshold]
         if len(slow):
             self._warn(int(slow[0]))
 

@@ -184,4 +184,11 @@ Append only. One entry per working session or milestone.
   settings, `engine.run` takes `rng`, and `Result(replicates, ...)` reads them, so a
   result can no longer be given another lag than its run's (DECISIONS #31). `merge`
   checks the seed, the settings and the dimension. 413 fast tests in 37 s.
+- `/simplify` of the change (`notes/reviews/run-settings.md`): `engine.run` loses its
+  `namespace`; the meeting-time pilot runs under its own seed, so a recorded seed
+  identifies its streams and a cross-namespace merge fails. The settings are one
+  immutable `engine.Settings`, the seed is `seed` everywhere, `root_seed` copies a given
+  `SeedSequence`, `Replicates.stopped` replaces two copies of a rule, and `Result`
+  refuses replicates stored without measures (DECISIONS #32). Five mutants checked.
+  417 fast tests in 39 s.
 

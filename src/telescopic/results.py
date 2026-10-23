@@ -78,7 +78,7 @@ class Result:
     Attributes
     ----------
     k, m, lag, thin : int
-        The configuration of the run (spec section 3.2).
+        The settings of the run (spec section 3.2).
     max_iter : int or None
         The cap of the run.
     seed : numpy.random.SeedSequence
@@ -115,6 +115,10 @@ class Result:
         met = np.isfinite(replicates.meeting_time)
         self.n_replicates = int(met.sum())
         self.n_censored = len(met) - self.n_replicates
+        if self.n_replicates and not len(replicates.atoms):
+            raise ValueError(
+                "the replicates hold no signed measures: run the engine with store=True"
+            )
         self.ndim = replicates.atoms.shape[1]
         self.names = [f"x{i}" for i in range(self.ndim)] if names is None else list(names)
         if len(self.names) != self.ndim:
@@ -128,19 +132,17 @@ class Result:
             np.searchsorted(replicates.index[met], replicates.owner),
             self.n_replicates,
         )
-        self.k, self.m, self.lag = replicates.k, replicates.m, replicates.lag
-        self.thin, self.max_iter, self.seed = replicates.thin, replicates.max_iter, replicates.root
-        self.kernel, self.initial = kernel, initial
+        self.k, self.m, self.lag, self.thin, self.max_iter = replicates.settings
+        self.seed, self.kernel, self.initial = replicates.seed, kernel, initial
         self._replicates = replicates
         self.n_log_prob, self.n_grad = replicates.n_log_prob, replicates.n_grad
         self.wall_time = replicates.seconds
         self.tuning, self.pilot = tuning, pilot
         # The engine runs only requested indices, so missing ones make index shorter.
         self.interrupted = len(replicates.index) < len(replicates.requested)
-        # The time each pair stopped: its meeting time, or the cap for a censored pair,
-        # which makes the bounds of section 3.6 lower bounds of their estimates.
-        cap = np.inf if self.max_iter is None else self.max_iter
-        self._stopped = np.minimum(self.meeting_times, cap).astype(np.int64)
+        # The cap for a censored pair makes the bounds of section 3.6 lower bounds of
+        # their estimates.
+        self._stopped = replicates.stopped.astype(np.int64)
 
     def estimate(self, h: Callable[[FloatArray], npt.ArrayLike], level: float = 0.95) -> Estimate:
         r"""Estimate :math:`\pi(h)` with a confidence interval (spec section 3.3).
