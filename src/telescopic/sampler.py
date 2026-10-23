@@ -328,7 +328,8 @@ class CoupledSampler:
             ("thin", thin, None),
             ("max_iter", max_iter, None),
         ):
-            if value != default:
+            # The type first: == compares an array elementwise.
+            if not (isinstance(value, type(default)) and value == default):
                 given[name] = integer(name, value, f"an integer or {default!r}")
         if self.settings is not None:
             for name, value in given.items():

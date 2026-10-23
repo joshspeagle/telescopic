@@ -59,7 +59,9 @@ def unevaluated(x):
     ("arguments", "error", "message"),
     [
         ({"n_replicates": 10.0}, TypeError, "n_replicates must be an integer, not 10.0"),
+        ({"n_replicates": True}, TypeError, "n_replicates must be an integer, not True"),
         ({"k": 5.5}, TypeError, "k must be an integer or 'auto', not 5.5"),
+        ({"k": np.array([3, 4])}, TypeError, "k must be an integer or 'auto'"),
         ({"thin": 2.0}, TypeError, "thin must be an integer or None, not 2.0"),
         ({"max_iter": "9"}, TypeError, "max_iter must be an integer or None"),
         ({"lag": 0}, ValueError, "lag must be at least 1, not 0"),

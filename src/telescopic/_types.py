@@ -34,21 +34,23 @@ def integer(
     name: str, value: Any, expected: str = "an integer", minimum: int | None = None
 ) -> int:
     # A Python int by operator.index, as range() takes one: NumPy integers pass, and a
-    # float, integral or not, raises TypeError naming the argument; one below minimum
-    # raises ValueError (DECISIONS #44, #50).
+    # float, integral or not, or a bool raises TypeError naming the argument; one below
+    # minimum raises ValueError (DECISIONS #44, #50).
     try:
         number = operator.index(value)
     except TypeError:
-        raise TypeError(f"{name} must be {expected}, not {value!r}") from None
+        number = None
+    if number is None or isinstance(value, bool):
+        raise TypeError(f"{name} must be {expected}, not {value!r}")
     if minimum is not None and number < minimum:
         raise ValueError(f"{name} must be at least {minimum}, not {number}")
     return number
 
 
 def real(name: str, value: Any) -> float:
-    # A float from a Python or NumPy real number; a string, an array or None raises
-    # TypeError naming the argument (DECISIONS #50).
-    if not isinstance(value, numbers.Real):
+    # A float from a Python or NumPy real number; a bool, a string, an array or None
+    # raises TypeError naming the argument (DECISIONS #50).
+    if not isinstance(value, numbers.Real) or isinstance(value, bool):
         raise TypeError(f"{name} must be a real number, not {value!r}")
     return float(value)
 

@@ -824,6 +824,7 @@ def test_gibbs_rejects_invalid_parameters(kwargs, message):
         (lambda: MALA(0.5, cov=np.eye(1)).with_step_size(np.eye(2)), "step_size must be a real"),
         (lambda: HMC(0.1, 2.0, cov=np.eye(1)), "n_steps must be an integer or None, not 2.0"),
         (lambda: Gibbs(conditional, [[0], [1]], eta="1"), "eta must be a real number"),
+        (lambda: Gibbs(conditional, [[0], [1]], eta=True), "eta must be a real number"),
         (lambda: MultivariateT(np.zeros(2), np.eye(2), df=2.5), "df must be a positive integer"),
     ],
 )
