@@ -6,9 +6,9 @@ from typing import Any, Protocol
 
 import numpy as np
 import numpy.typing as npt
-from scipy.linalg import solve_triangular
 from scipy.special import logsumexp
 
+from telescopic._linalg import matvec
 from telescopic._random import Draws, FloatArray
 
 BoolArray = npt.NDArray[np.bool_]
@@ -25,13 +25,14 @@ class Distribution(Protocol):
 
 
 def reflection_maximal(
-    mu_x: FloatArray, mu_y: FloatArray, chol: FloatArray, draws: Draws
+    mu_x: FloatArray, mu_y: FloatArray, chol: FloatArray, inverse: FloatArray, draws: Draws
 ) -> tuple[FloatArray, FloatArray, BoolArray]:
-    r"""Reflection-maximal coupling of :math:`\mathcal N(\mu_x, LL^\top)` and :math:`\mathcal N(\mu_y, LL^\top)`.
+    r"""Reflection-maximal coupling of :math:`\mathcal N(\mu_x, CC^\top)` and :math:`\mathcal N(\mu_y, CC^\top)`.
 
-    With :math:`\delta = L^{-1}(\mu_x - \mu_y)` and :math:`z \sim \mathcal N(0, I)`, the
-    pair is identical when :math:`\log u < -z\cdot\delta - \lVert\delta\rVert^2/2`;
-    otherwise :math:`y = \mu_y + L(z - 2(e\cdot z)e)` with :math:`e = \delta/\lVert\delta\rVert`
+    With :math:`\delta = C^{-1}(\mu_x - \mu_y)`, :math:`z \sim \mathcal N(0, I)` and
+    :math:`x = \mu_x + Cz`, the pair is identical when
+    :math:`\log u < -z\cdot\delta - \lVert\delta\rVert^2/2`; otherwise
+    :math:`y = \mu_y + C(z - 2(e\cdot z)e)` with :math:`e = \delta/\lVert\delta\rVert`
     (Jacob, O'Leary & Atchadé 2020, section 4.1; spec R-CPL-1). The coupling is maximal:
     :math:`P(x = y) = 2\Phi(-\lVert\delta\rVert/2)`.
 
@@ -40,7 +41,9 @@ def reflection_maximal(
     mu_x, mu_y : ndarray, shape (n, d)
         Means of the two Gaussians of each row.
     chol : ndarray, shape (d, d)
-        Lower-triangular factor :math:`L` of the shared covariance.
+        Lower-triangular factor :math:`C` of the shared covariance.
+    inverse : ndarray, shape (d, d)
+        :math:`C^{-1}`, which whitens the difference of the means.
     draws : Draws
         Random numbers for the ``n`` rows; each row uses ``d`` normals and 1 uniform.
 
@@ -53,15 +56,14 @@ def reflection_maximal(
     """
     z = draws.normal(mu_x.shape[1])
     log_u = draws.log_uniform()
-    delta = solve_triangular(chol, (mu_x - mu_y).T, lower=True).T
-    identical = log_u < -np.einsum("ij,ij->i", z, delta) - 0.5 * np.einsum(
-        "ij,ij->i", delta, delta
-    )
-    norm = np.sqrt(np.einsum("ij,ij->i", delta, delta))[:, None]
+    delta = matvec(inverse, mu_x - mu_y)
+    squared = np.einsum("ij,ij->i", delta, delta)
+    identical = log_u < -np.einsum("ij,ij->i", z, delta) - 0.5 * squared
+    norm = np.sqrt(squared)[:, None]
     e = np.divide(delta, norm, out=np.zeros_like(delta), where=norm > 0)
     reflected = z - 2.0 * np.einsum("ij,ij->i", e, z)[:, None] * e
-    x = mu_x + z @ chol.T
-    y = np.where(identical[:, None], x, mu_y + reflected @ chol.T)
+    x = mu_x + matvec(chol, z)
+    y = np.where(identical[:, None], x, mu_y + matvec(chol, reflected))
     return x, y, identical
 
 

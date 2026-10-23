@@ -8,16 +8,9 @@ import numpy as np
 import numpy.typing as npt
 from scipy.special import gammaln
 
+from telescopic._linalg import inverse_lower, matvec
 from telescopic._random import Draws, FloatArray
-from telescopic.kernels.base import (
-    BoolArray,
-    Kernel,
-    State,
-    equal_rows,
-    evaluate,
-    log_ratio,
-    select,
-)
+from telescopic.kernels.base import BoolArray, Kernel, State, evaluate, log_ratio, select
 from telescopic.kernels.random_walk import _covariance
 from telescopic.target import Target
 
@@ -25,7 +18,7 @@ from telescopic.target import Target
 class MultivariateT:
     r"""Multivariate Student-:math:`t` proposal with location ``mean``, scale ``cov``, ``df``.
 
-    Draws use only normals: :math:`x = \mu + Lz/\sqrt{w/\nu}` with :math:`w` the sum of
+    Draws use only normals: :math:`x = \mu + Cz/\sqrt{w/\nu}` with :math:`w` the sum of
     :math:`\nu` squared normals, so ``df`` is a positive integer. ``df=None`` gives the
     Gaussian :math:`\mathcal N(\mu, \Sigma)`.
 
@@ -46,6 +39,7 @@ class MultivariateT:
             raise ValueError(f"df must be a positive integer or None, not {df}")
         self.df = None if df is None else int(df)
         self._chol = np.linalg.cholesky(self.cov)
+        self._inverse = inverse_lower(self._chol)
         self._log_det = 2.0 * np.log(np.diag(self._chol)).sum()
 
     def sample(self, draws: Draws) -> FloatArray:
@@ -53,13 +47,13 @@ class MultivariateT:
         z = draws.normal(len(self.mean))
         if self.df is not None:
             z = z / np.sqrt((draws.normal(self.df) ** 2).sum(axis=1) / self.df)[:, None]
-        return self.mean + z @ self._chol.T
+        return self.mean + matvec(self._chol, z)
 
     def log_density(self, x: FloatArray) -> FloatArray:
         """Normalised log-density at the rows of ``x``, shape ``(n,)``."""
         d = len(self.mean)
-        z = np.linalg.solve(self._chol, (x - self.mean).T)
-        squared = (z**2).sum(axis=0)
+        z = matvec(self._inverse, x - self.mean)
+        squared = (z**2).sum(axis=1)
         log_density: FloatArray
         if self.df is None:
             log_density = -0.5 * (squared + self._log_det + d * math.log(2 * math.pi))
@@ -112,13 +106,13 @@ class Independence(Kernel):
 
     def coupled_step(
         self, target: Target, state_x: State, state_y: State, draws: Draws
-    ) -> tuple[State, State, BoolArray]:
+    ) -> tuple[State, State]:
         q = self._ready()
         proposal = evaluate(target, q.sample(draws), False)
         log_u = draws.log_uniform()
         state_x = select(log_u < _weight_ratio(q, proposal, state_x), proposal, state_x)
         state_y = select(log_u < _weight_ratio(q, proposal, state_y), proposal, state_y)
-        return state_x, state_y, equal_rows(state_x.x, state_y.x)
+        return state_x, state_y
 
     def _ready(self) -> MultivariateT:
         if self.proposal is None:

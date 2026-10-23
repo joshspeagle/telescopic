@@ -19,4 +19,5 @@ All notable changes to this project are documented here. The format follows
 - `Target` with a batched interface over scalar or vectorised log-densities and gradients;
   initial distributions `Normal`, `Uniform`, `Empirical` and `as_initial`.
 - Kernels with their couplings: `RandomWalk` (reflection-maximal or maximal proposals),
-  `Independence` with a `MultivariateT` proposal, and `Mixture`.
+  `Independence` with a `MultivariateT` proposal, and `Mixture`. A row's transition does
+  not depend on the other rows of its batch.

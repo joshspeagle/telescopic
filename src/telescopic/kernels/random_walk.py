@@ -7,13 +7,13 @@ from typing import Literal
 import numpy as np
 import numpy.typing as npt
 
+from telescopic._linalg import inverse_lower, matvec
 from telescopic._random import Draws, FloatArray
 from telescopic.couplings import maximal, reflection_maximal
 from telescopic.kernels.base import (
     BoolArray,
     Kernel,
     State,
-    equal_rows,
     evaluate,
     evaluate_pair,
     log_ratio,
@@ -25,7 +25,7 @@ from telescopic.target import Target
 class RandomWalk(Kernel):
     r"""Random-walk Metropolis-Hastings with a Gaussian proposal (spec R-KER-RW).
 
-    The proposal is :math:`x' = x + \lambda L z` with :math:`LL^\top = \Sigma` (``cov``),
+    The proposal is :math:`x' = x + \lambda C z` with :math:`CC^\top = \Sigma` (``cov``),
     :math:`\lambda` (``scale``) and :math:`z \sim \mathcal N(0, I)`; it is accepted when
     :math:`\log u < \log\pi(x') - \log\pi(x)`.
 
@@ -64,24 +64,24 @@ class RandomWalk(Kernel):
         self.cov = None if cov is None else _covariance(cov)
         self.scale = scale
         self.coupling = coupling
-        self._chol = None if self.cov is None else self._proposal_chol(self.cov, scale)
+        self._factors = None if self.cov is None else _factors(self.cov, scale)
 
     @property
     def is_tuned(self) -> bool:
         return self.cov is not None
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, BoolArray]:
-        chol = self._ready()
-        proposal = evaluate(target, state.x + draws.normal(len(chol)) @ chol.T, False)
+        chol, _ = self._ready()
+        proposal = evaluate(target, state.x + matvec(chol, draws.normal(len(chol))), False)
         accepted = draws.log_uniform() < log_ratio(proposal.log_prob, state.log_prob)
         return select(accepted, proposal, state), accepted
 
     def coupled_step(
         self, target: Target, state_x: State, state_y: State, draws: Draws
-    ) -> tuple[State, State, BoolArray]:
-        chol = self._ready()
+    ) -> tuple[State, State]:
+        chol, inverse = self._ready()
         if self.coupling == "reflection":
-            x, y, identical = reflection_maximal(state_x.x, state_y.x, chol, draws)
+            x, y, identical = reflection_maximal(state_x.x, state_y.x, chol, inverse, draws)
         else:
             x, y, identical, _ = maximal(
                 [_Gaussian(mean, chol) for mean in state_x.x],
@@ -96,16 +96,12 @@ class RandomWalk(Kernel):
         state_y = select(
             log_u < log_ratio(proposal_y.log_prob, state_y.log_prob), proposal_y, state_y
         )
-        return state_x, state_y, equal_rows(state_x.x, state_y.x)
+        return state_x, state_y
 
-    def _ready(self) -> FloatArray:
-        if self._chol is None:
+    def _ready(self) -> tuple[FloatArray, FloatArray]:
+        if self._factors is None:
             raise ValueError("RandomWalk needs cov; give it, or tune the kernel on a pilot run")
-        return self._chol
-
-    @staticmethod
-    def _proposal_chol(cov: FloatArray, scale: float | None) -> FloatArray:
-        return (2.38 / np.sqrt(len(cov)) if scale is None else scale) * np.linalg.cholesky(cov)
+        return self._factors
 
     def __repr__(self) -> str:
         cov = "None" if self.cov is None else f"<{len(self.cov)}x{len(self.cov)}>"
@@ -124,6 +120,12 @@ class _Gaussian:
     def logpdf(self, x: FloatArray) -> float:
         z = np.linalg.solve(self.chol, x - self.mean)
         return float(-0.5 * z @ z)
+
+
+def _factors(cov: FloatArray, scale: float | None) -> tuple[FloatArray, FloatArray]:
+    # The proposal's Cholesky factor and its inverse.
+    chol = (2.38 / np.sqrt(len(cov)) if scale is None else scale) * np.linalg.cholesky(cov)
+    return chol, inverse_lower(chol)
 
 
 def _covariance(cov: npt.ArrayLike) -> FloatArray:

@@ -57,20 +57,18 @@ class Mixture(Kernel):
 
     def coupled_step(
         self, target: Target, state_x: State, state_y: State, draws: Draws
-    ) -> tuple[State, State, BoolArray]:
+    ) -> tuple[State, State]:
         component = self._choose(draws)
         state_x, state_y = state_x.take(slice(None)), state_y.take(slice(None))
-        met = np.zeros(len(state_x), dtype=bool)
         for index, kernel in enumerate(self.kernels):
             rows = np.flatnonzero(component == index)
             if len(rows):
-                new_x, new_y, met_rows = kernel.coupled_step(
+                new_x, new_y = kernel.coupled_step(
                     target, state_x.take(rows), state_y.take(rows), draws.subset(rows)
                 )
                 state_x.put(rows, new_x)
                 state_y.put(rows, new_y)
-                met[rows] = met_rows
-        return state_x, state_y, met
+        return state_x, state_y
 
     def _choose(self, draws: Draws) -> npt.NDArray[np.intp]:
         index: npt.NDArray[np.intp] = np.searchsorted(

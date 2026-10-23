@@ -44,7 +44,7 @@ def test_reflection_maximal_matches_an_independent_reference(meet):
     u = min(u, 0.999)
     expected = reflection(mu_x, mu_y, chol, z, u)
     draws = fixed_draws(normals=[z], uniforms=[[u]])
-    x, y, identical = reflection_maximal(mu_x[None], mu_y[None], chol, draws)
+    x, y, identical = reflection_maximal(mu_x[None], mu_y[None], chol, np.linalg.inv(chol), draws)
     assert identical[0] == expected[2] == (u < np.exp(threshold))
     np.testing.assert_allclose(x[0], expected[0], atol=1e-12)
     np.testing.assert_allclose(y[0], expected[1], atol=1e-12)
@@ -58,7 +58,7 @@ def test_reflection_maximal_flags_exactly_the_equal_pairs(seed, d, scale):
     mu_x = rng.standard_normal((n, d))
     mu_y = mu_x + scale * rng.standard_normal((n, d))
     draws = fixed_draws(rng.standard_normal((n, d)), rng.random((n, 1)))
-    x, y, identical = reflection_maximal(mu_x, mu_y, chol, draws)
+    x, y, identical = reflection_maximal(mu_x, mu_y, chol, np.linalg.inv(chol), draws)
     np.testing.assert_array_equal(identical, np.all(x == y, axis=1))
     # Off the diagonal the reflection preserves the norm of the whitened draw.
     zx = np.linalg.solve(chol, (x - mu_x).T).T
@@ -72,7 +72,7 @@ def test_reflection_maximal_with_equal_means_always_meets():
     rng = np.random.default_rng(2)
     mu = rng.standard_normal((100, 3))
     draws = fixed_draws(rng.standard_normal((100, 3)), rng.random((100, 1)))
-    _, _, identical = reflection_maximal(mu, mu.copy(), np.eye(3), draws)
+    _, _, identical = reflection_maximal(mu, mu.copy(), np.eye(3), np.eye(3), draws)
     assert identical.all()
 
 
@@ -89,9 +89,10 @@ def test_reflection_maximal_meets_with_the_maximal_probability(d, distance):
     mu_x = np.tile(rng.standard_normal(d), (n, 1))
     mu_y = mu_x - chol @ (distance * direction)
     draws = fixed_draws(rng.standard_normal((n, d)), rng.random((n, 1)))
-    _, _, identical = reflection_maximal(mu_x, mu_y, chol, draws)
+    x, y, _ = reflection_maximal(mu_x, mu_y, chol, np.linalg.inv(chol), draws)
     p = 2 * stats.norm.cdf(-distance / 2)
-    assert abs(identical.mean() - p) < 5 * np.sqrt(p * (1 - p) / n)
+    equal = np.all(x == y, axis=1)
+    assert abs(equal.mean() - p) < 5 * np.sqrt(p * (1 - p) / n)
 
 
 def test_reflection_maximal_draws_have_exact_marginals():
@@ -101,7 +102,7 @@ def test_reflection_maximal_draws_have_exact_marginals():
     mu_x = np.tile(rng.standard_normal(d), (n, 1))
     mu_y = mu_x + 0.7
     draws = fixed_draws(rng.standard_normal((n, d)), rng.random((n, 1)))
-    x, y, _ = reflection_maximal(mu_x, mu_y, chol, draws)
+    x, y, _ = reflection_maximal(mu_x, mu_y, chol, np.linalg.inv(chol), draws)
     for draw, mu in ((x, mu_x), (y, mu_y)):
         whitened = np.linalg.solve(chol, (draw - mu).T).T
         for column in whitened.T:

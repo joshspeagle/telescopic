@@ -59,7 +59,7 @@ def test_random_walk_reflection_coupling_matches_the_reference(gap, u_accept):
     y = x + gap
     px, py, _ = reflection(x, y, 0.8 * np.eye(2), z, u_meet)
     kernel = RandomWalk(np.eye(2), scale=0.8)
-    new_x, new_y, met = kernel.coupled_step(
+    new_x, new_y = kernel.coupled_step(
         TARGET, state(x), state(y), fixed_draws([z], [[u_meet, u_accept]])
     )
     np.testing.assert_allclose(
@@ -68,7 +68,6 @@ def test_random_walk_reflection_coupling_matches_the_reference(gap, u_accept):
     np.testing.assert_allclose(
         new_y.x[0], metropolis(y, py, gaussian_log_prob, u_accept), atol=1e-12
     )
-    assert met[0] == np.array_equal(new_x.x[0], new_y.x[0])
 
 
 def test_independence_kernels_share_the_proposal_and_meet_when_both_accept():
@@ -76,12 +75,11 @@ def test_independence_kernels_share_the_proposal_and_meet_when_both_accept():
     # accept the shared proposal x' = z whatever u < 1 is.
     proposal = MultivariateT(np.zeros(2), np.eye(2), df=None)
     z = np.array([0.3, -0.4])
-    new_x, new_y, met = Independence(proposal).coupled_step(
+    new_x, new_y = Independence(proposal).coupled_step(
         TARGET, state([0.1, 0.2]), state([2.5, -1.0]), fixed_draws([z], [[0.5]])
     )
     np.testing.assert_array_equal(new_x.x[0], z)
     np.testing.assert_array_equal(new_y.x[0], z)
-    assert met[0]
 
 
 class Shift(Kernel):
@@ -94,11 +92,7 @@ class Shift(Kernel):
         return State(state.x + self.amount, state.log_prob), np.ones(len(state), bool)
 
     def coupled_step(self, target, state_x, state_y, draws):
-        moved_x, moved_y = (
-            self.step(target, state_x, draws)[0],
-            self.step(target, state_y, draws)[0],
-        )
-        return moved_x, moved_y, np.zeros(len(state_x), bool)
+        return self.step(target, state_x, draws)[0], self.step(target, state_y, draws)[0]
 
 
 def test_mixture_gives_both_chains_the_component_its_uniform_selects():
@@ -107,7 +101,7 @@ def test_mixture_gives_both_chains_the_component_its_uniform_selects():
     kernel = Mixture([Shift(1.0), Shift(100.0)], [0.25, 0.75])
     zeros = State(np.zeros((n, 1)), np.zeros(n))
     ones = State(np.ones((n, 1)), np.zeros(n))
-    new_x, new_y, _ = kernel.coupled_step(TARGET, zeros, ones, fixed_draws(uniforms=uniforms))
+    new_x, new_y = kernel.coupled_step(TARGET, zeros, ones, fixed_draws(uniforms=uniforms))
     np.testing.assert_array_equal(new_y.x - new_x.x, 1.0)
     np.testing.assert_array_equal(new_x.x[:, 0] == 100.0, uniforms[:, 0] >= 0.25)
     single, _ = kernel.step(TARGET, zeros, fixed_draws(uniforms=uniforms))
@@ -143,7 +137,7 @@ def test_each_chain_of_a_coupled_step_has_the_exact_one_step_law(name, gap):
     x0, y0 = 0.4, 0.4 + gap
     start_x = State(np.full((n, 1), x0), np.full(n, gaussian_log_prob(np.array([x0]))))
     start_y = State(np.full((n, 1), y0), np.full(n, gaussian_log_prob(np.array([y0]))))
-    new_x, new_y, _ = kernel.coupled_step(TARGET, start_x, start_y, random_draws(n, 4))
+    new_x, new_y = kernel.coupled_step(TARGET, start_x, start_y, random_draws(n, 4))
     for start, new in ((x0, new_x.x[:, 0]), (y0, new_y.x[:, 0])):
         stay, cdf = one_step_law(kernel, start)
         stayed = new == start
@@ -158,7 +152,7 @@ def test_coupled_marginals_match_single_steps_in_three_dimensions(name):
     rng = np.random.default_rng(5)
     x0, y0 = rng.standard_normal(3), rng.standard_normal(3)
     starts = [state(np.tile(p, (n, 1))) for p in (x0, y0)]
-    new_x, new_y, _ = kernel.coupled_step(TARGET, *starts, random_draws(n, 6))
+    new_x, new_y = kernel.coupled_step(TARGET, *starts, random_draws(n, 6))
     directions = rng.standard_normal((3, 3))
     for start, coupled, seed in ((starts[0], new_x, 7), (starts[1], new_y, 8)):
         single, _ = kernel.step(TARGET, start, random_draws(n, seed))
@@ -167,35 +161,53 @@ def test_coupled_marginals_match_single_steps_in_three_dimensions(name):
             assert p > P_MIN / 3
 
 
-# Faithfulness and the flag contract.
+# Faithfulness and batch invariance.
 
 
 @pytest.mark.parametrize("name", ["reflection", "maximal", "independence", "mixture"])
-def test_equal_states_stay_equal_and_met(name):
+def test_equal_states_stay_equal(name):
     kernel = kernels(2)[name]
     points = np.random.default_rng(9).standard_normal((50, 2))
     state_x, state_y = state(points), state(points.copy())
     for step in range(100):
-        state_x, state_y, met = kernel.coupled_step(
-            TARGET, state_x, state_y, random_draws(50, step)
-        )
-        assert met.all()
+        state_x, state_y = kernel.coupled_step(TARGET, state_x, state_y, random_draws(50, step))
         np.testing.assert_array_equal(state_x.x, state_y.x)
         np.testing.assert_array_equal(state_x.log_prob, state_y.log_prob)
 
 
+def dense_kernels(d):
+    # A dense covariance near the identity, so that most proposals are accepted.
+    a = np.random.default_rng(14).standard_normal((d, d))
+    cov = (a @ a.T + d * np.eye(d)) / (2 * d)
+    return {
+        "reflection": RandomWalk(cov, scale=0.5),
+        "maximal": RandomWalk(cov, scale=0.5, coupling="maximal"),
+        "independence": Independence(MultivariateT(np.zeros(d), cov, df=5)),
+        "mixture": Mixture([RandomWalk(cov, scale=0.3), RandomWalk(cov, scale=1.0)], [0.5, 0.5]),
+    }
+
+
 @pytest.mark.parametrize("name", ["reflection", "maximal", "independence", "mixture"])
-def test_met_holds_exactly_for_bitwise_equal_pairs(name):
-    kernel = kernels(2)[name]
-    rng = np.random.default_rng(10)
-    state_x, state_y = (
-        state(rng.standard_normal((400, 2))),
-        state(rng.standard_normal((400, 2)) * 0.2),
-    )
-    new_x, new_y, met = kernel.coupled_step(TARGET, state_x, state_y, random_draws(400, 11))
-    np.testing.assert_array_equal(met, np.all(new_x.x == new_y.x, axis=1))
-    np.testing.assert_array_equal(new_x.log_prob[met], new_y.log_prob[met])
-    assert met.any()
+def test_a_rows_transition_does_not_depend_on_the_rest_of_the_batch(name):
+    # Spec R-KER-6: a BLAS product gives most rows other bits in a batch of one.
+    d, n = 10, 16
+    kernel = dense_kernels(d)[name]
+    rng = np.random.default_rng(15)
+    x, y = rng.standard_normal((n, d)), rng.standard_normal((n, d))
+    normals, uniforms = rng.standard_normal((n, 2 * d + 5)), rng.random((n, 3))
+
+    def draws(rows):
+        generators = [np.random.default_rng([16, row]) for row in rows]
+        return fixed_draws(normals[rows], uniforms[rows], generators)
+
+    def transition(rows):
+        moved, _ = kernel.step(TARGET, state(x[rows]), draws(rows))
+        new_x, new_y = kernel.coupled_step(TARGET, state(x[rows]), state(y[rows]), draws(rows))
+        return np.stack([moved.x, new_x.x, new_y.x], axis=1)
+
+    batch = transition(np.arange(n))
+    for row in range(n):
+        np.testing.assert_array_equal(transition(np.array([row]))[0], batch[row])
 
 
 # Validation and the proposal distribution.

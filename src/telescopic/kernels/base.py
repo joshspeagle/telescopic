@@ -51,10 +51,11 @@ class Kernel(ABC):
     """A Markov kernel with its coupling (spec section 5.1, R-KER-1 to R-KER-5).
 
     Subclasses implement :meth:`step` and :meth:`coupled_step` on batches of chains.
-    Each marginal of :meth:`coupled_step` must have exactly the law of :meth:`step`.
-    ``met[i]`` must hold exactly when the returned states of pair ``i`` are bitwise
-    equal: on a meeting the kernel copies the first chain's state into the second. From
-    equal states, :meth:`coupled_step` must return equal states.
+    Each marginal of :meth:`coupled_step` must have exactly the law of :meth:`step`. The
+    engine declares a meeting when a pair's returned positions are bitwise equal, so a
+    coupling that makes the two proposals identical must give the second chain a copy of
+    the first chain's proposal, never a recomputation. A row's arithmetic must not depend
+    on the other rows of the batch (spec R-KER-6).
     """
 
     @property
@@ -85,14 +86,12 @@ class Kernel(ABC):
     @abstractmethod
     def coupled_step(
         self, target: Target, state_x: State, state_y: State, draws: Draws
-    ) -> tuple[State, State, BoolArray]:
+    ) -> tuple[State, State]:
         """One coupled transition of each pair.
 
         Returns
         -------
         state_x, state_y : State
-        met : ndarray of bool, shape (n,)
-            Whether each pair's states are now equal.
         """
 
 
@@ -126,11 +125,6 @@ def log_ratio(new: FloatArray, old: FloatArray) -> FloatArray:
     test rejects, without a warning."""
     with np.errstate(invalid="ignore"):
         return new - old
-
-
-def equal_rows(a: FloatArray, b: FloatArray) -> BoolArray:
-    """Whether each row of ``a`` is bitwise equal to the same row of ``b``: a meeting."""
-    return np.all(a == b, axis=1)
 
 
 def select(accepted: BoolArray, proposal: State, current: State) -> State:
