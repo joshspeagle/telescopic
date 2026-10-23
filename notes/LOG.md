@@ -155,3 +155,17 @@ Append only. One entry per working session or milestone.
   direct Gibbs run agrees on all 11 means (largest |z| 1.85). Every built-in kernel
   passes `check_coupling`; a wrong Y marginal, a recomputed meeting and independent
   steps are flagged. matplotlib joins the test group. 382 fast tests in 41 s.
+- M8 `/simplify` (`notes/reviews/m8.md`): `check_coupling` now checks what the engine
+  uses: meetings, fresh cached log-densities and gradients, and near misses in units in
+  the last place. It no longer checks faithfulness, which no result depends on
+  (DECISIONS #28). `Result.histogram` takes several coordinates, with errors, and the
+  corner plot uses it; the plot methods take axes (#30). Saving moved to the private
+  `telescopic._io`, with the seed's state (#29). The funnel and pump starts now cover
+  their targets, the pump conditionals run in Python numbers (a coupled step of 64
+  rows: 10.2-10.9 to 6.8-6.9 ms), and the Gaussian example's gradient is
+  row-independent (#27). The example tests compare each log-density with SciPy's
+  density of its description and follow the escalation rule. The long-tail plots draw
+  in 0.1 to 0.7 s instead of 9 to 11 s at max τ − L = 10⁷; the corner plot at d = 10
+  takes 4.4-5.4 s instead of 2.3-2.4 s. Two items deferred to before M10 (PLAN). 398
+  fast tests in 36 s.
+

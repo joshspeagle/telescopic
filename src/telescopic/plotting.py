@@ -7,7 +7,6 @@ from typing import Any
 
 import numpy as np
 
-from telescopic._types import FloatArray
 from telescopic.engine import Replicates
 from telescopic.results import Result
 
@@ -41,11 +40,9 @@ def meeting_times(result: Result, axes: Sequence[Axes] | None = None) -> list[Ax
     shifted = result.meeting_times - result.lag
     histogram.hist(shifted[np.isfinite(shifted)], bins="auto")
     histogram.set(xlabel=r"$\tau - L$", ylabel="pairs")
-    cap = np.inf if result.max_iter is None else result.max_iter - result.lag
-    stopped = np.sort(np.minimum(shifted, cap))
-    t = np.arange(int(stopped[-1]) + 1)
-    above = 1 - np.searchsorted(stopped, t, side="right") / len(stopped)
-    survival.step(t, above, where="post")
+    stopped = np.sort(result._stopped - result.lag)
+    t = np.union1d(0, stopped)  # the function steps only there
+    survival.step(t, 1 - np.searchsorted(stopped, t, side="right") / len(stopped), where="post")
     survival.set(yscale="log", xlabel="$t$", ylabel=r"$P(\tau - L > t)$")
     return [histogram, survival]
 
@@ -66,12 +63,15 @@ def tv_bound(result: Result, ax: Axes | None = None) -> Axes:
     Axes
     """
     ax = plt.subplots(figsize=(5, 3.5))[1] if ax is None else ax
-    bound = result.tv_bound()
+    # At most 4,000 times draw the step function, however long the tail of meeting times.
+    times = result._times()
+    t = times[:: max(1, len(times) // 2000)]
+    bound = result.tv_bound(t)
     positive = bound > 0
-    ax.plot(np.arange(len(bound))[positive], bound[positive])
+    ax.plot(t[positive], bound[positive])
     ax.axvline(result.k, color="grey", linestyle="--", label="$k$")
     ax.set(yscale="log", xlabel="$t$", ylabel=r"TV bound on $X_t$")
-    ax.legend()
+    ax.legend(loc="upper right")
     return ax
 
 
@@ -136,23 +136,18 @@ def corner(result: Result, dims: Sequence[int] | None = None, bins: int = 20) ->
     dims = list(range(result.ndim)) if dims is None else list(dims)
     n = len(dims)
     grid = plt.subplots(n, n, figsize=(2.5 * n, 2.5 * n), squeeze=False)[1]
-    cells = [_cells(result.measure.atoms[:, dim], bins) for dim in dims]
     for row in range(n):
         marginals(result, [dims[row]], bins, [grid[row, row]])
         for column in range(n):
+            ax = grid[row, column]
             if column > row:
-                grid[row, column].axis("off")
+                ax.axis("off")
             elif column < row:
-                (which_x, edges_x), (which_y, edges_y) = cells[column], cells[row]
-                mass = result.measure.mass(which_x * bins + which_y, bins * bins).mean(axis=0)
-                area = np.outer(np.diff(edges_x), np.diff(edges_y))
-                density = (mass.reshape(bins, bins) / area).T
+                masses, _, (edges_x, edges_y) = result.histogram([dims[column], dims[row]], bins)
+                density = masses / np.outer(np.diff(edges_x), np.diff(edges_y))
                 limit = np.max(np.abs(density))
-                grid[row, column].pcolormesh(
-                    edges_x, edges_y, density, cmap="RdBu_r", vmin=-limit, vmax=limit
-                )
-                grid[row, column].set(xlabel=result.names[dims[column]])
-                grid[row, column].set(ylabel=result.names[dims[row]])
+                ax.pcolormesh(edges_x, edges_y, density.T, cmap="RdBu_r", vmin=-limit, vmax=limit)
+                ax.set(xlabel=result.names[dims[column]], ylabel=result.names[dims[row]])
     return grid
 
 
@@ -198,10 +193,3 @@ def paths(
             line = ax.plot(x[:, dims[0]], x[:, dims[1]])[0]
             ax.plot(y[:, dims[0]], y[:, dims[1]], linestyle="--", color=line.get_color())
     return ax
-
-
-def _cells(values: FloatArray, bins: int) -> tuple[Any, FloatArray]:
-    # The bin of each value, and the edges, the last nudged up to keep the largest inside.
-    edges = np.histogram_bin_edges(values, bins=bins)
-    edges[-1] = np.nextafter(edges[-1], np.inf)
-    return np.searchsorted(edges, values, side="right") - 1, edges

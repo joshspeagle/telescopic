@@ -18,9 +18,8 @@ from telescopic.target import Target
 # Random one-dimensional projections on which check_coupling compares the moved values.
 PROJECTIONS = 5
 
-# Coupled steps, and pairs, over which check_coupling expects equal states to stay equal.
-FAITHFUL_STEPS = 100
-FAITHFUL_PAIRS = 100
+# Positions apart by at most this many units in the last place are a near miss.
+NEAR_MISS_ULPS = 64
 
 
 @dataclass(frozen=True)
@@ -36,21 +35,25 @@ class CouplingReport:
         For X and for Y, the Bonferroni-corrected p-value of two-sample
         Kolmogorov-Smirnov tests that compare the moved positions of a coupled step with
         those of a step alone, along random directions and in the distance moved.
-    faithful : bool
-        Whether 100 pairs of equal states stayed equal over 100 coupled steps.
+    met : float
+        The fraction of pairs that met: a coupling that never meets gives no estimate.
+    stale : int
+        Chains whose returned log-density or gradient differs from a fresh evaluation at
+        their position; the engine reuses them (spec section 5.1).
     near_misses : int
-        Pairs whose new positions differ by less than 1e-9 of their size without being
-        equal: a coupling that recomputes Y where it should copy X's proposal leaves
-        them, and the engine never sees such pairs meet (spec R-KER-3).
+        Pairs whose positions differ by at most 64 units in the last place in every
+        coordinate: a coupling that recomputes Y where it should copy X's proposal
+        leaves them, and the engine never sees such pairs meet (spec R-KER-3).
     """
 
     stay: tuple[float, float]
     moves: tuple[float, float]
-    faithful: bool
+    met: float
+    stale: int
     near_misses: int
 
     def passed(self, alpha: float = 1e-3) -> bool:
-        """Whether every p-value is at least ``alpha``, the coupling is faithful and no pair nearly met.
+        """Whether every p-value is at least ``alpha`` and pairs met, with no stale state or near miss.
 
         Parameters
         ----------
@@ -60,7 +63,8 @@ class CouplingReport:
         -------
         bool
         """
-        return min(*self.stay, *self.moves) >= alpha and self.faithful and not self.near_misses
+        p_values = (*self.stay, *self.moves)
+        return min(p_values) >= alpha and self.met > 0 and not (self.stale or self.near_misses)
 
 
 def check_coupling(
@@ -71,12 +75,13 @@ def check_coupling(
     n: int = 10_000,
     rng: Seed = None,
 ) -> CouplingReport:
-    """Check that each chain of a coupled step has the law of a step alone (spec section 9).
+    """Check a kernel's coupling as the engine uses it (spec section 9).
 
     From ``n`` copies of the pair ``(x, y)``, one coupled step is compared with one step
     of the kernel alone from ``x`` and one from ``y``: how often each chain stays put,
-    and where it moves to. Equal states must also stay equal, in 100 pairs over 100
-    coupled steps. Custom kernels should pass it before use.
+    and where it moves to. It also counts the pairs that meet, the states whose cached
+    log-density or gradient is stale, and the pairs that nearly meet. Custom kernels
+    should pass it before use.
 
     Parameters
     ----------
@@ -84,7 +89,8 @@ def check_coupling(
         A tuned kernel.
     target : Target
     x, y : array_like, shape (d,)
-        The starting points, close enough for the coupling to meet sometimes.
+        The starting points, close enough for the coupling to meet them in one step
+        sometimes: for HMC, within about its ``meeting_scale``.
     n : int
         Copies of the pair; at least 2. More detect smaller differences.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
@@ -95,24 +101,23 @@ def check_coupling(
 
     Notes
     -----
-    Costs one coupled step and two steps of ``n`` chains, then 100 coupled steps of 100
-    equal pairs.
+    Costs one coupled step and two steps of ``n`` chains, and an evaluation of the target
+    at each of their ``4n`` new positions.
     """
     x, y = np.asarray(x, dtype=np.float64), np.asarray(y, dtype=np.float64)
     if x.ndim != 1 or x.shape != y.shape:
         raise ValueError(f"x and y must be points of one shape (d,), not {x.shape} and {y.shape}")
     if n < 2:
         raise ValueError(f"n must be at least 2, not {n}")
-    seeds = root_seed(rng).spawn(5)
-    start_x = kernel.init_state(target, np.tile(x, (n, 1)))
-    start_y = kernel.init_state(target, np.tile(y, (n, 1)))
+    seeds = root_seed(rng).spawn(4)
+    starts = kernel.init_state(target, np.stack([x, y]))
+    start_x, start_y = (starts.take(np.full(n, row)) for row in (0, 1))
     new_x, new_y = kernel.coupled_step(target, start_x, start_y, random_draws(n, seeds[0]))
     alone = [
         kernel.step(target, start, random_draws(n, seed))[0]
         for start, seed in ((start_x, seeds[1]), (start_y, seeds[2]))
     ]
     directions = np.random.default_rng(seeds[3]).standard_normal((PROJECTIONS, len(x)))
-    directions /= np.linalg.norm(directions, axis=1, keepdims=True)
     stay, moves = [], []
     for point, coupled, single in ((x, new_x.x, alone[0].x), (y, new_y.x, alone[1].x)):
         stayed = [np.all(chain == point, axis=1) for chain in (coupled, single)]
@@ -120,14 +125,15 @@ def check_coupling(
         stay.append(float(stats.fisher_exact(table).pvalue))
         moved = [chain[~s] for chain, s in zip((coupled, single), stayed, strict=True)]
         moves.append(_compare_moves(point, moved[0], moved[1], directions))
-    gap = np.linalg.norm(new_x.x - new_y.x, axis=1)
-    size = 1 + np.linalg.norm(new_x.x, axis=1)
-    near_misses = int(np.sum((gap > 0) & (gap < 1e-9 * size)))
+    gap = np.abs(new_x.x - new_y.x)
+    ulp = np.spacing(np.maximum(np.abs(new_x.x), np.abs(new_y.x)))
+    near = np.any(gap > 0, axis=1) & np.all(gap <= NEAR_MISS_ULPS * ulp, axis=1)
     return CouplingReport(
         (stay[0], stay[1]),
         (moves[0], moves[1]),
-        _faithful(kernel, target, start_x.take(slice(FAITHFUL_PAIRS)), seeds[4]),
-        near_misses,
+        float(np.mean(np.all(gap == 0, axis=1))),
+        sum(_stale(kernel, target, state) for state in (new_x, new_y, *alone)),
+        int(near.sum()),
     )
 
 
@@ -145,14 +151,17 @@ def _compare_moves(
     return min(1.0, len(samples) * smallest)
 
 
-def _faithful(kernel: Kernel, target: Target, start: State, seed: np.random.SeedSequence) -> bool:
-    state_x, state_y = start, start.take(slice(None))
-    draws = random_draws(len(start), seed)
-    for _ in range(FAITHFUL_STEPS):
-        state_x, state_y = kernel.coupled_step(target, state_x, state_y, draws)
-        if not np.array_equal(state_x.x, state_y.x):
-            return False
-    return True
+def _stale(kernel: Kernel, target: Target, state: State) -> int:
+    # Chains whose cache disagrees with a fresh evaluation beyond rounding: a vectorised
+    # target can change the last bits between batches (spec section 6.1).
+    fresh = kernel.init_state(target, state.x)
+    close = (state.log_prob == fresh.log_prob) | (
+        np.abs(state.log_prob - fresh.log_prob) <= 1e-9 * np.abs(fresh.log_prob)
+    )
+    if state.grad is not None and fresh.grad is not None:
+        error = np.linalg.norm(state.grad - fresh.grad, axis=1)
+        close &= error <= 1e-9 * np.linalg.norm(fresh.grad, axis=1)
+    return int(np.sum(~close))
 
 
 def fixed_draws(

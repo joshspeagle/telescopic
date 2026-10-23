@@ -505,12 +505,12 @@ Methods:
 - **Estimates:**
   - `estimate(h, level=0.95)` returns an `Estimate`. `h` maps `(n, d)` to `(n,)` or `(n, p)`; any other output shape raises `ValueError`;
   - `mean()`, `cov()`, `var()`, `std()` follow §3.4.
-- **Quantiles and histograms:** `quantile(q)`, `interval(mass=0.68)` (the central interval holding that mass of $\pi$; `level` is reserved for confidence levels) and `histogram(dim, bins=..., range=None)`.
+- **Quantiles and histograms:** `quantile(q)`, `interval(mass=0.68)` (the central interval holding that mass of $\pi$; `level` is reserved for confidence levels) and `histogram(dims, bins=20, range=None)`, of one coordinate or a joint histogram of several, with standard errors (DECISIONS #30).
 - **Diagnostics:** `tv_bound(t=None)`, `w1_bound(t=None)` (should), and `diagnostics()` (a dict).
 - **Reporting:** `summary(level=0.95)` returns a `Summary` table. `check(strict=False)` emits the warnings of §7.4, or raises if strict.
-- **Plots:** `plot_meeting_times()`, `plot_tv_bound()`, `plot_marginals(dims=None)`, `plot_corner(dims=None)` (signed 2-D histograms).
+- **Plots:** `plot_meeting_times(axes=None)`, `plot_tv_bound(ax=None)`, `plot_marginals(dims=None, bins=20, axes=None)` and `plot_corner(dims=None, bins=20)` (signed 2-D histograms); the first three draw on given axes (DECISIONS #30).
 - **Persistence and merging:**
-  - `save(path)` and `Result.load(path)` use a versioned `.npz` schema, with no pickle: arrays, and the settings, names, seed and descriptions as JSON (DECISIONS #26). The engine's paths are not saved;
+  - `save(path)` and `Result.load(path)` use a versioned `.npz` schema, with no pickle: arrays, and the settings, names, seed state and descriptions as JSON (DECISIONS #26, #29). The engine's paths are not saved;
   - `merge(other)` joins runs with the same configuration and disjoint replicate indices.
 
 ### 7.2 `SignedMeasure` and `Estimate` (R-OUT-2)
@@ -628,18 +628,20 @@ result.plot_tv_bound()                       # with the plot extra: distance fro
 
 ## 9. Validation tools (user-facing, must)
 
-**`telescopic.examples`** provides targets with exact answers, used by the tests, tutorials and benchmarks. Each `Example` has `log_prob` and `grad` (for a point or a batch), a default `initial`, `ndim`, and the exact `mean` and `cov`; the Gibbs model also has `conditional` and `blocks` (DECISIONS #24). The targets are:
+**`telescopic.examples`** provides targets with exact answers, used by the tests, tutorials and benchmarks. Each `Example` has `log_prob` and `grad` (for a point or a batch), a default `initial` with at least the target's variance in each coordinate, the exact `mean` and `cov`, and `ndim`; the Gibbs model also has `conditional` and `blocks` (DECISIONS #24, #27). The targets are:
 - a correlated Gaussian;
 - the banana of Heng & Jacob, with exact moments;
 - a bimodal Gaussian mixture;
-- Neal's funnel, with exact marginals;
+- Neal's funnel;
 - a conjugate hierarchical model for Gibbs (the pump-failure model of JOA20), whose exact expectations come from one-dimensional quadrature over $\beta$ after integrating out $\lambda$.
 
-**`telescopic.testing.check_coupling(kernel, target, x, y, n, rng)`** checks a kernel and its coupling, comparing each chain of `coupled_step` from `(x, y)` with `step` from the same state:
-- marginals: a two-proportion test of the frequency of staying put, and two-sample KS tests of the moved values on random one-dimensional projections and on the norm, Bonferroni-corrected;
-- faithfulness: equal states stay equal over 100 steps.
+**`telescopic.testing.check_coupling(kernel, target, x, y, n, rng)`** checks a kernel's coupling as the engine uses it. From `n` copies of `(x, y)`, it compares each chain of one `coupled_step` with one `step` from the same state, and inspects the pairs:
+- marginals: Fisher's exact test of the frequency of staying put, and two-sample KS tests of the moved values on 5 random one-dimensional projections and on the distance moved, Bonferroni-corrected;
+- meetings: the fraction of pairs that met, which must be positive;
+- caches: the chains whose returned log-density or gradient differs from a fresh evaluation by more than $10^{-9}$ of its size (the engine reuses them);
+- near misses: pairs apart by at most 64 units in the last place in every coordinate without being equal, the mark of a coupling that recomputes $Y$ where it should copy $X$'s proposal (R-KER-3).
 
-It also counts near misses, pairs whose positions differ by less than $10^{-9}$ of their size without being equal, the mark of a coupling that recomputes $Y$ where it should copy $X$'s proposal (R-KER-3). It returns a report with p-values (DECISIONS #25). Custom kernels should pass it before use. `telescopic.testing` also provides `fixed_draws` (prescribed random numbers, for draw-for-draw tests) and `random_draws` (fresh random numbers for any number of rows).
+It returns a report with the p-values and counts, and `passed(alpha=1e-3)` (DECISIONS #28). Faithfulness is not checked: the engine moves the chains of a pair that met with `step` alone. Custom kernels should pass it before use. `telescopic.testing` also provides `fixed_draws` (prescribed random numbers, for draw-for-draw tests) and `random_draws` (fresh random numbers for any number of rows).
 
 ---
 

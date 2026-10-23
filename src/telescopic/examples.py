@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import functools
+import math
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -26,10 +27,12 @@ class Example:
         The log-density, up to a constant, and its gradient, for a point of shape
         ``(d,)`` or a batch of shape ``(n, d)``; pass ``vectorize=True`` with batches.
     initial : object with ``rvs(random_state=...)``
-        A default initial distribution, at least as wide as the target.
-    ndim : int
+        A default initial distribution, with at least the target's variance in each
+        coordinate.
     mean, cov : ndarray, shapes (d,) and (d, d)
         The exact mean and covariance.
+    ndim : int
+        The dimension ``d``.
     conditional : callable, optional
         For :class:`~telescopic.kernels.Gibbs`, ``conditional(x, b)``: the full
         conditional of block ``b`` given the other coordinates of ``x``.
@@ -41,11 +44,15 @@ class Example:
     log_prob: Callable[[FloatArray], Any]
     grad: Callable[[FloatArray], FloatArray]
     initial: Distribution
-    ndim: int
     mean: FloatArray
     cov: FloatArray
     conditional: Callable[[FloatArray, int], Any] | None = None
     blocks: list[npt.NDArray[np.int64]] | None = None
+
+    @property
+    def ndim(self) -> int:
+        """The dimension ``d``."""
+        return len(self.mean)
 
 
 def gaussian(d: int = 10, rho: float = 0.9) -> Example:
@@ -76,7 +83,6 @@ def gaussian(d: int = 10, rho: float = 0.9) -> Example:
         functools.partial(_gaussian_log_prob, precision=precision),
         functools.partial(_gaussian_grad, precision=precision),
         Normal(np.zeros(d), 4 * np.eye(d)),
-        d,
         np.zeros(d),
         cov,
     )
@@ -96,7 +102,7 @@ def banana() -> Example:
     """
     cov = np.array([[0.5, 1.0], [1.0, 2.55]])
     initial = Uniform([-5.0, -5.0], [5.0, 5.0])
-    return Example("banana", _banana_log_prob, _banana_grad, initial, 2, np.array([1.0, 1.5]), cov)
+    return Example("banana", _banana_log_prob, _banana_grad, initial, np.array([1.0, 1.5]), cov)
 
 
 def mixture() -> Example:
@@ -111,7 +117,7 @@ def mixture() -> Example:
     """
     initial = Normal([10.0], [[100.0]])
     return Example(
-        "mixture", _mixture_log_prob, _mixture_grad, initial, 1, np.zeros(1), np.array([[17.0]])
+        "mixture", _mixture_log_prob, _mixture_grad, initial, np.zeros(1), np.array([[17.0]])
     )
 
 
@@ -120,7 +126,7 @@ def funnel(d: int = 10) -> Example:
 
     The point is :math:`(v, x_1, \dots, x_{d-1})`. The mean is 0, and the coordinates
     are uncorrelated with variances 9 and :math:`E[e^v] = e^{9/2}`. Its default initial
-    distribution is :math:`\mathcal N(0, I)`.
+    distribution is :math:`\mathcal N(0, \Sigma)`, with that covariance.
 
     Parameters
     ----------
@@ -134,8 +140,8 @@ def funnel(d: int = 10) -> Example:
     if d < 2:
         raise ValueError(f"d must be at least 2, not {d}")
     cov = np.diag([9.0] + [np.exp(4.5)] * (d - 1))
-    initial = Normal(np.zeros(d), np.eye(d))
-    return Example("funnel", _funnel_log_prob, _funnel_grad, initial, d, np.zeros(d), cov)
+    initial = Normal(np.zeros(d), cov)
+    return Example("funnel", _funnel_log_prob, _funnel_grad, initial, np.zeros(d), cov)
 
 
 # The pump-failure data of George, Makov & Smith (1993): failures and thousands of hours.
@@ -156,7 +162,7 @@ def pumps() -> Example:
     :math:`\beta` from :math:`\mathrm{Gamma}(0.01 + 18.02, \text{rate } 1 + \sum\lambda_i)`,
     one coordinate per block. The exact moments come from quadrature over :math:`\beta`,
     whose posterior is one-dimensional once the :math:`\lambda_i` are integrated out. Its
-    default initial distribution is uniform on :math:`(0, 2]^{11}`.
+    default initial distribution is :math:`U(0.001, 5)^{11}`.
 
     Returns
     -------
@@ -167,8 +173,7 @@ def pumps() -> Example:
         "pumps",
         _pump_log_prob,
         _pump_grad,
-        Uniform(np.full(11, 1e-3), np.full(11, 2.0)),
-        11,
+        Uniform(np.full(11, 1e-3), np.full(11, 5.0)),
         mean,
         cov,
         _pump_conditional,
@@ -176,12 +181,13 @@ def pumps() -> Example:
     )
 
 
+# Two-operand einsums, unlike matrix products, give a row the same bits in any batch.
 def _gaussian_log_prob(x: FloatArray, precision: FloatArray) -> Any:
-    return -0.5 * np.einsum("...i,ij,...j->...", x, precision, x)
+    return -0.5 * np.einsum("...j,...j->...", np.einsum("...i,ij->...j", x, precision), x)
 
 
 def _gaussian_grad(x: FloatArray, precision: FloatArray) -> FloatArray:
-    grad: FloatArray = -(x @ precision)
+    grad: FloatArray = -np.einsum("...i,ij->...j", x, precision)
     return grad
 
 
@@ -237,10 +243,15 @@ def _pump_grad(x: FloatArray) -> FloatArray:
     return np.concatenate([dlam, dbeta[..., None]], axis=-1)
 
 
+# Python numbers: Gibbs kernels call the conditionals one row and block at a time, where
+# NumPy's scalar arithmetic is several times slower.
+_FAILURES, _TIMES = PUMP_FAILURES.tolist(), PUMP_TIMES.tolist()
+
+
 def _pump_conditional(x: FloatArray, block: int) -> _Gamma:
     if block < 10:
-        return _Gamma(ALPHA + PUMP_FAILURES[block], x[10] + PUMP_TIMES[block])
-    return _Gamma(GAMMA + 10 * ALPHA, DELTA + float(np.sum(x[:10])))
+        return _Gamma(ALPHA + _FAILURES[block], float(x[10]) + _TIMES[block])
+    return _Gamma(GAMMA + 10 * ALPHA, DELTA + math.fsum(x[:10]))
 
 
 class _Gamma:
@@ -255,8 +266,8 @@ class _Gamma:
     def logpdf(self, value: float) -> float:
         a, b = self.shape, self.rate
         if value <= 0:
-            return -np.inf
-        return float(a * np.log(b) - special.gammaln(a) + (a - 1) * np.log(value) - b * value)
+            return -math.inf
+        return a * math.log(b) - math.lgamma(a) + (a - 1) * math.log(value) - b * value
 
     def ppf(self, u: float) -> float:
         return float(special.gammaincinv(self.shape, u) / self.rate)

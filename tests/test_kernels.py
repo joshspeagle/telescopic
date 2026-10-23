@@ -15,7 +15,7 @@ from telescopic.kernels import (
     State,
 )
 from telescopic.target import Target
-from telescopic.testing import fixed_draws, random_draws
+from telescopic.testing import check_coupling, fixed_draws, random_draws
 from telescopic.tuning import PilotRun
 
 # The fields of a PilotRun after its samples.
@@ -194,22 +194,15 @@ def test_each_chain_of_a_coupled_step_has_the_exact_one_step_law(name, gap):
         assert stats.kstest(new[~stayed], cdf).pvalue > P_MIN
 
 
-@pytest.mark.parametrize(
-    "name", ["reflection", "independence", "mixture", "mala", "hmc", "gibbs", "gibbs-crn"]
-)
-def test_coupled_marginals_match_single_steps_in_three_dimensions(name):
+@pytest.mark.parametrize("name", NAMES)
+def test_couplings_keep_the_one_step_laws_and_fresh_caches_in_three_dimensions(name):
     kernel = kernels(dense(3))[name]
-    n = 20_000
-    rng = np.random.default_rng(5)
-    x0, y0 = rng.standard_normal(3), rng.standard_normal(3)
-    starts = [state(np.tile(p, (n, 1)), kernel.needs_grad) for p in (x0, y0)]
-    new_x, new_y = kernel.coupled_step(TARGET, *starts, random_draws(n, 6))
-    directions = rng.standard_normal((3, 3))
-    for start, coupled, seed in ((starts[0], new_x, 7), (starts[1], new_y, 8)):
-        single, _ = kernel.step(TARGET, start, random_draws(n, seed))
-        for direction in directions:
-            p = stats.ks_2samp(coupled.x @ direction, single.x @ direction).pvalue
-            assert p > P_MIN / 3
+    x0, y0 = np.random.default_rng(5).standard_normal((2, 3))
+    report = check_coupling(kernel, TARGET, x0, y0, n=20_000, rng=6)
+    # Not report.passed(): common random numbers alone never make Gibbs chains meet.
+    assert min(*report.stay, *report.moves) > P_MIN, report
+    assert report.stale == 0, report
+    assert report.near_misses == 0, report
 
 
 # Faithfulness and batch invariance.

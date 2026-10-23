@@ -3,16 +3,7 @@ import pytest
 
 from references import P_MIN
 from telescopic import examples
-from telescopic.kernels import (
-    HMC,
-    MALA,
-    Gibbs,
-    Independence,
-    Mixture,
-    MultivariateT,
-    RandomWalk,
-    State,
-)
+from telescopic.kernels import Gibbs, RandomWalk, State
 from telescopic.target import Target
 from telescopic.testing import check_coupling
 
@@ -22,23 +13,8 @@ COV = GAUSSIAN.cov
 PUMPS = examples.pumps()
 
 
-@pytest.mark.parametrize(
-    "kernel",
-    [
-        RandomWalk(COV),
-        MALA(0.8, cov=COV),
-        HMC(0.3, 4, cov=COV, meeting_weight=0.3, meeting_scale=0.5),
-        Independence(MultivariateT(np.zeros(2), 1.5 * COV, df=None)),
-        Mixture([RandomWalk(COV, scale=0.5), MALA(0.8, cov=COV)], [0.5, 0.5]),
-    ],
-    ids=["rwmh", "mala", "hmc", "independence", "mixture"],
-)
-def test_check_coupling_passes_the_built_in_kernels(kernel):
-    report = check_coupling(kernel, TARGET, [0.1, 0.2], [0.3, -0.1], n=2_000, rng=1)
-    assert report.passed(P_MIN), report
-
-
-def test_check_coupling_passes_gibbs_samplers():
+# test_kernels runs check_coupling on every built-in coupling, in three dimensions.
+def test_check_coupling_passes_the_gibbs_sampler_of_the_pump_model():
     target = Target(PUMPS.log_prob, vectorize=True)
     kernel = Gibbs(PUMPS.conditional, PUMPS.blocks, eta=0.8)
     report = check_coupling(kernel, target, PUMPS.mean, 1.1 * PUMPS.mean, n=500, rng=2)
@@ -53,16 +29,25 @@ class WrongY(RandomWalk):
 
 
 class Recomputing(RandomWalk):
-    # Where the proposals meet, Y gets X's proposal recomputed, off in the last bits.
+    # Where the proposals meet, Y gets X's proposal recomputed, off in the last bits, in
+    # every other row; the rest meet.
     def coupled_step(self, target, state_x, state_y, draws):
         new_x, new_y = super().coupled_step(target, state_x, state_y, draws)
-        met = np.all(new_x.x == new_y.x, axis=1)
-        y = np.where(met[:, None], new_x.x * (1 + 4e-16), new_y.x)
+        recomputed = np.all(new_x.x == new_y.x, axis=1)
+        recomputed[::2] = False
+        y = np.where(recomputed[:, None], new_x.x * (1 + 4e-16), new_y.x)
         return new_x, State(y, target.log_prob(y))
 
 
+class Stale(RandomWalk):
+    # Y carries X's log-density.
+    def coupled_step(self, target, state_x, state_y, draws):
+        new_x, new_y = super().coupled_step(target, state_x, state_y, draws)
+        return new_x, State(new_y.x, new_x.log_prob)
+
+
 class Independent(RandomWalk):
-    # Each chain steps alone: the marginals are right, but equal states split.
+    # Each chain steps alone: the marginals are right, but the chains never meet.
     def coupled_step(self, target, state_x, state_y, draws):
         return self.step(target, state_x, draws)[0], self.step(target, state_y, draws)[0]
 
@@ -71,20 +56,28 @@ def test_check_coupling_flags_a_wrong_marginal():
     report = check_coupling(
         WrongY(COV, scale=1.0), TARGET, [0.1, 0.2], [0.3, -0.1], n=2_000, rng=3
     )
-    assert report.moves[1] < P_MIN
-    assert report.moves[0] > P_MIN
+    assert report.stay[1] < P_MIN < report.stay[0]
+    assert report.moves[1] < P_MIN < report.moves[0]
 
 
 def test_check_coupling_flags_a_coupling_that_recomputes_y_where_the_chains_meet():
     report = check_coupling(Recomputing(COV), TARGET, [0.1, 0.2], [0.2, 0.1], n=2_000, rng=4)
     assert report.near_misses > 0
+    assert report.met > 0
     assert not report.passed()
 
 
-def test_check_coupling_flags_a_coupling_that_splits_equal_states():
-    report = check_coupling(Independent(COV), TARGET, [0.1, 0.2], [0.3, -0.1], n=2_000, rng=5)
-    assert not report.faithful
+def test_check_coupling_flags_a_stale_log_density():
+    report = check_coupling(Stale(COV), TARGET, [0.1, 0.2], [0.3, -0.1], n=2_000, rng=5)
+    assert report.stale > 0
+    assert not report.passed()
+
+
+def test_check_coupling_flags_a_coupling_that_never_meets():
+    report = check_coupling(Independent(COV), TARGET, [0.1, 0.2], [0.3, -0.1], n=2_000, rng=6)
+    assert report.met == 0
     assert min(*report.stay, *report.moves) > P_MIN
+    assert not report.passed()
 
 
 @pytest.mark.parametrize(

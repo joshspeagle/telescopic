@@ -230,12 +230,13 @@ Kernel-specific tests:
   - no pickle is used (`allow_pickle=False`).
 - **Plotting:** every plot function runs under the Agg backend and returns its axes. It is skipped without matplotlib.
 - **Examples:**
-  - exact moments match long reference runs or quadrature (banana, funnel, mixture);
+  - exact moments match independent draws from each target's generative description, and closed forms or quadrature where they exist (banana, funnel);
+  - log-densities match SciPy's densities of the generative descriptions up to a constant;
   - gradients match finite differences;
   - initial distributions have the documented shape.
 - **`check_coupling`:**
-  - passes the built-in kernels;
-  - flags a deliberately broken coupling (wrong $Y$ marginal, or one that recomputes $Y$ on the meeting branch) and a non-faithful one.
+  - passes the built-in kernels, and in three dimensions checks every built-in coupling;
+  - flags a wrong $Y$ marginal, a coupling that recomputes $Y$ on the meeting branch, a stale cached log-density, and a coupling that never meets.
 
 ### 2.12 Slow statistical tier (`-m slow`)
 
