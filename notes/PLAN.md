@@ -1,7 +1,7 @@
 # Plan
 
-**Current position:** Phase 4, milestones M0 to M5 implemented. M0 to M3 are reviewed; the
-M3 efficiency findings are being applied. M4 and M5 form the next review unit.
+**Current position:** Phase 4, milestones M0 to M5 implemented and M0 to M3 reviewed. M4
+and M5 form the next review unit.
 
 ## Phases
 
@@ -23,7 +23,7 @@ M3 efficiency findings are being applied. M4 and M5 form the next review unit.
 | M0 | Scaffold, `_random` | yes | done, fixed | done, fixed (M0 to M4) | `notes/reviews/m0.md`, `code-review-m0-m4.md` |
 | M1 | Coupling primitives | yes | done, fixed (with M2) | done, fixed (M0 to M4) | `notes/reviews/m1-m2.md` |
 | M2 | Target, initial, kernels | yes | done, fixed (with M1) | done, fixed (M0 to M4) | `notes/reviews/m1-m2.md` |
-| M3 | Estimators, measure, engine | yes | done; efficiency fixes in progress | done, fixed (M0 to M4) | `notes/reviews/m3.md` |
+| M3 | Estimators, measure, engine | yes | done, fixed | done, fixed (M0 to M4) | `notes/reviews/m3.md` |
 | M4 | Results, diagnostics, warnings, summary | yes | pending (with M5) | done, fixed (M0 to M4) | `notes/reviews/code-review-m0-m4.md` |
 | M5 | Tuning, sampler, `sample` | yes | pending (with M4) | pending | |
 | M6 | MALA, HMC, Gibbs | no | | | |

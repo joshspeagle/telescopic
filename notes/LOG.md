@@ -72,3 +72,8 @@ Append only. One entry per working session or milestone.
   Frobenius error had median 0.14 and maximum 0.25, against a bound of 0.20; the
   whitened condition number had median 1.48 and maximum 1.75, and the test bounds it by
   4. Pools and progress (spec §8.1) come with M7.
+- M3 efficiency review applied (`notes/reviews/m3.md`, Efficiency): outputs bitwise
+  identical on 54 configurations; one lane 156 to 101 µs per pair-step in the main run;
+  memory per stored row at one lane 519 to 103 bytes (92 of payload). Spec §10 now
+  records the standing: 256 lanes met (1.2 to 1.5 µs), one lane missed (93 µs of
+  overhead against 40).

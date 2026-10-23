@@ -475,7 +475,8 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 
 ### 6.6 Memory (R-EXEC-7)
 
-- **Atoms:** storage needs about $R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})\,(8d + 16)$ bytes for positions, weights and replicate indices, plus 24 bytes per stored distance.
+- **Atoms:** storage needs about $R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})\,(8d + 16)$ bytes for positions, weights and replicate indices, plus 24 bytes per stored distance. The engine stores each iteration's rows as small arrays and merges every 256 of them into one block, so at $d = 10$ a row holds 94 to 103 bytes against 92 of payload at 1 to 256 lanes (M3 review).
+- **Join:** at the end of a run, sorting the atoms by replicate holds about three times their size for a moment (3.1 times at $d = 10$).
 - **Estimate first:** the sampler estimates this before the main run and warns above 1 GB, suggesting `thin`.
 - **Streaming:** a streaming mode with a fixed `h` and constant memory is on the roadmap.
 
@@ -642,8 +643,8 @@ These targets are measured by `benchmarks/` and are not gating.
 
 | Operation | Target |
 |---|---|
-| Lockstep coupled RWMH, vectorised Gaussian target, $d = 10$, 256 lanes | ≤ 2 µs per pair-step (research note measurement: 0.37 µs at 1000 lanes without per-replicate streams) |
-| Same, point-by-point log-density, 1 lane | ≤ 40 µs per pair-step of overhead beyond the log-density |
+| Lockstep coupled RWMH, vectorised Gaussian target, $d = 10$, 256 lanes, main-run settings ($k = L = 141$, $m = 1410$) | ≤ 2 µs per pair-step (research note measurement: 0.37 µs at 1000 lanes without per-replicate streams). Met at M3: 1.2 to 1.5 µs. Meeting-time pilots ($L = 1$, $m = 0$) take 4.2 µs: each replicate's set-up, about 80 µs, adds 1.8 µs per pair-step at a mean $\tau$ of 46 (M3 review) |
+| Same, point-by-point log-density, 1 lane | ≤ 40 µs per pair-step of overhead beyond the log-density. Missed at M3: 93 µs in the main run and 150 µs in the pilot. A coupled RWMH step on one row takes 112 µs, of which its two log-density calls through `Target` take 15 µs; the target needs a scalar path for one lane, which v0.1 does not have |
 | Per-replicate random streams in lockstep | ≤ 0.5 µs per lane-step for the draws of a coupled RWMH step at 256 lanes, $d = 10$ (one shared generator: 0.15 µs), and ≤ 50 µs per replicate to set up its streams |
 | Process pool, log-density ≥ 1 ms | ≥ 3.5× speed-up on 4 workers |
 | Automatic pipeline overhead (both pilots) | ≤ 15% of the main run at the default $R = 100$ for $d \ge 10$. At $d = 2$ the fixed tuning pilot makes it about 30% (design review D-R13); it falls as $1/R$ |
