@@ -847,7 +847,7 @@ were revised.
 | D-R4 | Fixed by R-KER-6 and D-20 (`einsum` with precomputed inverse factors), a batch-of-one test per kernel, and the scope of R-EXEC-2. |
 | D-R5 | Fixed in R-TUNE-2 and §3.6: inverted-CDF quantile, $\beta \le 1 - 1/R_0$, the measured TV bound at $k$ reported by the main run, the pilot-size trade-off, E01 described as it ran. |
 | D-R6 | Fixed in §7.4 and D-16: warning 2 at 0.25, warning 3 for $R \ge 100$, warning 4 on $\tau - L + 1$ with $k_h = \max(10, R/10)$ for $R \ge 500$; false-alarm rates measured in M9. |
-| D-R7 | Fixed in §6.3 and D-23: a fixed pilot cap of $10^5$ (a cap from running quantiles would depend on completion order), censored pairs sorted last, an error when $\hat q_\beta$ is censored, and a slow-pair threshold of $10\max(L, m)$ that needs no pilot. |
+| D-R7 | Fixed in §6.3 and D-23: a fixed pilot cap of $10^5$ (a cap from running quantiles would depend on completion order), censored pairs sorted last, an error when $\hat q_\beta$ is censored, and a slow-pair threshold of $\max(10^4, 10\max(L, m))$ that needs no pilot. |
 | D-R8 | Fixed in test plan 2.4: one-sample tests in $d = 1$, two-sample tests against `step` for $d > 1$. The M2 tests already did this. |
 | D-R9 | Fixed in test plan 2.12 and §7.4: rates recorded, not asserted; the docs say the failure is undetectable at moderate $R$. |
 | D-R10 | Fixed in R-TUNE-4 and §7.3: the measured inefficiency is reported. |
