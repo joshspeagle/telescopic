@@ -138,7 +138,7 @@ def test_names_must_match_the_dimension():
 
 def test_merging_two_runs_equals_one_run_over_both_sets_of_replicates():
     def part(indices, seed=4):
-        return Result(gaussian_run(indices, **SETTINGS), seed=root_seed(seed), **SETTINGS)
+        return Result(gaussian_run(indices, seed, **SETTINGS), seed=root_seed(seed), **SETTINGS)
 
     merged, whole = part(range(5)).merge(part(range(5, 12))), part(range(12))
     np.testing.assert_array_equal(merged.meeting_times, whole.meeting_times)
@@ -150,6 +150,14 @@ def test_merging_two_runs_equals_one_run_over_both_sets_of_replicates():
         )
     with pytest.raises(ValueError, match="different seeds"):
         part(range(3)).merge(part(range(3, 5), seed=5))
+
+
+def test_results_from_equal_array_seeds_merge():
+    def part(indices):
+        seed = np.random.SeedSequence(np.array([1, 2, 3, 4]))
+        return Result(gaussian_run(indices, seed, **SETTINGS), seed=seed, **SETTINGS)
+
+    assert part(range(3)).merge(part(range(3, 5))).n_replicates == 5
 
 
 @pytest.mark.parametrize(

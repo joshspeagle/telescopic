@@ -18,7 +18,7 @@ TARGET_ACCEPTANCE = 0.234
 N_CHAINS = 4
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class TuningReport:
     r"""What a tuning pilot found (spec R-TUNE-1, section 5.3).
 
@@ -46,7 +46,7 @@ class TuningReport:
     max_weight_ratio: float | None = None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class PilotRun:
     """The second halves of adaptive Metropolis pilot chains, from :func:`adaptive_metropolis`.
 
@@ -136,14 +136,14 @@ def adaptive_metropolis(
     -----
     Cost: ``4 n_steps`` log-density evaluations and ``n_steps`` Cholesky factorisations.
     """
+    if n_steps is not None and n_steps < 3:
+        # The second half of each chain needs two states for R-hat.
+        raise ValueError(f"n_steps must be at least 3, not {n_steps}")
     root = root_seed(rng)
     generators = [replicate_generator(root, TUNING, i) for i in range(N_CHAINS)]
     points = np.array([[draw(initial, generator) for _ in range(25)] for generator in generators])
     x, d = points[:, 0].copy(), points.shape[2]
     n_steps = max(2000, 200 * d) if n_steps is None else n_steps
-    if n_steps < 3:
-        # The second half of each chain needs two states for R-hat.
-        raise ValueError(f"n_steps must be at least 3, not {n_steps}")
     streams = Streams(N_CHAINS)
     for chain, generator in enumerate(generators):
         streams.assign(chain, generator)
@@ -176,6 +176,11 @@ def adaptive_metropolis(
             samples[:, step - first_kept] = x
             kept_log_p[:, step - first_kept] = log_p
             accepted += accept
+    if not accepted.all():
+        raise ValueError(
+            f"tuning chain {int(np.argmin(accepted))} accepted no proposal in its second "
+            "half: start inside the support of the target, or give the kernel's parameters"
+        )
     return PilotRun(samples, kept_log_p, accepted / samples.shape[1], n_steps)
 
 
@@ -200,6 +205,8 @@ def choose_k(meeting_times: npt.ArrayLike, quantile: float = 0.99) -> int:
     int
     """
     tau = np.asarray(meeting_times, dtype=np.float64)
+    if tau.ndim != 1 or len(tau) == 0:
+        raise ValueError("meeting_times must be a non-empty one-dimensional array")
     largest = 1 - 1 / len(tau)
     if not 0 < quantile <= largest:
         raise ValueError(

@@ -84,8 +84,13 @@ class CoupledSampler:
         self.target = Target(log_prob, grad, args=args, kwargs=kwargs, vectorize=vectorize)
         self.initial = as_initial(init)
         self.kernel = _kernel(kernel)
-        self.names = None if names is None else list(names)
         self.seed = root_seed(rng)
+        # One draw from a throwaway generator gives the dimension, so that names are
+        # checked now rather than after the runs.
+        self.ndim = len(draw(self.initial, replicate_generator(self.seed, MAIN, 0)))
+        self.names = None if names is None else list(names)
+        if self.names is not None and len(self.names) != self.ndim:
+            raise ValueError(f"names must have {self.ndim} entries, not {len(self.names)}")
         self.tuning: TuningReport | None = None
         self.pilot: FloatArray | None = None
         self.settings: dict[str, Any] | None = None
@@ -127,6 +132,8 @@ class CoupledSampler:
         ndarray, shape (n,)
             Meeting times, ``inf`` for a censored pair.
         """
+        if n < 1:
+            raise ValueError(f"n must be at least 1, not {n}")
         self.tune()
         start = 0 if self.pilot is None else len(self.pilot)
         settings = {"k": 0, "m": 0, "lag": 1, "thin": 1, "max_iter": max_iter}
@@ -155,7 +162,7 @@ class CoupledSampler:
         n_replicates : int
         k, m, lag : int or "auto"
             ``"auto"`` derives a value on the first call: the pilot's quantile for ``k``,
-            then ``lag = k`` and ``m = 10 k`` (spec R-TUNE-2, D-21). A value given
+            then ``lag = max(1, k)`` and ``m = 10 k`` (spec R-TUNE-2, D-21). A value given
             explicitly is kept. On later calls ``"auto"`` keeps the first call's value.
         thin : int, optional
             Average every ``thin``-th state from ``k`` (spec R-EST-5): 1 on the first
@@ -246,7 +253,7 @@ class CoupledSampler:
         settings: dict[str, Any] = {
             "k": int(k),
             "m": 10 * int(k) if m == "auto" else int(m),
-            "lag": int(k) if lag == "auto" else int(lag),
+            "lag": max(1, int(k)) if lag == "auto" else int(lag),
             "thin": 1 if thin is None else thin,
             "max_iter": max_iter,
         }
@@ -256,7 +263,7 @@ class CoupledSampler:
     def _check_memory(self, settings: dict[str, Any], n_replicates: int) -> None:
         # Spec R-EXEC-7: estimate the atoms to store before running, and warn above 1 GB.
         # The pilot's meeting times stand in for those of the run.
-        d = self.kernel.ndim or len(draw(self.initial, replicate_generator(self.seed, MAIN, 0)))
+        d = self.ndim
         n_averaged = len(averaging_times(settings["k"], settings["m"], settings["thin"]))
         late = 0.0
         if self.pilot is not None and np.isfinite(self.pilot).any():
@@ -320,7 +327,7 @@ def _slow_pairs(lag: int, m: int) -> Callable[[engine.Status], bool]:
 
     def monitor(status: engine.Status) -> bool:
         nonlocal warned
-        if not warned and status.t > threshold:
+        if not warned and status.t >= threshold:
             warned = True
             warn(
                 f"replicate {status.slowest} has not met after {threshold} iterations; the "

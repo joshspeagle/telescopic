@@ -85,3 +85,7 @@ Append only. One entry per working session or milestone.
   now warn about censoring and the other §7.4 conditions; `thin` and `max_iter` default
   to the first run's values (DECISIONS #8); `summary()` on 1.27 million atoms takes
   0.44 s instead of 1.59 s.
+- M5 `/code-review` at high effort (`notes/reviews/m4-m5.md`): ten findings, all fixed,
+  among them a slow pair that warned nowhere (an off-by-one between the live monitor
+  and `issues`), `names` checked only after the whole run, and pilot chains that never
+  moved silencing the disagreement warning. 226 fast tests in 16 s.

@@ -34,6 +34,29 @@ def test_the_tuning_chains_agree_and_find_the_covariance_in_ten_dimensions():
     assert np.linalg.eigvalsh(pilot.cov).min() > 0.4
 
 
+def test_n_steps_is_checked_before_drawing_from_the_initial_distribution():
+    calls = []
+
+    def initial(rng):
+        calls.append(rng)
+        return rng.normal(size=5)
+
+    with pytest.raises(ValueError, match="n_steps must be at least 3"):
+        adaptive_metropolis(TARGET, initial, n_steps=2)
+    assert calls == []
+
+
+def test_chains_that_never_move_raise():
+    nowhere = Target(lambda x: np.full(len(x), -np.inf), vectorize=True)
+    with pytest.raises(ValueError, match="accepted no proposal"):
+        adaptive_metropolis(nowhere, START, 1, n_steps=10)
+
+
+def test_reports_of_different_pilots_compare_without_error():
+    first, second = (adaptive_metropolis(TARGET, START, seed, n_steps=10) for seed in (5, 6))
+    assert first.report() != second.report()
+
+
 def test_tuning_freezes_kernels_with_the_pilots_mean_and_covariance():
     pilot = adaptive_metropolis(TARGET, START, 2, n_steps=500)
     walk, _ = RandomWalk().tune(TARGET, START, pilot=pilot)
@@ -61,6 +84,11 @@ def test_choose_k_takes_the_inverted_cdf_quantile_of_tau_minus_one(lowest):
     # Of 100 pilot pairs, the 99% quantile is the 99th smallest meeting time, 30.
     assert choose_k(np.concatenate([np.full(98, lowest), [30, 50]])) == 29
     assert choose_k(np.full(100, lowest), quantile=0.5) == max(1, lowest - 1)
+
+
+def test_choose_k_refuses_no_meeting_times():
+    with pytest.raises(ValueError, match="non-empty"):
+        choose_k([])
 
 
 def test_choose_k_refuses_a_quantile_beyond_the_pilot():

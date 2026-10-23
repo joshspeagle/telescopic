@@ -1,7 +1,7 @@
 # Plan
 
-**Current position:** Phase 4, milestones M0 to M5 implemented; M4 and M5 have had
-`/simplify`, and M5's `/code-review` is next.
+**Current position:** Phase 4, milestones M0 to M5 implemented and reviewed; M6 is
+next.
 
 ## Phases
 
@@ -25,7 +25,7 @@
 | M2 | Target, initial, kernels | yes | done, fixed (with M1) | done, fixed (M0 to M4) | `notes/reviews/m1-m2.md` |
 | M3 | Estimators, measure, engine | yes | done, fixed | done, fixed (M0 to M4) | `notes/reviews/m3.md` |
 | M4 | Results, diagnostics, warnings, summary | yes | done, fixed (with M5) | done, fixed (M0 to M4) | `notes/reviews/m4-m5.md`, `code-review-m0-m4.md` |
-| M5 | Tuning, sampler, `sample` | yes | done, fixed (with M4) | pending | `notes/reviews/m4-m5.md` |
+| M5 | Tuning, sampler, `sample` | yes | done, fixed (with M4) | done, fixed | `notes/reviews/m4-m5.md` |
 | M6 | MALA, HMC, Gibbs | no | | | |
 | M7 | Parallel execution, interrupts, budgets | no | | | |
 | M8 | IO, plotting, examples, `check_coupling` | no | | | |

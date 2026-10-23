@@ -520,4 +520,7 @@ class Summary:
 
 
 def _seed_key(seed: SeedSequence | None) -> tuple[Any, ...] | None:
-    return None if seed is None else (seed.entropy, seed.spawn_key)
+    # Entropy may be an int, a sequence or an array; lists compare by value.
+    if seed is None:
+        return None
+    return np.atleast_1d(seed.entropy).tolist(), seed.spawn_key, seed.pool_size

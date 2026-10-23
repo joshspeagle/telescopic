@@ -82,17 +82,36 @@ def test_a_seed_reproduces_a_run_and_a_generator_moves_on():
     assert not np.array_equal(third.measure.atoms, fourth.measure.atoms)
 
 
+def test_an_explicit_k_of_zero_gets_a_lag_of_one():
+    sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=4)
+    settings = sampler._configure(0, "auto", "auto", None, None)
+    assert (settings["k"], settings["lag"], settings["m"]) == (0, 1, 0)
+
+
+@pytest.mark.parametrize(
+    ("call", "message"),
+    [
+        (lambda: CoupledSampler(log_prob, INIT, names=["a"]), "names must have 2 entries"),
+        (lambda: CoupledSampler(log_prob, INIT, kernel=KERNEL).meeting_times(0), "n must be"),
+    ],
+)
+def test_invalid_arguments_raise_before_any_run(call, message):
+    with pytest.raises(ValueError, match=message):
+        call()
+
+
 def test_unknown_kernel_names_are_listed():
     with pytest.raises(ValueError, match="'auto', 'rwmh', 'independence'"):
         CoupledSampler(log_prob, INIT, kernel="nuts")
 
 
-def test_a_slow_pair_warns_once():
+def test_a_slow_pair_warns_once_when_unmet_at_the_threshold():
+    # A pair still unmet at t = 10^4 meets after it, as diagnostics.issues counts slow.
     monitor = _slow_pairs(lag=1, m=10)
-    assert not monitor(Status(1, 0, 3, 10_000))
+    assert not monitor(Status(1, 0, 3, 9_999))
     with pytest.warns(ConvergenceWarning, match="replicate 3 has not met after 10000"):
-        monitor(Status(1, 0, 3, 10_001))
-    monitor(Status(1, 0, 3, 10_002))  # a second warning would fail under -W error
+        monitor(Status(1, 0, 3, 10_000))
+    monitor(Status(1, 0, 3, 10_001))  # a second warning would fail under -W error
 
 
 def test_tuning_chains_in_separate_modes_warn():

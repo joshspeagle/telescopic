@@ -209,7 +209,7 @@ Let $a_r = \hat\pi_r(h) \in \mathbb R^p$ for replicates $r = 1, \dots, R$. Write
 
   - **Level:** $\beta$ is 0.99 by default. Larger values give a more conservative mode and smaller values a cheaper one with more replicates per unit of compute. $\beta \le 1 - 1/R_0$ is required, so that $\hat q_\beta$ is not the sample maximum; 0.999 therefore needs $R_0 \ge 1000$.
   - **Pilot size:** with $R_0 = 100$, $k$ varies by about ±20% between pilots (5% to 95% range 117 to 168 at $d = 10$; design review D-R5). This changes the cost and the variance, never the bias.
-  - **Partial `"auto"` (D-21):** a value given explicitly is kept. A missing `lag` or `m` is derived from `k` ($L = k$, $m = 10k$) without a pilot, and the pilot runs only when `k` is `"auto"`.
+  - **Partial `"auto"` (D-21):** a value given explicitly is kept. A missing `lag` or `m` is derived from `k` ($L = \max(1, k)$, $m = 10k$) without a pilot, and the pilot runs only when `k` is `"auto"`.
   - **Evidence:** E01 (Appendix A) used a 2000-replicate pilot; the design review measured the 100-replicate pilot.
 - **R-TUNE-3:** pilots draw from their own random-stream namespaces (§6.1). Their replicates never enter estimates; they are reported.
 - **R-TUNE-4:** the result records every tuned value, the pilot meeting times, and the measured inefficiency: the mean cost per replicate divided by $m - k + 1$. (JOA20 §3.1 approximates it by $1 + (k + \mathbb E[\tau - L])/(m - k)$; with $\bar\tau$ in place of $\mathbb E[\tau - L]$ the approximation is too high by $L/(m-k)$ when $L > 1$.)
