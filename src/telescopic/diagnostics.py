@@ -220,7 +220,9 @@ def issues(result: Result) -> list[Issue]:
     if disagreement:
         found.append(Issue("tuning", disagreement))
     threshold = slow_pair_threshold(result.lag, result.m)
-    if values["meeting_time_max"] > threshold:
+    # A censored pair was still unmet at max_iter.
+    slowest = max(values["meeting_time_max"], result.max_iter if result.n_censored else 0)
+    if slowest > threshold:
         found.append(
             Issue(
                 "slow",

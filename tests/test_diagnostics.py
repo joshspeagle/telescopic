@@ -94,6 +94,11 @@ def test_each_warning_fires_on_a_result_built_to_trigger_it(
     assert any(message in issue.message for issue in found), found
 
 
+def test_a_pair_censored_after_the_slow_threshold_is_slow():
+    found = issues(synthetic([2] * 9 + [-1], np.zeros(9), max_iter=20_000))
+    assert {"censored", "slow"} <= {issue.kind for issue in found}
+
+
 def test_the_variance_warning_needs_one_replicate_to_hold_more_than_half_the_variance():
     # Shares of 0.5 and 0.58 in the variance of the mean or the second moment.
     assert issues(synthetic([2] * 100, [0.0] * 98 + [10.0, -10.0], k=5)) == []
