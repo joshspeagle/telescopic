@@ -204,7 +204,7 @@ def issues(result: Result) -> list[Issue]:
         moments = [result.measure.per_replicate(h) for h in (lambda x: x, np.square)]
         shares = variance_share(np.concatenate(moments, axis=1))
         worst = int(np.argmax(shares))
-        if shares[worst] > 0.25:
+        if shares[worst] > 0.5:
             name = result.names[worst % result.ndim]
             moment = "mean" if worst < result.ndim else "second moment"
             found.append(

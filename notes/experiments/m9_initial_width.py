@@ -9,9 +9,9 @@ expectation by rarer replicates whose chain Y is late. On the README's data, 20 
 spec's, Gaussians centred on the exact posterior mean with covariance c^2 times the exact
 one for c = 2, 10 and 100, and N(fit, 100 H^-1) from BFGS's fit and inverse-Hessian
 approximation started at 0. Each line gives the largest share of one replicate in the
-variance of the first two moments (the warning fires above 0.25), the estimated standard
-deviations over the exact ones (signed: a negative variance gives a negative ratio), k
-and the seconds per run.
+variance of the first two moments (the warning fired above 0.25, now above 0.5), the
+estimated standard deviations over the exact ones (signed: a negative variance gives a
+negative ratio), k and the seconds per run.
 
 Run: python notes/experiments/m9_initial_width.py
 """
@@ -65,7 +65,8 @@ for label, initial in initials.items():
     shares, ratios = np.array(shares), np.array(ratios)
     print(
         f"{label}: largest share median {np.median(shares):.2f}, 90% {np.quantile(shares, 0.9):.2f}, "
-        f"above 0.25 in {np.sum(shares > 0.25)} of 20; sd ratios from {ratios.min(axis=0).round(2)} "
+        f"above 0.25 in {np.sum(shares > 0.25)} and 0.5 in {np.sum(shares > 0.5)} of 20; "
+        f"sd ratios from {ratios.min(axis=0).round(2)} "
         f"to {ratios.max(axis=0).round(2)}; k median {np.median(ks):.0f}; "
         f"{(time.perf_counter() - start) / 20:.2f} s per run",
         flush=True,

@@ -94,6 +94,13 @@ def test_each_warning_fires_on_a_result_built_to_trigger_it(
     assert any(message in issue.message for issue in found), found
 
 
+def test_the_variance_warning_needs_one_replicate_to_hold_more_than_half_the_variance():
+    # Shares of 0.5 and 0.58 in the variance of the mean or the second moment.
+    assert issues(synthetic([2] * 100, [0.0] * 98 + [10.0, -10.0], k=5)) == []
+    found = issues(synthetic([2] * 100, [0.0] * 98 + [11.0, -10.0], k=5))
+    assert [issue.kind for issue in found] == ["variance"]
+
+
 def test_tuning_chains_disagree_when_their_means_spread_wider_than_the_chains():
     def result(rhat):
         report = TuningReport(np.zeros(2), np.eye(2), np.full(4, 0.23), rhat, 100)

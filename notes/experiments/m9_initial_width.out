@@ -1,7 +1,7 @@
 exact mean [-0.88907329  4.26330712], sd [0.01205854 0.06580682]; BFGS fit [-0.88907331  4.2633072 ], sd [0.01205854 0.06580682]
-N(0, 10 I): largest share median 0.78, 90% 0.95, above 0.25 in 11 of 20; sd ratios from [-1.79  0.86] to [4.23 1.16]; k median 1866; 7.13 s per run
-N(mean, 2^2 cov): largest share median 0.08, 90% 0.11, above 0.25 in 0 of 20; sd ratios from [0.98 0.98] to [1.01 1.02]; k median 24; 0.29 s per run
-N(mean, 10^2 cov): largest share median 0.08, 90% 0.11, above 0.25 in 0 of 20; sd ratios from [0.99 0.99] to [1.01 1.01]; k median 62; 0.44 s per run
-N(mean, 100^2 cov): largest share median 0.14, 90% 0.77, above 0.25 in 9 of 20; sd ratios from [0.94 0.53] to [1.24 1.12]; k median 496; 2.01 s per run
-N(fit, 100 H^-1): largest share median 0.08, 90% 0.11, above 0.25 in 0 of 20; sd ratios from [0.99 0.99] to [1.01 1.01]; k median 62; 0.43 s per run
+N(0, 10 I): largest share median 0.78, 90% 0.95, above 0.25 in 11 and 0.5 in 11 of 20; sd ratios from [-1.79  0.86] to [4.23 1.16]; k median 1866; 6.81 s per run
+N(mean, 2^2 cov): largest share median 0.08, 90% 0.11, above 0.25 in 0 and 0.5 in 0 of 20; sd ratios from [0.98 0.98] to [1.01 1.02]; k median 24; 0.32 s per run
+N(mean, 10^2 cov): largest share median 0.08, 90% 0.11, above 0.25 in 0 and 0.5 in 0 of 20; sd ratios from [0.99 0.99] to [1.01 1.01]; k median 62; 0.46 s per run
+N(mean, 100^2 cov): largest share median 0.14, 90% 0.77, above 0.25 in 9 and 0.5 in 6 of 20; sd ratios from [0.94 0.53] to [1.24 1.12]; k median 496; 1.89 s per run
+N(fit, 100 H^-1): largest share median 0.08, 90% 0.11, above 0.25 in 0 and 0.5 in 0 of 20; sd ratios from [0.99 0.99] to [1.01 1.01]; k median 62; 0.48 s per run
 exit 0

@@ -177,7 +177,7 @@ Kernel-specific tests:
 - **`check` warnings:** each fires on a synthetic result built to trigger it:
   - a censored replicate;
   - more than 25% bias corrections;
-  - one replicate holding more than 25% of the variance at $R \ge 100$;
+  - one replicate holding more than half the variance at $R \ge 100$, and not one holding exactly half;
   - a tail index below 2 at $R \ge 500$;
   - disagreeing pilots.
 

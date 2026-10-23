@@ -267,7 +267,7 @@ Rules:
 - A draw with the wrong shape or non-finite entries raises `ValueError`.
 - A draw with $\log\pi = -\infty$ emits an `InputWarning`; the chains leave it as §4.1 describes.
 
-The documentation recommends a $\pi_0$ that is overdispersed relative to $\pi$ and covers all its modes (JOA20 §2.3; AJ24), but not by orders of magnitude. A replicate whose chain $X$ is still far away at $k$ is averaged without correction, and only rarer replicates whose chain $Y$ is late balance it, so the estimates of second moments become heavy-tailed. On the README's line fit, Gaussians 2 and 10 times wider than the posterior never raised the variance warning in 20 runs; 100 times wider, 9 runs raised it, and from $\mathcal N(0, 10I)$, 70 posterior standard deviations away, 11 runs did, with standard deviations from 4.2 times the truth to a negative variance (`notes/experiments/m9_initial_width.out`). For a unimodal posterior, an optimiser's fit with its inverse Hessian scaled by 100 is a practical start (DECISIONS #35).
+The documentation recommends a $\pi_0$ that is overdispersed relative to $\pi$ and covers all its modes (JOA20 §2.3; AJ24), but not by orders of magnitude. A replicate whose chain $X$ is still far away at $k$ is averaged without correction, and only rarer replicates whose chain $Y$ is late balance it, so the estimates of second moments become heavy-tailed. On the README's line fit, Gaussians 2 and 10 times wider than the posterior never raised the variance warning in 20 runs; 100 times wider, 6 runs raised it, and from $\mathcal N(0, 10I)$, 70 posterior standard deviations away, 11 runs did, with standard deviations from 4.2 times the truth to a negative variance (`notes/experiments/m9_initial_width.out`). For a unimodal posterior, an optimiser's fit with its inverse Hessian scaled by 100 is a practical start (DECISIONS #35).
 
 ### 4.3 Parameter names
 
@@ -548,10 +548,15 @@ Classes: `TelescopicWarning`, with subclasses `ConvergenceWarning` and `InputWar
 `check()` warns on these conditions, and so does each `run` (§8.1). They are heuristics; the thresholds are set so that clean Gaussian runs at the defaults rarely trigger them, and M9 measures and documents each false-alarm rate (D-16):
 1. any censored replicate;
 2. a fraction of replicates with $\tau - L > k$ above 0.25 ("k may be too small"). The recipe itself gives 0.02 to 0.13 (§3.6), so a lower threshold fires on clean runs;
-3. one replicate contributing more than 25% of the sample variance of any reported estimate, with $R \ge 100$ (heavy tails or rare excursions). At $R = 20$ to 30 that share is typical of Gaussian data;
+3. one replicate contributing more than half of the sample variance of the estimate of a coordinate's mean or second moment, with $R \ge 100$ (heavy tails or rare excursions). A quarter, the first draft's threshold, is typical of Gaussian data at $R = 20$ to 30 and was exceeded in 87 of 200 clean runs on the banana at $R = 100$, whose intervals covered as often as the others (DECISIONS #36);
 4. a Hill estimate of the tail index of $\tau - L + 1$ below 2 (finite variance in doubt), from the $\max(10, \lfloor R/10\rfloor)$ largest values, with $R \ge 500$. Applied to $\tau$ itself with $L = k$, the shift by $L$ removes almost all its power;
 5. pilot chains that disagree (§5.3);
 6. a slow pair (§6.3).
+
+Rates measured at M9 with `sample()`'s defaults (`notes/experiments/m9_warnings.out`, `m9_variance_warning.out`):
+- `examples.gaussian(10)`: no warning in 50 runs at $R = 500$; at $R = 100$, the variance warning in at most 2 of 100 runs and no other.
+- The banana from $U[-5, 5]^2$: at $R = 100$, the variance warning in 19 of 200 runs, where the 95% intervals of $E[x_0^2]$ covered at 0.84 against 0.96 elsewhere; at $R = 500$, the variance warning in at most 6 of 50 runs and the tail warning in 14.
+- JOA20's bimodal target from $\mathcal N(10, 1)$ at $R = 1000$: 33 of 50 intervals of $P(x > 3)$ missed the truth, none with a warning; the 17 runs whose replicates found the other mode raised the variance warning and covered.
 
 The documentation explains each, with the failure cases of JOA20 §5.1, and says that a run that never left one mode cannot be detected from its own output at moderate $R$ (design review D-R9).
 
@@ -742,7 +747,7 @@ These were decided without Josh's input so that work could proceed. Each is easy
 | D-13 | No meeting cap by default in the main run. With a cap, censored pairs are excluded and reported as biasing the result. The meeting-time pilot is capped (D-23) | the theory needs every pair to meet; silent truncation is the R package's hazard | a default cap with silent `inf` (unbiasedmcmc) |
 | D-14 | Unbiased covariances by the U-statistic; quantiles by an isotonic projection of the pooled signed CDF | exact where possible (§3.4); isotonic regression is the $L^2$ projection onto monotone curves. A running maximum is another monotonisation; both are consistent and biased at finite $R$, and gave the same quantiles in the design review's test | plug-in covariance (biased); a running maximum; the crossing rule (non-unique) |
 | D-15 | Literature notation for `k`, `m`, `lag` in the API | users read JOA20 and AJ24 alongside the docs; "auto" covers newcomers | `burn_in`, `n_iter` |
-| D-16 | Warning thresholds from §7.4, documented as heuristics: warning 2 at 0.25, warning 3 only for $R \ge 100$, warning 4 on $\tau - L + 1$ for $R \ge 500$ | no published calibration exists (`diagnostics_practice.md` §4). The first draft's thresholds fired on clean Gaussian runs at the defaults (warning 2 with probability 0.25 at $d = 10$ and 0.49 at $d = 30$; warning 3 with probability 0.73 at $R = 30$ for 10 estimates; design review D-R6) | no warnings; strict errors; binomial tests at a stated level |
+| D-16 | Warning thresholds from §7.4, documented as heuristics: warning 2 at 0.25, warning 3 above one half (DECISIONS #36) and only for $R \ge 100$, warning 4 on $\tau - L + 1$ for $R \ge 500$ | no published calibration exists (`diagnostics_practice.md` §4). The first draft's thresholds fired on clean Gaussian runs at the defaults (warning 2 with probability 0.25 at $d = 10$ and 0.49 at $d = 30$; warning 3 with probability 0.73 at $R = 30$ for 10 estimates; design review D-R6) | no warnings; strict errors; binomial tests at a stated level |
 | D-17 | Docs with Sphinx, MyST-NB and furo | furo is the lead's most recent choice (GSPICE); MyST-NB executes the tutorials | pydata-sphinx-theme (pastry) |
 | D-18 | Python ≥ 3.11, NumPy ≥ 1.26, SciPy ≥ 1.12 | the floors of Josh's other packages; SciPy 1.12 adds `isotonic_regression` | SPEC 0 floors (3.12, NumPy 2.0) |
 | D-19 | Implement from the papers, never from the GPL R code. The R package is a reference for numbers only | the MIT licence; `software_landscape.md` licence analysis | port the R code under GPL |
