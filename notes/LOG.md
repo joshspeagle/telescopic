@@ -233,14 +233,24 @@ Append only. One entry per working session or milestone.
 
 ## 2026-10-23: M10
 
-- The documentation: the theory page, the README, Getting started, eight user-guide pages,
-  seven tutorials, the API reference and a citing page. Five writers drafted the guide and
-  the tutorials from briefs; every line was read against the code before commit. The
-  pages with code are MyST-NB notebooks run when the site is built, about 2 minutes 20
-  seconds in all with warnings as errors; the figures that the prose takes from outputs
-  are glued to them. The docs group gains emcee and cloudpickle (DECISIONS #37).
+- The documentation: the theory page, the README, Getting started, a seven-page user
+  guide, six tutorials, the API reference and a citing page. Five writers drafted the
+  guide and the tutorials from briefs, and revised them after review; every line was
+  read against the code before commit. The pages with code are MyST-NB notebooks run at
+  every build (DECISIONS #42), in about 2 minutes with warnings as errors and nitpicky
+  references (#43). Figures the prose takes from outputs are glued to them, and hidden
+  asserts fail the build when a conclusion the prose draws stops holding.
 - The writers found the spec and the code apart in five places, now aligned in the spec,
-  and two should-level items never built, now deferred (DECISIONS #38); three docstrings
-  were corrected. They also found that the automatic MALA can fail on a log-concave
-  logistic regression started ten times wider than the fit (QUESTIONS), and three small
-  code issues left for M11 (`notes/PLAN.md`).
+  and two should-level items never built, now deferred (DECISIONS #38). They also found
+  that the automatic MALA can fail on a log-concave logistic regression (QUESTIONS); the
+  kernels guide now shows how to check a step size against pilot meeting times.
+- `/simplify` (three reviewers, `notes/reviews/m10.md`): two pages repeated others and are
+  gone; each fact has one home. The altitude review found the docs working around the
+  package: `summary(level)` did nothing, the tutorials recomputed the values behind two
+  warnings, `inefficiency` meant something else in the literature, `tqdm.auto` warned in
+  notebooks. `Result.diagnostics()` now reports the tail index and the variance share,
+  the mean cost over m − k + 1 is the relative cost, and the bar is tqdm's text bar
+  (DECISIONS #39 to #41).
+- `/code-review` at extra-high effort: ten findings, all fixed, among them a custom kernel
+  that could not be tuned inside a mixture, a censored slow pair that `check` missed, and
+  twelve broken references in docstrings. 428 fast tests in 37 s.

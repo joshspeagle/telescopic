@@ -1,10 +1,10 @@
 # Plan
 
-**Current position:** Phase 4, milestones M0 to M9 implemented and reviewed, with the
-two interface changes deferred from M8 (DECISIONS #31, #32). M10 (documentation and
-tutorials) is next; the theory page, the README and drafts of Getting started and the
-pitfalls page exist. Open for M11: the pool and pipeline benchmarks (`notes/reviews/m9.md`),
-`sample()`'s fixed 64 lanes, and the questions in `QUESTIONS.md`.
+**Current position:** Phase 4, milestones M0 to M10 implemented and reviewed. M11 (the
+independent audit) is under way: four auditors (estimators and couplings, the engine,
+numerical robustness, the API) have reported, and a fifth measures the tests' power with
+mutants. Their findings, the items deferred from M10 and the performance items of M9 are
+M11's work, then the checkpoint report to Josh.
 
 ## Phases
 
@@ -15,7 +15,7 @@ pitfalls page exist. Open for M11: the pool and pipeline benchmarks (`notes/revi
 | 2 | Design, with prototypes where a choice needs evidence, and an adversarial review | `docs/design/spec.md`, `test-plan.md`, `implementation-plan.md`; `notes/experiments/`; `notes/reviews/design-review.md` | done |
 | 3 | Scaffold: packaging, CI, pre-commit, docs skeleton, `CLAUDE.md` | repository infrastructure | done |
 | 4 | Implementation milestones M0 to M11 (implementation plan §3), each a reviewed unit | `src/telescopic/`, `tests/` | in progress |
-| 5 | Documentation: theory, user guide, executed tutorials, API reference, README | `docs/` | pending |
+| 5 | Documentation: theory, user guide, executed tutorials, API reference, README | `docs/` | done (M10) |
 | 6 | Independent audit of the whole package, fixes, benchmarks | `notes/reviews/` | pending |
 | 7 | Checkpoint report to Josh: first draft complete | log entry and summary | pending |
 
@@ -33,7 +33,7 @@ pitfalls page exist. Open for M11: the pool and pipeline benchmarks (`notes/revi
 | M7 | Parallel execution, interrupts, progress (budgets deferred) | yes | done, fixed | done, fixed | `notes/reviews/m7.md` |
 | M8 | IO, plotting, examples, `check_coupling` | yes | done, fixed | done, fixed | `notes/reviews/m8.md` |
 | M9 | Slow statistical suite, benchmarks, warning calibration | yes | done, fixed | done, fixed | `notes/reviews/m9.md` |
-| M10 | Documentation and tutorials | no | | | |
+| M10 | Documentation and tutorials | yes | done, fixed | done, fixed | `notes/reviews/m10.md` |
 | M11 | Independent audit, checkpoint report | no | | | |
 
 ## Interface changes deferred from M8
