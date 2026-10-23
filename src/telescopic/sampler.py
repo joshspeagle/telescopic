@@ -83,11 +83,6 @@ class CoupledSampler:
         installed, lines on stderr otherwise.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
         The root of every random stream (spec section 6.1).
-
-    Attributes
-    ----------
-    settings : telescopic.engine.Settings or None
-        The settings, fixed by the first run.
     """
 
     def __init__(
@@ -120,8 +115,12 @@ class CoupledSampler:
             raise ValueError(f"names must have {self.ndim} entries, not {len(self.names)}")
         self.tuning: TuningReport | None = None
         self.pilot: FloatArray | None = None
-        self.settings: engine.Settings | None = None
         self._replicates: engine.Replicates | None = None
+
+    @property
+    def settings(self) -> engine.Settings | None:
+        """The settings of the runs, fixed by the first; ``None`` before it."""
+        return None if self._replicates is None else self._replicates.settings
 
     def tune(self) -> TuningReport | None:
         """Tune the kernel's unset parameters on pilot chains, once, and freeze the kernel.
@@ -167,7 +166,7 @@ class CoupledSampler:
     def _meeting_times(self, n: int, max_iter: int, pool: Any, progress: bool) -> FloatArray:
         self.tune()
         start = 0 if self.pilot is None else len(self.pilot)
-        settings = engine.Settings(0, 0, 1, 1, max_iter)
+        settings = engine.Settings(0, 0, 1, max_iter=max_iter, store=False)
         indices = np.arange(start, start + n)
         times = self._run(PILOT, indices, settings, pool, progress).meeting_time
         self.pilot = times if self.pilot is None else np.concatenate([self.pilot, times])
@@ -229,7 +228,6 @@ class CoupledSampler:
             done = 0 if self._replicates is None else len(self._replicates.index)
             self._check_memory(settings, done + n_replicates)
             part = self._run(MAIN, self._next_indices(n_replicates), settings, pool, show)
-        self.settings = settings
         self._replicates = (
             part if self._replicates is None else engine.merge([self._replicates, part])
         )
@@ -273,7 +271,6 @@ class CoupledSampler:
             self.kernel,
             self.initial,
             rng=self.seed if main else namespace_seed(self.seed, namespace),
-            store=main,
             **settings._asdict(),
         )
         slow = _SlowPairs(settings.lag, settings.m)
@@ -345,7 +342,7 @@ class CoupledSampler:
             thin=1 if thin is None else thin,
             max_iter=max_iter,
         )
-        engine.check_settings(*settings)
+        engine.check_settings(settings)
         return settings
 
     def _check_memory(self, settings: engine.Settings, n_replicates: int) -> None:

@@ -191,4 +191,9 @@ Append only. One entry per working session or milestone.
   `SeedSequence`, `Replicates.stopped` replaces two copies of a rule, and `Result`
   refuses replicates stored without measures (DECISIONS #32). Five mutants checked.
   417 fast tests in 39 s.
+- `/code-review` at high effort: eight findings, seven fixed. `merge` joined stored and
+  unstored runs, halving a mean, and `Result` missed an all-censored unstored run; `store`
+  is now one of the `Settings`, recorded and compared. The sampler's settings read its
+  replicates, censored pairs again need a cap, and `merge([])` names its argument. 419
+  fast tests in 38 s.
 

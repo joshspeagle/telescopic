@@ -169,7 +169,9 @@ def test_a_kernel_of_another_dimension_than_the_points_raises():
         simulate(RandomWalk(np.eye(1)))
 
 
-def test_merging_refuses_parts_that_share_replicates():
+def test_merging_refuses_no_parts_and_parts_that_share_replicates():
+    with pytest.raises(ValueError, match="at least one"):
+        merge([])
     part = simulate(n=3)
     with pytest.raises(ValueError, match="share replicate indices"):
         merge([part, part])
@@ -180,12 +182,13 @@ def test_merging_refuses_parts_that_share_replicates():
     [
         ({"rng": 2}, "different seeds"),
         ({"lag": 2}, "different settings"),
+        ({"store": False}, "different settings"),
         (
             {"kernel": RandomWalk(np.eye(1)), "initial": Normal([3.0], [[1.0]])},
             "dimensions 2 and 1",
         ),
     ],
-    ids=["seed", "settings", "dimension"],
+    ids=["seed", "settings", "store", "dimension"],
 )
 def test_merging_refuses_parts_of_another_run(options, message):
     with pytest.raises(ValueError, match=message):

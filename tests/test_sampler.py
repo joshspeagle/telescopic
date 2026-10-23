@@ -41,11 +41,14 @@ def test_two_runs_of_a_sampler_equal_one_run_of_both():
 
 def test_a_sampler_keeps_its_settings():
     sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3)
+    assert sampler.settings is None
     sampler.run(5, k=40, thin=2)
     assert sampler.run(5).thin == 2
     for change, message in (({"k": 41}, "k was 40"), ({"thin": 1}, "thin was 2")):
         with pytest.raises(ValueError, match=message):
             sampler.run(5, **change)
+    with pytest.raises(AttributeError):
+        sampler.settings = sampler.settings._replace(lag=2)
 
 
 def test_invalid_first_settings_are_not_kept():

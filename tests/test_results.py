@@ -156,8 +156,29 @@ def test_merging_two_runs_equals_one_run_over_both_sets_of_replicates():
 
 
 def test_a_result_needs_the_signed_measures_of_its_replicates():
+    # Every pair censored, so no missing atom shows that none were stored.
+    replicates = run(
+        TARGET,
+        RandomWalk(np.eye(2), scale=1e-6),
+        Normal([2.0, -1.0], [1.0, 1.0]),
+        range(3),
+        k=0,
+        m=0,
+        lag=1,
+        max_iter=5,
+        rng=1,
+        store=False,
+    )
+    assert np.all(np.isinf(replicates.meeting_time))
     with pytest.raises(ValueError, match="store=True"):
-        Result(gaussian_run(range(3), store=False, **SETTINGS))
+        Result(replicates)
+
+
+def test_censored_pairs_need_the_cap_of_their_run():
+    tau = RESULT._replicates.meeting_time.copy()
+    tau[0] = np.inf
+    with pytest.raises(ValueError, match="max_iter of their run"):
+        Result(replace(RESULT._replicates, meeting_time=tau))
 
 
 def test_results_from_equal_array_seeds_merge():

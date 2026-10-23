@@ -120,7 +120,8 @@ SignedMeasure(atoms (N, d), weights (N,), replicate (N,), n_replicates)
 ### 2.6 Engine (`engine.py`)
 
 ```text
-Settings(k, m, lag, thin=1, max_iter=None)                  # spec §3.2
+Settings(k, m, lag, thin=1, max_iter=None, store=True)      # spec §3.2
+check_settings(settings)                                    # raises ValueError
 Replicates(seed, settings, index, meeting_time, cost, atoms, weights, owner, distance_owner,
            distance_time, distance, zero_density, requested, n_log_prob, n_grad, seconds,
            paths)                                           # inf = censored
@@ -139,7 +140,7 @@ Status(started, finished, slowest, t)                       # given to the monit
   4. refill.
 - **Storage:** atoms from $t = k$, with weights from `averaging_times` and `correction_coefficients`.
 - **Monitoring:** the engine emits no warning. It records the facts (censoring, starts with zero density, evaluations, time) and passes a `Status` to `monitor` every iteration; the sampler warns about slow pairs from it, shows progress, and stops new replicates on an interrupt by returning true. Results and facts reach the parent from pool workers, which warnings would not.
-- **Pilot use:** the meeting-time pilot calls `run(k=0, m=0, lag=1, store=False)` with the root's pilot seed (spec §6.1).
+- **Pilot use:** the meeting-time pilot calls `run(k=0, m=0, lag=1, store=False)` with the root's pilot seed (spec §6.1). `Result` refuses replicates run with `store=False`.
 
 ### 2.7 Parallel execution (`_parallel.py`)
 

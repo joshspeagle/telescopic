@@ -1,8 +1,8 @@
 # Plan
 
-**Current position:** Phase 4, milestones M0 to M8 implemented and reviewed. The two
-interface changes deferred from M8 are implemented (DECISIONS #31) and under review;
-M9 (the slow statistical suite, benchmarks and warning calibration) follows.
+**Current position:** Phase 4, milestones M0 to M8 implemented and reviewed, with the
+two interface changes deferred from M8 (DECISIONS #31, #32). M9 (the slow statistical
+suite, benchmarks and warning calibration) is next.
 
 ## Phases
 
@@ -34,12 +34,8 @@ M9 (the slow statistical suite, benchmarks and warning calibration) follows.
 | M10 | Documentation and tutorials | no | | | |
 | M11 | Independent audit, checkpoint report | no | | | |
 
-## Deferred from M8, now under review
+## Interface changes deferred from M8
 
-From the M8 altitude review (`notes/reviews/m8.md`), done before M9 so that its tests and
-benchmarks use the final interfaces (DECISIONS #31):
-
-- `Replicates` records k, m, the lag, thin, `max_iter` and the root seed, so that
-  `Result(replicates)`, `plotting.paths(replicates)` and `merge` need no settings.
-- `engine.run` takes `rng` (spec §8.2), with the main namespace by default, so that
-  users never import `telescopic._random`.
+Done before M9, so that its tests and benchmarks use the final interfaces: the
+replicates record their run's seed and settings, and `engine.run` takes `rng`
+(DECISIONS #31, #32; `notes/reviews/run-settings.md`).

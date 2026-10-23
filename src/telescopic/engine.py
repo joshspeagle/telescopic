@@ -36,6 +36,9 @@ class Settings(NamedTuple):
         Average every ``thin``-th time from ``k`` (spec R-EST-5).
     max_iter : int or None
         The cap: a pair still unmet when :math:`t` reaches it is censored.
+    store : bool
+        Whether the run stores the signed measures and distances; meeting-time pilots do
+        not.
     """
 
     k: int
@@ -43,6 +46,7 @@ class Settings(NamedTuple):
     lag: int
     thin: int = 1
     max_iter: int | None = None
+    store: bool = True
 
 
 @dataclass
@@ -195,7 +199,8 @@ def run(
     Memory: the stored atoms take about :math:`R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})
     (8d + 16)` bytes (spec R-EXEC-7).
     """
-    check_settings(k, m, lag, thin, max_iter)
+    settings = Settings(k, m, lag, thin, max_iter, store)
+    check_settings(settings)
     if lanes < 1:
         raise ValueError(f"lanes must be at least 1, not {lanes}")
     requested = np.asarray(indices)
@@ -215,8 +220,7 @@ def run(
     head = _Start(first, initial, seed, None)
     ndim = len(head.x0)
     starts = itertools.chain([head], (_Start(i, initial, seed, ndim) for i in queue))
-    settings = Settings(k, m, lag, thin, max_iter)
-    batch = _Batch(target, kernel, ndim, lanes, settings, store, keep_paths)
+    batch = _Batch(target, kernel, ndim, lanes, settings, keep_paths)
     batch.fill(np.arange(lanes), starts)
     stopping = False
     while batch.active.any():
@@ -234,16 +238,17 @@ def run(
     )
 
 
-def check_settings(k: int, m: int, lag: int, thin: int, max_iter: int | None) -> None:
+def check_settings(settings: Settings) -> None:
     r"""Raise ``ValueError`` unless the settings of a run are valid (spec section 3.2).
+
+    They need :math:`0 \le k \le m`, :math:`L \ge 1`, ``thin`` :math:`\ge 1`, and a
+    ``max_iter`` above :math:`\max(L, m)` if any.
 
     Parameters
     ----------
-    k, m, lag, thin : int
-        :math:`0 \le k \le m`, :math:`L \ge 1` and ``thin`` :math:`\ge 1`.
-    max_iter : int, optional
-        Above :math:`\max(L, m)`.
+    settings : Settings
     """
+    k, m, lag, thin, max_iter, _ = settings
     if not 0 <= k <= m:
         raise ValueError(f"k and m must satisfy 0 <= k <= m, not k={k}, m={m}")
     if lag < 1 or thin < 1:
@@ -266,6 +271,8 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
     -------
     Replicates
     """
+    if not parts:
+        raise ValueError("parts must hold at least one Replicates")
     first, identity = parts[0], _seed_key(parts[0].seed)
     for part in parts[1:]:
         if _seed_key(part.seed) != identity:
@@ -331,12 +338,11 @@ class _Batch:
         ndim: int,
         lanes: int,
         settings: Settings,
-        store: bool,
         keep_paths: bool,
     ) -> None:
         self.target, self.kernel, self.settings = target, kernel, settings
-        self.k, self.m, self.lag, self.thin, self.max_iter = settings
-        self.store, self.keep_paths = store, keep_paths
+        self.k, self.m, self.lag, self.thin, self.max_iter, self.store = settings
+        self.keep_paths = keep_paths
         self.weight = 1.0 / len(averaging_times(self.k, self.m, self.thin))
         self.streams = Streams(lanes)
         self.replicate = np.full(lanes, -1, dtype=np.int64)

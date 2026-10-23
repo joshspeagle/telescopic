@@ -59,3 +59,34 @@ Every fix with a test was checked by a mutant: the settings check of `merge`, th
 - Altitude: `store` is also a pilot's option on the public `engine.run`. It is a real
   choice for a user who wants only meeting times, and the guard in `Result` covers its
   misuse.
+
+## `/code-review` of the change
+
+**Scope:** e7dc402..d576955 in `src/` and `tests/` (the change and the fixes above), at
+high effort. Eight findings: seven fixed, one answered. Each fix has a test that fails
+without it, checked by mutants, except the last two, which change no behaviour.
+
+1. `merge` joined a stored run with an unstored one: the unstored replicates then
+   counted as estimates of 0, and the mean of a target of mean 3 came out 1.50 ± 0.09.
+   `store` is now one of the `Settings`, which `merge` compares, and `check_settings`
+   takes a `Settings` value.
+2. The guard in `Result` inferred `store` from the atoms, so it passed a run with
+   `store=False` whose pairs were all censored, and `w1_bound` then reported 0 for
+   distances it never stored. `Result` now reads the recorded `store`. This answers the
+   simplify round's claim that the guard covered the misuse of `store`.
+3. The sampler kept its settings beside its replicates, and reassigning them made every
+   later run do its work and then fail to merge. `settings` is now a read-only property
+   that reads the replicates.
+4. The removed check that censored pairs need the run's cap returns: hand-built
+   replicates can still have censored pairs and no `max_iter`, and their stopping times
+   then cast `inf` to an integer.
+5. `merge([])` raised `IndexError`; it now raises `ValueError` naming `parts`.
+6. The pilot's `Settings` passed `thin=1`, the default.
+7. `check_coupling` derived its streams without spawning so as not to change a caller's
+   `SeedSequence`. Since `root_seed` copies it, `spawn` is safe again, and the code and
+   its stale comment return to the simpler form.
+
+Answered: `Result` copies the settings into plain attributes, which a user could
+overwrite. All of `Result`'s attributes are plain, and overwriting one is a deliberate
+act, unlike the constructor arguments that DECISIONS #31 removed.
+

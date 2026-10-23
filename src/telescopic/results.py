@@ -115,10 +115,12 @@ class Result:
         met = np.isfinite(replicates.meeting_time)
         self.n_replicates = int(met.sum())
         self.n_censored = len(met) - self.n_replicates
-        if self.n_replicates and not len(replicates.atoms):
+        if not replicates.settings.store:
             raise ValueError(
                 "the replicates hold no signed measures: run the engine with store=True"
             )
+        if self.n_censored and replicates.settings.max_iter is None:
+            raise ValueError("replicates with censored pairs need the max_iter of their run")
         self.ndim = replicates.atoms.shape[1]
         self.names = [f"x{i}" for i in range(self.ndim)] if names is None else list(names)
         if len(self.names) != self.ndim:
@@ -132,7 +134,7 @@ class Result:
             np.searchsorted(replicates.index[met], replicates.owner),
             self.n_replicates,
         )
-        self.k, self.m, self.lag, self.thin, self.max_iter = replicates.settings
+        self.k, self.m, self.lag, self.thin, self.max_iter, _ = replicates.settings
         self.seed, self.kernel, self.initial = replicates.seed, kernel, initial
         self._replicates = replicates
         self.n_log_prob, self.n_grad = replicates.n_log_prob, replicates.n_grad
