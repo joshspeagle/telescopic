@@ -15,7 +15,7 @@ class Progress:
         self.total, self.description, self.finished = total, description, 0
         self.start = self.shown = time.perf_counter()
         try:
-            from tqdm.auto import tqdm
+            from tqdm import tqdm
         except ImportError:
             self.bar = None
         else:

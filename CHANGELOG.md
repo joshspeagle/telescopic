@@ -61,3 +61,5 @@ All notable changes to this project are documented here. The format follows
   specification's performance targets. The tuning pilot runs of order d² steps beyond 20
   dimensions, and the variance warning needs one replicate holding more than half the
   variance; both were measured against their alternatives.
+- `import telescopic` imports every public submodule but `plotting`, and `progress=True`
+  draws tqdm's text bar, in notebooks too.

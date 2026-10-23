@@ -296,7 +296,7 @@ def progressing(pool=None):
 
 @pytest.mark.parametrize("pool", [None, Serial()], ids=["here", "pool"])
 def test_progress_falls_back_to_lines_on_stderr_without_tqdm(pool, monkeypatch, capsys):
-    monkeypatch.setitem(sys.modules, "tqdm.auto", None)
+    monkeypatch.setitem(sys.modules, "tqdm", None)
     monkeypatch.setattr(_progress, "INTERVAL", 0.0)
     sampler = progressing(pool)
     sampler.meeting_times(4)
@@ -307,7 +307,7 @@ def test_progress_falls_back_to_lines_on_stderr_without_tqdm(pool, monkeypatch, 
 
 
 def test_the_progress_argument_of_a_run_covers_its_pilot(monkeypatch, capsys):
-    monkeypatch.setitem(sys.modules, "tqdm.auto", None)
+    monkeypatch.setitem(sys.modules, "tqdm", None)
     sampler = telescopic.CoupledSampler(gaussian_log_prob, INIT, kernel=RandomWalk(np.eye(2)))
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", ConvergenceWarning)  # a short run may meet late

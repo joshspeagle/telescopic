@@ -14,15 +14,6 @@ where the pilot pairs and the replicates run; tuning runs in this process. The
 [parallel guide](../guide/parallel.md) gives the rules of pools, reproducibility,
 pickling and interrupts.
 
-```{code-cell} python
-:tags: [remove-cell]
-
-import warnings
-
-# Without ipywidgets, tqdm warns in a notebook, then draws its bars as text.
-warnings.filterwarnings("ignore", message="IProgress not found")
-```
-
 ## The same replicates on four workers
 
 The line fit of [Getting started](../getting-started.md), whose log-density takes one
