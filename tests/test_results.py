@@ -187,6 +187,10 @@ def test_names_must_be_distinct_strings_one_per_coordinate(names, error, message
         Result(RESULT._replicates, names=names)
 
 
+def test_names_from_an_iterator_are_read_once():
+    assert Result(RESULT._replicates, names=iter(["a", "b"])).names == ["a", "b"]
+
+
 def test_merging_two_runs_equals_one_run_over_both_sets_of_replicates():
     def part(indices, seed=4):
         return Result(gaussian_run(indices, seed, **SETTINGS))

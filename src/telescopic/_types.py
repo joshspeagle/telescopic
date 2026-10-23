@@ -77,14 +77,15 @@ def parameter_names(names: Sequence[str] | None, ndim: int) -> list[str]:
     # Distinct names of the ndim coordinates; x0, x1, ... by default.
     if names is None:
         return [f"x{i}" for i in range(ndim)]
-    if isinstance(names, str) or not all(isinstance(name, str) for name in names):
+    # Listed first, so that an iterator is read once; a string would list its letters.
+    listed = None if isinstance(names, str) else list(names)
+    if listed is None or not all(isinstance(name, str) for name in listed):
         raise TypeError(f"names must be a sequence of strings, not {names!r}")
-    names = list(names)
-    if len(names) != ndim:
-        raise ValueError(f"names must have {ndim} entries, not {len(names)}")
-    if len(set(names)) != ndim:
-        raise ValueError(f"names must be distinct, not {names}")
-    return names
+    if len(listed) != ndim:
+        raise ValueError(f"names must have {ndim} entries, not {len(listed)}")
+    if len(set(listed)) != ndim:
+        raise ValueError(f"names must be distinct, not {listed}")
+    return listed
 
 
 def read_only(array: npt.NDArray[Any]) -> npt.NDArray[Any]:
