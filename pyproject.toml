@@ -89,3 +89,7 @@ extend-exclude = ["research_notes", "reports", "*.md"]
 [tool.ruff.lint]
 # No pep8-naming rules: the code follows the spec's notation (H, R, L), as CLAUDE.md allows.
 extend-select = ["B", "C4", "I", "NPY", "PT", "RUF", "SIM", "UP"]
+
+[tool.ruff.lint.isort]
+# The tests' helper module of reference implementations.
+known-first-party = ["references"]
