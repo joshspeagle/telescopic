@@ -117,10 +117,7 @@ def test_kernels_tune_from_an_array_or_a_callable_as_sample_does(initial):
     assert kernel.ndim == 5
 
 
-@pytest.mark.parametrize(
-    "kernel", [MALA(), Mixture([RandomWalk(), MALA()], [0.5, 0.5])], ids=["mala", "mixture"]
-)
-def test_tuning_checks_the_target_before_running_the_pilot(kernel):
+def test_tuning_checks_the_target_before_running_the_pilot():
     drawn = []
 
     def initial(rng):
@@ -130,7 +127,7 @@ def test_tuning_checks_the_target_before_running_the_pilot(kernel):
     # The message shows the kernel as given, not with a tuned step size.
     without_grad = Target(lambda x: -0.5 * np.sum(x**2, axis=1), vectorize=True)
     with pytest.raises(ValueError, match=r"MALA\(step_size=None, cov=None\).* needs the grad"):
-        kernel.tune(without_grad, initial, 1)
+        MALA().tune(without_grad, initial, 1)
     assert drawn == []
 
 

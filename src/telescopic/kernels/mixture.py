@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import copy
 from collections.abc import Sequence
-from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -13,7 +12,7 @@ from telescopic._random import Draws
 from telescopic._types import FloatArray, IndexArray, Seed
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
-from telescopic.tuning import PilotRun, TuningReport, adaptive_metropolis
+from telescopic.tuning import PilotRun, TuningReport
 
 
 class Mixture(Kernel):
@@ -62,23 +61,9 @@ class Mixture(Kernel):
     def ndim(self) -> int | None:
         return next((kernel.ndim for kernel in self.kernels if kernel.ndim is not None), None)
 
-    def tune(
-        self,
-        target: Target,
-        initial: Any,
-        rng: Seed = None,
-        *,
-        pilot: PilotRun | None = None,
-    ) -> tuple[Kernel, TuningReport | None]:
-        """A copy whose components are tuned by their own ``tune`` on one pilot.
-
-        The parameters and returns are those of :meth:`Kernel.tune`.
-        """
-        if self.is_tuned:
-            return self, None
-        self.check_target(target)
-        pilot = adaptive_metropolis(target, initial, rng) if pilot is None else pilot
-        tuned = [kernel.tune(target, initial, rng, pilot=pilot) for kernel in self.kernels]
+    def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
+        # Each component tuned by its own tune on the one pilot, which never reads initial.
+        tuned = [kernel.tune(target, None, rng, pilot=pilot) for kernel in self.kernels]
         ratios = [report.max_weight_ratio for _, report in tuned if report is not None]
         ratio = max((r for r in ratios if r is not None), default=None)
         # A copy keeps the class and settings of a subclass, such as HMC.
