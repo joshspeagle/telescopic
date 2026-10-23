@@ -2,7 +2,9 @@ import numpy as np
 import pytest
 from scipy import stats
 
+from references import P_MIN
 from telescopic.initial import Empirical, Normal, Uniform, as_initial, draw
+from telescopic.kernels import MultivariateT
 
 
 @pytest.mark.parametrize(
@@ -27,14 +29,14 @@ def test_a_univariate_scipy_distribution_draws_one_dimensional_points():
 def test_point_arrays_are_sampled_uniformly_over_their_rows():
     points = np.arange(8.0).reshape(4, 2)
     rng = np.random.default_rng(1)
-    rows = [int(Empirical(points).sample(rng)[0]) // 2 for _ in range(4000)]
-    assert stats.chisquare(np.bincount(rows, minlength=4)).pvalue > 1e-5
+    rows = [int(Empirical(points).rvs(random_state=rng)[0]) // 2 for _ in range(4000)]
+    assert stats.chisquare(np.bincount(rows, minlength=4)).pvalue > P_MIN
 
 
 def test_normal_draws_have_the_requested_moments():
     init = Normal([1.0, -1.0], [[2.0, 0.6], [0.6, 1.0]])
     rng = np.random.default_rng(2)
-    draws = np.array([init.sample(rng) for _ in range(20_000)])
+    draws = np.array([init.rvs(random_state=rng) for _ in range(20_000)])
     np.testing.assert_allclose(draws.mean(axis=0), init.mean, atol=5 * np.sqrt(2 / 20_000))
     np.testing.assert_allclose(np.cov(draws.T), init.cov, atol=0.06)
 
@@ -54,10 +56,18 @@ def test_a_single_point_is_refused_with_guidance():
         as_initial(np.zeros(2))
 
 
+def test_an_object_without_rvs_is_not_an_initial_distribution():
+    # A proposal samples from buffered draws, not from a generator.
+    with pytest.raises(TypeError, match="rvs"):
+        as_initial(MultivariateT(np.zeros(2), np.eye(2)))
+
+
 @pytest.mark.parametrize(
     ("factory", "message"),
     [
         (lambda: Normal([0.0, 0.0], np.eye(3)), "cov must have shape"),
+        (lambda: Normal([0.0, 0.0], [[1.0, 0.5], [0.0, 1.0]]), "cov must be symmetric"),
+        (lambda: Normal([0.0, 0.0], [[1.0, 2.0], [2.0, 1.0]]), "positive definite"),
         (lambda: Uniform([1.0], [0.0]), "low < high"),
         (lambda: Empirical(np.zeros((2, 2, 2))), "shape"),
     ],

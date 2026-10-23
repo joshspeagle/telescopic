@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 
-from telescopic._random import FloatArray
+from telescopic._types import FloatArray
 
 
 class Target:
@@ -68,26 +68,23 @@ class Target:
         """Log-densities at the rows of ``x``, shape ``(n,)``; raises on NaN or ``+inf``."""
         values = self._call(self._log_prob, x, ())
         self.n_log_prob += len(x)
-        bad = np.isnan(values) | (values == np.inf)
-        if bad.any():
-            row = int(np.argmax(bad))
+        # One reduction finds NaN or +inf, which make the maximum fail the test.
+        if not np.max(values, initial=-np.inf) < np.inf:
+            row = int(np.argmax(np.isnan(values) | (values == np.inf)))
             raise ValueError(f"log_prob returned {values[row]} at x = {x[row].tolist()}")
         return values
 
     def log_prob_and_grad(self, x: FloatArray) -> tuple[FloatArray, FloatArray]:
         """Log-densities, shape ``(n,)``, and gradients, shape ``(n, d)``, at the rows of ``x``.
 
-        Rows with a finite log-density must have a finite gradient.
+        Gradients are returned as computed: kernels decide what a non-finite one means
+        (spec R-INPUT-1).
         """
         if self._grad is None:
             raise ValueError("this target has no gradient; pass grad= to use this kernel")
         values = self.log_prob(x)
         gradients = self._call(self._grad, x, (x.shape[1],))
         self.n_grad += len(x)
-        bad = np.isfinite(values) & ~np.isfinite(gradients).all(axis=1)
-        if bad.any():
-            row = int(np.argmax(bad))
-            raise ValueError(f"grad returned {gradients[row].tolist()} at x = {x[row].tolist()}")
         return values, gradients
 
     def _call(
@@ -100,10 +97,12 @@ class Target:
         else:
             out = np.asarray(
                 [function(row, *self.args, **self.kwargs) for row in view], dtype=np.float64
-            ).reshape((len(x), *event))
+            )
         if out.shape != (len(x), *event):
+            per_point = "a float" if not event else f"shape {event}"
             raise ValueError(
                 f"{getattr(function, '__name__', 'the target function')} returned shape "
-                f"{out.shape} for {len(x)} points; expected {(len(x), *event)}"
+                f"{out.shape} for {len(x)} points; expected {(len(x), *event)}, that is "
+                f"{per_point} for each point"
             )
         return out

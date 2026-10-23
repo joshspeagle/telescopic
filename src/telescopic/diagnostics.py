@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import numpy.typing as npt
 
-from telescopic._random import FloatArray
+from telescopic._types import FloatArray
 
 if TYPE_CHECKING:
     from telescopic.results import Result

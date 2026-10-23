@@ -8,8 +8,7 @@ from dataclasses import dataclass
 import numpy as np
 import numpy.typing as npt
 
-from telescopic._random import FloatArray
-from telescopic.estimators import IntArray
+from telescopic._types import FloatArray, IntArray
 
 
 @dataclass(frozen=True)

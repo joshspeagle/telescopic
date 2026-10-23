@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from references import gaussian_log_prob
 from telescopic._random import MAIN, root_seed
 from telescopic.engine import run
 from telescopic.estimators import averaging_times, correction_coefficients
@@ -8,11 +9,6 @@ from telescopic.initial import Empirical, Normal
 from telescopic.kernels import Kernel, RandomWalk, State
 from telescopic.target import Target
 from telescopic.warnings import ConvergenceWarning, InputWarning
-
-
-def gaussian_log_prob(x):
-    return -0.5 * float(np.sum(x**2))
-
 
 # Point by point, so that a replicate's results are bitwise independent of the batch.
 TARGET = Target(gaussian_log_prob)

@@ -8,7 +8,8 @@ import numpy as np
 import numpy.typing as npt
 
 from telescopic._random import Draws
-from telescopic.kernels.base import BoolArray, Kernel, State
+from telescopic._types import BoolArray, IndexArray
+from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
 
 
@@ -70,10 +71,8 @@ class Mixture(Kernel):
                 state_y.put(rows, new_y)
         return state_x, state_y
 
-    def _choose(self, draws: Draws) -> npt.NDArray[np.intp]:
-        index: npt.NDArray[np.intp] = np.searchsorted(
-            self._cumulative, draws.uniform(), side="right"
-        )
+    def _choose(self, draws: Draws) -> IndexArray:
+        index: IndexArray = np.searchsorted(self._cumulative, draws.uniform(), side="right")
         return np.minimum(index, len(self.kernels) - 1)
 
     def __repr__(self) -> str:

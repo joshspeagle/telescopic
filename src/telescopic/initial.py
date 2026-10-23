@@ -3,19 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, Protocol, runtime_checkable
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
 
-from telescopic._random import FloatArray
-
-
-@runtime_checkable
-class Initial(Protocol):
-    """An initial distribution: ``sample(generator)`` returns one point of shape ``(d,)``."""
-
-    def sample(self, generator: np.random.Generator) -> FloatArray: ...
+from telescopic._linalg import covariance
+from telescopic._types import Distribution, FloatArray
 
 
 class Normal:
@@ -30,16 +24,14 @@ class Normal:
 
     def __init__(self, mean: npt.ArrayLike, cov: npt.ArrayLike) -> None:
         self.mean = np.array(mean, dtype=np.float64, ndmin=1)
-        cov = np.asarray(cov, dtype=np.float64)
-        cov = np.diag(cov) if cov.ndim == 1 else cov
-        if cov.shape != (len(self.mean), len(self.mean)):
-            raise ValueError(f"cov must have shape {(len(self.mean),) * 2}, not {cov.shape}")
-        self.cov = cov
-        self._chol = np.linalg.cholesky(cov)
+        matrix = np.asarray(cov, dtype=np.float64)
+        self.cov, self._chol = covariance(
+            np.diag(matrix) if matrix.ndim == 1 else matrix, "cov", len(self.mean)
+        )
 
-    def sample(self, generator: np.random.Generator) -> FloatArray:
+    def rvs(self, *, random_state: np.random.Generator) -> FloatArray:
         """One draw, shape ``(d,)``."""
-        return self.mean + self._chol @ generator.standard_normal(len(self.mean))
+        return self.mean + self._chol @ random_state.standard_normal(len(self.mean))
 
     def __repr__(self) -> str:
         return f"Normal(mean={self.mean.tolist()}, cov={self.cov.tolist()})"
@@ -59,9 +51,9 @@ class Uniform:
         if self.low.shape != self.high.shape or not np.all(self.low < self.high):
             raise ValueError("low and high must have the same shape, with low < high")
 
-    def sample(self, generator: np.random.Generator) -> FloatArray:
+    def rvs(self, *, random_state: np.random.Generator) -> FloatArray:
         """One draw, shape ``(d,)``."""
-        return generator.uniform(self.low, self.high)
+        return random_state.uniform(self.low, self.high)
 
     def __repr__(self) -> str:
         return f"Uniform(low={self.low.tolist()}, high={self.high.tolist()})"
@@ -83,9 +75,9 @@ class Empirical:
         if self.points.ndim != 2:
             raise ValueError(f"points must have shape (n, d), not {self.points.shape}")
 
-    def sample(self, generator: np.random.Generator) -> FloatArray:
+    def rvs(self, *, random_state: np.random.Generator) -> FloatArray:
         """One of the points, chosen uniformly, shape ``(d,)``."""
-        point: FloatArray = self.points[generator.integers(len(self.points))].copy()
+        point: FloatArray = self.points[random_state.integers(len(self.points))].copy()
         return point
 
     def __repr__(self) -> str:
@@ -96,57 +88,48 @@ class _Callable:
     def __init__(self, function: Callable[[np.random.Generator], Any]) -> None:
         self.function = function
 
-    def sample(self, generator: np.random.Generator) -> FloatArray:
-        return np.array(self.function(generator), dtype=np.float64, ndmin=1)
+    def rvs(self, *, random_state: np.random.Generator) -> Any:
+        return self.function(random_state)
 
     def __repr__(self) -> str:
         return f"{getattr(self.function, '__name__', 'callable')}(rng)"
 
 
-class _Frozen:
-    def __init__(self, distribution: Any) -> None:
-        self.distribution = distribution
-
-    def sample(self, generator: np.random.Generator) -> FloatArray:
-        return np.array(self.distribution.rvs(random_state=generator), dtype=np.float64, ndmin=1)
-
-    def __repr__(self) -> str:
-        return repr(self.distribution)
-
-
-def as_initial(init: Any) -> Initial:
+def as_initial(init: Any) -> Distribution:
     """Interpret ``init`` as an initial distribution (spec R-INPUT-2).
 
     Parameters
     ----------
     init
-        An object with ``sample(generator)``; a frozen SciPy distribution (anything with
-        ``rvs``); a callable ``init(rng)``; or an array of points of shape ``(n, d)``,
-        used as :class:`Empirical`.
+        An object with ``rvs(random_state=generator)``, such as a frozen SciPy
+        distribution, :class:`Normal`, :class:`Uniform` or :class:`Empirical`; a callable
+        ``init(rng)``; or an array of points of shape ``(n, d)``, used as
+        :class:`Empirical`.
 
     Returns
     -------
-    Initial
+    object with ``rvs(random_state=generator)``
     """
-    if isinstance(init, Initial):
-        return init
     if hasattr(init, "rvs"):
-        return _Frozen(init)
+        distribution: Distribution = init
+        return distribution
     if callable(init):
         return _Callable(init)
     points = np.asarray(init)
     if points.ndim == 2 and np.issubdtype(points.dtype, np.number):
         return Empirical(points)
     raise TypeError(
-        "init must be an initial distribution, a frozen SciPy distribution, a callable "
-        "init(rng) or an array of points of shape (n, d); a single point of shape (d,) "
-        "is a point mass: pass Empirical([point]) to use one"
+        "init must have rvs(random_state=...), like a frozen SciPy distribution, or be a "
+        "callable init(rng) or an array of points of shape (n, d); a single point of shape "
+        "(d,) is a point mass: pass Empirical([point]) to use one"
     )
 
 
-def draw(initial: Initial, generator: np.random.Generator, ndim: int | None = None) -> FloatArray:
-    """One validated draw from ``initial``: shape ``(d,)`` (or ``(ndim,)``) and finite."""
-    point = initial.sample(generator)
+def draw(
+    initial: Distribution, generator: np.random.Generator, ndim: int | None = None
+) -> FloatArray:
+    """One validated draw from ``initial``: finite, of shape ``(d,)`` (or ``(ndim,)``)."""
+    point = np.array(initial.rvs(random_state=generator), dtype=np.float64, ndmin=1)
     if point.ndim != 1 or (ndim is not None and len(point) != ndim):
         expected = "(d,)" if ndim is None else f"({ndim},)"
         raise ValueError(f"the initial distribution drew shape {point.shape}, not {expected}")

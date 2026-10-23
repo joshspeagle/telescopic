@@ -8,10 +8,10 @@ import numpy as np
 import numpy.typing as npt
 from scipy.special import gammaln
 
-from telescopic._linalg import inverse_lower, matvec
-from telescopic._random import Draws, FloatArray
-from telescopic.kernels.base import BoolArray, Kernel, State, evaluate, log_ratio, select
-from telescopic.kernels.random_walk import _covariance
+from telescopic._linalg import covariance, inverse_lower, matvec
+from telescopic._random import Draws
+from telescopic._types import BoolArray, FloatArray
+from telescopic.kernels.base import Kernel, State, evaluate, log_ratio, select
 from telescopic.target import Target
 
 
@@ -32,13 +32,10 @@ class MultivariateT:
 
     def __init__(self, mean: npt.ArrayLike, cov: npt.ArrayLike, df: int | None = 5) -> None:
         self.mean = np.array(mean, dtype=np.float64, ndmin=1)
-        self.cov = _covariance(cov)
-        if self.cov.shape != (len(self.mean), len(self.mean)):
-            raise ValueError(f"cov must have shape {(len(self.mean),) * 2}, not {self.cov.shape}")
+        self.cov, self._chol = covariance(cov, "cov", len(self.mean))
         if df is not None and (int(df) != df or df < 1):
             raise ValueError(f"df must be a positive integer or None, not {df}")
         self.df = None if df is None else int(df)
-        self._chol = np.linalg.cholesky(self.cov)
         self._inverse = inverse_lower(self._chol)
         self._log_det = 2.0 * np.log(np.diag(self._chol)).sum()
 
@@ -100,18 +97,20 @@ class Independence(Kernel):
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, BoolArray]:
         q = self._ready()
-        proposal = evaluate(target, q.sample(draws), False)
-        accepted = draws.log_uniform() < _weight_ratio(q, proposal, state)
+        proposal = evaluate(target, q.sample(draws), state.grad is not None)
+        new, old = _log_weights(q, proposal, state)
+        accepted = draws.log_uniform() < log_ratio(new, old)
         return select(accepted, proposal, state), accepted
 
     def coupled_step(
         self, target: Target, state_x: State, state_y: State, draws: Draws
     ) -> tuple[State, State]:
         q = self._ready()
-        proposal = evaluate(target, q.sample(draws), False)
+        proposal = evaluate(target, q.sample(draws), state_x.grad is not None)
         log_u = draws.log_uniform()
-        state_x = select(log_u < _weight_ratio(q, proposal, state_x), proposal, state_x)
-        state_y = select(log_u < _weight_ratio(q, proposal, state_y), proposal, state_y)
+        new, old_x, old_y = _log_weights(q, proposal, state_x, state_y)
+        state_x = select(log_u < log_ratio(new, old_x), proposal, state_x)
+        state_y = select(log_u < log_ratio(new, old_y), proposal, state_y)
         return state_x, state_y
 
     def _ready(self) -> MultivariateT:
@@ -123,7 +122,8 @@ class Independence(Kernel):
         return f"Independence(proposal={self.proposal!r})"
 
 
-def _weight_ratio(q: MultivariateT, proposal: State, state: State) -> FloatArray:
-    return log_ratio(
-        proposal.log_prob - q.log_density(proposal.x), state.log_prob - q.log_density(state.x)
-    )
+def _log_weights(q: MultivariateT, *states: State) -> list[FloatArray]:
+    # log pi - log q at each state's positions, from one call of q.log_density, whose rows
+    # do not depend on each other (spec R-KER-6).
+    log_q = np.split(q.log_density(np.concatenate([state.x for state in states])), len(states))
+    return [state.log_prob - part for state, part in zip(states, log_q, strict=True)]

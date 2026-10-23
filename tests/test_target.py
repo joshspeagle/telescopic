@@ -66,12 +66,6 @@ def test_a_target_without_gradient_refuses_gradient_requests():
         Target(gaussian).log_prob_and_grad(np.zeros((1, 2)))
 
 
-def test_a_non_finite_gradient_at_a_finite_density_raises():
-    target = Target(gaussian, grad=lambda x: np.full_like(x, np.nan))
-    with pytest.raises(ValueError, match="grad returned"):
-        target.log_prob_and_grad(np.zeros((1, 2)))
-
-
 def test_a_wrong_output_shape_raises():
     with pytest.raises(ValueError, match="expected"):
         Target(lambda x: np.zeros(3), vectorize=True).log_prob(np.zeros((2, 1)))

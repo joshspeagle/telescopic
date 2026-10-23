@@ -13,7 +13,7 @@ from numpy.random import SeedSequence
 from scipy import stats
 
 from telescopic import diagnostics
-from telescopic._random import FloatArray
+from telescopic._types import FloatArray
 from telescopic.engine import Replicates
 from telescopic.estimators import unbiased_covariance, weighted_quantile
 from telescopic.measure import SignedMeasure

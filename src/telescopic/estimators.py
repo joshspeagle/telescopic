@@ -8,9 +8,7 @@ import numpy as np
 import numpy.typing as npt
 from scipy.optimize import isotonic_regression
 
-from telescopic._random import FloatArray
-
-IntArray = npt.NDArray[np.int64]
+from telescopic._types import FloatArray, IntArray
 
 
 def averaging_times(k: int, m: int, thin: int) -> IntArray:

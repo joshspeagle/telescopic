@@ -249,17 +249,17 @@ Averaging only the replicates completed by a deadline is biased by $-\mathbb E[H
 
 - **Log-density:** `log_prob(x, *args, **kwargs)` returns a float for `x` of shape `(d,)`. With `vectorize=True` it takes `(n, d)` and returns `(n,)`.
 - **Gradient:** an optional `grad` with the same signature returns $\nabla \log\pi$, of shape `(d,)` or `(n, d)`. A kernel that needs a gradient raises `ValueError` without one.
-- **Special values:** `-inf` is a valid value and is rejected by every Metropolis step. NaN or `+inf` raises `ValueError` with the offending point. Where the log-density is `-inf`, the gradient may be non-finite.
+- **Special values:** `-inf` is a valid value and is rejected by every Metropolis step. NaN or `+inf` raises `ValueError` with the offending point. Where the log-density is `-inf`, the gradient may be non-finite. Where it is finite, a non-finite gradient raises at an initial state, and gradient kernels reject a proposal that has one.
+- **Gibbs:** with a Gibbs kernel, `log_prob` may be `None` (§5.7).
 - **Determinism:** the log-density must return the same value at the same point. A stochastic log-density can split chains that have met. The documentation says so.
 - **Layer C:** a `Target` object wraps these functions, counts evaluations, and presents a batched interface `(n, d) -> (n,)` to kernels, whether or not the user's function is vectorised.
 
 ### 4.2 Initial distribution (R-INPUT-2)
 
 `init` may be any of:
+- an object with `rvs(random_state=rng)`: a frozen SciPy distribution, or a helper (`telescopic.initial.Normal`, `Uniform`, `Empirical`). A draw is normalised to shape `(d,)` (SciPy returns shape `()` for a one-dimensional multivariate normal);
 - a callable `init(rng) -> array (d,)`;
-- a frozen SciPy distribution, used through `rvs(random_state=rng)`, whose draw is normalised to shape `(d,)` (SciPy returns shape `()` for a one-dimensional multivariate normal);
-- an array of points of shape `(n, d)`, used as the uniform distribution over its rows. This lets emcee users start from an existing ensemble without losing unbiasedness;
-- a helper object (`telescopic.initial.Normal`, `Uniform`, `Empirical`).
+- an array of points of shape `(n, d)`, used as the uniform distribution over its rows. This lets emcee users start from an existing ensemble without losing unbiasedness.
 
 Rules:
 - $X_0$ and $Y_0$ are independent draws from the replicate's own stream.
@@ -288,7 +288,7 @@ coupled_step(target, sx, sy, draws) -> (sx, sy)             # one coupled transi
 tune(target, initial, rng, **options) -> (kernel, report)   # only if it has unset parameters
 ```
 
-- **States:** `State(x, log_prob, grad)` are batch-first: `x` is `(n, d)`, `log_prob` is `(n,)`, and `grad` is `(n, d)` or `None`.
+- **States:** `State(x, log_prob, grad)` are batch-first: `x` is `(n, d)`, `log_prob` is `(n,)`, and `grad` is `(n, d)` or `None`. A kernel returns states with the fields of its input states, valid at the returned positions, so a kernel that needs no gradient still evaluates one for states that carry it: mixtures of gradient and gradient-free kernels then keep valid caches. Kernels never modify their input states.
 - **Randomness:** `draws` supplies random numbers row by row from each replicate's stream (§6.1). Its `normal(d)`, `uniform()`, `log_uniform()` and `generator(i)` give `(n, d)` normals, `(n,)` uniforms and their logarithms, and row `i`'s `numpy.random.Generator`.
 - **R-KER-2:** each marginal of `coupled_step` has exactly the law of `step`.
 - **R-KER-3:** the engine declares a meeting when the returned positions of a pair are bitwise equal (R-EST-2). A coupling that makes the two proposals identical gives $Y$ a copy of $X$'s proposal and its cached log-density, never a recomputation, so that equality is exact.
@@ -463,7 +463,8 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 - **Worker hygiene:**
   - every task runs under `threadpool_limits(1)`, so BLAS is pinned to one thread in user pools too;
   - in pools that telescopic creates, the target is shipped once per worker and workers ignore SIGINT. With a user executor the target travels with each task.
-- **Picklability:** telescopic ships the target to the workers it creates with `cloudpickle` when it is installed (the `parallel` extra), so a `log_prob` defined in a notebook works under the spawn and forkserver start methods (D-27). Otherwise the target must be picklable, and the error says how to fix it. The documentation covers the `if __name__ == "__main__"` guard.
+- **Picklability:** telescopic ships the target, the initial distribution and the kernel (which can hold user functions, such as Gibbs conditionals) to the workers it creates with `cloudpickle` when it is installed (the `parallel` extra), so functions defined in a notebook work under the spawn and forkserver start methods (D-27). Otherwise they must be picklable, and the error says how to fix it. The documentation covers the `if __name__ == "__main__"` guard.
+- **Counters:** each task returns its own numbers of log-density and gradient evaluations, since the `Target` counters of a worker process are not the parent's.
 
 ### 6.5 Interruption (R-EXEC-6)
 

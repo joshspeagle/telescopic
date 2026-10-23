@@ -12,14 +12,13 @@ import numpy as np
 import numpy.typing as npt
 from numpy.random import Generator, SeedSequence
 
-from telescopic._random import FloatArray, Streams, replicate_generator
-from telescopic.estimators import IntArray, averaging_times, correction_coefficients
-from telescopic.initial import Initial, draw
+from telescopic._random import Streams, replicate_generator
+from telescopic._types import BoolArray, Distribution, FloatArray, IntArray
+from telescopic.estimators import averaging_times, correction_coefficients
+from telescopic.initial import draw
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
 from telescopic.warnings import ConvergenceWarning, InputWarning
-
-BoolArray = npt.NDArray[np.bool_]
 
 
 @dataclass
@@ -62,7 +61,7 @@ class Replicates:
 def run(
     target: Target,
     kernel: Kernel,
-    initial: Initial,
+    initial: Distribution,
     indices: Iterable[int],
     *,
     root: SeedSequence,
@@ -91,7 +90,7 @@ def run(
     target : Target
     kernel : Kernel
         A tuned kernel.
-    initial : Initial
+    initial : object with rvs(random_state=generator)
     indices : iterable of int
         Replicate indices, started in this order.
     root : numpy.random.SeedSequence
@@ -167,7 +166,12 @@ def run(
 class _Start:
     # A replicate's generator and initial states, drawn X_0 first (spec section 6.1).
     def __init__(
-        self, index: int, initial: Initial, root: SeedSequence, namespace: int, ndim: int | None
+        self,
+        index: int,
+        initial: Distribution,
+        root: SeedSequence,
+        namespace: int,
+        ndim: int | None,
     ) -> None:
         self.index = index
         self.generator: Generator = replicate_generator(root, namespace, index)

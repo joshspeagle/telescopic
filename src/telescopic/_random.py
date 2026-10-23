@@ -8,8 +8,7 @@ import numpy as np
 import numpy.typing as npt
 from numpy.random import PCG64DXSM, Generator, SeedSequence
 
-FloatArray = npt.NDArray[np.float64]
-IndexArray = npt.NDArray[np.intp]
+from telescopic._types import FloatArray, IndexArray
 
 # Namespaces of replicate streams (spec section 6.1).
 MAIN = 0

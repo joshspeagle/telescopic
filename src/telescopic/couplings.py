@@ -2,26 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Any
 
 import numpy as np
-import numpy.typing as npt
-from scipy.special import logsumexp
+from scipy.special import softmax
 
 from telescopic._linalg import matvec
-from telescopic._random import Draws, FloatArray
-
-BoolArray = npt.NDArray[np.bool_]
-IntArray = npt.NDArray[np.intp]
-
-
-class Distribution(Protocol):
-    """A distribution with a sampler and a normalised log-density, such as a frozen SciPy one.
-
-    Discrete SciPy distributions provide ``logpmf`` instead of ``logpdf``; both work.
-    """
-
-    def rvs(self, *, random_state: np.random.Generator) -> Any: ...
+from telescopic._random import Draws
+from telescopic._types import BoolArray, Distribution, FloatArray, IndexArray
 
 
 def reflection_maximal(
@@ -69,7 +57,7 @@ def reflection_maximal(
 
 def maximal(
     p: list[Distribution], q: list[Distribution], draws: Draws, eta: float = 1.0
-) -> tuple[FloatArray, FloatArray, BoolArray, IntArray]:
+) -> tuple[FloatArray, FloatArray, BoolArray, IndexArray]:
     r"""Rejection maximal coupling of the distributions ``p[i]`` and ``q[i]`` of each row.
 
     Draw :math:`X \sim p`; the pair is identical with probability
@@ -101,29 +89,26 @@ def maximal(
     if not 0.0 < eta <= 1.0:
         raise ValueError(f"eta must be in (0, 1], not {eta}")
     log_eta = np.log(eta)
-    xs, ys, identical, n_draws = [], [], np.zeros(len(p), dtype=bool), np.ones(len(p), np.intp)
+    xs, ys, n_draws = [], [], np.ones(len(p), np.intp)
     for row, (p_row, q_row) in enumerate(zip(p, q, strict=True)):
         generator = draws.generator(row)
-        x = p_row.rvs(random_state=generator)
+        x = y = p_row.rvs(random_state=generator)
         log_ratio = _log_density(q_row, x) - _log_density(p_row, x)
-        if _log_uniform(generator) <= min(log_eta, log_ratio):
-            identical[row] = True
-            xs.append(x)
-            ys.append(x)
-            continue
-        while True:
+        accepted = _log_uniform(generator) <= min(log_eta, log_ratio)
+        while not accepted:
             y = q_row.rvs(random_state=generator)
             n_draws[row] += 1
-            if _log_uniform(generator) > log_eta + _log_density(p_row, y) - _log_density(q_row, y):
-                break
+            log_ratio = _log_density(p_row, y) - _log_density(q_row, y)
+            accepted = _log_uniform(generator) > log_eta + log_ratio
         xs.append(x)
         ys.append(y)
-    return np.asarray(xs, dtype=np.float64), np.asarray(ys, dtype=np.float64), identical, n_draws
+    x_array, y_array = np.asarray(xs, dtype=np.float64), np.asarray(ys, dtype=np.float64)
+    return x_array, y_array, n_draws == 1, n_draws
 
 
 def discrete_maximal(
     log_p: FloatArray, log_q: FloatArray, draws: Draws
-) -> tuple[IntArray, IntArray]:
+) -> tuple[IndexArray, IndexArray]:
     r"""Maximal coupling of two distributions on :math:`\{0, \dots, K-1\}`, row by row.
 
     With probability :math:`\alpha = \sum_k \min(p_k, q_k)` both indices are drawn from
@@ -144,8 +129,7 @@ def discrete_maximal(
     i, j : ndarray of int, shape (n,)
         The coupled indices.
     """
-    p = np.exp(log_p - logsumexp(log_p, axis=1, keepdims=True))
-    q = np.exp(log_q - logsumexp(log_q, axis=1, keepdims=True))
+    p, q = softmax(log_p, axis=1), softmax(log_q, axis=1)
     overlap = np.minimum(p, q)
     alpha = overlap.sum(axis=1)
     meet = draws.uniform() < alpha
@@ -165,13 +149,13 @@ def _log_density(distribution: Any, value: Any) -> float:
     return float(log_density(value))
 
 
-def _categorical(weights: FloatArray, u: FloatArray) -> IntArray:
+def _categorical(weights: FloatArray, u: FloatArray) -> IndexArray:
     # Inverse-CDF draw from unnormalised non-negative weights: the first index whose
     # cumulative weight exceeds u times the total, so zero-weight categories are never
     # drawn. The clip only matters for rounding at u -> 1 and for an all-zero row (a
     # residual that is never used).
     cumulative = np.cumsum(weights, axis=1)
-    index: IntArray = np.minimum(
+    index: IndexArray = np.minimum(
         (cumulative <= (u * cumulative[:, -1])[:, None]).sum(axis=1), weights.shape[1] - 1
     )
     return index

@@ -8,7 +8,8 @@ import numpy as np
 import numpy.typing as npt
 from numpy.random import Generator, SeedSequence
 
-from telescopic._random import Draws, FloatArray, Streams
+from telescopic._random import Draws, Streams
+from telescopic._types import FloatArray
 
 
 def fixed_draws(

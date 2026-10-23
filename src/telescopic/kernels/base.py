@@ -7,17 +7,18 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
-import numpy.typing as npt
 
-from telescopic._random import Draws, FloatArray
+from telescopic._random import Draws
+from telescopic._types import BoolArray, FloatArray
 from telescopic.target import Target
-
-BoolArray = npt.NDArray[np.bool_]
 
 
 @dataclass
 class State:
     """Positions, log-densities and (optionally) gradients of ``n`` chains, batch first.
+
+    A kernel returns states with the fields of its input states, valid at the returned
+    positions: a state that carries gradients gets them evaluated at every new position.
 
     Attributes
     ----------
@@ -34,7 +35,8 @@ class State:
         return len(self.log_prob)
 
     def take(self, rows: Any) -> State:
-        """The chains in ``rows``."""
+        """A copy of the chains in ``rows`` (an index, an index array, a mask or a slice)."""
+        rows = np.arange(len(self))[rows]
         return State(
             self.x[rows], self.log_prob[rows], None if self.grad is None else self.grad[rows]
         )
@@ -43,7 +45,7 @@ class State:
         """Overwrite the chains in ``rows`` with ``other``, in place."""
         self.x[rows] = other.x
         self.log_prob[rows] = other.log_prob
-        if self.grad is not None and other.grad is not None:
+        if self.grad is not None:
             self.grad[rows] = other.grad
 
 
@@ -69,8 +71,21 @@ class Kernel(ABC):
         return True
 
     def init_state(self, target: Target, x: FloatArray) -> State:
-        """Evaluate the target at the rows of ``x``."""
-        return evaluate(target, x, self.needs_grad)
+        """Evaluate the target at the rows of ``x``, with gradients if the kernel needs them.
+
+        A non-finite gradient where the log-density is finite raises ``ValueError`` here;
+        gradient kernels reject such a proposal instead (spec R-INPUT-1).
+        """
+        state = evaluate(target, x, self.needs_grad)
+        if state.grad is not None:
+            bad = np.isfinite(state.log_prob) & ~np.isfinite(state.grad).all(axis=1)
+            if bad.any():
+                row = int(np.argmax(bad))
+                raise ValueError(
+                    f"grad returned {state.grad[row].tolist()} at x = {x[row].tolist()}, "
+                    "where log_prob is finite"
+                )
+        return state
 
     @abstractmethod
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, BoolArray]:
@@ -110,14 +125,11 @@ def evaluate_pair(
 
     Identical proposals are evaluated once and their state is shared.
     """
-    distinct = ~identical
+    distinct = np.flatnonzero(~identical)
     both = evaluate(target, np.concatenate([x, y[distinct]]), need_grad)
-    state_x = both.take(slice(0, len(x)))
-    state_y = State(
-        y, state_x.log_prob.copy(), None if both.grad is None else both.grad[: len(x)].copy()
-    )
-    state_y.put(distinct, both.take(slice(len(x), None)))
-    return state_x, state_y
+    source = np.arange(len(x))
+    source[distinct] = np.arange(len(x), len(both))
+    return both.take(slice(0, len(x))), both.take(source)
 
 
 def log_ratio(new: FloatArray, old: FloatArray) -> FloatArray:
@@ -132,7 +144,5 @@ def select(accepted: BoolArray, proposal: State, current: State) -> State:
     return State(
         np.where(accepted[:, None], proposal.x, current.x),
         np.where(accepted, proposal.log_prob, current.log_prob),
-        None
-        if current.grad is None or proposal.grad is None
-        else np.where(accepted[:, None], proposal.grad, current.grad),
+        None if current.grad is None else np.where(accepted[:, None], proposal.grad, current.grad),
     )
