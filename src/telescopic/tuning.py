@@ -12,7 +12,7 @@ import numpy.typing as npt
 
 from telescopic._linalg import matvec
 from telescopic._random import TUNING, Streams, replicate_generator, root_seed
-from telescopic._types import FloatArray, Seed
+from telescopic._types import FloatArray, Seed, integer, real
 from telescopic.initial import as_initial, draw
 from telescopic.target import Target
 
@@ -155,7 +155,7 @@ def adaptive_metropolis(
     Cholesky factorisations: beyond 20 dimensions the chains refactor the covariance and
     keep their states every :math:`\lceil d/20\rceil` steps, or fewer for a short pilot.
     """
-    if n_steps is not None and n_steps < 3:
+    if n_steps is not None and integer("n_steps", n_steps, "an integer or None") < 3:
         # The second half of each chain needs two states for R-hat.
         raise ValueError(f"n_steps must be at least 3, not {n_steps}")
     root = root_seed(rng)
@@ -294,7 +294,7 @@ def choose_k(meeting_times: npt.ArrayLike, quantile: float = 0.99) -> int:
     if tau.ndim != 1 or len(tau) == 0:
         raise ValueError("meeting_times must be a non-empty one-dimensional array")
     largest = 1 - 1 / len(tau)
-    if not 0 < quantile <= largest:
+    if not 0 < real("quantile", quantile) <= largest:
         raise ValueError(
             f"quantile must be in (0, 1 - 1/R0] = (0, {largest:g}] for {len(tau)} pilot "
             f"pairs, not {quantile}; run more pilot pairs for a higher quantile"

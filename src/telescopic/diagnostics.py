@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, NamedTuple
 import numpy as np
 import numpy.typing as npt
 
-from telescopic._types import FloatArray
+from telescopic._types import FloatArray, integer
 
 if TYPE_CHECKING:
     from telescopic.results import Result
@@ -91,8 +91,8 @@ def w1_bound(
 def _lagged_tail(values: FloatArray, lag: int, t: npt.ArrayLike) -> FloatArray:
     # sum_{j >= 1} values[t + jL], with values zero past the end. tail[i, r] sums values
     # over the times i'L + r with i' >= i; the padding adds a last row of zeros.
-    if int(lag) != lag or lag < 1:
-        raise ValueError(f"lag must be an integer of at least 1, not {lag}")
+    if integer("lag", lag) < 1:
+        raise ValueError(f"lag must be at least 1, not {lag}")
     times = np.asarray(t)
     if not np.all(times == np.floor(times)) or np.any(times < 0):
         raise ValueError(f"t must be non-negative integers, not {times}")

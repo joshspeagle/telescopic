@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import itertools
-import operator
 import time
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
@@ -14,7 +13,7 @@ import numpy.typing as npt
 from numpy.random import Generator, SeedSequence
 
 from telescopic._random import MAIN, Streams, replicate_generator, root_seed
-from telescopic._types import BoolArray, Distribution, FloatArray, IntArray, Seed
+from telescopic._types import BoolArray, Distribution, FloatArray, IntArray, Seed, integer
 from telescopic.estimators import correction_coefficients
 from telescopic.initial import draw
 from telescopic.kernels.base import Kernel, State
@@ -202,7 +201,7 @@ def run(
     (spec R-EXEC-7).
     """
     settings = check_settings(Settings(k, m, lag, thin, max_iter, store))
-    if lanes < 1:
+    if integer("lanes", lanes) < 1:
         raise ValueError(f"lanes must be at least 1, not {lanes}")
     requested = np.asarray(indices)
     if (
@@ -262,11 +261,11 @@ def check_settings(settings: Settings) -> Settings:
         If the settings break a bound.
     """
     k, m, lag, thin = (
-        _integer(name, getattr(settings, name)) for name in ("k", "m", "lag", "thin")
+        integer(name, getattr(settings, name)) for name in ("k", "m", "lag", "thin")
     )
     max_iter = settings.max_iter
     if max_iter is not None:
-        max_iter = _integer("max_iter", max_iter, "an integer or None")
+        max_iter = integer("max_iter", max_iter, "an integer or None")
     if not 0 <= k <= m:
         raise ValueError(f"k and m must satisfy 0 <= k <= m, not k={k}, m={m}")
     if lag < 1 or thin < 1:
@@ -274,14 +273,6 @@ def check_settings(settings: Settings) -> Settings:
     if max_iter is not None and max_iter <= max(lag, m):
         raise ValueError(f"max_iter must exceed max(lag, m) = {max(lag, m)}, not {max_iter}")
     return Settings(k, m, lag, thin, max_iter, settings.store)
-
-
-def _integer(name: str, value: Any, expected: str = "an integer") -> int:
-    # The sampler checks its own arguments with it too.
-    try:
-        return operator.index(value)
-    except TypeError:
-        raise TypeError(f"{name} must be {expected}, not {value!r}") from None
 
 
 def merge(parts: Sequence[Replicates]) -> Replicates:

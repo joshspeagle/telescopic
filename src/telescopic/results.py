@@ -13,7 +13,7 @@ import numpy.typing as npt
 from scipy import stats
 
 from telescopic import diagnostics, engine
-from telescopic._types import FloatArray
+from telescopic._types import FloatArray, integer, real
 from telescopic.engine import Replicates
 from telescopic.estimators import unbiased_covariance, unbiased_variance, weighted_quantile
 from telescopic.measure import SignedMeasure
@@ -162,7 +162,7 @@ class Result:
         -------
         Estimate
         """
-        if not 0 < level < 1:
+        if not 0 < real("level", level) < 1:
             raise ValueError(f"level must be in (0, 1), not {level}")
         self._require(2)
         values = self.measure.per_replicate(h)
@@ -240,7 +240,7 @@ class Result:
         ndarray, shape (2, d)
             Lower and upper ends.
         """
-        if not 0 < mass < 1:
+        if not 0 < real("mass", mass) < 1:
             raise ValueError(f"mass must be in (0, 1), not {mass}")
         return self.quantile([(1 - mass) / 2, (1 + mass) / 2])
 
@@ -272,7 +272,7 @@ class Result:
         edges : ndarray, shape (bins + 1,), or a list of them for a sequence of coordinates
         """
         columns = self._columns(dims)
-        if bins < 1:
+        if integer("bins", bins) < 1:
             raise ValueError(f"bins must be at least 1, not {bins}")
         expected = (*np.shape(dims), 2)
         if range is not None and np.shape(range) != expected:

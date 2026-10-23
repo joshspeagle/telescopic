@@ -10,16 +10,8 @@ from scipy.special import gammaln
 
 from telescopic._linalg import covariance, inverse_lower, matvec, vector
 from telescopic._random import Draws
-from telescopic._types import FloatArray, Seed
-from telescopic.kernels.base import (
-    REAL,
-    Kernel,
-    State,
-    acceptance,
-    evaluate,
-    log_ratio,
-    select,
-)
+from telescopic._types import FloatArray, Seed, integer
+from telescopic.kernels.base import Kernel, State, acceptance, evaluate, log_ratio, select
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport
 
@@ -42,10 +34,9 @@ class MultivariateT:
     def __init__(self, mean: npt.ArrayLike, cov: npt.ArrayLike, df: int | None = 5) -> None:
         self.mean = vector(mean, "mean")
         self.cov, self._chol = covariance(cov, "cov", len(self.mean))
-        if df is not None and not (isinstance(df, REAL) and 1 <= df < np.inf and int(df) == df):
-            raise ValueError(
-                f"df must be a positive integer, or None for the Gaussian, not {df!r}"
-            )
+        expected = "a positive integer, or None for the Gaussian"
+        if df is not None and integer("df", df, expected) < 1:
+            raise ValueError(f"df must be {expected}, not {df}")
         self.df = None if df is None else int(df)
         self._inverse = inverse_lower(self._chol)
         self._log_det = 2.0 * np.log(np.diag(self._chol)).sum()

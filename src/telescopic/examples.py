@@ -12,7 +12,7 @@ import numpy as np
 import numpy.typing as npt
 from scipy import integrate, special
 
-from telescopic._types import Distribution, FloatArray
+from telescopic._types import Distribution, FloatArray, integer, real
 from telescopic.initial import Normal, Uniform
 
 
@@ -71,9 +71,9 @@ def gaussian(d: int = 10, rho: float = 0.9) -> Example:
     -------
     Example
     """
-    if not isinstance(d, int | np.integer) or d < 1:
-        raise ValueError(f"d must be an integer of at least 1, not {d!r}")
-    if not -1 < rho < 1:
+    if integer("d", d) < 1:
+        raise ValueError(f"d must be at least 1, not {d}")
+    if not -1 < real("rho", rho) < 1:
         raise ValueError(f"rho must be in (-1, 1), not {rho}")
     steps = np.arange(d)
     cov = float(rho) ** np.abs(steps[:, None] - steps[None, :])
@@ -138,8 +138,8 @@ def funnel(d: int = 10) -> Example:
     -------
     Example
     """
-    if not isinstance(d, int | np.integer) or d < 2:
-        raise ValueError(f"d must be an integer of at least 2, not {d!r}")
+    if integer("d", d) < 2:
+        raise ValueError(f"d must be at least 2, not {d}")
     cov = np.diag([9.0] + [np.exp(4.5)] * (d - 1))
     initial = Normal(np.zeros(d), cov)
     return Example("funnel", _funnel_log_prob, _funnel_grad, initial, np.zeros(d), cov)

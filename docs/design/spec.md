@@ -612,7 +612,7 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
 
 - **Randomness:** every function that draws random numbers takes `rng` (SPEC 7). There is no global state.
 - **Shapes:** batch first. States are `(n, d)`; test functions map `(n, d)` to `(n,)` or `(n, p)`; per-replicate values are `(R, ...)`.
-- **Errors:** `ValueError` or `TypeError` with messages that name the argument and say what was expected. Questionable inputs emit `InputWarning`; reliability problems emit `ConvergenceWarning`.
+- **Errors:** `TypeError` for an argument of the wrong type and `ValueError` for a value out of bounds, with messages that name the argument and say what was expected (DECISIONS #50). Questionable inputs emit `InputWarning`; reliability problems emit `ConvergenceWarning`.
 - **Progress:** `progress=True` draws tqdm's text bar when tqdm is installed, in notebooks too, and falls back to periodic lines on stderr (DECISIONS #39).
 - **Types and documentation:** public signatures are typed, with NumPy-style docstrings.
 - **Vocabulary:** the documentation says "replicates" and "pairs", never "walkers".

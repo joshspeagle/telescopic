@@ -9,7 +9,7 @@ from scipy.special import softmax
 
 from telescopic._linalg import matvec
 from telescopic._random import Draws
-from telescopic._types import BoolArray, Distribution, FloatArray, IndexArray
+from telescopic._types import BoolArray, Distribution, FloatArray, IndexArray, real
 
 
 def reflection_maximal(
@@ -93,7 +93,7 @@ def maximal(
     n_draws : ndarray of int, shape (n,)
         Draws from ``p`` and ``q`` used by each row.
     """
-    if not 0.0 < eta <= 1.0:
+    if not 0.0 < real("eta", eta) <= 1.0:
         raise ValueError(f"eta must be in (0, 1], not {eta}")
     log_eta = np.log(eta)
     xs, ys, n_draws = [], [], np.ones(len(p), np.intp)

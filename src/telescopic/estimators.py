@@ -8,7 +8,7 @@ import numpy as np
 import numpy.typing as npt
 from scipy.optimize import isotonic_regression
 
-from telescopic._types import FloatArray, IntArray
+from telescopic._types import FloatArray, IntArray, integer
 
 
 def averaging_times(k: int, m: int, thin: int) -> IntArray:
@@ -59,11 +59,11 @@ def correction_coefficients(t: npt.ArrayLike, k: int, m: int, lag: int, thin: in
 
 
 def _check(k: int, m: int, lag: int, thin: int) -> None:
-    if not all(int(value) == value for value in (k, m, lag, thin)) or not (
-        0 <= k <= m and lag >= 1 and thin >= 1
-    ):
+    for name, value in (("k", k), ("m", m), ("lag", lag), ("thin", thin)):
+        integer(name, value)
+    if not (0 <= k <= m and lag >= 1 and thin >= 1):
         raise ValueError(
-            "k, m, lag and thin must be integers with 0 <= k <= m, lag >= 1 and thin >= 1, "
+            "k, m, lag and thin must satisfy 0 <= k <= m, lag >= 1 and thin >= 1, "
             f"not {k}, {m}, {lag} and {thin}"
         )
 

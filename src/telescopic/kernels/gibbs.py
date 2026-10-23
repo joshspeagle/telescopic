@@ -11,9 +11,9 @@ import numpy.typing as npt
 from scipy import linalg
 
 from telescopic._random import Draws
-from telescopic._types import FloatArray
+from telescopic._types import FloatArray, real
 from telescopic.couplings import maximal
-from telescopic.kernels.base import REAL, Kernel, State, evaluate, evaluate_pair
+from telescopic.kernels.base import Kernel, State, evaluate, evaluate_pair
 from telescopic.target import Target
 
 COUPLINGS = ("maximal", "crn", "two-scale")
@@ -86,10 +86,10 @@ class Gibbs(Kernel):
             raise ValueError(f"coupling must be one of {', '.join(map(repr, COUPLINGS))}")
         if (coupling == "two-scale") != (threshold is not None):
             raise ValueError("threshold is required by coupling='two-scale', and only by it")
-        if threshold is not None and not threshold > 0:
+        if threshold is not None and not real("threshold", threshold) > 0:
             raise ValueError(f"threshold must be positive, not {threshold}")
-        if not (isinstance(eta, REAL) and 0 < eta <= 1):
-            raise ValueError(f"eta must be in (0, 1], not {eta!r}")
+        if not 0 < real("eta", eta) <= 1:
+            raise ValueError(f"eta must be in (0, 1], not {eta}")
         if coupling == "crn" and eta != 1:
             raise ValueError(
                 "eta applies to the maximal coupling, which coupling='crn' never uses"

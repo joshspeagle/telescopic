@@ -92,12 +92,18 @@ def test_quantiles_of_a_signed_measure_merge_project_and_clip_its_cdf():
 
 
 @pytest.mark.parametrize(
-    "settings", [(4, 2, 1, 1), (0, 5, 0, 1), (0, 5, 1, 0), (1.5, 5, 1, 1), (0, 5, 1, 2.5)]
+    ("settings", "error", "message"),
+    [
+        ((4, 2, 1, 1), ValueError, "must satisfy 0 <= k <= m"),
+        ((0, 5, 0, 1), ValueError, "must satisfy"),
+        ((0, 5, 1, 0), ValueError, "must satisfy"),
+        ((1.5, 5, 1, 1), TypeError, "k must be an integer"),
+        ((0, 5, 1, 2.0), TypeError, "thin must be an integer"),
+    ],
 )
-def test_the_estimator_weights_refuse_invalid_settings(settings):
-    k, m, lag, thin = settings
-    with pytest.raises(ValueError, match="k, m, lag and thin must be integers"):
-        correction_coefficients([5, 6, 7], k, m, lag, thin)
+def test_the_estimator_weights_refuse_invalid_settings(settings, error, message):
+    with pytest.raises(error, match=message):
+        correction_coefficients([5, 6, 7], *settings)
 
 
 def test_weighted_quantiles_refuse_levels_outside_the_unit_interval():

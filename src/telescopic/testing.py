@@ -11,7 +11,7 @@ from numpy.random import Generator
 from scipy import stats
 
 from telescopic._random import Draws, Streams, root_seed
-from telescopic._types import FloatArray, Seed
+from telescopic._types import FloatArray, Seed, integer
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
 
@@ -107,8 +107,8 @@ def check_coupling(
     x, y = np.asarray(x, dtype=np.float64), np.asarray(y, dtype=np.float64)
     if x.ndim != 1 or x.shape != y.shape:
         raise ValueError(f"x and y must be points of one shape (d,), not {x.shape} and {y.shape}")
-    if not isinstance(n, int | np.integer) or n < 2:
-        raise ValueError(f"n must be an integer of at least 2, not {n!r}")
+    if integer("n", n) < 2:
+        raise ValueError(f"n must be at least 2, not {n}")
     seeds = root_seed(rng).spawn(4)
     starts = kernel.init_state(target, np.stack([x, y]))
     start_x, start_y = (starts.take(np.full(n, row)) for row in (0, 1))
@@ -209,8 +209,8 @@ def random_draws(n_rows: int, rng: Seed = None) -> Draws:
     -------
     Draws
     """
-    if not isinstance(n_rows, int | np.integer) or n_rows < 1:
-        raise ValueError(f"n_rows must be an integer of at least 1, not {n_rows!r}")
+    if integer("n_rows", n_rows) < 1:
+        raise ValueError(f"n_rows must be at least 1, not {n_rows}")
     return _Shared(n_rows, np.random.default_rng(rng)).view(np.arange(n_rows))
 
 

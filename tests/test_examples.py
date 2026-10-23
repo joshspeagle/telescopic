@@ -158,15 +158,15 @@ def test_an_uncorrelated_gaussian_has_a_float_covariance():
 
 
 @pytest.mark.parametrize(
-    ("make", "kwargs"),
+    ("make", "kwargs", "error"),
     [
-        (examples.gaussian, {"d": 0}),
-        (examples.gaussian, {"d": 2.0}),
-        (examples.gaussian, {"rho": 1.0}),
-        (examples.funnel, {"d": 1}),
-        (examples.funnel, {"d": 2.5}),
+        (examples.gaussian, {"d": 0}, ValueError),
+        (examples.gaussian, {"d": 2.0}, TypeError),
+        (examples.gaussian, {"rho": 1.0}, ValueError),
+        (examples.funnel, {"d": 1}, ValueError),
+        (examples.funnel, {"d": 2.5}, TypeError),
     ],
 )
-def test_invalid_example_parameters_raise(make, kwargs):
-    with pytest.raises(ValueError, match="must be"):
+def test_invalid_example_parameters_raise(make, kwargs, error):
+    with pytest.raises(error, match="must be"):
         make(**kwargs)

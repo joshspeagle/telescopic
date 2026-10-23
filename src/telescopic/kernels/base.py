@@ -13,12 +13,9 @@ import numpy.typing as npt
 
 from telescopic._linalg import covariance
 from telescopic._random import Draws
-from telescopic._types import BoolArray, FloatArray, Seed
+from telescopic._types import BoolArray, FloatArray, Seed, real
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport, adaptive_metropolis, dual_averaging
-
-# The types of a real parameter, Python's and NumPy's, for checks that name the parameter.
-REAL = int | float | np.integer | np.floating
 
 
 @dataclass
@@ -258,8 +255,8 @@ class GradientKernel(Kernel):
 
 
 def _checked_step_size(step_size: float) -> float:
-    if not (isinstance(step_size, REAL) and 0 < step_size < np.inf):
-        raise ValueError(f"step_size must be positive and finite, not {step_size!r}")
+    if not 0 < real("step_size", step_size) < np.inf:
+        raise ValueError(f"step_size must be positive and finite, not {step_size}")
     return float(step_size)
 
 

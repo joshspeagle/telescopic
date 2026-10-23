@@ -13,7 +13,7 @@ from telescopic import diagnostics, engine
 from telescopic._parallel import Interrupt, check_pool, execute, opened
 from telescopic._progress import Progress
 from telescopic._random import MAIN, PILOT, namespace_seed, replicate_generator, root_seed
-from telescopic._types import FloatArray, IntArray, Seed
+from telescopic._types import FloatArray, IntArray, Seed, integer
 from telescopic.initial import as_initial, draw
 from telescopic.kernels import HMC, MALA, Independence, Kernel, RandomWalk
 from telescopic.results import Result, parameter_names
@@ -333,7 +333,7 @@ class CoupledSampler:
             ("max_iter", max_iter, None),
         ):
             if value != default:
-                given[name] = engine._integer(name, value, f"an integer or {default!r}")
+                given[name] = integer(name, value, f"an integer or {default!r}")
         if self.settings is not None:
             for name, value in given.items():
                 kept = getattr(self.settings, name)
@@ -475,7 +475,7 @@ class _SlowPairs:
 
 def _count(name: str, value: Any) -> int:
     # A number of replicates or pilot pairs to run.
-    count = engine._integer(name, value)
+    count = integer(name, value)
     if count < 1:
         raise ValueError(f"{name} must be at least 1, not {count}")
     return count

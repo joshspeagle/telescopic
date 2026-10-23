@@ -299,8 +299,6 @@ def test_an_untuned_random_walk_refuses_to_step():
         ({"cov": np.ones((2, 3))}, "square"),
         ({"cov": np.eye(2), "scale": 0.0}, "scale must be positive and finite"),
         ({"cov": np.eye(2), "scale": np.inf}, "scale must be positive and finite"),
-        ({"cov": np.eye(2), "scale": "1"}, "scale must be positive and finite, not '1'"),
-        ({"cov": np.eye(2), "scale": np.array([1.0, 2.0])}, "scale must be positive and finite"),
         ({"cov": np.eye(2), "coupling": "independent"}, "coupling must be"),
     ],
 )
@@ -362,8 +360,7 @@ def test_independence_refuses_a_proposal_without_sample_and_log_density(proposal
     [
         ({"mean": [np.nan, 0.0]}, "mean must be finite"),
         ({"mean": [[0.0, 0.0]]}, "mean must have shape"),
-        ({"df": np.inf}, "df must be a positive integer, or None for the Gaussian"),
-        ({"df": 2.5}, "df must be a positive integer"),
+        ({"df": 0}, "df must be a positive integer, or None for the Gaussian, not 0"),
     ],
 )
 def test_multivariate_t_rejects_invalid_parameters(kwargs, message):
@@ -514,7 +511,7 @@ def test_the_hmc_meeting_step_meets_with_the_reflection_probability():
 @pytest.mark.parametrize(
     ("kwargs", "message"),
     [
-        ({"n_steps": 0}, "n_steps must be a positive integer"),
+        ({"n_steps": 0}, "n_steps must be at least 1"),
         ({"meeting_weight": 0.0}, "meeting_weight must be in"),
         ({"meeting_scale": -1.0}, "meeting_scale must be positive and finite"),
         ({"meeting_scale": np.inf}, "meeting_scale must be positive and finite"),
@@ -560,7 +557,7 @@ def test_gradient_kernels_enter_the_support_from_a_start_outside_it():
         np.testing.assert_array_equal(moved.x, [[0.5], [-0.5]])
 
 
-@pytest.mark.parametrize("step_size", [0.0, -1.0, np.inf, np.nan, "0.1", np.eye(2)])
+@pytest.mark.parametrize("step_size", [0.0, -1.0, np.inf, np.nan])
 def test_gradient_kernels_refuse_step_sizes_that_are_not_positive_and_finite(step_size):
     makers = (
         lambda: MALA(step_size, cov=np.eye(1)),
@@ -774,13 +771,29 @@ def test_identical_conditionals_give_both_chains_the_same_draw():
         ({"coupling": "independent"}, "coupling must be one of"),
         ({"threshold": 1.0}, "threshold is required"),
         ({"eta": 0.0}, "eta must be in"),
-        ({"eta": "1"}, "eta must be in"),
         ({"coupling": "crn", "eta": 0.5}, "eta applies to the maximal coupling"),
     ],
 )
 def test_gibbs_rejects_invalid_parameters(kwargs, message):
     with pytest.raises(ValueError, match=message):
         Gibbs(conditional, **({"blocks": [[0], [1]]} | kwargs))
+
+
+@pytest.mark.parametrize(
+    ("make", "message"),
+    [
+        (lambda: RandomWalk(np.eye(2), scale="1"), "scale must be a real number, not '1'"),
+        (lambda: RandomWalk(np.eye(2), scale=np.ones(2)), "scale must be a real number"),
+        (lambda: MALA("0.1", cov=np.eye(1)), "step_size must be a real number"),
+        (lambda: MALA(0.5, cov=np.eye(1)).with_step_size(np.eye(2)), "step_size must be a real"),
+        (lambda: HMC(0.1, 2.0, cov=np.eye(1)), "n_steps must be an integer or None, not 2.0"),
+        (lambda: Gibbs(conditional, [[0], [1]], eta="1"), "eta must be a real number"),
+        (lambda: MultivariateT(np.zeros(2), np.eye(2), df=2.5), "df must be a positive integer"),
+    ],
+)
+def test_kernel_parameters_of_the_wrong_type_raise_type_errors_naming_them(make, message):
+    with pytest.raises(TypeError, match=message):
+        make()
 
 
 # Draws per step (spec R-KER-5): exactly what each kernel documents, checked by running

@@ -119,19 +119,19 @@ def test_check_coupling_flags_a_coupling_that_never_meets():
 
 
 @pytest.mark.parametrize(
-    ("x", "y", "n", "message"),
+    ("x", "y", "n", "error", "message"),
     [
-        ([0.0, 0.0], [0.0], 10, "x and y must be points"),
-        ([0.0], [0.0], 1, "n must be an integer of at least 2"),
-        ([0.0], [0.0], 1e4, "n must be an integer of at least 2, not 10000.0"),
+        ([0.0, 0.0], [0.0], 10, ValueError, "x and y must be points"),
+        ([0.0], [0.0], 1, ValueError, "n must be at least 2"),
+        ([0.0], [0.0], 1e4, TypeError, "n must be an integer, not 10000.0"),
     ],
 )
-def test_check_coupling_rejects_invalid_arguments(x, y, n, message):
-    with pytest.raises(ValueError, match=message):
+def test_check_coupling_rejects_invalid_arguments(x, y, n, error, message):
+    with pytest.raises(error, match=message):
         check_coupling(RandomWalk(np.eye(len(x))), TARGET, x, y, n=n)
 
 
-@pytest.mark.parametrize("n_rows", [0, 2.5])
-def test_random_draws_need_a_positive_integer_number_of_rows(n_rows):
-    with pytest.raises(ValueError, match="n_rows must be an integer of at least 1"):
+@pytest.mark.parametrize(("n_rows", "error"), [(0, ValueError), (2.5, TypeError)])
+def test_random_draws_need_a_positive_integer_number_of_rows(n_rows, error):
+    with pytest.raises(error, match="n_rows must be"):
         random_draws(n_rows)
