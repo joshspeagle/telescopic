@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from scipy import linalg
 
 import references
 from telescopic import examples
@@ -27,12 +28,16 @@ TARGET = Target(
 START = Normal(np.zeros(5), 4 * np.eye(5))
 
 
+def whitened_condition_number(cov, pilot):
+    # The condition number of a target of covariance cov whitened by the pilot's.
+    eigenvalues = linalg.eigh(cov, pilot.cov, eigvals_only=True)
+    return eigenvalues.max() / eigenvalues.min()
+
+
 def test_adaptive_metropolis_learns_the_shape_and_the_acceptance_rate():
     pilot = adaptive_metropolis(TARGET, START, 1)
     # Whitened by the pilot's covariance, the target's condition number falls from 100.
-    inverse = np.linalg.inv(np.linalg.cholesky(pilot.cov))
-    eigenvalues = np.linalg.eigvalsh(inverse @ COV @ inverse.T)
-    assert eigenvalues.max() / eigenvalues.min() < 4
+    assert whitened_condition_number(COV, pilot) < 4
     np.testing.assert_allclose(pilot.acceptance, TARGET_ACCEPTANCE, atol=0.05)
     assert pilot.rhat.max() < 1.1
 
@@ -48,14 +53,12 @@ def test_the_tuning_chains_agree_and_find_the_covariance_in_ten_dimensions():
 
 
 def test_the_default_pilot_learns_a_correlated_covariance_in_fifty_dimensions():
-    # With 200 d steps the whitened target's condition number stayed at 76 to 106, and k
-    # came out 11 to 17 times too large; 10 d^2 steps give 3.5 to 3.8 over 3 seeds
-    # (notes/experiments/m9_pilot_length.out).
+    # With 200 d steps the whitened target's condition number stayed at 76 to 106 over 3
+    # seeds, and k came out 12 to 19 times too large; the default gives 3.2 to 3.3
+    # (notes/experiments/m9_pilot_length_2.out, m9_pilot_length_3.out).
     example = examples.gaussian(50)
     pilot = adaptive_metropolis(Target(example.log_prob, vectorize=True), example.initial, 0)
-    inverse = np.linalg.inv(np.linalg.cholesky(pilot.cov))
-    eigenvalues = np.linalg.eigvalsh(inverse @ example.cov @ inverse.T)
-    assert eigenvalues.max() / eigenvalues.min() < 10
+    assert whitened_condition_number(example.cov, pilot) < 10
 
 
 def test_n_steps_is_checked_before_drawing_from_the_initial_distribution():

@@ -1,0 +1,6 @@
+d = 50, seed 0, 25000 steps: k 1648 against 1259, ratio 1.31; condition number 3.3; pilot 2.7 s; states 6.7 MB
+d = 50, seed 1, 25000 steps: k 1866 against 1205, ratio 1.55; condition number 3.3; pilot 2.9 s; states 6.7 MB
+d = 50, seed 2, 25000 steps: k 1586 against 1249, ratio 1.27; condition number 3.2; pilot 3.5 s; states 6.7 MB
+d = 100, seed 0, 100000 steps: k 4694 against 2995, ratio 1.57; condition number 3.9; pilot 17.7 s; states 32.0 MB
+d = 100, seed 1, 100000 steps: k 4919 against 3464, ratio 1.42; condition number 4.7; pilot 17.6 s; states 32.0 MB
+exit 0

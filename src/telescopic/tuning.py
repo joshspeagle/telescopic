@@ -54,13 +54,16 @@ class TuningReport:
 
 @dataclass(frozen=True, eq=False)
 class PilotRun:
-    """The second halves of adaptive Metropolis pilot chains, from :func:`adaptive_metropolis`.
+    r"""The second halves of adaptive Metropolis pilot chains, from :func:`adaptive_metropolis`.
 
     Attributes
     ----------
     samples : ndarray, shape (4, n, d)
+        The states of the second halves, beyond 20 dimensions only every
+        :math:`\lceil d/20\rceil`-th, ending with the last.
     log_prob : ndarray, shape (4, n)
     acceptance : ndarray, shape (4,)
+        Over all the steps of the second halves.
     n_steps : int
     """
 
@@ -140,7 +143,9 @@ def adaptive_metropolis(
 
     Notes
     -----
-    Cost: ``4 n_steps`` log-density evaluations and ``n_steps`` Cholesky factorisations.
+    Cost: ``4 n_steps`` log-density evaluations and ``n_steps / ceil(d/20)`` Cholesky
+    factorisations: beyond 20 dimensions the chains refactor the covariance every
+    :math:`\lceil d/20\rceil` steps and keep their states that far apart.
     """
     if n_steps is not None and n_steps < 3:
         # The second half of each chain needs two states for R-hat.
@@ -149,8 +154,12 @@ def adaptive_metropolis(
     generators = [replicate_generator(root, TUNING, i) for i in range(N_CHAINS)]
     points = np.array([[draw(initial, generator) for _ in range(25)] for generator in generators])
     x, d = points[:, 0].copy(), points.shape[2]
-    # Learning a covariance takes of order d^2 steps (DECISIONS #34).
+    # Learning a covariance takes of order d^2 steps. Beyond 20 dimensions, refactoring the
+    # covariance and keeping states only every ceil(d/20) steps (at least two per chain)
+    # bounds the factorisations by 10 d^2 / ceil(d/20) and the stored states by about 400 d
+    # (DECISIONS #34).
     n_steps = max(2000, 200 * d, 10 * d * d) if n_steps is None else n_steps
+    every = -(-d // 20)
     streams = Streams(N_CHAINS)
     for chain, generator in enumerate(generators):
         streams.assign(chain, generator)
@@ -162,11 +171,14 @@ def adaptive_metropolis(
     variance = points.reshape(-1, d).var(axis=0, ddof=1)
     mean, cov, eye = x.mean(axis=0), np.diag(np.where(variance > 0, variance, 1.0)), np.eye(d)
     first_kept = n_steps // 2
-    samples = np.empty((N_CHAINS, n_steps - first_kept, d))
-    kept_log_p = np.empty((N_CHAINS, n_steps - first_kept))
+    stride = min(every, n_steps - first_kept - 1)
+    n_kept = (n_steps - 1 - first_kept) // stride + 1
+    samples = np.empty((N_CHAINS, n_kept, d))
+    kept_log_p = np.empty((N_CHAINS, n_kept))
     accepted = np.zeros(N_CHAINS)
     for step in range(n_steps):
-        chol = np.linalg.cholesky(cov + 1e-12 * np.trace(cov) * eye)
+        if step % every == 0:
+            chol = np.linalg.cholesky(cov + 1e-12 * np.trace(cov) * eye)
         steps = np.exp(0.5 * log_scale)[:, None] * matvec(chol, draws.normal(d))
         proposal_log_p = target.log_prob(x + steps)
         # A NaN log ratio (-inf - -inf) is a rejection, with acceptance probability 0.
@@ -179,16 +191,18 @@ def adaptive_metropolis(
         delta = x - mean
         mean += delta.mean(axis=0) / (step + 2)
         cov += (delta.T @ delta / N_CHAINS - cov) / (step + 2)
+        behind = n_steps - 1 - step
         if step >= first_kept:
-            samples[:, step - first_kept] = x
-            kept_log_p[:, step - first_kept] = log_p
             accepted += accept
+            if behind % stride == 0:
+                samples[:, n_kept - 1 - behind // stride] = x
+                kept_log_p[:, n_kept - 1 - behind // stride] = log_p
     if not accepted.all():
         raise ValueError(
             f"tuning chain {int(np.argmin(accepted))} accepted no proposal in its second "
             "half: start inside the support of the target, or give the kernel's parameters"
         )
-    return PilotRun(samples, kept_log_p, accepted / samples.shape[1], n_steps)
+    return PilotRun(samples, kept_log_p, accepted / (n_steps - first_kept), n_steps)
 
 
 def dual_averaging(
