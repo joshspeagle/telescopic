@@ -27,7 +27,7 @@ For Josh, at the end of milestone M11. Figures are measured, with their sources.
   tutorials executed at every build, the API reference and a citing page. The strict
   build, with warnings as errors and every cross-reference checked, runs in about two and
   a half minutes.
-- **Records:** 53 decisions with their reasons and alternatives (`notes/DECISIONS.md`), a
+- **Records:** 56 decisions with their reasons and alternatives (`notes/DECISIONS.md`), a
   review of every milestone (`notes/reviews/`), experiments with their outputs
   (`notes/experiments/`), the log, and benchmarks (`benchmarks/results/`).
 
@@ -98,3 +98,8 @@ Each has a default that the work follows until you decide (`notes/QUESTIONS.md`)
 6. **Starts far from the target** (above). Default: keep the recipe and the advice.
    Remedies are new constructions: a start built from the tuning pilot, or k at a higher
    quantile.
+7. **The threshold of the variance warning.** Taken about the atoms' mean, the share fires
+   in 37 of 200 banana runs instead of 19. Default: keep a half.
+8. **Common random numbers for Gibbs conditionals that are not normal.** They are drawn as
+   the normal with their `mean` and `cov`. Default: keep, as documented; the alternative,
+   generators in the same state, gives every law exactly but may not contract.
