@@ -72,7 +72,8 @@ pilot runs whenever the kernel has parameters to tune.
   when needed, and fixes `k`, `m`, `lag`, `thin` and `max_iter`, kept in
   `sampler.settings`; later calls keep them, and another value raises `ValueError`. A
   setting that is not an integer raises `TypeError`, and one that breaks a bound
-  `ValueError`, before any tuning.
+  `ValueError`, before any tuning; the bounds that depend on an automatic `k`, `m` at
+  least `k` and `max_iter` above `lag` and `m`, are checked once the pilot has chosen it.
   [Parallel runs](parallel.md#interrupting-a-run) describes what Ctrl-C does during a
   run.
 
