@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -88,3 +89,17 @@ def test_quantiles_of_a_signed_measure_merge_project_and_clip_its_cdf():
     weights = np.array([0.5, -0.1, 0.5, -0.3, -0.2, 0.6])
     levels = [0.0, 0.45, 0.5, 0.55, 1.0]
     np.testing.assert_array_equal(weighted_quantile(values, weights, levels), [-1, 1, 1, 3, 3])
+
+
+@pytest.mark.parametrize(
+    "settings", [(4, 2, 1, 1), (0, 5, 0, 1), (0, 5, 1, 0), (1.5, 5, 1, 1), (0, 5, 1, 2.5)]
+)
+def test_the_estimator_weights_refuse_invalid_settings(settings):
+    k, m, lag, thin = settings
+    with pytest.raises(ValueError, match="k, m, lag and thin must be integers"):
+        correction_coefficients([5, 6, 7], k, m, lag, thin)
+
+
+def test_weighted_quantiles_refuse_levels_outside_the_unit_interval():
+    with pytest.raises(ValueError, match="q must be in"):
+        weighted_quantile(np.arange(3.0), np.full(3, 1 / 3), np.nan)

@@ -159,6 +159,32 @@ def test_without_late_pairs_the_upper_bound_of_the_late_fraction_is_the_rule_of_
     assert abs(found["late_fraction_upper"] - (1 - 0.05 ** (1 / 50))) < 1e-12
 
 
+def test_hill_leaves_a_tail_unresolved_by_ties_undefined():
+    # 92% ones and 8% twos: the threshold, the 51st largest value, is the smallest value.
+    assert np.isnan(hill([1.0] * 460 + [2.0] * 40, 50))
+
+
+def test_variance_share_ignores_spreads_of_rounding():
+    assert variance_share(np.r_[np.ones(99), 1 + 2**-52]) == 0
+
+
+@pytest.mark.parametrize(
+    ("meeting_times", "lag", "t", "message"),
+    [([], 1, [0], "non-empty"), ([3, 4], 0, [0], "lag must be"), ([3, 4], 1, [2.9], "integers")],
+)
+def test_the_tv_bound_refuses_invalid_arguments(meeting_times, lag, t, message):
+    with pytest.raises(ValueError, match=message):
+        tv_bound(meeting_times, lag, t)
+
+
+def test_the_tv_bound_at_k_of_the_diagnostics_is_the_bounds():
+    rng = np.random.default_rng(9)
+    result = synthetic(rng.geometric(0.2, size=200) + 3, rng.standard_normal(200), k=4, lag=3)
+    assert result.diagnostics()["tv_bound_at_k"] == pytest.approx(
+        result.tv_bound([4])[0], rel=1e-12
+    )
+
+
 def test_hill_refuses_non_positive_values():
     with pytest.raises(ValueError, match="positive"):
         hill([0.0, 1.0, 2.0], 1)

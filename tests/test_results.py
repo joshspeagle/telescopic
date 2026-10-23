@@ -64,6 +64,14 @@ def test_the_covariance_combines_first_and_second_moments_coordinate_by_coordina
     np.testing.assert_allclose(RESULT.std(), np.sqrt(np.maximum(0, np.diag(covariance))))
 
 
+def test_variances_stay_exact_far_from_the_origin():
+    # Moments about 0 would cancel catastrophically at an offset of 1e8 for a spread of 1.
+    replicates = gaussian_run(range(40), **SETTINGS)
+    shifted = Result(replace(replicates, atoms=replicates.atoms + 1e8))
+    np.testing.assert_allclose(shifted.cov(), RESULT.cov(), rtol=1e-6, atol=1e-6)
+    np.testing.assert_allclose(shifted.var(), RESULT.var(), rtol=1e-6)
+
+
 def test_without_bias_corrections_quantiles_are_those_of_the_pooled_draws():
     # With k past every meeting, all weights are 1 / |S|: an ordinary empirical measure.
     # The levels avoid multiples of 1 / N, where rounding of the cumulative weights
@@ -198,11 +206,28 @@ def test_results_from_equal_array_seeds_merge():
         (lambda r: r.histogram([0, 1], range=(0.0, 1.0)), r"range must have shape \(2, 2\)"),
         (lambda r: r.tv_bound([-1]), "t must be non-negative"),
         (lambda r: r.w1_bound([-1]), "t must be non-negative"),
+        (lambda r: r.quantile(np.nan), "q must be in"),
     ],
 )
 def test_invalid_arguments_of_the_result_raise(call, message):
     with pytest.raises(ValueError, match=message):
         call(RESULT)
+
+
+def test_merging_refuses_runs_of_different_kernels():
+    first = Result(gaussian_run(range(3), **SETTINGS), kernel="RandomWalk(a)")
+    second = Result(gaussian_run(range(3, 5), **SETTINGS), kernel="RandomWalk(b)")
+    with pytest.raises(ValueError, match="different kernels"):
+        first.merge(second)
+
+
+def test_the_default_w1_times_reach_a_censored_pairs_last_distance():
+    replicates = gaussian_run(range(40), **SETTINGS, max_iter=13)
+    result = Result(replicates)
+    assert result.n_censored
+    bound = result.w1_bound()
+    assert len(bound) == replicates.distance_time.max() - result.lag + 1
+    assert bound[-1] > 0
 
 
 def test_the_default_bound_times_end_where_the_bound_vanishes():

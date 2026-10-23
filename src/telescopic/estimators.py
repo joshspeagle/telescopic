@@ -13,6 +13,7 @@ from telescopic._types import FloatArray, IntArray
 
 def averaging_times(k: int, m: int, thin: int) -> IntArray:
     """The averaging set :math:`S = \\{k, k + s, k + 2s, \\dots\\} \\cap [k, m]` for ``thin`` = s."""
+    _check(k, m, 1, thin)
     return np.arange(k, m + 1, thin, dtype=np.int64)
 
 
@@ -43,6 +44,7 @@ def correction_coefficients(t: npt.ArrayLike, k: int, m: int, lag: int, thin: in
     -------
     ndarray of float, same shape as ``t``
     """
+    _check(k, m, lag, thin)
     t = np.asarray(t, dtype=np.int64)
     n_averaged = (m - k) // thin + 1
     g = gcd(thin, lag)
@@ -56,6 +58,16 @@ def correction_coefficients(t: npt.ArrayLike, k: int, m: int, lag: int, thin: in
     return count / n_averaged
 
 
+def _check(k: int, m: int, lag: int, thin: int) -> None:
+    if not all(int(value) == value for value in (k, m, lag, thin)) or not (
+        0 <= k <= m and lag >= 1 and thin >= 1
+    ):
+        raise ValueError(
+            "k, m, lag and thin must be integers with 0 <= k <= m, lag >= 1 and thin >= 1, "
+            f"not {k}, {m}, {lag} and {thin}"
+        )
+
+
 def unbiased_covariance(first: FloatArray, second: FloatArray) -> FloatArray:
     r"""Unbiased estimate of :math:`\mathrm{Cov}_\pi(h)` from :math:`R \ge 2` replicates.
 
@@ -63,8 +75,8 @@ def unbiased_covariance(first: FloatArray, second: FloatArray) -> FloatArray:
 
     with :math:`a_r = \hat\pi_r(h)`, :math:`\bar b` the mean of
     :math:`\hat\pi_r(hh^\top)` and :math:`S_a` the sample covariance of the :math:`a_r`
-    (spec R-EST-8). The last two terms are the U-statistic
-    :math:`\sum_{r \ne s} a_r a_s^\top / (R(R-1))`, unbiased for
+    (spec R-EST-8). The last two terms are minus the U-statistic
+    :math:`\sum_{r \ne s} a_r a_s^\top / (R(R-1))`, which is unbiased for
     :math:`\pi(h)\pi(h)^\top`; the plug-in :math:`\bar a\bar a^\top` is biased by
     :math:`\mathrm{Cov}(\bar a)`.
 
@@ -138,6 +150,9 @@ def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike)
     -------
     ndarray, shape of ``q``
     """
+    q = np.asarray(q, dtype=np.float64)
+    if not np.all((q >= 0) & (q <= 1)):
+        raise ValueError(f"q must be in [0, 1], not {q}")
     unique, inverse = np.unique(values, return_inverse=True)
     mass = np.bincount(inverse.ravel(), weights=weights)
     cdf = np.clip(isotonic_regression(np.cumsum(mass)).x, 0.0, 1.0)

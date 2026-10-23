@@ -22,3 +22,13 @@ def test_per_replicate_values_are_weighted_sums_over_each_replicates_atoms():
 def test_a_test_function_of_the_wrong_shape_raises(h):
     with pytest.raises(ValueError, match="h must map"):
         MEASURE.per_replicate(h)
+
+
+def test_a_test_function_cannot_change_the_atoms():
+    def shift(x):
+        x -= 100.0
+        return x[:, 0]
+
+    with pytest.raises(ValueError, match="read-only"):
+        MEASURE.per_replicate(shift)
+    np.testing.assert_allclose(MEASURE.per_replicate(lambda x: x[:, 0]), [1.0, 0.0, 4.0])

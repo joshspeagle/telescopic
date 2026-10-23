@@ -190,7 +190,7 @@ Let $a_r = \hat\pi_r(h) \in \mathbb R^p$ for replicates $r = 1, \dots, R$. Write
 - **Expectations:** $\bar a$, with standard error $\sqrt{\mathrm{diag}(S_a)/R}$ and Monte Carlo covariance $S_a / R$.
 - **Products of expectations:** $\bar a \bar a^\top - S_a/R$ is unbiased for $\pi(h)\pi(h)^\top$ when $R \ge 2$.
 - **Covariance:** $\widehat{\mathrm{Cov}}_\pi(h) = R^{-1}\sum_r \hat\pi_r(hh^\top) - \bar a\bar a^\top + S_a/R$ is unbiased. The plug-in $\sum\omega hh^\top - (\sum \omega h)(\sum\omega h)^\top$ is biased by $-S_a/R$ and is not used. Standard deviations are $\sqrt{\max(0, \widehat{\mathrm{Var}})}$, which is consistent, not unbiased.
-- **Histograms:** each replicate's signed mass in each half-open bin $[a, b)$, averaged over replicates. This is unbiased, with standard errors from the replicates. Bins can be negative.
+- **Histograms:** each replicate's signed mass in each half-open bin $[a, b)$, averaged over replicates. This is unbiased for bins fixed before the run, with standard errors from the replicates; the default range, from the atoms, biases the two outer bins by a term of order $1/R$ (M11 audit). Bins can be negative.
 - **Quantiles:**
   1. Pool all replicates' atoms with weights $\omega/R$, and merge atoms with equal coordinates by summing their weights.
   2. Sort along the coordinate and take the cumulative sum of the weights.
@@ -511,7 +511,7 @@ Methods:
 - **Plots:** `plot_meeting_times(axes=None)`, `plot_tv_bound(ax=None)`, `plot_marginals(dims=None, bins=20, axes=None)` and `plot_corner(dims=None, bins=20)` (signed 2-D histograms); the first three draw on given axes (DECISIONS #30).
 - **Persistence and merging:**
   - `save(path)` and `Result.load(path)` use a versioned `.npz` schema, with no pickle: arrays, and the settings, names, seed state and descriptions as JSON (DECISIONS #26, #29). The engine's paths are not saved;
-  - `merge(other)` joins runs with the same configuration and disjoint replicate indices.
+  - `merge(other)` joins runs with the same configuration and disjoint replicate indices, and refuses runs whose recorded kernels or initial distributions differ.
 
 ### 7.2 `SignedMeasure` and `Estimate` (R-OUT-2)
 
@@ -551,7 +551,7 @@ Classes: `TelescopicWarning`, with subclasses `ConvergenceWarning` and `InputWar
 1. any censored replicate;
 2. a fraction of replicates with $\tau - L > k$ above 0.25 ("k may be too small"). The recipe itself gives 0.02 to 0.13 (§3.6), so a lower threshold fires on clean runs;
 3. one replicate contributing more than half of the sample variance of the estimate of a coordinate's mean or second moment, with $R \ge 100$ (heavy tails or rare excursions). A quarter, the first draft's threshold, is typical of Gaussian data at $R = 20$ to 30 and was exceeded in 87 of 200 clean runs on the banana at $R = 100$, whose intervals covered as often as the others (DECISIONS #36);
-4. a Hill estimate of the tail index of $\tau - L + 1$ below 2 (finite variance in doubt), from the $\lfloor R/10\rfloor$ largest values, with $R \ge 500$. Applied to $\tau$ itself with $L = k$, the shift by $L$ removes almost all its power;
+4. a Hill estimate of the tail index of $\tau - L + 1$ below 2 (finite variance in doubt), from the $\lfloor R/10\rfloor$ largest values, with $R \ge 500$; none when the threshold value is the smallest, since ties among small integers then leave the tail unresolved (M11 audit). Applied to $\tau$ itself with $L = k$, the shift by $L$ removes almost all its power;
 5. pilot chains that disagree (§5.3);
 6. a slow pair (§6.3).
 

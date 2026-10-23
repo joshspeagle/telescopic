@@ -52,7 +52,10 @@ class SignedMeasure:
         -----
         Cost: one call of ``h`` on all :math:`N` atoms, then one sparse product.
         """
-        values = np.asarray(h(self.atoms), dtype=np.float64)
+        # A read-only view: an h that writes to its input would change every later estimate.
+        atoms = self.atoms.view()
+        atoms.flags.writeable = False
+        values = np.asarray(h(atoms), dtype=np.float64)
         if values.ndim not in (1, 2) or len(values) != len(self.atoms):
             raise ValueError(
                 f"h must map atoms of shape (n, d) to shape (n,) or (n, p); for n = "

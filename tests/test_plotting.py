@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import numpy as np
 import pytest
 
@@ -49,6 +51,14 @@ def test_the_tv_bound_plot_draws_the_bound_and_marks_k():
     np.testing.assert_array_equal(bound, RESULT.tv_bound(t))
     assert ax.get_yscale() == "log"
     assert ax.lines[-1].get_xdata()[0] == RESULT.k
+
+
+def test_pairs_that_all_met_at_the_lag_plot_without_a_log_scale():
+    replicates = RESULT._replicates
+    met = np.full(len(replicates.index), float(RESULT.lag))
+    result = telescopic.Result(replace(replicates, meeting_time=met))
+    assert result.plot_meeting_times()[1].get_yscale() == "linear"
+    assert result.plot_tv_bound().get_yscale() == "linear"
 
 
 def test_marginal_plots_draw_signed_densities_with_error_boxes():

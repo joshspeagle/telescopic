@@ -74,7 +74,8 @@ class Result:
     tuning : TuningReport, optional
         The report of the tuning pilot.
     pilot : ndarray, shape (R0,), optional
-        The pilot's lag-1 meeting times, from which ``k`` was chosen.
+        The sampler's lag-1 pilot meeting times; an automatic ``k`` came from those run
+        before the first run.
 
     Attributes
     ----------
@@ -95,9 +96,10 @@ class Result:
     n_censored : int
     ndim : int
     n_log_prob, n_grad : int
-        Evaluations of the log-density and its gradient during the runs.
+        Evaluations of the log-density and its gradient by the replicates, without those
+        of tuning and of the meeting-time pilot.
     wall_time : float
-        Seconds spent in the runs.
+        Seconds spent running the replicates, without tuning and the pilot.
     interrupted : bool
         Whether a requested replicate never ran, so that the estimates are consistent
         but not exactly unbiased until it does (spec section 6.5).
@@ -153,7 +155,8 @@ class Result:
         Parameters
         ----------
         h : callable
-            Maps points of shape ``(n, d)`` to values of shape ``(n,)`` or ``(n, p)``.
+            Maps points of shape ``(n, d)``, a read-only array, to values of shape ``(n,)``
+            or ``(n, p)``.
         level : float
             Confidence level of the interval, in (0, 1).
 
@@ -181,17 +184,17 @@ class Result:
         ndarray, shape (d, d)
         """
         self._require(2)
-        first = self.measure.per_replicate(lambda x: x)
-        atoms, weights = self.measure.atoms, self.measure.weights
-        second = atoms.T @ (weights[:, None] * atoms) / self.n_replicates
+        centred, first = self._centred()
+        weights = self.measure.weights
+        second = centred.T @ (weights[:, None] * centred) / self.n_replicates
         return unbiased_covariance(first, second)
 
     def var(self) -> FloatArray:
         """Unbiased estimates of the variances, shape ``(d,)``; they can be negative."""
         self._require(2)
-        first = self.measure.per_replicate(lambda x: x)
-        atoms, weights = self.measure.atoms, self.measure.weights
-        second = np.einsum("i,ij,ij->j", weights, atoms, atoms) / self.n_replicates
+        centred, first = self._centred()
+        weights = self.measure.weights
+        second = np.einsum("i,ij,ij->j", weights, centred, centred) / self.n_replicates
         return unbiased_variance(first, second)
 
     def std(self) -> FloatArray:
@@ -216,7 +219,7 @@ class Result:
         ndarray, shape (d,) for a scalar ``q``, else ``(len(q), d)``
         """
         q = np.asarray(q, dtype=np.float64)
-        if np.any((q < 0) | (q > 1)):
+        if not np.all((q >= 0) & (q <= 1)):
             raise ValueError(f"q must be in [0, 1], not {q}")
         self._require(1)
         # Rejections repeat atoms; merging consecutive equal rows first shortens every sort.
@@ -246,10 +249,12 @@ class Result:
     def histogram(
         self, dims: int | Sequence[int], bins: int = 20, range: npt.ArrayLike | None = None
     ) -> tuple[FloatArray, FloatArray, FloatArray | list[FloatArray]]:
-        """Unbiased histogram of one coordinate or several, with standard errors (spec section 3.4).
+        """Histogram of one coordinate or several, with standard errors (spec section 3.4).
 
         The mass of each half-open bin is the average over replicates of its signed mass,
-        so a bin can be negative.
+        so a bin can be negative. It is unbiased for a ``range`` fixed before the run; the
+        default range, from the atoms, biases the two outer bins by a term of order
+        :math:`1/R`. Memory: :math:`R \times` ``bins ** len(dims)`` floats.
 
         Parameters
         ----------
@@ -304,12 +309,16 @@ class Result:
         -------
         ndarray, shape of ``t``
         """
-        return diagnostics.tv_bound(self._stopped, self.lag, self._times() if t is None else t)
+        if t is None:
+            t = self._times(int(np.max(self._stopped)))
+        return diagnostics.tv_bound(self._stopped, self.lag, t)
 
     def w1_bound(self, t: npt.ArrayLike | None = None) -> FloatArray:
         """Estimated upper bound on the 1-Wasserstein distance from the law of X_t to the target.
 
-        Spec section 3.6. It depends on the parametrisation of the target.
+        Spec section 3.6. It depends on the parametrisation of the target. A censored
+        pair's distances stop at its cap, so with censored pairs it is a lower bound of the
+        estimate without a cap.
 
         Parameters
         ----------
@@ -320,12 +329,11 @@ class Result:
         -------
         ndarray, shape of ``t``
         """
+        replicates = self._replicates
+        if t is None:
+            t = self._times(int(np.max(replicates.distance_time, initial=0)) + 1)
         return diagnostics.w1_bound(
-            self._replicates.distance_time,
-            self._replicates.distance,
-            len(self.index),
-            self.lag,
-            self._times() if t is None else t,
+            replicates.distance_time, replicates.distance, len(self.index), self.lag, t
         )
 
     def diagnostics(self) -> dict[str, Any]:
@@ -360,6 +368,10 @@ class Result:
         n_late = int(np.sum(self.meeting_times - self.lag > self.k))
         n_total = len(self.meeting_times)
         upper = stats.binomtest(n_late, n_total, alternative="less").proportion_ci(0.95).high
+        # The TV bound at k as an average over replicates (section 3.6), in O(R) memory:
+        # diagnostics.tv_bound's survival function takes memory up to the largest time.
+        excess = np.ceil((self._stopped - self.lag - self.k) / self.lag)
+        tv_at_k = min(1.0, float(np.maximum(0, excess).mean()))
         share, share_of = np.nan, None
         if self.n_replicates >= 2:
             moments = [self.measure.per_replicate(h) for h in (lambda x: x, np.square)]
@@ -378,7 +390,7 @@ class Result:
             "censored": self.n_censored,
             "late_fraction": n_late / n_total,
             "late_fraction_upper": float(upper),
-            "tv_bound_at_k": float(self.tv_bound([self.k])[0]),
+            "tv_bound_at_k": tv_at_k,
             "variance_share": share,
             "variance_share_of": share_of,
             "mean_cost": mean_cost,
@@ -431,6 +443,11 @@ class Result:
             The union of the replicates and of the requested indices; interrupted if a
             requested replicate ran in neither.
         """
+        for name in ("kernel", "initial"):
+            mine, theirs = getattr(self, name), getattr(other, name)
+            # A result built from the engine's output alone has neither.
+            if mine is not None and theirs is not None and str(mine) != str(theirs):
+                raise ValueError(f"the runs have different {name}s: {mine} and {theirs}")
         return type(self)(
             engine.merge([self._replicates, other._replicates]),
             names=self.names,
@@ -585,15 +602,24 @@ class Result:
             edges[-1] = np.nextafter(edges[-1], np.inf)
         return np.searchsorted(edges, values, side="right") - 1, edges
 
+    def _centred(self) -> tuple[FloatArray, FloatArray]:
+        # The atoms about their mean, and each replicate's mean of them. Each replicate's
+        # weights sum to 1, so the covariance estimator is the same about any point; about
+        # 0, a mean far from 0 next to the spread would cancel catastrophically.
+        centre = self.measure.atoms.mean(axis=0)
+        centred = self.measure.atoms - centre
+        return centred, self.measure.per_replicate(lambda x: x - centre)
+
     def _require(self, n: int) -> None:
         if self.n_replicates < n:
             raise ValueError(
                 f"this needs at least {n} replicates that met, not {self.n_replicates}"
             )
 
-    def _times(self) -> npt.NDArray[np.int64]:
-        # Every time from 0 to the last at which the bounds of section 3.6 are positive.
-        return np.arange(max(1, int(np.max(self._stopped)) - self.lag))
+    def _times(self, last: int) -> npt.NDArray[np.int64]:
+        # Every time from 0 to the last at which a bound of section 3.6 can be positive,
+        # given the first time after the last that enters it.
+        return np.arange(max(1, last - self.lag))
 
 
 @dataclass(eq=False)
