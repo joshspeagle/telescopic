@@ -1,0 +1,4 @@
+all 200 runs: coverage of E[x0], E[x1], E[x0^2], E[x1^2] [0.95  0.98  0.95  0.935]
+about 0: median share 0.224, above 0.5 in 19 runs, coverage [0.947 0.947 0.842 0.947]; below: [0.95  0.983 0.961 0.934]
+about the mean: median share 0.315, above 0.5 in 37 runs, coverage [0.946 0.946 0.892 0.919]; below: [0.951 0.988 0.963 0.939]
+exit 0
