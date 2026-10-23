@@ -61,6 +61,30 @@ def test_the_default_pilot_learns_a_correlated_covariance_in_fifty_dimensions():
     assert whitened_condition_number(example.cov, pilot) < 10
 
 
+def test_beyond_twenty_dimensions_the_acceptance_rate_counts_every_step():
+    # At d = 21 the pilot keeps every other state of its second halves.
+    pilot = adaptive_metropolis(
+        Target(references.gaussian_log_prob, vectorize=True),
+        Normal(np.zeros(21), np.eye(21)),
+        7,
+        n_steps=4000,
+    )
+    assert pilot.samples.shape[1] == 1000
+    np.testing.assert_allclose(pilot.acceptance, TARGET_ACCEPTANCE, atol=0.05)
+
+
+def test_a_short_pilot_beyond_twenty_dimensions_keeps_two_states_per_chain():
+    # A target ten times wider than the start accepts almost every step.
+    pilot = adaptive_metropolis(
+        Target(lambda x: -0.005 * np.sum(x**2, axis=1), vectorize=True),
+        Normal(np.zeros(21), np.eye(21)),
+        8,
+        n_steps=3,
+    )
+    assert pilot.samples.shape[1] == 2
+    assert np.all(np.isfinite(pilot.rhat))
+
+
 def test_n_steps_is_checked_before_drawing_from_the_initial_distribution():
     calls = []
 

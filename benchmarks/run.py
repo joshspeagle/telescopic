@@ -1,11 +1,10 @@
 """Timings and efficiency of telescopic on the setups of spec section 10, as JSON; run by hand.
 
 Run from the repository on an otherwise idle machine: python benchmarks/run.py. It writes
-benchmarks/results/<commit>.json after each section, with the commit, machine, BLAS
-libraries and versions; figures from different setups are not comparable (CLAUDE.md,
-Measurements). Every case runs with BLAS on one thread; "blas" records each library's
-default thread count. A pair-step is an iteration of one replicate, max(tau, m) per
-replicate.
+benchmarks/results/<commit>.json after each section, with the commit, machine, the CPUs
+this process may use, BLAS libraries and versions; figures from different setups are not
+comparable (CLAUDE.md, Measurements). Every case runs with BLAS on one thread, as "blas"
+records. A pair-step is an iteration of one replicate, max(tau, m) per replicate.
 """
 
 import json
@@ -58,6 +57,9 @@ def setup():
     return {
         "commit": commit,
         "machine": f"{cpu_model()}, {os.cpu_count()} CPUs, {platform.system()} {platform.release()}",
+        "available CPUs": len(os.sched_getaffinity(0))
+        if hasattr(os, "sched_getaffinity")
+        else None,
         "blas": [
             {key: library[key] for key in ("internal_api", "version", "num_threads")}
             for library in threadpoolctl.threadpool_info()
@@ -231,10 +233,10 @@ def efficiency():
 
 if __name__ == "__main__":
     warnings.simplefilter("ignore", telescopic.TelescopicWarning)
-    report = setup()
-    path = ROOT / "benchmarks" / "results" / f"{report['commit']}.json"
-    path.parent.mkdir(exist_ok=True)
     with threadpoolctl.threadpool_limits(1):
+        report = setup()
+        path = ROOT / "benchmarks" / "results" / f"{report['commit']}.json"
+        path.parent.mkdir(exist_ok=True)
         for name, case in (
             ("lockstep, microseconds per pair-step by lanes", lockstep),
             ("point by point, microseconds per pair-step beyond the log-density", point_by_point),

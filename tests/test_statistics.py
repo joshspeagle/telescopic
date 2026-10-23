@@ -38,7 +38,7 @@ RIDGE = Normal([3.0, 9.0], 0.01 * np.eye(2))
 
 
 def far(d):
-    # Every coordinate starts three or more standard deviations from its mean.
+    # Centred three standard deviations from the target's mean in every coordinate.
     return Normal(np.full(d, 3.0), np.eye(d))
 
 
@@ -166,22 +166,18 @@ def test_intervals_cover_at_the_reference_rate():
     assert_z_scores(z_scores, 2000, seed=20)
 
 
-def exact_tv(mean, variance):
-    # The total variation distance between N(mean, variance) and N(0, 1), by quadrature.
-    def gap(x):
-        return abs(stats.norm.pdf(x, mean, np.sqrt(variance)) - stats.norm.pdf(x))
-
-    return 0.5 * integrate.quad(gap, -np.inf, np.inf, limit=200)[0]
-
-
 @functools.cache
 def exact_tv_curve(rho):
-    # The distance of X_t ~ N(3 rho^t, 0.25 rho^(2t) + 1 - rho^(2t)), the AR(1) chain from
-    # N(3, 0.5^2), to N(0, 1), for t = 0, 1, ... while it is at least 0.01. A Markov
-    # chain's distance to its stationary law never increases.
+    # The total variation distance of X_t ~ N(3 rho^t, 0.25 rho^(2t) + 1 - rho^(2t)), the
+    # AR(1) chain from N(3, 0.5^2), to N(0, 1), by quadrature, for t = 0, 1, ... while it is
+    # at least 0.01. A Markov chain's distance to its stationary law never increases.
+    def gap(x, mean, sd):
+        return abs(stats.norm.pdf(x, mean, sd) - stats.norm.pdf(x))
+
     curve = []
     for t in itertools.count():
-        distance = exact_tv(3 * rho**t, 0.25 * rho ** (2 * t) + 1 - rho ** (2 * t))
+        mean, sd = 3 * rho**t, np.sqrt(0.25 * rho ** (2 * t) + 1 - rho ** (2 * t))
+        distance = 0.5 * integrate.quad(gap, -np.inf, np.inf, args=(mean, sd), limit=200)[0]
         if distance < 0.01:
             return np.array(curve)
         curve.append(distance)

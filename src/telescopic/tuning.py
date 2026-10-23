@@ -59,8 +59,8 @@ class PilotRun:
     Attributes
     ----------
     samples : ndarray, shape (4, n, d)
-        The states of the second halves, beyond 20 dimensions only every
-        :math:`\lceil d/20\rceil`-th, ending with the last.
+        The states of the second halves, ending with the last; beyond 20 dimensions only
+        states :math:`\lceil d/20\rceil` steps apart, or fewer for a short pilot.
     log_prob : ndarray, shape (4, n)
     acceptance : ndarray, shape (4,)
         Over all the steps of the second halves.
@@ -143,9 +143,9 @@ def adaptive_metropolis(
 
     Notes
     -----
-    Cost: ``4 n_steps`` log-density evaluations and ``n_steps / ceil(d/20)`` Cholesky
-    factorisations: beyond 20 dimensions the chains refactor the covariance every
-    :math:`\lceil d/20\rceil` steps and keep their states that far apart.
+    Cost: ``4 n_steps`` log-density evaluations and about ``n_steps / ceil(d/20)``
+    Cholesky factorisations: beyond 20 dimensions the chains refactor the covariance and
+    keep their states every :math:`\lceil d/20\rceil` steps, or fewer for a short pilot.
     """
     if n_steps is not None and n_steps < 3:
         # The second half of each chain needs two states for R-hat.
@@ -155,11 +155,10 @@ def adaptive_metropolis(
     points = np.array([[draw(initial, generator) for _ in range(25)] for generator in generators])
     x, d = points[:, 0].copy(), points.shape[2]
     # Learning a covariance takes of order d^2 steps. Beyond 20 dimensions, refactoring the
-    # covariance and keeping states only every ceil(d/20) steps (at least two per chain)
-    # bounds the factorisations by 10 d^2 / ceil(d/20) and the stored states by about 400 d
-    # (DECISIONS #34).
+    # covariance and keeping states only every ceil(d/20) steps, or fewer so that each
+    # chain keeps two, bounds the factorisations by 10 d^2 / ceil(d/20) and the stored
+    # states by about 400 d (DECISIONS #34).
     n_steps = max(2000, 200 * d, 10 * d * d) if n_steps is None else n_steps
-    every = -(-d // 20)
     streams = Streams(N_CHAINS)
     for chain, generator in enumerate(generators):
         streams.assign(chain, generator)
@@ -171,13 +170,13 @@ def adaptive_metropolis(
     variance = points.reshape(-1, d).var(axis=0, ddof=1)
     mean, cov, eye = x.mean(axis=0), np.diag(np.where(variance > 0, variance, 1.0)), np.eye(d)
     first_kept = n_steps // 2
-    stride = min(every, n_steps - first_kept - 1)
+    stride = min(-(-d // 20), n_steps - first_kept - 1)
     n_kept = (n_steps - 1 - first_kept) // stride + 1
     samples = np.empty((N_CHAINS, n_kept, d))
     kept_log_p = np.empty((N_CHAINS, n_kept))
     accepted = np.zeros(N_CHAINS)
     for step in range(n_steps):
-        if step % every == 0:
+        if step % stride == 0:
             chol = np.linalg.cholesky(cov + 1e-12 * np.trace(cov) * eye)
         steps = np.exp(0.5 * log_scale)[:, None] * matvec(chol, draws.normal(d))
         proposal_log_p = target.log_prob(x + steps)
