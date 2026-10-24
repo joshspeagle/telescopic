@@ -204,6 +204,10 @@ def test_a_tuned_kernel_returns_itself():
     assert kernel.tune(TARGET, START) == (kernel, None)
 
 
+# A pilot of four chains, each one state at the origin, for the dual-averaging tests.
+PILOT = PilotRun(np.zeros((4, 1, 5)), np.zeros((4, 1)), np.ones(4), 1)
+
+
 class Exact(Kernel):
     # Accepts with probability exp(-step_size), so that dual averaging is deterministic.
     def __init__(self, step_size):
@@ -217,8 +221,7 @@ class Exact(Kernel):
 
 
 def test_dual_averaging_matches_hoffman_and_gelman():
-    pilot = PilotRun(np.zeros((4, 1, 5)), np.zeros((4, 1)), np.ones(4), 1)
-    step_size = dual_averaging(Exact, TARGET, pilot, 7, 0.574, 0.9)
+    step_size = dual_averaging(Exact, TARGET, PILOT, 7, 0.574, 0.9)
     expected = references.dual_averaging(lambda epsilon: np.exp(-epsilon), 0.9, 0.574)
     np.testing.assert_allclose(step_size, expected, rtol=1e-12)
 
@@ -233,9 +236,8 @@ def test_dual_averaging_matches_hoffman_and_gelman():
     ],
 )
 def test_dual_averaging_refuses_invalid_arguments(target_acceptance, step_size, error, message):
-    pilot = PilotRun(np.zeros((4, 1, 5)), np.zeros((4, 1)), np.ones(4), 1)
     with pytest.raises(error, match=message):
-        dual_averaging(Exact, TARGET, pilot, 7, target_acceptance, step_size)
+        dual_averaging(Exact, TARGET, PILOT, 7, target_acceptance, step_size)
 
 
 @pytest.mark.parametrize(("kernel", "goal"), [(MALA(), 0.574), (HMC(), 0.8)])
