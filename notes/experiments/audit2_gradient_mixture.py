@@ -63,7 +63,7 @@ for name, make in (("MALA", MALA), ("HMC", HMC)):
                 continue
         mean = result.estimate(lambda x: x[:, 0])
         square = result.estimate(lambda x: x[:, 0] ** 2)
-        warned = any("gradient evaluations" in str(w.message) for w in caught)
+        warned = any("taken as 0" in str(w.message) for w in caught)
         largest = f", largest log pi there {max(worst):.4g}" if worst else ""
         print(
             f"{name}, seed {seed}: z of E[x] {mean.value / mean.standard_error:+.2f}, "

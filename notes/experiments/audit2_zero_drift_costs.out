@@ -1,0 +1,13 @@
+At c1daae9, where chains could start at such a gradient:
+sample() from N(45, 1), seed 0: E[x] = 40.099 +- 0.029
+sample() from N(45, 1), seed 1: E[x] = 40.068 +- 0.039
+sample() from N(45, 1), seed 2: E[x] = 40.115 +- 0.033
+
+With chains refused there:
+MALA from x = 60, textbook gradient: 0% of chains within |x| < 10 after 2,000 steps, median |x| 40.09
+MALA from x = 60, log-space gradient: 100% of chains within |x| < 10 after 2,000 steps, median |x| 1.50
+sample() from N(45, 1), seed 0: raised ValueError: grad returned [nan] at x = [44.729552193527525], where log_p
+sample() from N(45, 1), seed 1: raised ValueError: grad returned [nan] at x = [44.95293521118313], where log_pr
+sample() from N(45, 1), seed 2: raised ValueError: grad returned [nan] at x = [45.18701379090847], where log_pr
+HMC(0.5, 2), gradient NaN where x_0 < 0: 100 of 100 pairs met by 2,000 iterations, median meeting time 45.0; 8294 of 18394 gradients taken as 0
+HMC(0.5, 2), gradient exact: 100 of 100 pairs met by 2,000 iterations, median meeting time 27.0; 0 of 12394 gradients taken as 0

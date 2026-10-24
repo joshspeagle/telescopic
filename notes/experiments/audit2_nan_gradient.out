@@ -10,5 +10,5 @@ HMC: raised ValueError: grad returned [nan] at x = [1.0783717787973028], where l
 
 With DECISIONS #67:
 random walk: E[x] = +0.0007 +- 0.0052 (z = +0.1), P(x > 1) = 0.1602 +- 0.0017
-MALA: E[x] = -0.0006 +- 0.0056 (z = -0.1), P(x > 1) = 0.1574 +- 0.0020; warned: 45538 gradient evaluations of the replicates
-HMC: E[x] = +0.0041 +- 0.0034 (z = +1.2), P(x > 1) = 0.1600 +- 0.0016; warned: 204535 gradient evaluations of the replicates
+MALA: E[x] = -0.0006 +- 0.0056 (z = -0.1), P(x > 1) = 0.1574 +- 0.0020; warned, 45538 gradients of the replicates taken as 0
+HMC: E[x] = +0.0041 +- 0.0034 (z = +1.2), P(x > 1) = 0.1600 +- 0.0016; warned, 204535 gradients of the replicates taken as 0

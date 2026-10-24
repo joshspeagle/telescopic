@@ -301,10 +301,29 @@ def test_the_readme_example_runs_without_a_warning(capsys):
     assert "slope" in capsys.readouterr().out
 
 
-def test_a_run_that_takes_gradients_as_zero_warns_with_their_number():
+def test_chains_cannot_start_where_the_gradient_is_not_finite():
+    # MALA chains that started there stayed at its edge: on a mixture whose gradient
+    # underflows beyond 40, from N(45, 1), E[x] was 40.10 +- 0.03 (DECISIONS #67).
+    def grad(x):
+        return np.where(x > 1, np.nan, -x)
+
+    with pytest.raises(ValueError, match="where log_prob is finite: chains cannot start"):
+        sample(
+            log_prob, Normal([3.0], [0.01]), 10, grad=grad, kernel=MALA(1.0, cov=np.eye(1)), k=5
+        )
+
+
+def test_a_run_warns_when_it_first_takes_a_gradient_as_zero():
+    # It warned after the run, so that a run whose pairs never met gave no sign: the count
+    # in the warning is the run's so far.
     def grad(x):
         return np.where(x > 1, np.nan, -x)
 
     kernel = MALA(1.0, cov=np.eye(1))
-    with pytest.warns(InputWarning, match=r"^\d+ gradient evaluations of the replicates were"):
-        sample(log_prob, Normal([0.0], [1.0]), 20, grad=grad, kernel=kernel, k=10, rng=1)
+    pattern = r"taken as 0 in \d+ of (\d+) evaluations of the replicates"
+    with pytest.warns(InputWarning, match=pattern) as caught:
+        result = sample(log_prob, Normal([0.0], [0.01]), 20, grad=grad, kernel=kernel, k=10, rng=1)
+    message = next(str(w.message) for w in caught if "taken as 0" in str(w.message))
+    evaluated = int(re.search(pattern, message).group(1))
+    assert 0 < evaluated < result.n_grad
+    assert result.n_grad_zeroed > 0

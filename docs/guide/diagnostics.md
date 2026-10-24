@@ -250,8 +250,9 @@ of `UserWarning`, is the base class of telescopic's warnings. A
 a result may be unreliable: the conditions above. An
 {class}`telescopic.InputWarning <telescopic.warnings.InputWarning>` says that an input is
 legal but questionable: replicates or pilot pairs whose initial draws have zero target
-density, and a run whose atoms and distances would take more than 1 GB
-([Settings](settings.md#memory-and-thinning)).
+density, gradients taken as 0 because they were not finite where the log-density is
+([Targets](targets.md#special-values)), and a run whose atoms and distances would take
+more than 1 GB ([Settings](settings.md#memory-and-thinning)).
 Each warning points at the line of your code that called telescopic.
 
 The filters of the `warnings` module select them by class:

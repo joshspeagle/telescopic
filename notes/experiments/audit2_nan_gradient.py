@@ -53,10 +53,14 @@ for name, kernel in kernels.items():
             continue
     mean = result.estimate(lambda x: x[:, 0])
     tail = result.estimate(lambda x: (x[:, 0] > 1).astype(float))
-    zeroed = [str(w.message).split(" were")[0] for w in caught if "gradient" in str(w.message)]
+    warned = any("taken as 0" in str(w.message) for w in caught)
     print(
         f"{name}: E[x] = {mean.value:+.4f} +- {mean.standard_error:.4f} "
         f"(z = {mean.value / mean.standard_error:+.1f}), "
         f"P(x > 1) = {tail.value:.4f} +- {tail.standard_error:.4f}"
-        + (f"; warned: {zeroed[0]}" if zeroed else "")
+        + (
+            f"; warned, {result.n_grad_zeroed} gradients of the replicates taken as 0"
+            if warned
+            else ""
+        )
     )

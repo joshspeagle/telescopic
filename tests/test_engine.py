@@ -244,7 +244,7 @@ def test_the_replicates_count_the_gradients_taken_as_zero():
 
     def part(indices):
         kernel = MALA(1.0, cov=np.eye(1))
-        return run(target, kernel, Normal([2.0], [1.0]), indices, rng=3, k=1, m=5, lag=1)
+        return run(target, kernel, Normal([0.0], [0.01]), indices, rng=3, k=1, m=5, lag=1)
 
     whole = part(range(10))
     assert whole.n_grad_zeroed > 0

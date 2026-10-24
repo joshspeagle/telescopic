@@ -101,12 +101,20 @@ For the gradient:
 
 - Where the log-density is `-inf`, the gradient is not evaluated, so it may fail there.
   States there carry a gradient of 0, so MALA and HMC propose from them without drift.
-- Where the log-density is finite, a gradient that is not finite is taken as 0 too, which
-  keeps MALA and HMC exact but takes their drift away there. A run whose replicates met
-  one warns with their number. A gradient that fails only far in the tails, as a
-  mixture's responsibilities computed from densities do where every density underflows,
-  then costs nothing; one that fails where the target has mass slows the chains. Forms in
-  log space avoid both, such as responsibilities from `scipy.special.logsumexp`.
+- Where the log-density is finite, a gradient that is not finite raises `ValueError`
+  with the point at the states that chains start from: a MALA chain could not leave such
+  a start, since a move back is accepted only if the reverse proposal, which carries the
+  full drift, could return. Elsewhere it is taken as 0 too, which keeps MALA and HMC exact
+  but takes their drift away there. The pilot pairs and the replicates of a run that meet
+  one warn, in this process as soon as they do and on a pool when the run ends, and
+  `Result.n_grad_zeroed` counts the replicates' ones. Tuning does not warn: its search for
+  a step size reaches far into the tails.
+- Such a gradient costs nothing where the chains do not go, as with a mixture's
+  responsibilities computed from densities, which underflow far in the tails. Where they
+  go, it slows them, and HMC pairs that lose their drift over much of the target may not
+  meet. A gradient computed in log space avoids both, such as responsibilities from
+  `scipy.special.logsumexp`. In this process, `warnings.simplefilter("error",
+  telescopic.InputWarning)` stops a run at the first such gradient after tuning.
 
 The log-density must be deterministic: the same point must always give the same value.
 Pairs meet when their states are equal, and a log-density estimated by simulation breaks

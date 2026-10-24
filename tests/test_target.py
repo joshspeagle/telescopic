@@ -86,6 +86,12 @@ def test_a_non_finite_gradient_where_the_log_density_is_finite_is_zero_and_count
     assert gradients[1, 0] != 0  # the function's own array is left alone
 
 
+def test_a_non_finite_gradient_at_a_start_raises_with_the_point():
+    target = Target(gaussian, grad=lambda x: np.where(x > 0, np.nan, -x), vectorize=True)
+    with pytest.raises(ValueError, match=r"at x = \[1.0\], where log_prob is finite: chains"):
+        target.log_prob_and_grad(np.array([[-1.0], [1.0]]), start=True)
+
+
 @pytest.mark.parametrize("vectorize", [False, True])
 def test_a_function_that_returns_none_is_named(vectorize):
     # NumPy read None as NaN, and the error blamed the value.

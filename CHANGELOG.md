@@ -75,16 +75,18 @@ All notable changes to this project are documented here. The format follows
   variances are computed about the atoms' mean; tuning does not depend on the
   coordinates' scales; the engine advances up to 256 replicates at a time.
 - Fixes from a second audit: a gradient that is not finite where the log-density is
-  finite is taken as 0, which keeps MALA and HMC exact, where they rejected the proposal
-  and so sampled a restricted target, and a run whose replicates met one warns; the
-  maximal coupling keeps each chain's law at draws where a log-density is infinite, and
-  takes SciPy's Dirichlet laws; `check_coupling` swaps half the pairs, so that it catches a
-  coupling that reads another row's state, and fails a NaN p-value; `check()` and the
-  summary report a slow pair when every pair is censored; `hill` and `variance_share`
-  check their values; every bounded number argument raises "must be in (low, high)",
-  and `dual_averaging`, the TV and W1 bounds, the estimators, `SignedMeasure.mass`,
-  `plotting.paths`, `Target(vectorize=)` and `pool` check what they were missing; a first
-  Ctrl-C after the replicates, while the result is built, no longer loses the run, and a
-  process that ignores Ctrl-C, or whose handler Python did not set, keeps its handler;
-  the tuning pilot takes a third less time at d = 100, Gibbs sweeps less, and joint
-  histograms take memory in proportion to the atoms (`SignedMeasure.mass` is sparse).
+  finite is taken as 0 where chains move, which keeps MALA and HMC exact, and raises with
+  the point where they start, where MALA and HMC rejected such proposals and so sampled a
+  restricted target; a run that meets one warns as it does, and `Result.n_grad_zeroed`
+  counts them; the maximal coupling keeps each chain's law at draws where a log-density
+  is infinite, and takes SciPy's Dirichlet laws; `check_coupling` swaps half the pairs,
+  so that it catches a coupling that reads another row's state, and fails a NaN p-value;
+  `check()` and the summary report a slow pair when every pair is censored; `hill` and
+  `variance_share` check their values; every bounded number argument raises "must be in
+  (low, high)", and `dual_averaging`, the TV and W1 bounds, the estimators,
+  `SignedMeasure.mass`, `plotting.paths`, `Target(vectorize=)` and `pool` check what they
+  were missing; a first Ctrl-C after the replicates, while the result is built, no longer
+  loses the run, and a process that ignores Ctrl-C, or whose handler Python did not set,
+  keeps its handler; the tuning pilot takes a third less time at d = 100, Gibbs sweeps
+  less, and joint histograms take memory in proportion to the atoms (`SignedMeasure.mass`
+  is sparse).

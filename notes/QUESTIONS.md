@@ -66,6 +66,9 @@ Each item has the default that work proceeds on until Josh answers.
   default tuning on correct gradients that underflow far in the tails, as a mixture's
   textbook responsibilities do, in 10 of 10 runs that rejection completed
   (`notes/experiments/audit2_gradient_mixture.out`). Every kernel now takes such a
-  gradient as 0, which is exact, and a run whose replicates met one warns with their
-  number (DECISIONS #67). Default: zero drift with the warning. Alternatives: raise, with
-  tuning exempt; zero drift without the warning.
+  gradient as 0 where chains move, which is exact, warns as soon as a run meets one, and
+  raises with the point where chains start, since a MALA chain cannot leave such a start:
+  zero drift there too returned E[x] = 40.10 for a truth of 0
+  (`notes/experiments/audit2_zero_drift_costs.out`; DECISIONS #67). Default: this rule.
+  Alternatives: raise wherever a chain meets one after tuning, which fails runs that zero
+  drift completes exactly; zero drift without the warning.

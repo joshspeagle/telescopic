@@ -88,12 +88,15 @@ class Target:
             raise ValueError(f"log_prob returned {values[row]} at x = {x[row].tolist()}")
         return values
 
-    def log_prob_and_grad(self, x: FloatArray) -> tuple[FloatArray, FloatArray]:
+    def log_prob_and_grad(
+        self, x: FloatArray, *, start: bool = False
+    ) -> tuple[FloatArray, FloatArray]:
         """Log-densities, shape ``(n,)``, and gradients, shape ``(n, d)``, at the rows of ``x``.
 
         The gradient is evaluated only where the log-density is finite, and is 0 where it
         is ``-inf``. Where it is finite, a gradient that is not finite is taken as 0 too,
-        and counted in ``n_grad_zeroed`` (spec R-INPUT-1).
+        and counted in ``n_grad_zeroed``; at the states that chains ``start`` from, it
+        raises ``ValueError`` with the point (spec R-INPUT-1).
         """
         if self._grad is None:
             raise ValueError("this target has no gradient; pass grad= to use this kernel")
@@ -110,6 +113,15 @@ class Target:
         finite = np.isfinite(gradients)
         if not finite.all():
             bad = ~finite.all(axis=1)
+            if start:
+                # A MALA chain that starts there cannot leave: its moves back need the
+                # reverse proposal, which carries the full drift, to return (DECISIONS #67).
+                row = int(np.argmax(bad))
+                raise ValueError(
+                    f"grad returned {gradients[row].tolist()} at x = {x[row].tolist()}, "
+                    "where log_prob is finite: chains cannot start there; compute grad in "
+                    "log space, as with scipy.special.logsumexp, or start them elsewhere"
+                )
             # A copy: a vectorised grad may return its own array.
             gradients = gradients.copy()
             gradients[bad] = 0.0
