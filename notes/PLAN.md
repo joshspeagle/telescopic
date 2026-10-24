@@ -1,9 +1,12 @@
 # Plan
 
-**Current position:** Phase 7. Milestones M0 to M11 are implemented and reviewed, and the
-first draft is complete. The checkpoint report to Josh is `notes/CHECKPOINT.md`. Work
-waits on his answers to `notes/QUESTIONS.md`, whose defaults stand meanwhile; the items
-deferred beyond v0.1 are listed in `notes/reviews/m11.md`.
+**Current position:** Phase 9. Milestones M0 to M11 are implemented and reviewed, and the
+first draft is complete; the checkpoint report to Josh is `notes/CHECKPOINT.md`. The
+milestones are on `main` (pull requests #21 to #32), and the second audit's fixes
+(`notes/reviews/audit2.md`) land there in phase 6 of the tracking issue (#1, #7). Phase 7
+of that issue (#8) is Josh's review on the hub (`notes/review/`). Work waits on his
+answers to `notes/QUESTIONS.md`, whose defaults stand meanwhile; the items deferred
+beyond v0.1 are listed in `notes/reviews/m11.md`.
 
 ## Phases
 
@@ -17,6 +20,8 @@ deferred beyond v0.1 are listed in `notes/reviews/m11.md`.
 | 5 | Documentation: theory, user guide, executed tutorials, API reference, README | `docs/` | done (M10) |
 | 6 | Independent audit of the whole package, fixes, benchmarks | `notes/reviews/m11.md` | done (M11) |
 | 7 | Checkpoint report to Josh: first draft complete | `notes/CHECKPOINT.md`, log entry | done |
+| 8 | Second audit of the whole package, by reviewers who had not written it, and its fixes | `notes/reviews/audit2.md` | done |
+| 9 | Landing on `main` through issues and pull requests, then Josh's review (DECISIONS #58) | tracking issue #1; `notes/review/` | in progress: phase 7 of #1 is Josh's review |
 
 ## Milestone status
 

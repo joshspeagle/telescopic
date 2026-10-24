@@ -290,3 +290,31 @@ Append only. One entry per working session or milestone.
   the pipeline's pilots 43% to 63% of a main run that 256 lanes made faster, against
   15%.
 - The checkpoint report to Josh: `notes/CHECKPOINT.md`.
+
+## 2026-10-24: the landing on main and the second audit
+
+- Josh asked for issues and pull requests to bring the work to `main` (DECISIONS #58): a
+  tracking issue (#1), an issue per phase (#2 to #8) and per milestone (#9 to #20), and
+  twelve pull requests (#21 to #32), one per milestone and one for the run settings,
+  merged with merge commits so that the hashes the notes cite stay valid.
+- The second audit (`notes/reviews/audit2.md`), of the package at dc2f0df by reviewers
+  who had not written it: four `/simplify` angles, a `/code-review` at maximum effort
+  and four correctness reviewers by group of modules. The worst finding: where the
+  gradient is not finite and the density is, MALA and HMC rejected the proposal, and so
+  sampled a restricted target without a sign (E[x] off by 91 and 122 standard errors).
+- Its fix took four adversarial reviews. Raising (#59) failed default tuning on a mixture
+  whose textbook gradient underflows; zero drift (#67) keeps both kernels exact but traps
+  a MALA chain that starts where a correct gradient underflowed (E[x] = 40.10 ± 0.03 for
+  a truth of 0). So such a gradient raises at starts and is 0 elsewhere, counted and
+  warned; an open question for Josh.
+- The maximal coupling changed a chain's law at draws of infinite log-density and misread
+  Dirichlet draws (#60); `check_coupling` passed couplings that read another row (#61); a
+  Ctrl-C after the replicates lost the run (#63); twelve interval checks became one
+  helper (#62). The pilot at d = 100 takes 16.9 s against 25.1 s, and a joint histogram
+  23 MB against 629 MB (#66).
+- The phase's own `/simplify`, six reviewers, and `/code-review` at extra-high effort,
+  whose eight findings included NumPy's floats warning at inf - inf in the coupling's log
+  ratio and SciPy's Dirichlet refusing a zero component whose alpha is below 1; fixed. At
+  4377bab, 607 fast tests in 41 s and 20 slow in 125 s pass, and the strict docs build in
+  2 min 15 s.
+- The review hub (`notes/review/`) shows the audit's findings on its steps.
