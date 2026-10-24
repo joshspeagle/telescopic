@@ -13,6 +13,7 @@ decisions. These notes are the durable record of what the hub settles.
 | File | What it holds | How it changes |
 |---|---|---|
 | `hub/steps.py` | The plan: phases, steps, what each step reads and what to challenge | Edited when the plan changes; rebuild and republish the hub |
+| `hub/audit2.json` | The second audit's findings, each shown on the steps it concerns | Edited when a finding's status changes; rebuild and republish the hub |
 | `hub/build.py` | Builds `hub/review-data.json` from the repository at HEAD | Run before each republish |
 | `hub/index.html` | The hub page | Republished from this path to keep its URL |
 | `ARTIFACTS.md` | The hub's URL | Append when a page is published |

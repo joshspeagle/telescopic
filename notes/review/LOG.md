@@ -15,3 +15,10 @@ Append only. One entry per working session.
   module map. Its queue starts with the eight open questions of `notes/QUESTIONS.md`,
   each answered with its default.
 - Built at dc2f0df. It is rebuilt after the second audit's fixes, before the review starts.
+
+## 2026-10-24: the second audit on the hub
+
+- The steps carry the second audit's decisions (#59 to #67) and its experiments, and its
+  findings (`hub/audit2.json`) show on the steps they concern, with the answers that
+  changed nothing marked for the review. The hub is rebuilt from `main` once phase 6 has
+  merged, before the review starts.

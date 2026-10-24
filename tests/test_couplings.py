@@ -127,14 +127,15 @@ class PrescribedUniforms:
 
 
 class Tabled(Prescribed):
-    """A distribution with prescribed draws and a table of log-densities."""
+    """A distribution with prescribed draws and a table of log-densities, as NumPy floats."""
 
     def __init__(self, values, table):
         super().__init__(None, values)
         self.table = table
 
     def logpdf(self, x):
-        return self.table[x]
+        # NumPy's, as SciPy's logpdf returns: they warned at inf - inf.
+        return np.float64(self.table[x])
 
 
 class Broken:
@@ -285,6 +286,17 @@ def test_maximal_couples_dirichlet_distributions_by_their_density():
     assert stats.binomtest(int(identical.sum()), n, 0.5).pvalue > P_MIN
     assert stats.kstest(x[:, 0, 0], stats.beta(1, 2).cdf).pvalue > P_MIN
     assert stats.kstest(y[:, 0, 0], stats.beta(2, 1).cdf).pvalue > P_MIN
+
+
+def test_maximal_couples_dirichlet_draws_at_a_pole():
+    # Each of the first two components of Dir(0.001, 0.001, 1) is 0 in about half of its
+    # draws, a pole of its density that SciPy's logpdf refuses.
+    n = 1000
+    p, q = stats.dirichlet([0.001, 0.001, 1.0]), stats.dirichlet([0.002, 0.001, 1.0])
+    x, _, identical, _ = maximal([p] * n, [q] * n, random_draws(n, 6))
+    poles = np.any(x[:, 0, :2] == 0, axis=1)
+    assert poles.any()
+    assert not np.any(identical & poles)
 
 
 def test_maximal_couples_one_row_matrix_normals():

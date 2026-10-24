@@ -1,0 +1,119 @@
+[
+ {
+  "id": "A",
+  "title": "MALA and HMC sampled a restricted target where the gradient is not finite",
+  "severity": "high",
+  "status": "fixed",
+  "summary": "Where the log-density is finite but the gradient is not, MALA and HMC rejected the proposal, and so sampled the target restricted to where the gradient is finite, silently: on N(0, 1) with a NaN gradient beyond 1, E[x] was -0.288 with MALA (z = -91) and -0.286 with HMC (z = -122), against 0.001 for random-walk Metropolis (`notes/experiments/audit2_nan_gradient.out`).",
+  "resolution": "First a raise with the point (DECISIONS #59), which an adversarial review refuted: a mixture's textbook gradient is NaN far in the tails, where dual averaging's second step size sends proposals, so default tuning failed in 10 of 10 runs that rejection had completed (`notes/experiments/audit2_gradient_mixture.out`). Then zero drift, which keeps both kernels exact (DECISIONS #67). Of its three adversarial reviewers, two upheld it with changes and one refuted it, and all three found that a MALA chain started where a correct gradient underflowed cannot come back: from N(45, 1) on the mixture, `sample()` returned E[x] = 40.10 ± 0.03 for a truth of 0 (`notes/experiments/audit2_zero_drift_costs.out`). The rule now: such a gradient raises with the point where chains start and is taken as 0 where they move; a run warns as soon as it meets one, or when it ends on a pool, and `Result.n_grad_zeroed` keeps the count. Open for Josh in `notes/QUESTIONS.md`.",
+  "steps": ["3.3", "7.1"]
+ },
+ {
+  "id": "B",
+  "title": "The maximal coupling changed a chain's law at infinite log-densities, and misread Dirichlet draws",
+  "severity": "medium",
+  "status": "fixed",
+  "summary": "Draws that underflow to the edge of their support (Gamma(0.01) at 0.0, about 6e-4 of draws) have a log-density of -inf or +inf. The first test made such a pair identical through a NaN ratio, the loop rejected q's own such draws, and +inf raised in coupled steps only. SciPy's Dirichlet draws of shape (1, k) were refused for k = 3 and read as two points for k = 2, so Dir(1, 2) and Dir(2, 1) met in every pair.",
+  "resolution": "Such draws are never identical and always accepted (DECISIONS #60). SciPy's Dirichlet draws are evaluated as shape (k,), keyed on the distribution, since keying on the shape broke one-row `matrix_normal`. The phase's code review found two more faults: NumPy's floats warned at inf - inf, which a warnings filter of \"error\" turns into an exception, and SciPy refuses a Dirichlet component of 0 whose alpha is below 1; log ratios are now Python floats, and such a component is a pole. The rule gives up meetings where such draws are frequent: Beta(0.01, 0.01) puts a third of its draws at 1.0, and against Beta(0.011, 0.01), whose densities overlap by 0.971, pairs were identical in 0.623 of cases and equal in 0.959 (`notes/experiments/audit2_maximal_lumps.out`).",
+  "steps": ["3.1", "7.1"]
+ },
+ {
+  "id": "C",
+  "title": "check_coupling passed couplings that read another row's state",
+  "severity": "medium",
+  "status": "fixed",
+  "summary": "From copies of one pair every row held the same state, so a coupling that read another row's log-density got the p-values of the right one, in 20 of 20 seeds, while one such coupling biased a run's E[x] by 6.3 standard errors. A NaN p-value passed through `min`.",
+  "resolution": "Pairs (x, y) and (y, x) in random rows, each chain compared among the rows that start it at one point, Bonferroni over the two points; a NaN p-value fails (DECISIONS #61; `notes/experiments/audit2_check_coupling_rows.out`).",
+  "steps": ["3.5", "9.1"]
+ },
+ {
+  "id": "D",
+  "title": "The slow-pair warning vanished from check() and the summary when every pair was censored",
+  "severity": "low",
+  "status": "fixed",
+  "summary": "The largest meeting time was NaN when no pair met, and `max(nan, max_iter)` kept the NaN. `variance_share` read NaN as no variance, and `hill` gave NumPy's errors on 2-D values and on a scalar.",
+  "resolution": "The slow-pair check reads the largest stopping time, as the run's live check does; both functions check their values.",
+  "steps": ["6.2"]
+ },
+ {
+  "id": "E",
+  "title": "Public arguments without checks",
+  "severity": "low",
+  "status": "fixed",
+  "summary": "A `Fraction` passed twelve hand-written interval checks and failed in NumPy; quantile weights summing to R gave wrong quantiles; cells past the last spilled into the next replicate; `dual_averaging` took a target acceptance of 1.5 (a step size of 3e-124); several functions took mismatched arrays or non-integer times. The phase's code review found that `Independence` read a proposal's `mean` method as one dimension.",
+  "resolution": "One helper reads every bounded real argument, and each function checks what it was missing (DECISIONS #62); one predicate checks integer arrays, and the estimator weights stay exact up to int64. A `mean` method no longer fixes a dimension.",
+  "steps": ["7.3", "2.1"]
+ },
+ {
+  "id": "P",
+  "title": "Ctrl-C after the replicates lost a finished run; foreign handlers were replaced",
+  "severity": "medium",
+  "status": "fixed",
+  "summary": "The first Ctrl-C's handler covered only the replicates: a Ctrl-C while the workers stopped, the runs merged and the result was built (4.1 s at 3.9 million atoms) lost the run. A process that ignores SIGINT got it back during a run, and a handler Python did not set raised or was replaced. SciPy's multivariate normal draws differ between BLAS thread counts from d = 200, against the docs' promise of bitwise agreement on pools.",
+  "resolution": "The handler is set when the replicates start and kept until `run` returns; tuning and the pilot keep the caller's handler; ignored or foreign handlers are left alone (DECISIONS #63). The parallel guide states the BLAS condition (DECISIONS #64).",
+  "steps": ["5.3", "5.2"]
+ },
+ {
+  "id": "F",
+  "title": "Stored state that could be derived, and dead code",
+  "severity": "low",
+  "status": "fixed",
+  "summary": "`Replicates.cost` always equalled its formula from the stopping times; `Status.started` was never read and wrong on pools; four helpers and a guard did nothing a caller needed.",
+  "resolution": "`cost` is a property and is no longer saved; `started` is gone (DECISIONS #65).",
+  "steps": ["5.4", "5.1"]
+ },
+ {
+  "id": "G",
+  "title": "The pilot, Gibbs sweeps and histograms did work they did not need",
+  "severity": "low",
+  "status": "fixed",
+  "summary": "The pilot updated its covariance at every step, Gibbs sweeps converted every draw, and joint histograms built dense per-replicate masses: 629 MB and 3.06 s for 3 coordinates of 40 bins.",
+  "resolution": "The pilot at d = 100 took 16.9 s against 25.1 s, the Gibbs tutorial's run 1.25 s against 2.13 s, and the joint histogram 0.062 s and 23 MB, with sparse masses (DECISIONS #66; `notes/experiments/audit2_performance.out`). MALA in whitened coordinates is deferred.",
+  "steps": ["4.1", "3.4", "2.3", "9.3"]
+ },
+ {
+  "id": "H",
+  "title": "The README example was untested, and some tests repeated others",
+  "severity": "low",
+  "status": "fixed",
+  "summary": "The only test of the README example ran the first draft's version; the finite-state exactness test of test plan 2.4 was missing; several tests repeated others or wrote their own references.",
+  "resolution": "The README's code runs as a test; every pair of rows of a 4-state transition matrix is coupled in one batch; duplicates removed.",
+  "steps": ["9.1"]
+ },
+ {
+  "id": "I",
+  "title": "Docs that the code contradicted, and facts stated twice",
+  "severity": "low",
+  "status": "fixed",
+  "summary": "CONTRIBUTING's tolerance rule, the CHANGELOG's promise of identical replicates on pools, the diagnostics guide's condition for a NaN tail index and Getting started's list of summary lines were wrong; four facts had two homes.",
+  "resolution": "Corrected; each fact has one home.",
+  "steps": ["8.2"]
+ },
+ {
+  "id": "Q1",
+  "title": "Result keeps its replicates private",
+  "severity": "low",
+  "status": "answered",
+  "summary": "Plotting, saving and the diagnostics read `Result._replicates` or `Result._stopped` (altitude review).",
+  "resolution": "Kept private: the modules of the package share them, and a public attribute would put the engine's schema into the API (spec §7.1). A question for the review.",
+  "steps": ["6.1"]
+ },
+ {
+  "id": "Q2",
+  "title": "The zero-density warning is not an issue of the result",
+  "severity": "low",
+  "status": "answered",
+  "summary": "Starts where the target density is zero warn when the run ends, but `check()`, the summary and a loaded result do not report them (altitude review).",
+  "resolution": "Kept as an input warning at run time: it concerns the initial distribution, not convergence, and `Replicates.zero_density` keeps the indices. A question for the review.",
+  "steps": ["6.2"]
+ },
+ {
+  "id": "Q3",
+  "title": "Two tests write into the repository's tests/ directory",
+  "severity": "low",
+  "status": "answered",
+  "summary": "The README test, like the saving tests, writes a temporary directory under tests/, which fails on a read-only checkout (the phase's code review).",
+  "resolution": "Kept: running the README's code without a file needs `exec`, which ruff's S102 refuses, and CLAUDE.md allows no ignore rules; the system's temporary directory is outside the repository, which CLAUDE.md's hermetic rule excludes. A question for the review.",
+  "steps": ["9.1"]
+ }
+]

@@ -257,7 +257,10 @@ PHASES = [
                     "laws with an `eta` cap on the meeting probability (bounded variance "
                     "of the number of draws), and the maximal coupling of discrete laws. "
                     "Every kernel builds on these, so their marginals carry every "
-                    "kernel's correctness."
+                    "kernel's correctness. The second audit found the rejection coupling "
+                    "changed a chain's law at draws whose log-density is infinite, as "
+                    "draws that underflow to the edge of their support; such pairs now "
+                    "never meet (DECISIONS #60)."
                 ),
                 "spec": ["5.2"],
                 "code": [
@@ -267,8 +270,11 @@ PHASES = [
                 ],
                 "tests": ["tests/test_couplings.py"],
                 "reviews": ["m1-m2.md"],
+                "decisions": [60],
+                "experiments": ["audit2_maximal_lumps"],
                 "challenge": [
                     "Check the reflection coupling's meeting probability and its marginals at equal means and tiny distances.",
+                    "Is giving up meetings at draws of infinite log-density acceptable, when Beta(0.01, 0.01) puts a third of its draws at 1.0?",
                     "Is the eta option of Atchadé and Jacob worth its complexity for users?",
                 ],
             },
@@ -309,8 +315,10 @@ PHASES = [
                     "by reflection where they used rejection (D-11, D-24). Both tune their step by dual averaging. Gradients are evaluated "
                     "only where the log-density is finite (DECISIONS #14, #49). The second "
                     "audit found that a proposal with a non-finite gradient where the "
-                    "density is finite is rejected, which restricts the target: see the "
-                    "audit notes below."
+                    "density is finite was rejected, which restricted the target. Such a "
+                    "gradient is now taken as 0 where chains move, which keeps both "
+                    "kernels exact, and raises where they start (DECISIONS #59, #67): an "
+                    "open question."
                 ),
                 "spec": ["4.1", "5.4", "5.5"],
                 "code": [
@@ -321,8 +329,14 @@ PHASES = [
                     "src/telescopic/tuning.py:dual_averaging",
                 ],
                 "tests": ["tests/test_kernels.py", "tests/test_tuning.py"],
-                "decisions": ["D-11", "D-24", 11, 12, 13, 14, 17, 18, 49],
-                "experiments": ["m9_hmc_meeting", "m10_mala_logistic"],
+                "decisions": ["D-11", "D-24", 11, 12, 13, 14, 17, 18, 49, 59, 67],
+                "experiments": [
+                    "m9_hmc_meeting",
+                    "m10_mala_logistic",
+                    "audit2_nan_gradient",
+                    "audit2_gradient_mixture",
+                    "audit2_zero_drift_costs",
+                ],
                 "challenge": [
                     "Should a non-finite gradient at a point of finite density raise, be rejected, or count as zero drift?",
                     "Is a random-walk meeting step the right way to make HMC meet, against Heng and Jacob's own?",
@@ -376,7 +390,8 @@ PHASES = [
                 ],
                 "tests": ["tests/test_kernels.py", "tests/test_testing.py"],
                 "docs": ["docs/guide/custom-kernels.md"],
-                "decisions": [10, 19, 25, 28, "D-20"],
+                "decisions": [10, 19, 25, 28, "D-20", 61],
+                "experiments": ["audit2_check_coupling_rows"],
                 "challenge": [
                     "Is the kernel contract small enough for users to implement correctly?",
                     "Does check_coupling catch the mistakes users will make?",
@@ -515,7 +530,9 @@ PHASES = [
                     "lockstep batches, so a replicate's numbers do not depend on the "
                     "lanes, the chunks or the workers. Kernel arithmetic is "
                     "row-independent (`einsum` without optimisation), so results are "
-                    "bitwise identical for log-densities evaluated point by point."
+                    "bitwise identical for log-densities evaluated point by point, given "
+                    "the BLAS's thread count, which changes SciPy's multivariate normal "
+                    "draws from d = 200 (DECISIONS #64)."
                 ),
                 "spec": ["6.1"],
                 "code": [
@@ -525,7 +542,7 @@ PHASES = [
                     "src/telescopic/_linalg.py:matvec",
                 ],
                 "tests": ["tests/test_random.py"],
-                "decisions": ["D-8", "D-20", "D-26"],
+                "decisions": ["D-8", "D-20", "D-26", 64],
                 "reviews": ["m0.md"],
                 "challenge": [
                     "Is bitwise reproducibility across lanes worth its 2.2 times cost in random numbers?",
@@ -542,7 +559,9 @@ PHASES = [
                     "`map`. Chunks of up to 256 replicates, at most four per worker, run "
                     "in workers that live for one call. A first Ctrl-C lets started "
                     "replicates finish and returns a result flagged interrupted, which "
-                    "the next run completes; a second stops at once."
+                    "the next run completes; a second stops at once. The handler is set "
+                    "when the replicates start and kept until `run` returns, and a "
+                    "caller's own handler is left alone (DECISIONS #63)."
                 ),
                 "spec": ["6.4", "6.5"],
                 "code": [
@@ -552,7 +571,7 @@ PHASES = [
                 ],
                 "tests": ["tests/test_parallel.py"],
                 "docs": ["docs/guide/parallel.md"],
-                "decisions": [20, 21, 23, 45, 52, "D-22", "D-27"],
+                "decisions": [20, 21, 23, 45, 52, "D-22", "D-27", 63],
                 "experiments": ["m11_chunks"],
                 "reviews": ["m7.md"],
                 "challenge": [
@@ -574,6 +593,7 @@ PHASES = [
                 "spec": ["6.6", "10"],
                 "code": ["src/telescopic/sampler.py:CoupledSampler._check_memory"],
                 "docs": ["benchmarks/run.py"],
+                "decisions": [65, 66],
                 "experiments": ["m11_t_memory"],
                 "challenge": [
                     "Which missed performance target matters most to you?",
@@ -681,7 +701,11 @@ PHASES = [
                     "log-density raises with the point; -inf is a rejection. Where the "
                     "log-density is -inf the gradient is not evaluated and is 0, so a "
                     "gradient kernel proposes from there without drift and stays "
-                    "invariant (DECISIONS #14, #49)."
+                    "invariant (DECISIONS #14, #49). Where the log-density is finite and "
+                    "the gradient is not, the gradient is taken as 0 where chains move, "
+                    "counted and warned, and raises with the point where they start "
+                    "(DECISIONS #67). A draw of infinite log-density never meets in the "
+                    "rejection coupling (DECISIONS #60)."
                 ),
                 "spec": ["4.1"],
                 "code": [
@@ -690,7 +714,12 @@ PHASES = [
                     "src/telescopic/kernels/base.py:log_ratio",
                 ],
                 "tests": ["tests/test_target.py", "tests/test_kernels.py"],
-                "decisions": [11, 14, 49],
+                "decisions": [11, 14, 49, 59, 60, 67],
+                "experiments": [
+                    "audit2_nan_gradient",
+                    "audit2_zero_drift_costs",
+                    "audit2_maximal_lumps",
+                ],
                 "challenge": [
                     "Is raising on a NaN log-density right inside a long run, which then loses its work?",
                 ],
@@ -731,7 +760,7 @@ PHASES = [
                 ),
                 "spec": ["8.2"],
                 "code": ["src/telescopic/_types.py:integer", "src/telescopic/_types.py:real"],
-                "decisions": [44, 50],
+                "decisions": [44, 50, 62],
                 "challenge": ["Is refusing integral floats (k=5.0) too strict for users?"],
             },
         ],
@@ -838,11 +867,15 @@ PHASES = [
                     "streams within target; a 1 ms log-density 3.89 times faster on 4 "
                     "started workers. Missed: point-by-point overhead (90 µs against 40), "
                     "a pool's speed-up with its start (2.28 against 3.5) and the "
-                    "pipeline's pilots (43 to 63% against 15%)."
+                    "pipeline's pilots (43 to 63% against 15%). The second audit cut the "
+                    "pilot at d = 100 from 25.1 s to 16.9 s, and a joint histogram of 3 "
+                    "coordinates from 3.06 s and 629 MB to 0.062 s and 23 MB (DECISIONS "
+                    "#66)."
                 ),
                 "spec": ["10"],
                 "docs": ["benchmarks/run.py", "benchmarks/results/20b262b.json"],
-                "experiments": ["m11_lanes", "m11_chunks"],
+                "decisions": [66],
+                "experiments": ["m11_lanes", "m11_chunks", "audit2_performance"],
                 "challenge": ["Which target should v0.2 meet first?"],
             },
         ],
