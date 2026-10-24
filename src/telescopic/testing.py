@@ -149,7 +149,7 @@ def check_coupling(
         (stay[0], stay[1]),
         (moves[0], moves[1]),
         float(np.mean(np.all(gap == 0, axis=1))),
-        sum(_stale(kernel, target, state) for state in (new_x, new_y, *alone)),
+        sum(_stale(target, state) for state in (new_x, new_y, *alone)),
         int(near.sum()),
     )
 
@@ -172,7 +172,7 @@ def _compare(
     return stay, float(np.minimum(1.0, len(samples) * smallest))
 
 
-def _stale(kernel: Kernel, target: Target, state: State) -> int:
+def _stale(target: Target, state: State) -> int:
     # Chains whose cache disagrees with a fresh evaluation beyond rounding: a vectorised
     # target can change the last bits between batches (spec section 6.1).
     fresh = evaluate(target, state.x, state.grad is not None)

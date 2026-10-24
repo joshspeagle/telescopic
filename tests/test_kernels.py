@@ -348,6 +348,13 @@ def test_independence_reads_a_scalar_mean_as_one_dimension():
     assert Independence(proposal).ndim == 1
 
 
+def test_independence_takes_a_proposal_whose_mean_is_a_method():
+    # The size of a method is 1, so the kernel refused points of two dimensions.
+    proposal = StandardNormal()
+    proposal.mean = lambda: np.zeros(2)
+    assert Independence(proposal).ndim is None
+
+
 def test_independence_refuses_a_proposal_without_sample_and_log_density():
     with pytest.raises(TypeError, match="proposal must have sample"):
         Independence(stats.multivariate_normal(np.zeros(2)))

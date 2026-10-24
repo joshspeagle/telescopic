@@ -7,7 +7,7 @@ Gibbs tutorial run: 2.13 s
 run of 400 replicates, 222416 atoms: peak 69 MB
 joint histogram of 3 coordinates, 40 bins: 3.060 s, peak 629 MB
 
-With the changes:
+At bbbf851, with the changes:
 Intel(R) Xeon(R) Processor @ 2.10GHz, 4 CPUs; Python 3.13.16
 NumPy 2.5.4, SciPy 1.18.1; BLAS limited to 1 thread
 pilot at d = 50: 2.93 s

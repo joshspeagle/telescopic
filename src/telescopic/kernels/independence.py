@@ -81,7 +81,7 @@ class Independence(Kernel):
     ----------
     proposal : MultivariateT, optional
         Any object with ``sample(draws)`` and ``log_density(x)``; its ``mean``, if it has
-        one, fixes the dimension. ``None`` leaves the kernel untuned:
+        one that is not a method, fixes the dimension. ``None`` leaves the kernel untuned:
         :meth:`~telescopic.kernels.Kernel.tune` fits a Student-:math:`t_5` located at the
         mean of adaptive Metropolis pilot chains, with their covariance as its scale
         matrix (spec section 5.6, D-25). Its report gives the largest weight
@@ -113,7 +113,7 @@ class Independence(Kernel):
     @property
     def ndim(self) -> int | None:
         mean = getattr(self.proposal, "mean", None)
-        return None if mean is None else int(np.size(mean))
+        return None if mean is None or callable(mean) else int(np.size(mean))
 
     def _tuned(
         self, target: Target, initial: Any, pilot: PilotRun, rng: Seed
