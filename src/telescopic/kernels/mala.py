@@ -30,7 +30,7 @@ class MALA(GradientKernel):
     with :math:`CC^\top = \Sigma` (``cov``) and :math:`z \sim \mathcal N(0, I)`, a draw from
     :math:`q(\cdot \mid x)`. It is accepted when
     :math:`\log u < \log\pi(x') - \log\pi(x) + \log q(x \mid x') - \log q(x' \mid x)`; a
-    proposal with a log-density of ``-inf`` or a non-finite gradient is rejected. Coupled
+    proposal with a log-density of ``-inf`` or a non-finite position is rejected. Coupled
     chains draw their proposals from the reflection-maximal coupling of their proposal
     distributions, which share the covariance :math:`\epsilon^2\Sigma`, and share the
     uniform (Jacob, O'Leary & Atchade 2020, section 4.4).

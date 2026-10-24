@@ -58,3 +58,10 @@ Each item has the default that work proceeds on until Josh answers.
   of scale the draws stayed 0.05 apart, against 1.54 for independent draws
   (`notes/reviews/m11.md`). Default: keep the normal map, whose Cholesky factor contracts
   for nearby covariances, and the documented contract.
+
+- [ ] **A gradient that is not finite where the density is positive.** MALA and HMC
+  rejected such proposals, which sampled the target restricted to where the gradient is
+  finite: E[x] = −0.29 for N(0, 1) with a NaN gradient beyond 1
+  (`notes/experiments/audit2_nan_gradient.out`). Every kernel now raises there with the
+  point (DECISIONS #59). Default: raise. Alternative: a zero drift at such points, which
+  keeps every kernel exact but hides the bug in the gradient.

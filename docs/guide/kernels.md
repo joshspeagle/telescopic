@@ -101,7 +101,7 @@ chosen by a uniform:
 
 - with probability $1 - \gamma$, $\gamma$ = `meeting_weight`, a leapfrog trajectory of
   `n_steps` steps of size $\epsilon$ = `step_size`, with `cov` as the inverse mass
-  matrix; a trajectory that reaches zero density or a non-finite gradient stops there
+  matrix; a trajectory that reaches zero density or a non-finite position stops there
   and is rejected;
 - with probability $\gamma$, the meeting step: a random-walk step with proposal
   covariance $\sigma^2\Sigma$, $\sigma$ = `meeting_scale`.

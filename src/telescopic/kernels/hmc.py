@@ -34,10 +34,9 @@ class HMC(Mixture):
 
     with :math:`CC^\top = \Sigma` (``cov``), accepted on the change in
     :math:`\log\pi(x) - \tfrac12\lVert\nu\rVert^2`. A trajectory that reaches a non-finite
-    position, a log-density of ``-inf`` or a non-finite gradient stops there and is
-    rejected. With probability :math:`\gamma` (``meeting_weight``), a random-walk step with
-    proposal covariance :math:`\sigma^2\Sigma` (``meeting_scale`` :math:`= \sigma`), which
-    also rejects a proposal with a non-finite gradient.
+    position or a log-density of ``-inf`` stops there and is rejected. With probability
+    :math:`\gamma` (``meeting_weight``), a random-walk step with proposal covariance
+    :math:`\sigma^2\Sigma` (``meeting_scale`` :math:`= \sigma`).
 
     Coupled chains take the same component. Their trajectories share the momentum and the
     uniform, so the chains contract; the random-walk step couples them by the
@@ -84,7 +83,7 @@ class HMC(Mixture):
         if not 0 < meeting_scale < np.inf:
             raise ValueError(f"meeting_scale must be positive and finite, not {meeting_scale}")
         leapfrog = _Leapfrog(step_size, n_steps, cov)
-        walk = _Meeting(leapfrog.cov, scale=meeting_scale)
+        walk = RandomWalk(leapfrog.cov, scale=meeting_scale)
         super().__init__([leapfrog, walk], [1 - meeting_weight, meeting_weight])
         self.meeting_weight, self.meeting_scale = meeting_weight, meeting_scale
 
@@ -190,9 +189,3 @@ class _Leapfrog(GradientKernel):
             # From a start outside the support (log pi = -inf) any finite end is accepted.
             log_alpha = log_prob - 0.5 * np.einsum("ij,ij->i", momentum, momentum) - start
         return State(x, log_prob, grad), np.where(going, log_alpha, -np.inf)
-
-
-class _Meeting(RandomWalk):
-    # HMC's meeting step. It rejects a proposal with a non-finite gradient, as the
-    # trajectories do, where a random walk whose states carry gradients raises.
-    _evaluate = staticmethod(lambda target, x, need_grad: evaluate_proposal(target, x))

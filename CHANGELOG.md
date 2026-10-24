@@ -73,3 +73,5 @@ All notable changes to this project are documented here. The format follows
   distinct strings, one per coordinate; `Kernel.check_ndim` checks a kernel's dimension;
   variances are computed about the atoms' mean; tuning does not depend on the
   coordinates' scales; the engine advances up to 256 replicates at a time.
+- Fixes from a second audit: a non-finite gradient where the log-density is finite
+  raises with the point in every kernel, where MALA and HMC rejected the proposal.

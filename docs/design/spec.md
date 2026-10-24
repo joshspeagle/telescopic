@@ -249,7 +249,7 @@ Averaging only the replicates completed by a deadline is biased by $-\mathbb E[H
 
 - **Log-density:** `log_prob(x, *args, **kwargs)` returns a float for `x` of shape `(d,)`. With `vectorize=True` it takes `(n, d)` and returns `(n,)`.
 - **Gradient:** an optional `grad` with the same signature returns $\nabla \log\pi$, of shape `(d,)` or `(n, d)`. A kernel that needs a gradient raises `ValueError` without one.
-- **Special values:** `-inf` is a valid value and is rejected by every Metropolis step. NaN or `+inf` raises `ValueError` with the offending point. Where the log-density is `-inf`, the gradient is not evaluated, and states there carry a gradient of 0: a gradient kernel proposes from such a point without drift and accepts any proposal of finite density, as RWMH does (DECISIONS #14, #49). Where it is finite, a non-finite gradient raises wherever a cached state would keep it (initial states, and proposals of gradient-free kernels whose states carry gradients); gradient kernels, HMC's meeting step included, reject a proposal that has one.
+- **Special values:** `-inf` is a valid value and is rejected by every Metropolis step. NaN or `+inf` raises `ValueError` with the offending point. Where the log-density is `-inf`, the gradient is not evaluated, and states there carry a gradient of 0: a gradient kernel proposes from such a point without drift and accepts any proposal of finite density, as RWMH does (DECISIONS #14, #49). Where it is finite, a non-finite gradient raises `ValueError` with the offending point, wherever a kernel evaluates it (DECISIONS #59).
 - **Gibbs:** with a kernel that needs no log-density, a Gibbs kernel or a mixture of them, `log_prob` may be `None` (§5.7).
 - **Determinism:** the log-density must return the same value at the same point. A stochastic log-density can split chains that have met. The documentation says so.
 - **Layer C:** a `Target` object wraps these functions, counts evaluations, and presents a batched interface `(n, d) -> (n,)` to kernels, whether or not the user's function is vectorised.
@@ -376,9 +376,9 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 - whitened momentum $\nu \sim \mathcal N(0, I)$;
 - `n_steps` leapfrog updates of size $\epsilon$: $\nu \leftarrow \nu + \tfrac{\epsilon}{2}C^\top\nabla\log\pi(x)$, then $x \leftarrow x + \epsilon C\nu$, then the half step again;
 - accept on the change in $\log\pi(x) - \tfrac12\lVert\nu\rVert^2$;
-- a trajectory that reaches a non-finite position, a point with $\log\pi = -\infty$ or a non-finite gradient stops there and is rejected, without raising.
+- a trajectory that reaches a non-finite position or a point with $\log\pi = -\infty$ stops there and is rejected, without raising.
 
-With probability $\gamma$, take a RWMH step with proposal covariance $\sigma^2\Sigma$, where $\sigma$ = `meeting_scale`; like the trajectories, it rejects a proposal with a non-finite gradient (DECISIONS #18). Heng & Jacob use $\sigma^2 I$; the whitened $\sigma^2\Sigma$ makes the component invariant to the scale of each coordinate (D-24).
+With probability $\gamma$, take a RWMH step with proposal covariance $\sigma^2\Sigma$, where $\sigma$ = `meeting_scale`. Heng & Jacob use $\sigma^2 I$; the whitened $\sigma^2\Sigma$ makes the component invariant to the scale of each coordinate (D-24).
 
 **Coupling:**
 - a common uniform chooses the component, so both chains use the same one;

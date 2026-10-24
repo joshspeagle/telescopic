@@ -75,6 +75,13 @@ def test_the_gradient_is_evaluated_only_where_the_log_density_is_finite():
     assert target.n_grad == 1
 
 
+@pytest.mark.parametrize("bad", [np.nan, np.inf])
+def test_a_non_finite_gradient_where_the_log_density_is_finite_raises_with_the_point(bad):
+    target = Target(gaussian, grad=lambda x: np.where(x > 0, bad, -x), vectorize=True)
+    with pytest.raises(ValueError, match=r"at x = \[1.0\], where log_prob is finite"):
+        target.log_prob_and_grad(np.array([[-1.0], [1.0]]))
+
+
 @pytest.mark.parametrize("vectorize", [False, True])
 def test_a_function_that_returns_none_is_named(vectorize):
     # NumPy read None as NaN, and the error blamed the value.
