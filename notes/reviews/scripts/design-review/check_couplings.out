@@ -1,0 +1,9 @@
+refl-max |delta|=0.5: P(meet) 0.8018 vs 2Phi(-|d|/2) 0.8026 (binomial p=0.364); flag==bitwise: True; Bonferroni KS p(Y whitened)=1.000
+refl-max |delta|=1.5: P(meet) 0.4515 vs 2Phi(-|d|/2) 0.4533 (binomial p=0.119); flag==bitwise: True; Bonferroni KS p(Y whitened)=0.605
+refl-max |delta|=3.0: P(meet) 0.1329 vs 2Phi(-|d|/2) 0.1336 (binomial p=0.329); flag==bitwise: True; Bonferroni KS p(Y whitened)=0.550
+delta=0 as written raises under warnings-as-errors: RuntimeWarning: invalid value encountered in divide
+rejection eta=1.0: P(meet) 0.8698 vs int min(eta p, q) 0.8676; mean draws 1.988; var draws 13.375 vs 2c/(1-c) 13.105 (bound 2eta/(1-eta) = inf); KS p(Y~q)=0.404
+rejection eta=0.9: P(meet) 0.8365 vs int min(eta p, q) 0.8356; mean draws 2.000; var draws 10.323 vs 2c/(1-c) 10.165 (bound 2eta/(1-eta) = 18.000); KS p(Y~q)=0.345
+rejection eta=0.9 from p == q: outputs differ in 0.0993 of calls (1 - eta = 0.10)
+RWMH from equal states: states equal after step 1.0000; met flag true 0.3456; equal but met False in 0.6544 of pairs (both rejected)
+IMH from equal states: both reject (equal states, met False) in 0.1676 of pairs

@@ -1,0 +1,21 @@
+pool n=1000000: mean H +0.0039, sd(H) 14.44, E[C] 11.06, corr(H,C) -0.191 [2.8s]
+B=  1 lanes, interrupt at T=  5 iters ( 0.5 E[C]): bias +0.0239 (se 0.0229, z   +1.0), bias/sd(H) +0.0017
+B=  1 lanes, interrupt at T= 15 iters ( 1.4 E[C]): bias -0.3075 (se 0.0238, z  -12.9), bias/sd(H) -0.0213  <-- biased
+B=  1 lanes, interrupt at T= 30 iters ( 2.7 E[C]): bias -0.2629 (se 0.0183, z  -14.4), bias/sd(H) -0.0182  <-- biased
+B=  1 lanes, interrupt at T=100 iters ( 9.0 E[C]): bias -0.0721 (se 0.0083, z   -8.7), bias/sd(H) -0.0050  <-- biased
+B=  2 lanes, interrupt at T=  5 iters ( 0.5 E[C]): bias +0.0133 (se 0.0162, z   +0.8), bias/sd(H) +0.0009
+B=  2 lanes, interrupt at T= 15 iters ( 1.4 E[C]): bias -0.1192 (se 0.0134, z   -8.9), bias/sd(H) -0.0083  <-- biased
+B=  2 lanes, interrupt at T= 30 iters ( 2.7 E[C]): bias -0.1218 (se 0.0101, z  -12.1), bias/sd(H) -0.0084  <-- biased
+B=  2 lanes, interrupt at T=100 iters ( 9.0 E[C]): bias -0.0258 (se 0.0055, z   -4.7), bias/sd(H) -0.0018
+B=  4 lanes, interrupt at T=  5 iters ( 0.5 E[C]): bias +0.0082 (se 0.0115, z   +0.7), bias/sd(H) +0.0006
+B=  4 lanes, interrupt at T= 15 iters ( 1.4 E[C]): bias -0.0666 (se 0.0088, z   -7.6), bias/sd(H) -0.0046  <-- biased
+B=  4 lanes, interrupt at T= 30 iters ( 2.7 E[C]): bias -0.0552 (se 0.0065, z   -8.4), bias/sd(H) -0.0038  <-- biased
+B=  4 lanes, interrupt at T=100 iters ( 9.0 E[C]): bias -0.0158 (se 0.0038, z   -4.2), bias/sd(H) -0.0011
+B= 16 lanes, interrupt at T=  5 iters ( 0.5 E[C]): bias +0.0090 (se 0.0114, z   +0.8), bias/sd(H) +0.0006
+B= 16 lanes, interrupt at T= 15 iters ( 1.4 E[C]): bias -0.0097 (se 0.0084, z   -1.2), bias/sd(H) -0.0007
+B= 16 lanes, interrupt at T= 30 iters ( 2.7 E[C]): bias -0.0073 (se 0.0062, z   -1.2), bias/sd(H) -0.0005
+B= 16 lanes, interrupt at T=100 iters ( 9.0 E[C]): bias -0.0021 (se 0.0037, z   -0.6), bias/sd(H) -0.0001
+B= 64 lanes, interrupt at T=  5 iters ( 0.5 E[C]): bias -0.0099 (se 0.0057, z   -1.7), bias/sd(H) -0.0007
+B= 64 lanes, interrupt at T= 15 iters ( 1.4 E[C]): bias +0.0010 (se 0.0041, z   +0.2), bias/sd(H) +0.0001
+B= 64 lanes, interrupt at T= 30 iters ( 2.7 E[C]): bias -0.0060 (se 0.0031, z   -1.9), bias/sd(H) -0.0004
+B= 64 lanes, interrupt at T=100 iters ( 9.0 E[C]): bias -0.0020 (se 0.0018, z   -1.1), bias/sd(H) -0.0001

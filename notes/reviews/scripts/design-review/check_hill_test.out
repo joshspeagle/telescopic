@@ -1,0 +1,4 @@
+alpha=1.5 k_h=  100: P(|alpha_hat/alpha - 1| < 0.1) = 0.698
+alpha=1.5 k_h= 1000: P(|alpha_hat/alpha - 1| < 0.1) = 0.998
+alpha=3.0 k_h=  100: P(|alpha_hat/alpha - 1| < 0.1) = 0.679
+alpha=3.0 k_h= 1000: P(|alpha_hat/alpha - 1| < 0.1) = 0.998

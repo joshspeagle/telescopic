@@ -1,0 +1,10 @@
+true Cov: [2.  0.6 0.6 1. ]
+plug-in mean [1.9607 0.5878 0.5878 0.9793]  (expected bias -C/(n R) = [-0.04  -0.012 -0.012 -0.02 ])
+U-stat  mean [2.0007 0.5998 0.5998 0.9992]  (se ~ [0.0009 0.0005 0.0005 0.0005])
+
+R=200: 3506 atoms, negative-weight share 0.243, raw CDF range [0.005, 1.287], non-monotone steps 853
+  unit weights: q16 -1.7819  q50 -0.7846  q84 +0.1135
+  gap weights : q16 -1.7819  q50 -0.7846  q84 +0.1135
+  running max : q16 -1.7819  q50 -0.7846  q84 +0.1135
+  truth       : q16 -0.9945  q50 +0.0000  q84 +0.9945
+  bootstrap sd of the unit-weight median: 0.6689

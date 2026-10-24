@@ -1,0 +1,2 @@
+batch sizes where row 0 of z @ chol.T differs from its value at n=1000: [1]
+max |difference| n=1 vs n=1000: 4.440892098500626e-16

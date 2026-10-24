@@ -10,10 +10,13 @@ Most estimator bugs cannot be caught statistically. In the census, an off-by-one
 
 ## 1. Principles
 
-- **Deterministic.** Every random test passes a fixed seed through `rng`.
-  - Statistical tests use tolerances of 5 Monte Carlo standard errors.
-  - When $4 < |z| \le 6$, a test reruns once with 4× the replicates and a fresh seed, and fails only if the rerun also exceeds 4 (Gandy-style escalation, never `--reruns`).
-  - Seeds are never chosen to make a test pass.
+- **Deterministic.** Every random test passes a fixed seed through `rng`, and seeds are never chosen to make a test pass.
+- **One tolerance rule, sequential escalation**, for every test that asserts a $z$-score:
+  - pass if $|z| \le 4$;
+  - if $4 < |z| \le 6$, rerun once with 4× the replicates and a seed derived from the first, and pass if and only if the rerun gives $|z| \le 4$;
+  - fail if $|z| > 6$.
+
+  Heavy tails make a plain 4σ or 5σ rule unreliable: the census measured $\mathbb P(|z| > 4) = 0.005$ at $R = 5000$, about 80× the Gaussian rate. Tests of p-values (KS, binomial) use a fixed threshold that keeps each module's family-wise false-positive rate below about $10^{-3}$.
 - **Exact references first.** In order of preference:
   1. draw-for-draw oracles with injected random numbers;
   2. closed forms (Gaussian total-variation distances, meeting probabilities);
@@ -32,11 +35,8 @@ Most estimator bugs cannot be caught statistically. In the census, an off-by-one
 
 - `root_seed` accepts `None`, an integer, a `SeedSequence` and a `Generator`. The same integer gives the same streams, and different namespaces give different streams.
 - `replicate_generator(root, ns, i)` equals the generator built from `SeedSequence(root.entropy, spawn_key=root.spawn_key + (ns, i))`.
-- `Streams`/`Draws`:
-  - the draws a lane receives depend only on its generator and its request sizes, not on the other lanes or on the order in which lanes request;
-  - refills are deterministic;
-  - `subset` keeps the row-to-lane mapping;
-  - a sequence of requests of mixed sizes from one lane equals the same sequence drawn with a single-lane `Streams`.
+- `Streams`/`Draws` (Hypothesis, over random sequences of requests from random subsets of lanes, with lanes reassigned in between): every row of every request equals the next numbers of its replicate's two child generators (§6.1), whatever the buffer width, the other lanes' requests and the order of lanes. `subset` keeps the row-to-lane mapping.
+- `fixed_draws` replays its arrays in order and raises once a row's numbers run out.
 
 ### 2.2 `tests/test_couplings.py` (R-CPL-1–3)
 
@@ -45,8 +45,8 @@ Most estimator bugs cannot be caught statistically. In the census, an off-by-one
 - **Algebra (Hypothesis):**
   - the reflection is an involution and preserves norms;
   - `identical` holds if and only if the outputs are bitwise equal;
-  - $\delta = 0$ always gives `identical`.
-- **Meeting probability:** a binomial test of the meeting frequency against $2\Phi(-\lVert\delta\rVert/2)$. Use $n = 2\times10^5$ per case for three distances in $d = 1, 3, 10$, with a dense $\Sigma$. This is the test that catches a coupling that recomputes $Y$ (spec Appendix A, E-R2).
+  - $\delta = 0$ always gives `identical`, without a warning.
+- **Meeting probability:** a binomial test of the frequency of bitwise-equal outputs (not of the `identical` flag, which a recomputing coupling still sets correctly) against $2\Phi(-\lVert\delta\rVert/2)$. Use $n = 2\times10^5$ per case for three distances in $d = 1, 3, 10$, with a dense $\Sigma$. This is the test that catches a coupling that recomputes $Y$ (spec Appendix A, E-R2).
 - **Marginal law:** $Y$'s whitened coordinates are $\mathcal N(0, I)$ (one-sample KS per coordinate, and KS of $\lVert\cdot\rVert^2$ against $\chi^2_d$, Bonferroni-corrected). The same holds for $X$.
 
 **Rejection maximal**
@@ -60,7 +60,7 @@ Most estimator bugs cannot be caught statistically. In the census, an off-by-one
   - the mean draw count is 2.
 
 **Discrete maximal**
-- The exact joint table, computed by enumeration in exact mode, has the right row and column sums and diagonal mass $1 - \mathrm{TV}$, to $10^{-15}$.
+- The joint frequencies of the outputs match the exact joint table (diagonal $\min(p_i, q_i)$, off-diagonal the product of the normalised residuals times $\mathrm{TV}$), computed independently in the test, by a chi-square test.
 - Log-space inputs with very peaked probabilities do not underflow.
 
 ### 2.3 `tests/test_target.py`, `tests/test_initial.py` (R-INPUT-1, R-INPUT-2)
@@ -86,19 +86,18 @@ Most estimator bugs cannot be caught statistically. In the census, an off-by-one
 
 Each kernel ($\times$ each coupling it offers) gets the same suite, via a parametrised fixture:
 
-1. **Oracle draw-for-draw:** with `FixedDraws`, `step` and each marginal of `coupled_step` equal an independent NumPy reference kernel at `atol=1e-12`.
+1. **Oracle draw-for-draw:** with `fixed_draws`, `step` and each marginal of `coupled_step` equal an independent NumPy reference kernel at `atol=1e-12`.
    - Pairs are far apart, close, and equal.
    - Uniforms are chosen to exercise both acceptance and rejection.
    - For mixtures, both components are exercised.
 2. **Marginal preservation:** from fixed pairs (equal; $0.1\sigma$ apart; $3\sigma$ apart), the empirical law of each marginal after one coupled step equals the exact one-step law. For RWMH, MALA and IMH on a Gaussian target this is:
    - a binomial test of the probability of staying;
-   - a KS test of moved values against the normalised $q(x' \mid x)\,\alpha(x, x')$, by one-dimensional quadrature in $d = 1$;
-   - KS tests on whitened coordinates for $d > 1$.
+   - a KS test of moved values against the normalised $q(x' \mid x)\,\alpha(x, x')$, by one-dimensional quadrature, in $d = 1$ only.
 
-   One-sample tests against the exact law are about 10× more sample-efficient than two-sample tests (census). This test runs with $n = 2\times10^4$ in the fast tier and $2\times10^5$ in the slow tier.
-3. **Faithfulness:** from equal states, 100 coupled steps keep the states bitwise equal and `met` true at every step.
-4. **Flag contract:** over many steps from random pairs, `met[i]` holds if and only if the returned states are bitwise equal. Met pairs carry equal log-densities and gradients.
-5. **Finite-state exactness:** a test-only kernel on 4 states uses `discrete_maximal` to couple transition rows. Built through the same code paths, its coupled transition matrix (enumerated in exact mode) has marginals equal to $P$ and an absorbing diagonal.
+   Moved values are accepted proposals, whose law is not Gaussian, and the stay probability in $d > 1$ is a $d$-dimensional integral. So for $d > 1$ each coupled marginal is compared with `step` from the same state by two-sample tests: a two-proportion test of the stay frequency, and KS tests of the moved values on random projections and on the norm, with a larger $n$ (design review D-R8). One-sample tests against the exact law are about 10× more sample-efficient than two-sample tests (census). These tests run with $n = 2\times10^4$ in the fast tier and $2\times10^5$ in the slow tier.
+3. **Faithfulness:** from equal states, 100 coupled steps keep the states bitwise equal, with equal log-densities and gradients.
+4. **Batch invariance (R-KER-6):** a step and a coupled step on a batch of 1 equal the same rows in batches of 2 and 64, bitwise, at $d \ge 5$ with a dense $\Sigma$.
+5. **Finite-state exactness:** a test-only kernel on 4 states uses `discrete_maximal` to couple transition rows. Its empirical coupled transitions match the exact coupled transition matrix, computed independently in the test, whose marginals equal $P$ and whose diagonal is absorbing.
 
 Kernel-specific tests:
 - **RWMH:**
@@ -110,13 +109,14 @@ Kernel-specific tests:
   - shared momentum contracts two chains on a Gaussian;
   - the meeting component meets with the probability of §5.2;
   - a common uniform chooses the same component for both chains.
-- **IMH:** both chains propose the same point; a meeting happens exactly when both accept.
+- **IMH:** both chains propose the same point, and the pair meets when both accept.
 - **Gibbs:**
   - `"maximal"` couplings of conditionals have exact marginals (KS against the conditional's CDF);
   - `"crn"` uses a common uniform through `ppf`;
-  - `"two-scale"` switches at the threshold;
-  - a meeting is declared only when the whole state is equal at the end of a sweep.
-- **Mixture:** the component frequencies match the weights. Component choice does not depend on the states (structural test with `FixedDraws`).
+  - `"two-scale"` switches at the threshold, and requires one;
+  - when the coordinates outside a block are equal, both chains receive the same draw, so equal states stay equal with $\eta < 1$.
+- **Mixture:** the component frequencies match the weights. Component choice does not depend on the states (structural test with `fixed_draws`).
+- **Draw counts (R-KER-5):** each kernel consumes the random numbers it documents, checked with `fixed_draws` arrays of exactly that size.
 
 ### 2.5 `tests/test_estimators.py` (R-EST-4–8)
 
@@ -132,28 +132,32 @@ Kernel-specific tests:
 **Derived estimators**
 - `unbiased_covariance` matches the U-statistic $\frac{1}{R(R-1)}\sum_{r \ne s} a_r a_s^\top$ form exactly. Averaged over many synthetic replicate sets with known moments, it is unbiased where the plug-in is not.
 - `weighted_quantile`:
-  - reproduces NumPy's inverted-CDF quantiles for positive weights;
+  - reproduces NumPy's inverted-CDF quantiles for positive integer weights, through repeated values (NumPy's `weights=` needs NumPy 2.0, newer than the oldest supported stack);
   - is monotone in $q$;
   - returns finite answers for non-monotone signed CDFs.
 - Histograms use half-open bins, and their bin masses sum to the total weight inside the range.
 
-**Exact finite-state expectation** (slow tier). For a 4-state chain coupled by `discrete_maximal`, $\mathbb E[H_{k:m}]$ computed by recursion on the joint chain equals $\pi(h)$. The engine's average over $10^6$ replicates matches it within 5 standard errors, for several $(k, m, L)$ including $L \ge 2$ and `thin` $> 1$.
+**Exact finite-state expectation.**
+- Fast tier: for a 4-state chain coupled by `discrete_maximal`, $\mathbb E[H_{k:m}]$, computed by recursion on the exact law of the joint chain with the package's own `lag_weights` and `correction_coefficients`, equals $\pi(h)$ to $10^{-12}$, for several $(k, m, L)$ including $L \ge 2$ and `thin` $> 1$. This catches weight bugs deterministically.
+- Slow tier: the engine's average over $10^6$ replicates matches it (sequential escalation).
 
-**Perfect kernel.** A test-only kernel with $P(x, \cdot) = \pi$ for every $x$, coupled by common draws, meets at the first coupled step. The engine records $\tau = L + 1$ ($\tau = L$ when $X_L = Y_0$). This checks the meeting-time bookkeeping and the lag indexing deterministically.
+**Perfect kernel.** A test-only kernel with $P(x, \cdot) = \pi$ for every $x$, coupled by common draws, meets at the first coupled step. The engine records $\tau = L + 1$, or $\tau = L$ when $X_L = Y_0$. This checks the meeting-time bookkeeping and the lag indexing deterministically.
 
 ### 2.6 `tests/test_engine.py` (R-EST-1–3, R-EST-7, R-EXEC-3, R-EXEC-4)
 
 - **Estimates against recorded paths:** with `keep_paths=True`, every replicate's stored signed measure equals the one computed by a reference implementation of §3.2 from the recorded paths. Exact to `1e-12`, for random $(k, m, L, \text{thin})$.
 - **Lag:** $X$ runs exactly $L$ steps alone before the first coupled step.
 - **Meeting:**
-  - $\tau$ is the first $t \ge L$ with $X_t = Y_{t-L}$;
-  - after the meeting only $X$ is simulated;
-  - the cost formula holds.
-- **Refill:** with $R > B$ lanes, every requested index is run exactly once, and per-replicate results do not depend on $B$ (1, 7, 64) for a point-by-point target. This is the invariance contract of R-EXEC-2.
+  - $\tau$ is the first $t \ge L$ with $X_t = Y_{t-L}$, including $\tau = L$;
+  - after the meeting only $X$ is simulated, so a kernel that would split equal states cannot affect the result;
+  - the cost formula holds;
+  - distances are recorded for $L \le t < \tau$.
+- **Refill:** with $R > B$ lanes, every requested index is run exactly once, and per-replicate results do not depend on $B$ (1, 7, 64) for a point-by-point target, bitwise. This is the invariance contract of R-EXEC-2, extended to a kernel with variable draw counts (RWMH `"maximal"`), and to MALA and HMC in M6.
 - **Censoring:**
-  - with `max_iter`, unmet pairs are returned as censored, never dropped;
-  - without it, a slow pair triggers the one-time `ConvergenceWarning`.
+  - with `max_iter`, unmet pairs are returned as censored, never dropped, and `max_iter` $\le \max(L, m)$ raises;
+  - a pair past $10\max(L, m)$ triggers the one-time `ConvergenceWarning`.
 - **Pilot mode:** `k=0, m=0, store=False` returns meeting times only.
+- **Memory:** the stored atom count stays within the bound of §3.2 (R-EXEC-7).
 
 ### 2.7 `tests/test_results.py`, `tests/test_measure.py` (R-OUT-1–3)
 
@@ -163,23 +167,27 @@ Kernel-specific tests:
 - **Histograms:** `histogram` returns masses, standard errors and edges.
 - **Summary:** `summary()` contains the fields of §7.3 and converts with `to_dict()`. `to_pandas()` is skipped without pandas.
 - **Merging:** `merge` rejects different configurations and overlapping indices, and its output equals one run over the union of indices.
-- **Censored replicates** are excluded from estimates and counted.
+- **Censored replicates** are excluded from estimates and from $R$, and listed with meeting time `inf`.
+- **Output shapes:** an `h` whose output is not `(n,)` or `(n, p)` raises.
+- **Interrupted results** say in `summary()` that their estimates are consistent, not exactly unbiased.
 
 ### 2.8 `tests/test_diagnostics.py` (R-DIAG-1, R-DIAG-2)
 
 - **TV bound:**
   - the formula equals $\sum_{j\ge1}\hat{\mathbb P}(\tau > t + jL)$ (identity on random meeting times);
-  - it is reported as $\min(1, \cdot)$ with an upper confidence bound at 0.
+  - it is reported as $\min(1, \cdot)$ with an upper confidence bound at 0;
+  - with censored replicates it is reported as a lower bound, with their count.
 - **Exact reference:** for a finite chain, the bound computed from the exact meeting-time distribution is at least the exact TV distance at every $t$.
-- **Hill tail index:** recovers the index of Pareto samples within 10% at $n = 10^4$.
+- **W1 bound (should):** equals its definition on recorded distances.
+- **Hill tail index:** with $k_h = n/10$, recovers the index of Pareto samples within $4\alpha/\sqrt{k_h}$ at $n = 10^4$ (with $k_h = \sqrt n$ the estimate is within 10% only 69% of the time; design review D-R17).
 - **`check` warnings:** each fires on a synthetic result built to trigger it:
   - a censored replicate;
-  - more than 5% bias corrections;
-  - one replicate holding more than 25% of the variance;
-  - a tail index below 2;
+  - more than 25% bias corrections;
+  - one replicate holding more than 25% of the variance at $R \ge 100$;
+  - a tail index below 2 at $R \ge 500$;
   - disagreeing pilots.
 
-  None fires on a clean Gaussian run.
+  `check(strict=True)` raises instead. None fires on a clean Gaussian run in a configuration whose computed false-alarm probability is below $10^{-3}$.
 
 ### 2.9 `tests/test_tuning.py`, `tests/test_sampler.py`, `tests/test_api.py` (R-TUNE-*, R-API-*)
 
@@ -188,8 +196,10 @@ Kernel-specific tests:
   - on a correlated Gaussian ($d = 5$, condition number 100), the pilot covariance is within 20% of the truth in Frobenius norm;
   - the acceptance rate is within 0.05 of 0.234.
 - **`choose_kml`:**
-  - gives $k = \lceil q_{0.99}(\tau - 1)\rceil$, $L = k$ and $m = 10k$;
-  - the floor $k \ge 1$ holds.
+  - gives $k$ = the inverted-CDF $q_{0.99}(\tau - 1)$, $L = k$ and $m = 10k$;
+  - the floor $k \ge 1$ holds;
+  - $\beta > 1 - 1/R_0$ raises, and so does a quantile that falls on a censored pilot pair;
+  - explicit values are kept, and `lag` and `m` follow an explicit `k` without a pilot.
 - **Dual averaging:** reaches its target acceptance within 0.05 on a Gaussian.
 
 **`CoupledSampler`**
@@ -209,7 +219,9 @@ Kernel-specific tests:
 
 - **Pools:** for a point-by-point target, the per-replicate results are identical across `pool=None`, a `ProcessPoolExecutor` with 1 and 2 workers, and a `.map`-only pool.
 - **Chunking:** chunks cover the indices exactly once. Results come back in index order.
-- **Interrupts:** a simulated stop after $j$ completed replicates returns an `interrupted` result whose indices are a prefix.
+- **Interrupts:** a simulated stop returns an `interrupted` result containing every started replicate, which form a prefix of the indices; running chunks are awaited.
+- **Worker hygiene:** tasks run with BLAS pinned to one thread, and workers that telescopic creates ignore SIGINT.
+- **Progress:** without tqdm, progress falls back to lines on stderr.
 - **Budget mode (should):**
   - on a toy whose estimate correlates with its cost, the per-lane GH estimator is unbiased;
   - the pooled completed-by-deadline average is biased ($|z| > 10$ in seconds), which documents why it is not offered.
@@ -227,7 +239,7 @@ Kernel-specific tests:
   - initial distributions have the documented shape.
 - **`check_coupling`:**
   - passes the built-in kernels;
-  - flags a deliberately broken coupling (wrong $Y$ marginal) and a non-faithful one.
+  - flags a deliberately broken coupling (wrong $Y$ marginal, or one that recomputes $Y$ on the meeting branch) and a non-faithful one.
 
 ### 2.12 Slow statistical tier (`-m slow`)
 
@@ -238,10 +250,10 @@ Kernel-specific tests:
   - $L \in \{1, 7\}$;
   - `thin` $\in \{1, 3\}$;
   - small $k$, so the bias correction matters.
-- **Coverage.** 1,000 intervals of $R = 200$ from near-stationary starts; coverage of the 95% interval in [0.93, 0.97]. Coverage from far starts is recorded, not asserted, to document the heavy-tail caveat.
+- **Coverage.** 2,000 intervals of $R = 200$ from near-stationary starts, on the exact AR(1) chain. The coverage of the 95% interval is within 4 standard errors (0.02) of 0.945, the coverage the design review measured for a correct implementation (0.939 to 0.951 by case). Coverage from far starts is recorded, not asserted, to document the heavy-tail caveat.
 - **TV bounds against exact TV.** For an exact AR(1) kernel ($x' = \rho x + \sqrt{1-\rho^2}\,\xi$), coupled by `reflection_maximal`, with $10^4$ meeting times: $\widehat{\text{bound}}(t) \ge \mathrm{TV}(t) - 5\,\mathrm{SE}(t)$ on a grid of $t$. The exact TV between Gaussians comes from quadrature.
 - **Literature reproductions** (loose bands): RWMH reflection-maximal mean $\tau \approx 30$ at $d = 10$ (O'Leary 2021); the HMC logistic regression meeting times of Heng & Jacob, order of magnitude.
-- **Warning calibration.** On clean targets, the warnings of §7.4 fire in under 1% of runs. On JOA20's bimodal case with a narrow $\pi_0$, warning 3 or 4 fires in most runs at $R = 1000$.
+- **Warning calibration (recorded, not asserted).** The false-alarm rate of each warning of §7.4 on clean targets, and its firing rate on JOA20's bimodal case with a narrow $\pi_0$, are measured and written to the documentation. In the design review's simulation of that case, warnings fired mainly in runs whose intervals already covered the truth (2 of 14 misleading runs warned), so the documentation says that such a failure cannot be detected from the output at moderate $R$. What is asserted is what the design can show: a wide $\pi_0$ exposes the second mode through the meeting times or the TV bound.
 - **Linear SBC (should).** On conjugate Normal–Normal and Gamma–Poisson models, $\mathbb E[\hat\pi(\phi) - \phi(\tilde\theta, y)] = 0$ for $\phi \in \{\theta, \theta^2, \mathbb 1(\theta \le c), \log p(y \mid \theta)\}$, at $|z| \le 5$.
 
 ### 2.13 Docs, examples and packaging
@@ -263,18 +275,18 @@ Kernel-specific tests:
 
 | Requirement | Tests |
 |---|---|
-| R-EST-1–3 (construction, meeting, faithfulness) | 2.4 faithfulness and flag; 2.5 perfect kernel; 2.6 lag and meeting |
+| R-EST-1–3 (construction, meeting, faithfulness) | 2.4 faithfulness; 2.5 perfect kernel; 2.6 lag and meeting, and a splitting kernel |
 | R-EST-4–6 (weights, thinning, signed measure) | 2.5 identities; 2.6 recorded paths; 2.12 unbiasedness |
 | R-EST-7 (cost) | 2.5; 2.6 |
 | R-EST-8 (derived estimators) | 2.5; 2.7 |
 | R-THEORY-1 | docs review; 2.12 coverage and failure-mode runs |
 | R-CPL-1–3 | 2.2 |
-| R-KER-* | 2.4; 2.12 |
+| R-KER-* | 2.4 (with batch invariance and draw counts); 2.12 |
 | R-INPUT-1–2 | 2.3 |
 | R-EXEC-1–2 (streams, invariance) | 2.1; 2.6; 2.10 |
 | R-EXEC-3–4 (engine, censoring) | 2.6 |
 | R-EXEC-5–6 (parallel, interrupts) | 2.10 |
-| R-EXEC-7 (memory) | 2.9 (warning on the estimate) |
+| R-EXEC-7 (memory) | 2.6 atom count; 2.9 (warning on the estimate) |
 | R-TUNE-1–4 | 2.9 |
 | R-OUT-1–3 | 2.7; 2.11 |
 | R-DIAG-1–2 | 2.8; 2.12 |

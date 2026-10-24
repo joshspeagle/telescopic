@@ -1,0 +1,4 @@
+multivariate_normal d=1: rvs(size=1) shape () ; rvs(size=2) shape (2,)
+norm(): rvs(size=1) shape (1,)
+multivariate_normal d=3: rvs(size=1) shape (3,)
+multivariate_t d=2: rvs(size=1) shape (2,)

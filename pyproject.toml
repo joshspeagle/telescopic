@@ -49,7 +49,6 @@ docs = [
     "furo==2025.12.19",
     "sphinx-copybutton==0.5.2",
     "numpydoc==1.11.0",
-    "sphinxcontrib-bibtex==2.7.0",
     "matplotlib>=3.8",
     "ipykernel",
 ]
@@ -78,14 +77,17 @@ precision = 2
 
 [tool.mypy]
 strict = true
-# scipy-stubs needs Python 3.12; the commands also run mypy --python-version 3.11.
-python_version = "3.12"
+python_version = "3.11"
 files = ["src/telescopic"]
 
 [tool.ruff]
 line-length = 99
-extend-exclude = ["research_notes", "reports", "*.md"]
+extend-exclude = ["research_notes", "notes/reviews/scripts", "*.md"]
 
 [tool.ruff.lint]
 # No pep8-naming rules: the code follows the spec's notation (H, R, L), as CLAUDE.md allows.
 extend-select = ["B", "C4", "I", "NPY", "PT", "RUF", "SIM", "UP"]
+
+[tool.ruff.lint.isort]
+# The tests' helper module of reference implementations.
+known-first-party = ["references"]
