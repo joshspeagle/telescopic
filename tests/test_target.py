@@ -75,3 +75,11 @@ def test_a_wrong_output_shape_raises():
 def test_non_callables_are_rejected(log_prob, grad):
     with pytest.raises(TypeError, match="must be callable"):
         Target(log_prob, grad)
+
+
+def test_a_target_without_a_log_density_gives_zero_and_takes_no_gradient():
+    target = Target(None)
+    np.testing.assert_array_equal(target.log_prob(np.ones((3, 2))), np.zeros(3))
+    assert not target.has_log_prob
+    with pytest.raises(ValueError, match="grad needs log_prob"):
+        Target(None, grad=lambda x: -x)

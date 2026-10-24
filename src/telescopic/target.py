@@ -18,11 +18,12 @@ class Target:
 
     Parameters
     ----------
-    log_prob : callable
+    log_prob : callable or None
         ``log_prob(x, *args, **kwargs)`` returns a float for ``x`` of shape ``(d,)``, or
         an array of shape ``(n,)`` for ``x`` of shape ``(n, d)`` when ``vectorize`` is
         true. ``-inf`` marks zero density. It must be deterministic: the same point
-        must always give the same value.
+        must always give the same value. ``None`` is for Gibbs kernels, which need no
+        log-density: every point then gets 0 (spec section 5.7).
     grad : callable, optional
         :math:`\nabla\log\pi` with the same signature, returning shape ``(d,)`` or
         ``(n, d)``.
@@ -40,15 +41,17 @@ class Target:
 
     def __init__(
         self,
-        log_prob: Callable[..., Any],
+        log_prob: Callable[..., Any] | None,
         grad: Callable[..., Any] | None = None,
         *,
         args: tuple[Any, ...] = (),
         kwargs: Mapping[str, Any] | None = None,
         vectorize: bool = False,
     ) -> None:
-        if not callable(log_prob):
-            raise TypeError(f"log_prob must be callable, not {type(log_prob).__name__}")
+        if log_prob is not None and not callable(log_prob):
+            raise TypeError(f"log_prob must be callable or None, not {type(log_prob).__name__}")
+        if log_prob is None and grad is not None:
+            raise ValueError("grad needs log_prob; log_prob=None is for Gibbs kernels")
         if grad is not None and not callable(grad):
             raise TypeError(f"grad must be callable or None, not {type(grad).__name__}")
         self._log_prob = log_prob
@@ -64,8 +67,15 @@ class Target:
         """Whether a gradient was given."""
         return self._grad is not None
 
+    @property
+    def has_log_prob(self) -> bool:
+        """Whether a log-density was given."""
+        return self._log_prob is not None
+
     def log_prob(self, x: FloatArray) -> FloatArray:
         """Log-densities at the rows of ``x``, shape ``(n,)``; raises on NaN or ``+inf``."""
+        if self._log_prob is None:
+            return np.zeros(len(x))
         values = self._call(self._log_prob, x, ())
         self.n_log_prob += len(x)
         # One reduction finds NaN or +inf, which make the maximum fail the test.

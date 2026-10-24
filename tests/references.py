@@ -1,11 +1,28 @@
 """Reference implementations, written independently of the package, for oracle tests."""
 
 import numpy as np
+from scipy import special
 
 # One-sample and frequency tests use this p-value threshold, which keeps each module's
 # family-wise false-positive rate below about 1e-3 (CLAUDE.md: tolerances from the Monte
 # Carlo error).
 P_MIN = 1e-5
+
+
+class Normal:
+    """A univariate normal with the methods of a frozen SciPy one, and faster to build."""
+
+    def __init__(self, mean, sd):
+        self.mean, self.sd = mean, sd
+
+    def rvs(self, *, random_state):
+        return self.mean + self.sd * random_state.standard_normal()
+
+    def logpdf(self, value):
+        return -0.5 * ((value - self.mean) / self.sd) ** 2 - np.log(self.sd * np.sqrt(2 * np.pi))
+
+    def ppf(self, u):
+        return self.mean + self.sd * special.ndtri(u)
 
 
 def gaussian_log_prob(x):
@@ -25,3 +42,16 @@ def reflection(mu_x, mu_y, chol, z, u):
 
 def metropolis(current, proposal, log_prob, u):
     return proposal if np.log(u) < log_prob(proposal) - log_prob(current) else current
+
+
+def dual_averaging(acceptance, step_size, goal, n_steps=1000):
+    # Hoffman & Gelman (2014), algorithm 5, with gamma = 0.05, t0 = 10, kappa = 0.75 and
+    # mu = log(10 step_size), for an acceptance probability that is a function of the
+    # step size.
+    mu, h_bar, log_bar = np.log(10 * step_size), 0.0, 0.0
+    for m in range(1, n_steps + 1):
+        h_bar = (1 - 1 / (m + 10)) * h_bar + (goal - acceptance(step_size)) / (m + 10)
+        log_step = mu - np.sqrt(m) / 0.05 * h_bar
+        log_bar = m**-0.75 * log_step + (1 - m**-0.75) * log_bar
+        step_size = np.exp(log_step)
+    return np.exp(log_bar)

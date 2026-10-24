@@ -12,7 +12,7 @@ from telescopic._random import MAIN, PILOT, replicate_generator, root_seed
 from telescopic._types import FloatArray, Seed
 from telescopic.estimators import averaging_times
 from telescopic.initial import as_initial, draw
-from telescopic.kernels import Independence, Kernel, RandomWalk
+from telescopic.kernels import HMC, MALA, Independence, Kernel, RandomWalk
 from telescopic.results import Result
 from telescopic.target import Target
 from telescopic.tuning import TuningReport, choose_k
@@ -21,6 +21,8 @@ from telescopic.warnings import ConvergenceWarning, InputWarning, warn
 KERNELS: dict[str, Callable[[], Kernel]] = {
     "auto": RandomWalk,
     "rwmh": RandomWalk,
+    "mala": MALA,
+    "hmc": HMC,
     "independence": Independence,
 }
 PILOT_REPLICATES = 100
@@ -39,9 +41,11 @@ class CoupledSampler:
 
     Parameters
     ----------
-    log_prob : callable
+    log_prob : callable or None
         :math:`\log\pi` up to a constant: ``log_prob(x, *args, **kwargs)`` for ``x`` of
-        shape ``(d,)``, or of shape ``(n, d)`` with ``vectorize=True``.
+        shape ``(d,)``, or of shape ``(n, d)`` with ``vectorize=True``. ``None`` only with
+        a kernel that needs no log-density: a :class:`~telescopic.kernels.Gibbs` kernel or
+        a mixture of them.
     init
         The initial distribution :math:`\pi_0`: an object with
         ``rvs(random_state=rng)`` (such as a frozen SciPy distribution or
@@ -56,7 +60,8 @@ class CoupledSampler:
         Whether ``log_prob`` and ``grad`` take a batch of points.
     kernel : Kernel or str
         A kernel, or one of ``"auto"`` and ``"rwmh"`` (random-walk Metropolis with the
-        reflection-maximal coupling) and ``"independence"``.
+        reflection-maximal coupling), ``"mala"`` and ``"hmc"`` (which need ``grad``) and
+        ``"independence"``.
     names : sequence of str, optional
         Parameter names for summaries.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
@@ -70,7 +75,7 @@ class CoupledSampler:
 
     def __init__(
         self,
-        log_prob: Callable[..., Any],
+        log_prob: Callable[..., Any] | None,
         init: Any,
         *,
         args: tuple[Any, ...] = (),
@@ -84,6 +89,7 @@ class CoupledSampler:
         self.target = Target(log_prob, grad, args=args, kwargs=kwargs, vectorize=vectorize)
         self.initial = as_initial(init)
         self.kernel = _kernel(kernel)
+        self.kernel.check_target(self.target)
         self.seed = root_seed(rng)
         # One draw from a throwaway generator gives the dimension, so that names are
         # checked now rather than after the runs.
@@ -279,7 +285,7 @@ class CoupledSampler:
 
 
 def sample(
-    log_prob: Callable[..., Any],
+    log_prob: Callable[..., Any] | None,
     init: Any,
     n_replicates: int = 100,
     *,

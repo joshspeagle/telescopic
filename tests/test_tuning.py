@@ -1,16 +1,28 @@
 import numpy as np
 import pytest
 
+import references
 from telescopic.initial import Normal
-from telescopic.kernels import Independence, Mixture, RandomWalk
+from telescopic.kernels import HMC, MALA, Independence, Kernel, Mixture, RandomWalk
 from telescopic.target import Target
-from telescopic.tuning import TARGET_ACCEPTANCE, adaptive_metropolis, choose_k
+from telescopic.testing import random_draws
+from telescopic.tuning import (
+    TARGET_ACCEPTANCE,
+    PilotRun,
+    adaptive_metropolis,
+    choose_k,
+    dual_averaging,
+)
 
 # A correlated Gaussian with condition number 100.
 _q, _ = np.linalg.qr(np.random.default_rng(3).standard_normal((5, 5)))
 COV = _q @ np.diag(np.logspace(0, 2, 5)) @ _q.T
 PRECISION = np.linalg.inv(COV)
-TARGET = Target(lambda x: -0.5 * np.einsum("ij,jk,ik->i", x, PRECISION, x), vectorize=True)
+TARGET = Target(
+    lambda x: -0.5 * np.einsum("ij,jk,ik->i", x, PRECISION, x),
+    grad=lambda x: -x @ PRECISION,
+    vectorize=True,
+)
 START = Normal(np.zeros(5), 4 * np.eye(5))
 
 
@@ -77,6 +89,38 @@ def test_tuning_freezes_kernels_with_the_pilots_mean_and_covariance():
 def test_a_tuned_kernel_returns_itself():
     kernel = RandomWalk(np.eye(5))
     assert kernel.tune(TARGET, START) == (kernel, None)
+
+
+class Exact(Kernel):
+    # Accepts with probability exp(-step_size), so that dual averaging is deterministic.
+    def __init__(self, step_size):
+        self.step_size = step_size
+
+    def step(self, target, state, draws):
+        return state, np.full(len(state), np.exp(-self.step_size))
+
+    def coupled_step(self, target, state_x, state_y, draws):
+        return state_x, state_y
+
+
+def test_dual_averaging_matches_hoffman_and_gelman():
+    pilot = PilotRun(np.zeros((4, 1, 5)), np.zeros((4, 1)), np.ones(4), 1)
+    step_size = dual_averaging(Exact, TARGET, pilot, 7, 0.574, 0.9)
+    expected = references.dual_averaging(lambda epsilon: np.exp(-epsilon), 0.9, 0.574)
+    np.testing.assert_allclose(step_size, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize(("kernel", "goal"), [(MALA(), 0.574), (HMC(), 0.8)])
+def test_dual_averaging_reaches_the_target_acceptance(kernel, goal):
+    # The bound is dual averaging's spread over seeds, up to 0.034 above the goal for
+    # MALA (DECISIONS #13), plus 3 standard errors of this mean of 4,000 probabilities
+    # (0.0055 for MALA, 0.0036 for HMC). The reference test above pins its arithmetic.
+    tuned, _ = kernel.tune(TARGET, START, 7)
+    trajectory = tuned.kernels[0] if isinstance(tuned, HMC) else tuned
+    points = np.random.default_rng(8).multivariate_normal(np.zeros(5), COV, size=4000)
+    start = trajectory.init_state(TARGET, points)
+    _, acceptance = trajectory.step(TARGET, start, random_draws(4000, 9))
+    assert abs(acceptance.mean() - goal) < 0.05
 
 
 @pytest.mark.parametrize("lowest", [1, 4])

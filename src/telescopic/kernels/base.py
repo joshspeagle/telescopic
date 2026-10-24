@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
+import copy
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 
+from telescopic._linalg import covariance
 from telescopic._random import Draws
 from telescopic._types import BoolArray, Distribution, FloatArray, Seed
 from telescopic.target import Target
-from telescopic.tuning import PilotRun, TuningReport, adaptive_metropolis
+from telescopic.tuning import PilotRun, TuningReport, adaptive_metropolis, dual_averaging
 
 
 @dataclass
@@ -67,6 +71,11 @@ class Kernel(ABC):
         return False
 
     @property
+    def needs_log_prob(self) -> bool:
+        """Whether the kernel evaluates the log-density; Gibbs kernels do not."""
+        return True
+
+    @property
     def is_tuned(self) -> bool:
         """Whether every parameter is set, so the kernel can run."""
         return True
@@ -75,6 +84,18 @@ class Kernel(ABC):
     def ndim(self) -> int | None:
         """The dimension that the kernel's parameters fix, or ``None``."""
         return None
+
+    def check_target(self, target: Target) -> None:
+        """Raise ``ValueError`` if ``target`` lacks a function that the kernel evaluates.
+
+        Parameters
+        ----------
+        target : Target
+        """
+        if self.needs_log_prob and not target.has_log_prob:
+            raise ValueError(f"{self!r} needs a log-density; log_prob=None is for Gibbs kernels")
+        if self.needs_grad and not target.has_grad:
+            raise ValueError(f"{self!r} needs the gradient of log_prob: pass grad=")
 
     def tune(
         self,
@@ -93,7 +114,8 @@ class Kernel(ABC):
         target : Target
         initial : object with ``rvs(random_state=generator)``
         rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
-            Seed of the pilot chains (tuning namespace, spec section 6.1).
+            Seed of the tuning, in the tuning namespace (spec section 6.1): the pilot
+            chains, unless ``pilot`` is given, and dual averaging.
         pilot : PilotRun, optional
             Adaptive Metropolis chains already run, from
             :func:`telescopic.tuning.adaptive_metropolis`, so that several kernels can be
@@ -133,17 +155,19 @@ class Kernel(ABC):
                 f"the kernel works in {self.ndim} dimensions, but the initial points have "
                 f"{x.shape[1]}"
             )
+        self.check_target(target)
         return evaluate(target, x, self.needs_grad)
 
     @abstractmethod
-    def step(self, target: Target, state: State, draws: Draws) -> tuple[State, BoolArray]:
+    def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         """One transition of each chain.
 
         Returns
         -------
         state : State
-        accepted : ndarray of bool, shape (n,)
-            Whether each chain moved to its proposal.
+        acceptance : ndarray, shape (n,)
+            Each chain's probability of accepting its proposal, 1 for a kernel that always
+            moves; dual averaging adapts step sizes to its mean.
         """
 
     @abstractmethod
@@ -158,12 +182,87 @@ class Kernel(ABC):
         """
 
 
+class GradientKernel(Kernel):
+    """A kernel with a step size and a covariance, driven by the gradient: MALA, HMC.
+
+    :meth:`tune` takes the covariance of the pilot chains unless ``cov`` was given, then
+    the step size by dual averaging toward ``target_acceptance`` from the pilot's last
+    states unless ``step_size`` was given (spec sections 5.4 and 5.5).
+
+    Parameters
+    ----------
+    step_size : float, optional
+    cov : array_like, shape (d, d), optional
+    """
+
+    target_acceptance: float
+
+    def __init__(self, step_size: float | None, cov: npt.ArrayLike | None) -> None:
+        self.step_size = None if step_size is None else _checked_step_size(step_size)
+        self.cov: FloatArray | None = None
+        self._chol: FloatArray | None = None
+        if cov is not None:
+            self.cov, self._chol = covariance(cov, "cov")
+
+    @property
+    def needs_grad(self) -> bool:
+        return True
+
+    @property
+    def is_tuned(self) -> bool:
+        return self.step_size is not None and self.cov is not None
+
+    @property
+    def ndim(self) -> int | None:
+        return None if self.cov is None else len(self.cov)
+
+    def with_step_size(self, step_size: float) -> GradientKernel:
+        """A copy with another step size, without validating the covariance again.
+
+        Parameters
+        ----------
+        step_size : float
+            Positive and finite.
+
+        Returns
+        -------
+        GradientKernel
+        """
+        kernel = copy.copy(self)
+        kernel.step_size = _checked_step_size(step_size)
+        return kernel
+
+    def _with_cov(self, cov: FloatArray) -> GradientKernel:
+        raise NotImplementedError
+
+    def _first_step_size(self, d: int) -> float:
+        raise NotImplementedError
+
+    def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
+        kernel = self if self.cov is not None else self._with_cov(pilot.cov)
+        if kernel.step_size is None:
+            first = self._first_step_size(len(pilot.cov))
+            step_size = dual_averaging(
+                kernel.with_step_size, target, pilot, rng, self.target_acceptance, first
+            )
+            kernel = kernel.with_step_size(step_size)
+        return kernel, pilot.report()
+
+
+def _checked_step_size(step_size: float) -> float:
+    if not 0 < step_size < np.inf:
+        raise ValueError(f"step_size must be positive and finite, not {step_size}")
+    return float(step_size)
+
+
 def evaluate(target: Target, x: FloatArray, need_grad: bool) -> State:
     """The state at the rows of ``x``: log-densities, and gradients if needed.
 
     A non-finite gradient where the log-density is finite raises ``ValueError``: a cache
-    must stay valid (spec R-INPUT-1). Gradient kernels that reject such proposals call
-    the target directly.
+    must stay valid (spec R-INPUT-1). Gradient kernels reject such proposals instead,
+    with :func:`evaluate_proposal`. Where the log-density is ``-inf`` the gradient is set
+    to 0, so a gradient kernel proposes from there without drift, and accepts any
+    proposal of finite density, as random-walk Metropolis does.
 
     Parameters
     ----------
@@ -178,40 +277,100 @@ def evaluate(target: Target, x: FloatArray, need_grad: bool) -> State:
     if not need_grad:
         return State(x, target.log_prob(x))
     log_prob, grad = target.log_prob_and_grad(x)
-    bad = np.isfinite(log_prob) & ~np.isfinite(grad).all(axis=1)
+    outside = np.isneginf(log_prob)
+    bad = ~outside & ~np.isfinite(grad).all(axis=1)
     if bad.any():
         row = int(np.argmax(bad))
         raise ValueError(
             f"grad returned {grad[row].tolist()} at x = {x[row].tolist()}, where log_prob "
             "is finite"
         )
+    if outside.any():
+        grad = np.where(outside[:, None], 0.0, grad)
     return State(x, log_prob, grad)
 
 
-def evaluate_pair(
-    target: Target, x: FloatArray, y: FloatArray, identical: BoolArray, need_grad: bool
-) -> tuple[State, State]:
-    """States at the coupled proposals ``x`` and ``y`` in one batched call.
+def evaluate_proposal(target: Target, x: FloatArray, live: BoolArray | None = None) -> State:
+    """The states of a gradient kernel's proposals at the rows of ``x``.
 
-    Identical proposals are evaluated once and their state is shared.
+    A proposal can be accepted only where its position, its log-density and its gradient
+    are finite (spec R-INPUT-1). The others get a log-density of ``-inf``, which every
+    Metropolis test rejects, and a zero gradient. Non-finite positions, and rows that
+    ``live`` excludes, are not evaluated.
 
     Parameters
     ----------
     target : Target
+    x : ndarray, shape (n, d)
+    live : ndarray of bool, shape (n,), optional
+        Rows to evaluate, such as the HMC trajectories that have not stopped.
+
+    Returns
+    -------
+    State
+    """
+    usable = np.isfinite(x).all(axis=1)
+    if live is not None:
+        usable &= live
+    if usable.all():
+        log_prob, grad = target.log_prob_and_grad(x)
+    else:
+        log_prob, grad = np.full(len(x), -np.inf), np.zeros_like(x)
+        rows = usable.nonzero()[0]
+        if len(rows):
+            log_prob[rows], grad[rows] = target.log_prob_and_grad(x[rows])
+    bad = ~np.isfinite(grad).all(axis=1)
+    if bad.any():
+        # New arrays: those of a vectorised target may be its own.
+        log_prob, grad = np.where(bad, -np.inf, log_prob), np.where(bad[:, None], 0.0, grad)
+    return State(x, log_prob, grad)
+
+
+def evaluate_pair(
+    evaluate_rows: Callable[[FloatArray], State],
+    x: FloatArray,
+    y: FloatArray,
+    identical: BoolArray,
+) -> tuple[State, State]:
+    """States at the coupled proposals ``x`` and ``y`` from one call of ``evaluate_rows``.
+
+    Identical proposals are evaluated once and their state is shared (spec R-KER-3).
+
+    Parameters
+    ----------
+    evaluate_rows : callable
+        Maps points of shape ``(m, d)`` to their states, such as :func:`evaluate` with its
+        target and ``need_grad`` bound.
     x, y : ndarray, shape (n, d)
     identical : ndarray of bool, shape (n,)
         Rows where ``y`` is a copy of ``x``.
-    need_grad : bool
 
     Returns
     -------
     state_x, state_y : State
     """
-    distinct = np.flatnonzero(~identical)
-    both = evaluate(target, np.concatenate([x, y[distinct]]), need_grad)
+    distinct = (~identical).nonzero()[0]
+    both = evaluate_rows(np.concatenate([x, y[distinct]]))
     source = np.arange(len(x))
     source[distinct] = np.arange(len(x), len(both))
     return both.take(slice(0, len(x))), both.take(source)
+
+
+def acceptance(log_alpha: FloatArray) -> FloatArray:
+    r"""Metropolis acceptance probabilities :math:`\min(1, e^{\log\alpha})`, 0 for NaN.
+
+    Parameters
+    ----------
+    log_alpha : ndarray, shape (n,)
+        Log acceptance ratios; NaN, from ``-inf - -inf``, is a rejection.
+
+    Returns
+    -------
+    ndarray, shape (n,)
+    """
+    # fmax ignores NaN, so a NaN ratio gives exp(-inf) = 0.
+    probability: FloatArray = np.exp(np.fmax(np.minimum(log_alpha, 0.0), -np.inf))
+    return probability
 
 
 def log_ratio(new: FloatArray, old: FloatArray) -> FloatArray:

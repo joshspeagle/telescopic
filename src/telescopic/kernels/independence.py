@@ -10,8 +10,8 @@ from scipy.special import gammaln
 
 from telescopic._linalg import covariance, inverse_lower, matvec
 from telescopic._random import Draws
-from telescopic._types import BoolArray, FloatArray, Seed
-from telescopic.kernels.base import Kernel, State, evaluate, log_ratio, select
+from telescopic._types import FloatArray, Seed
+from telescopic.kernels.base import Kernel, State, acceptance, evaluate, log_ratio, select
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport
 
@@ -113,12 +113,13 @@ class Independence(Kernel):
         ratio = float(np.exp(np.max(log_weights) - np.median(log_weights)))
         return Independence(proposal), pilot.report(max_weight_ratio=ratio)
 
-    def step(self, target: Target, state: State, draws: Draws) -> tuple[State, BoolArray]:
+    def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         q = self._ready()
         proposal = evaluate(target, q.sample(draws), state.grad is not None)
         new, old = _log_weights(q, proposal, state)
-        accepted = draws.log_uniform() < log_ratio(new, old)
-        return select(accepted, proposal, state), accepted
+        log_alpha = log_ratio(new, old)
+        accepted = draws.log_uniform() < log_alpha
+        return select(accepted, proposal, state), acceptance(log_alpha)
 
     def coupled_step(
         self, target: Target, state_x: State, state_y: State, draws: Draws

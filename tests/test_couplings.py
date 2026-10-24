@@ -5,7 +5,7 @@ from hypothesis import strategies as st
 from scipy import stats
 from scipy.integrate import quad
 
-from references import P_MIN, reflection
+from references import P_MIN, Normal, reflection
 from telescopic.couplings import discrete_maximal, maximal, reflection_maximal
 from telescopic.testing import fixed_draws, random_draws
 
@@ -13,19 +13,6 @@ from telescopic.testing import fixed_draws, random_draws
 def dense_cholesky(d, rng):
     a = rng.standard_normal((d, d))
     return np.linalg.cholesky(a @ a.T + d * np.eye(d))
-
-
-class Normal:
-    """A minimal normal distribution: faster than a frozen SciPy one in long loops."""
-
-    def __init__(self, loc, scale):
-        self.loc, self.scale = loc, scale
-
-    def rvs(self, *, random_state):
-        return self.loc + self.scale * random_state.standard_normal()
-
-    def logpdf(self, x):
-        return -0.5 * ((x - self.loc) / self.scale) ** 2 - np.log(self.scale * np.sqrt(2 * np.pi))
 
 
 @pytest.mark.parametrize("meet", [True, False])

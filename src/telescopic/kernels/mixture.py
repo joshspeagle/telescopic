@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import copy
 from collections.abc import Sequence
 
 import numpy as np
 import numpy.typing as npt
 
 from telescopic._random import Draws
-from telescopic._types import BoolArray, IndexArray, Seed
+from telescopic._types import FloatArray, IndexArray, Seed
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport
@@ -49,6 +50,10 @@ class Mixture(Kernel):
         return any(kernel.needs_grad for kernel in self.kernels)
 
     @property
+    def needs_log_prob(self) -> bool:
+        return any(kernel.needs_log_prob for kernel in self.kernels)
+
+    @property
     def is_tuned(self) -> bool:
         return all(kernel.is_tuned for kernel in self.kernels)
 
@@ -63,27 +68,34 @@ class Mixture(Kernel):
         ]
         ratios = [report.max_weight_ratio for _, report in tuned if report is not None]
         ratio = max((r for r in ratios if r is not None), default=None)
-        return Mixture([kernel for kernel, _ in tuned], self.weights), pilot.report(ratio)
+        # A copy keeps the class and settings of a subclass, such as HMC.
+        mixture = copy.copy(self)
+        mixture.kernels = [kernel for kernel, _ in tuned]
+        return mixture, pilot.report(ratio)
 
-    def step(self, target: Target, state: State, draws: Draws) -> tuple[State, BoolArray]:
+    def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         component = self._choose(draws)
+        if (component == component[0]).all():
+            # One component for every row, always so at one lane: no copies.
+            return self.kernels[int(component[0])].step(target, state, draws)
         state = state.take(slice(None))
-        accepted = np.zeros(len(state), dtype=bool)
+        probability = np.zeros(len(state))
         for index, kernel in enumerate(self.kernels):
-            rows = np.flatnonzero(component == index)
+            rows = (component == index).nonzero()[0]
             if len(rows):
-                new, moved = kernel.step(target, state.take(rows), draws.subset(rows))
+                new, probability[rows] = kernel.step(target, state.take(rows), draws.subset(rows))
                 state.put(rows, new)
-                accepted[rows] = moved
-        return state, accepted
+        return state, probability
 
     def coupled_step(
         self, target: Target, state_x: State, state_y: State, draws: Draws
     ) -> tuple[State, State]:
         component = self._choose(draws)
+        if (component == component[0]).all():
+            return self.kernels[int(component[0])].coupled_step(target, state_x, state_y, draws)
         state_x, state_y = state_x.take(slice(None)), state_y.take(slice(None))
         for index, kernel in enumerate(self.kernels):
-            rows = np.flatnonzero(component == index)
+            rows = (component == index).nonzero()[0]
             if len(rows):
                 new_x, new_y = kernel.coupled_step(
                     target, state_x.take(rows), state_y.take(rows), draws.subset(rows)

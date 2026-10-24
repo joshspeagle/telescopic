@@ -89,3 +89,34 @@ Append only. One entry per working session or milestone.
   among them a slow pair that warned nowhere (an off-by-one between the live monitor
   and `issues`), `names` checked only after the whole run, and pilot chains that never
   moved silencing the disagreement warning. 226 fast tests in 16 s.
+
+## 2026-10-23: M6
+
+- M6 implemented: `MALA` (reflection-maximal coupling, both proposal densities), `HMC`
+  as a mixture of shared-momentum leapfrog trajectories and a whitened random-walk
+  meeting step, `Gibbs` with maximal, common-random-number and two-scale couplings, and
+  dual averaging (DECISIONS #13). `step` returns acceptance probabilities (DECISIONS
+  #10); gradient kernels refuse starts outside the support (#11); MALA has no coupling
+  option (#12); `Target(log_prob=None)` serves Gibbs. Each chain's one-step law matches
+  the exact one in one dimension for every kernel (MALA's and the linear leapfrog's
+  derived in the test); 12 of 13 mutants failed the tests at once, and the 13th (a
+  mixture dropping its components' acceptance probabilities) now does too. Dual
+  averaging gave stationary acceptance 0.572 to 0.608 for MALA (target 0.574) and 0.802
+  to 0.811 for HMC (target 0.8). 287 fast tests in 23 s.
+- M6 `/simplify` (`notes/reviews/m6.md`): gradient kernels no longer refuse starts
+  outside the support, which failed runs by their seed (8 of 8 MALA runs on a
+  half-normal from N((3, 0), I)); such states carry a zero gradient (DECISIONS #14).
+  `Kernel.needs_log_prob` replaces the sampler's type check, which refused mixtures of
+  Gibbs kernels (#15); `"crn"` refuses `eta` (#16). A `GradientKernel` base holds the
+  shared tuning, and dual averaging rescales instead of rebuilding kernels: tuning the
+  step size at d = 10 takes 83 ms instead of 174 for MALA and 118 instead of 195 for
+  HMC. Engine cost per pair-step at one lane fell from 223 to 153 µs for HMC and from 135
+  to 114 µs for MALA, with identical meeting times. 289 fast tests in 22 s.
+- M6 `/code-review` at high effort (`notes/reviews/m6.md`): ten findings. Among them, the
+  common-random-number coupling gave every coordinate of a multi-coordinate block the
+  same uniform when its conditional had `ppf`, a wrong law without an error; HMC's
+  `tune` hung on a wrong gradient, its default trajectory growing as 1/ε (now at most
+  1,000 steps, DECISIONS #17); HMC's meeting step raised where its trajectories reject
+  (#18). `Kernel.check_target` holds the checks of what a kernel needs (#19). A
+  reference implementation of Hoffman & Gelman's dual averaging pins ours to 1e-12.
+  304 fast tests in 23 s.
