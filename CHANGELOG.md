@@ -81,4 +81,6 @@ All notable changes to this project are documented here. The format follows
   summary report a slow pair when every pair is censored; `hill` and `variance_share`
   check their values; every bounded number argument raises "must be in (low, high)",
   and `dual_averaging`, the TV and W1 bounds, the estimators, `SignedMeasure.mass`,
-  `plotting.paths`, `Target(vectorize=)` and `pool` check what they were missing.
+  `plotting.paths`, `Target(vectorize=)` and `pool` check what they were missing; a first
+  Ctrl-C after the replicates, while the result is built, no longer loses the run, and a
+  process that ignores Ctrl-C, or whose handler Python did not set, keeps its handler.

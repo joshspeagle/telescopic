@@ -15,7 +15,7 @@ import threading
 import time
 from collections.abc import Callable, Iterator
 from concurrent.futures import BrokenExecutor, Executor, Future, ProcessPoolExecutor
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager
 from dataclasses import replace
 from typing import Any
 
@@ -42,27 +42,16 @@ Monitor = Callable[[engine.Status], bool]
 
 
 class Interrupt:
-    # Ctrl-C during a run: the first sets stopping, the second raises at once.
+    # Ctrl-C while catching. Once armed, as a run's replicates start, the first sets
+    # stopping and the second raises at once; before, Ctrl-C raises, as by default.
     def __init__(self) -> None:
-        self.stopping = False
+        self.armed = self.stopping = False
 
-    @contextmanager
-    def catching(self) -> Iterator[None]:
-        # Python sets signal handlers only in the main thread; elsewhere Ctrl-C keeps its
-        # usual effect.
-        if threading.current_thread() is not threading.main_thread():
-            yield
-            return
-        previous = signal.signal(signal.SIGINT, self._handle)
-        try:
-            yield
-        finally:
-            signal.signal(
-                signal.SIGINT, signal.default_int_handler if previous is None else previous
-            )
+    def catching(self) -> AbstractContextManager[None]:
+        return _sigint(self._handle)
 
     def _handle(self, signum: int, frame: Any) -> None:
-        if self.stopping:
+        if self.stopping or not self.armed:
             raise KeyboardInterrupt
         self.stopping = True
         print(
@@ -87,7 +76,7 @@ class Workers:
         # Now, so that their start overlaps the parent's tuning. A process made while the
         # parent ignores Ctrl-C starts ignoring it on POSIX, so a Ctrl-C while it imports
         # does not kill it.
-        with _ctrl_c_ignored():
+        with _sigint(signal.SIG_IGN):
             for _ in range(self.n):
                 self.executor.submit(int)
 
@@ -303,17 +292,22 @@ def _as_worker(parent: int) -> Iterator[None]:
         return
     # Each task scans the loaded libraries again (2.3 ms), so that one loaded by an earlier
     # task, such as a lazily imported torch, is limited too.
-    with _ctrl_c_ignored(), threadpoolctl.threadpool_limits(1):
+    with _sigint(signal.SIG_IGN), threadpoolctl.threadpool_limits(1):
         yield
 
 
 @contextmanager
-def _ctrl_c_ignored() -> Iterator[None]:
-    # Only the main thread may set handlers.
-    if threading.current_thread() is not threading.main_thread():
+def _sigint(handler: Any) -> Iterator[None]:
+    # Ctrl-C goes to handler during the block. Only the main thread sets handlers. A
+    # process that ignores Ctrl-C, as a user's pool worker may, keeps ignoring it, and a
+    # handler that Python did not install, which getsignal gives as None (an embedding
+    # host's, as under R's reticulate), stays, since Python could not restore it.
+    main = threading.current_thread() is threading.main_thread()
+    previous = signal.getsignal(signal.SIGINT) if main else None
+    if previous is None or previous is signal.SIG_IGN:
         yield
         return
-    previous = signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGINT, handler)
     try:
         yield
     finally:

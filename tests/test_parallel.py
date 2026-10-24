@@ -19,6 +19,7 @@ from telescopic import _parallel, _progress, engine
 from telescopic._parallel import Interrupt, execute, opened
 from telescopic.initial import Normal
 from telescopic.kernels import RandomWalk, State
+from telescopic.results import Result
 from telescopic.target import Target
 from telescopic.warnings import ConvergenceWarning
 
@@ -249,10 +250,16 @@ def test_a_broken_pool_raises_without_a_stop_or_a_finished_chunk(first, monitor)
         execute(job(), np.arange(200), Broken(first), monitor)
 
 
+def test_ctrl_c_raises_until_the_replicates_start():
+    with Interrupt().catching(), pytest.raises(KeyboardInterrupt):
+        signal.raise_signal(signal.SIGINT)
+
+
 def test_ctrl_c_once_stops_new_replicates_and_twice_raises(capsys):
     previous = signal.getsignal(signal.SIGINT)
     interrupt = Interrupt()
     with interrupt.catching():
+        interrupt.armed = True
         signal.raise_signal(signal.SIGINT)
         assert interrupt.stopping
         assert "press Ctrl-C again" in capsys.readouterr().err
@@ -289,6 +296,44 @@ def test_an_interrupted_run_is_completed_by_the_next_run(capsys):
     whole = telescopic.sample(gaussian_log_prob, INIT, 306, kernel=kernel, k=40, m=40, rng=7)
     assert_same_replicates(second._replicates, whole._replicates)
     assert "press Ctrl-C again" in capsys.readouterr().err
+
+
+def test_ctrl_c_after_the_replicates_keeps_the_run(monkeypatch):
+    # While the result was built, Ctrl-C raised KeyboardInterrupt: the caller got no
+    # result, and a second run's finished replicates were lost in the merge.
+    def interrupted(*args, **kwargs):
+        signal.raise_signal(signal.SIGINT)
+        return Result(*args, **kwargs)
+
+    sampler = telescopic.CoupledSampler(gaussian_log_prob, INIT, kernel=RandomWalk(np.eye(2)))
+    monkeypatch.setattr("telescopic.sampler.Result", interrupted)
+    try:
+        result = sampler.run(20, k=40, m=40)
+    except KeyboardInterrupt:
+        pytest.fail("Ctrl-C after the replicates raised KeyboardInterrupt")
+    assert result.n_replicates == 20
+    assert not result.interrupted
+
+
+def test_a_process_that_ignores_ctrl_c_keeps_ignoring_it():
+    # Workers of a user's pool that ignore Ctrl-C got it back during their runs.
+    previous = signal.signal(signal.SIGINT, signal.SIG_IGN)
+    try:
+        with Interrupt().catching():
+            assert signal.getsignal(signal.SIGINT) is signal.SIG_IGN
+    finally:
+        signal.signal(signal.SIGINT, previous)
+
+
+def test_a_handler_that_python_did_not_install_is_left_alone(monkeypatch):
+    # An embedding host's handler reads as None: restoring None raised TypeError, and
+    # Python's default handler replaced the host's.
+    calls = []
+    monkeypatch.setattr(signal, "getsignal", lambda signum: None)
+    monkeypatch.setattr(signal, "signal", lambda *args: calls.append(args))
+    with Interrupt().catching(), _parallel._sigint(signal.SIG_IGN):
+        pass
+    assert calls == []
 
 
 def test_ctrl_c_during_the_pilot_raises():

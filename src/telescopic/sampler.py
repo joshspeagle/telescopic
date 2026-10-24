@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Callable, Mapping, Sequence
-from contextlib import nullcontext
 from typing import Any, cast
 
 import numpy as np
@@ -235,27 +234,33 @@ class CoupledSampler:
         n_replicates = integer("n_replicates", n_replicates, minimum=1)
         given = self._check(k, m, lag, thin, max_iter)
         show = self.progress if progress is None else progress
-        # Worker processes start before tuning, which runs here meanwhile, and serve the
-        # pilot and the run (DECISIONS #23).
-        with opened(self.pool) as pool:
-            settings = self.settings or self._configure(given, pool, show)
-            done = 0 if self._replicates is None else len(self._replicates.index)
-            self._check_memory(settings, done + n_replicates)
-            part = self._run(MAIN, self._next_indices(n_replicates), settings, pool, show)
-        self._replicates = (
-            part if self._replicates is None else engine.merge([self._replicates, part])
-        )
-        result = Result(
-            self._replicates,
-            names=self.names,
-            kernel=self.kernel,
-            initial=self.initial,
-            tuning=self.tuning,
-            pilot=self.pilot,
-        )
-        for issue in diagnostics.issues(result):
-            if issue.kind not in _LIVE:
-                warn(issue.message, ConvergenceWarning)
+        # From the start of the replicates until the result returns, the first Ctrl-C
+        # lets the run finish (spec section 6.5): after the replicates, while the workers
+        # stop and the result is built, it would lose them.
+        interrupt = Interrupt()
+        with interrupt.catching():
+            # Worker processes start before tuning, which runs here meanwhile, and serve
+            # the pilot and the run (DECISIONS #23).
+            with opened(self.pool) as pool:
+                settings = self.settings or self._configure(given, pool, show)
+                done = 0 if self._replicates is None else len(self._replicates.index)
+                self._check_memory(settings, done + n_replicates)
+                indices = self._next_indices(n_replicates)
+                part = self._run(MAIN, indices, settings, pool, show, interrupt)
+            self._replicates = (
+                part if self._replicates is None else engine.merge([self._replicates, part])
+            )
+            result = Result(
+                self._replicates,
+                names=self.names,
+                kernel=self.kernel,
+                initial=self.initial,
+                tuning=self.tuning,
+                pilot=self.pilot,
+            )
+            for issue in diagnostics.issues(result):
+                if issue.kind not in _LIVE:
+                    warn(issue.message, ConvergenceWarning)
         return result
 
     def _next_indices(self, n: int) -> IntArray:
@@ -275,9 +280,11 @@ class CoupledSampler:
         settings: engine.Settings,
         pool: Any,
         progress: bool,
+        interrupt: Interrupt | None = None,
     ) -> engine.Replicates:
         # The engine on the given replicates, here or on the opened pool. A main run stores
-        # its measures and stops on Ctrl-C (spec section 6.5); a pilot run does neither.
+        # its measures and stops on Ctrl-C, through interrupt (spec section 6.5); a pilot
+        # run does neither.
         main = namespace == MAIN
         job = functools.partial(
             engine.run,
@@ -290,20 +297,20 @@ class CoupledSampler:
         kind = "replicate" if main else "pilot pair"
         slow = _SlowPairs(settings.lag, settings.m, kind)
         bar = Progress(len(indices), f"{kind}s") if progress else None
-        interrupt = Interrupt()
 
         def monitor(status: engine.Status) -> bool:
             if bar is not None:
                 bar.update(status.finished)
             slow(status)
-            return interrupt.stopping
+            return interrupt is not None and interrupt.stopping
 
-        with interrupt.catching() if main else nullcontext():
-            try:
-                replicates = execute(job, indices, pool, monitor)
-            finally:
-                if bar is not None:
-                    bar.close()
+        if interrupt is not None:
+            interrupt.armed = True
+        try:
+            replicates = execute(job, indices, pool, monitor)
+        finally:
+            if bar is not None:
+                bar.close()
         slow.after(replicates)
         if len(replicates.zero_density):
             warn(
