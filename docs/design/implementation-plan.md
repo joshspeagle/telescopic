@@ -107,13 +107,12 @@ discrete_maximal(log_p, log_q, draws) -> (i, j)                    # (n, K) log-
 ### 2.5 Estimators and measures (`estimators.py`, `measure.py`)
 
 ```text
-lag_weights(t, k, m, lag) -> v_t                           # spec R-EST-4, integer arrays
-correction_coefficients(t, k, m, lag, thin) -> c_t          # spec R-EST-5
 averaging_times(k, m, thin) -> S
+correction_coefficients(t, k, m, lag, thin) -> c_t          # spec R-EST-5; v_t/(m-k+1) when thin = 1
 unbiased_covariance(first (R, p), second (R, p, p)) -> (p, p)
 weighted_quantile(values, weights, q) -> quantiles         # isotonic projection, spec §3.4
 SignedMeasure(atoms (N, d), weights (N,), replicate (N,), n_replicates)
-  .per_replicate(h) -> (R, ...)
+  .per_replicate(h) -> (R, ...)                            # histograms: h = bin indicators
 ```
 
 ### 2.6 Engine (`engine.py`)

@@ -29,3 +29,22 @@ Append only. One entry per working session or milestone.
   this target; a batch without refilling waits for its slowest pair. Random numbers:
   0.15 us per slot-step from one generator, 1.4 us from per-replicate generators;
   one scalar coupled step costs about 16 us of Python overhead.
+
+## 2026-10-23: design review, M0 review, M3
+
+- The adversarial design review (`notes/reviews/design-review.md`) found 38 issues, one
+  a blocker: a kernel `met` flag missed pairs already equal that both reject, and
+  meetings at t = L. All were accepted. Meetings are now the engine's exact comparison;
+  kernel arithmetic is row-independent (`einsum`), because BLAS gave a row other bits in
+  a batch of one; decisions D-20 to D-27 are new (00f9474).
+- M0 review (`notes/reviews/m0.md`): buffer sizes entered every seeded number. Each
+  replicate's normals and uniforms now come from two child generators read in order,
+  so widths are free settings; measured 0.33 µs per lane-step at 256 lanes, d = 10,
+  against 0.15 µs for one shared generator (aec1f18). Kernels dropped the `met` flag
+  and use `einsum` (5b39221). CI now covers Python 3.15.
+- M3 implemented: the engine with refill, exact meetings, thinned weights, censoring and
+  a slow-pair threshold of max(10^4, 10 max(L, m)) (the first draft's 10 max(L, m)
+  fired on every pilot); `SignedMeasure`; the unbiased covariance; isotonic quantiles.
+  `lag_weights` was removed: the engine needs only the thinned coefficients, and the
+  tests anchor them to JOA20 equation 2.1. 146 fast tests in 18 s, coverage 96%. Nine
+  mutants of the engine and the weights were all caught by the new tests.

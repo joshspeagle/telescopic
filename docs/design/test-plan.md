@@ -122,23 +122,20 @@ Kernel-specific tests:
 
 **Algebraic identities (Hypothesis).** Paths are synthetic: random arrays $X_{0..T}$ and $Y_{0..T-L}$ with a forced meeting time $\tau$, and random $0 \le k \le m$, $L \ge 1$, `thin` $\ge 1$. On them:
 - The weighted sum of §3.2 equals the definitional average of $H_l$ over the averaging set, to `1e-12`. This is the main guard against weight and index bugs.
-- `lag_weights` with $L = 1$ equals $\min(t - k, m - k + 1)$.
-- `correction_coefficients` with `thin=1` equals `lag_weights`$/(m - k + 1)$.
-- The weights of the signed measure sum to 1, and $\hat\pi(h)$ equals $H$ for several $h$.
-- $\tau \le k + L$ implies a zero bias correction. $m = k$ gives $H_k$.
-- The JRSSB-reply weight differs from `lag_weights` for some $L \ge 2$ inputs. This documents why it is not used.
-- The cost equals $L + 2(\tau - L) + \max(0, m - \tau)$.
+- `correction_coefficients` with $L = 1$ and `thin=1` equals $\min(1, (t - k)/(m - k + 1))$ (JOA20 eq. 2.1), an anchor independent of the reference above.
+- The weights of the signed measure sum to 1, and $\hat\pi(h)$ equals $H$ for several $h$ (in 2.6, on recorded paths).
+- The cost equals $L + 2(\tau - L) + \max(0, m - \tau)$ (in 2.6).
 
 **Derived estimators**
-- `unbiased_covariance` matches the U-statistic $\frac{1}{R(R-1)}\sum_{r \ne s} a_r a_s^\top$ form exactly. Averaged over many synthetic replicate sets with known moments, it is unbiased where the plug-in is not.
+- `unbiased_covariance` matches the U-statistic $\frac{1}{R(R-1)}\sum_{r \ne s} a_r a_s^\top$ form exactly, which is unbiased by construction.
 - `weighted_quantile`:
   - reproduces NumPy's inverted-CDF quantiles for positive integer weights, through repeated values (NumPy's `weights=` needs NumPy 2.0, newer than the oldest supported stack);
   - is monotone in $q$;
   - returns finite answers for non-monotone signed CDFs.
-- Histograms use half-open bins, and their bin masses sum to the total weight inside the range.
+- Histograms (M4, through `per_replicate` of bin indicators) use half-open bins, and their bin masses sum to the total weight inside the range.
 
-**Exact finite-state expectation.**
-- Fast tier: for a 4-state chain coupled by `discrete_maximal`, $\mathbb E[H_{k:m}]$, computed by recursion on the exact law of the joint chain with the package's own `lag_weights` and `correction_coefficients`, equals $\pi(h)$ to $10^{-12}$, for several $(k, m, L)$ including $L \ge 2$ and `thin` $> 1$. This catches weight bugs deterministically.
+**Exact expectation.**
+- Fast tier: with $\mathbb E\,h(X_t) = a_t$ converging geometrically, $|S|^{-1}\sum_{l\in S} a_l + \sum_t c_t (a_t - a_{t-L})$, computed with the package's `correction_coefficients`, equals $\lim a_t$ to $10^{-12}$ for random $(k, m, L, \text{thin})$. Since a faithful coupling's marginals give exactly this expectation, this is the unbiasedness of the weights, checked against the truth rather than a reference. (A 4-state chain is one such sequence; the recursion on its joint law adds nothing.)
 - Slow tier: the engine's average over $10^6$ replicates matches it (sequential escalation).
 
 **Perfect kernel.** A test-only kernel with $P(x, \cdot) = \pi$ for every $x$, coupled by common draws, meets at the first coupled step. The engine records $\tau = L + 1$, or $\tau = L$ when $X_L = Y_0$. This checks the meeting-time bookkeeping and the lag indexing deterministically.
@@ -155,7 +152,7 @@ Kernel-specific tests:
 - **Refill:** with $R > B$ lanes, every requested index is run exactly once, and per-replicate results do not depend on $B$ (1, 7, 64) for a point-by-point target, bitwise. This is the invariance contract of R-EXEC-2, extended to a kernel with variable draw counts (RWMH `"maximal"`), and to MALA and HMC in M6.
 - **Censoring:**
   - with `max_iter`, unmet pairs are returned as censored, never dropped, and `max_iter` $\le \max(L, m)$ raises;
-  - a pair past $10\max(L, m)$ triggers the one-time `ConvergenceWarning`.
+  - a pair past the slow-pair threshold triggers the one-time `ConvergenceWarning`.
 - **Pilot mode:** `k=0, m=0, store=False` returns meeting times only.
 - **Memory:** the stored atom count stays within the bound of §3.2 (R-EXEC-7).
 
