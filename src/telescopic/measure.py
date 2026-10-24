@@ -70,7 +70,7 @@ class SignedMeasure:
             (self.weights, (self.replicate, np.arange(n))), shape=(self.n_replicates, n)
         )
 
-    def mass(self, cell: IntArray, n_cells: int) -> FloatArray:
+    def mass(self, cell: IntArray, n_cells: int) -> csr_array:
         """Each replicate's signed mass in each of ``n_cells`` cells, such as histogram bins.
 
         Parameters
@@ -81,7 +81,9 @@ class SignedMeasure:
 
         Returns
         -------
-        ndarray, shape (R, n_cells)
+        scipy.sparse.csr_array, shape (R, n_cells)
+            At most one stored entry per atom, so its memory follows the atoms, not
+            ``R * n_cells``.
         """
         n_cells = integer("n_cells", n_cells, minimum=1)
         if np.shape(cell) != self.weights.shape or not np.all((cell >= -1) & (cell < n_cells)):
@@ -89,10 +91,9 @@ class SignedMeasure:
                 f"cell must give each of the {len(self.weights)} atoms a cell from 0 to "
                 f"n_cells - 1 = {n_cells - 1}, or -1"
             )
-        inside = cell >= 0
-        masses: FloatArray = np.bincount(
-            self.replicate[inside] * n_cells + cell[inside],
-            weights=self.weights[inside],
-            minlength=self.n_replicates * n_cells,
-        ).reshape(self.n_replicates, n_cells)
+        inside = (cell >= 0).nonzero()[0]
+        indicator: csr_array = csr_array(
+            (np.ones(len(inside)), (inside, cell[inside])), shape=(len(cell), n_cells)
+        )
+        masses: csr_array = self._sums @ indicator
         return masses

@@ -175,6 +175,13 @@ def _block(drawn: list[Any], b: int, points: FloatArray, size: int) -> FloatArra
     # The draws of block b, one per chain, if each is a finite point of the block's size:
     # one value would be broadcast to the whole block, and a NaN would never meet and
     # would spread to the other blocks through their conditionals.
+    try:
+        # Draws of one shape, such as scalars, in one conversion.
+        block = np.array(drawn, dtype=np.float64).reshape(len(drawn), size)
+        if np.isfinite(block).all():
+            return block
+    except ValueError:
+        pass
     values = [np.ravel(value) for value in drawn]
     if all(len(value) == size for value in values):
         block = np.array(values, dtype=np.float64)

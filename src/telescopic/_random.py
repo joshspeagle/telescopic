@@ -88,14 +88,16 @@ class Streams:
 
     def _take(self, kind: int, lanes: IndexArray, size: int) -> FloatArray:
         buffer, cursor = self._buffers[kind], self._cursors[kind]
-        if 8 * size > buffer.shape[1]:
-            # Widen on the left, so each lane's unread numbers stay at the end.
+        start = cursor[lanes]
+        short = start > buffer.shape[1] - size
+        if short.any() and 8 * size > buffer.shape[1]:
+            # Widen on the left, so each lane's unread numbers stay at the end; only before
+            # a top-up, so that a buffer of given numbers is not copied.
             pad = 8 * size - buffer.shape[1]
             buffer = self._buffers[kind] = np.pad(buffer, ((0, 0), (pad, 0)))
             cursor += pad
+            start += pad
         width = buffer.shape[1]
-        start = cursor[lanes]
-        short = start > width - size
         if short.any():
             for lane in lanes[short].tolist():
                 unread = width - cursor[lane]

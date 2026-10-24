@@ -181,7 +181,7 @@ def adaptive_metropolis(
     # The initial distribution's scales start the covariance; the identity would dominate
     # small variances for thousands of steps.
     variance = points.reshape(-1, d).var(axis=0, ddof=1)
-    mean, cov = x.mean(axis=0), np.diag(np.where(variance > 0, variance, 1.0))
+    mean, total = x.mean(axis=0), np.diag(np.where(variance > 0, variance, 1.0))
     ridge = 1 + 1e-12 * np.eye(d)
     first_kept = n_steps // 2
     stride = min(-(-d // 20), n_steps - first_kept - 1)
@@ -189,11 +189,17 @@ def adaptive_metropolis(
     samples = np.empty((N_CHAINS, n_kept, d))
     kept_log_p = np.empty((N_CHAINS, n_kept))
     accepted = np.zeros(N_CHAINS)
+    # The covariance after t steps is (Sigma_0 + sum_{s < t} delta_s^T delta_s / 4) / (t + 1):
+    # total holds the sum, and the steps between factorisations join it in one product.
+    deltas = np.empty((stride, N_CHAINS, d))
     for step in range(n_steps):
         if step % stride == 0:
+            if step:
+                block = deltas.reshape(-1, d)
+                total += block.T @ block / N_CHAINS
             # A ridge of 1e-12 times each coordinate's variance, which keeps the
             # factorisation independent of the coordinates' scales.
-            chol = np.linalg.cholesky(cov * ridge)
+            chol = np.linalg.cholesky(total / (step + 1) * ridge)
         steps = np.exp(0.5 * log_scale)[:, None] * matvec(chol, draws.normal(d))
         proposal_log_p = target.log_prob(x + steps)
         # A NaN log ratio (-inf - -inf) is a rejection, with acceptance probability 0.
@@ -202,10 +208,10 @@ def adaptive_metropolis(
         accept = draws.log_uniform() < log_alpha
         x = np.where(accept[:, None], x + steps, x)
         log_p = np.where(accept, proposal_log_p, log_p)
-        log_scale += (step + 2) ** -0.6 * (np.nan_to_num(np.exp(log_alpha)) - TARGET_ACCEPTANCE)
-        delta = x - mean
-        mean += delta.mean(axis=0) / (step + 2)
-        cov += (delta.T @ delta / N_CHAINS - cov) / (step + 2)
+        # fmax makes a NaN ratio -inf, whose probability is 0.
+        log_scale += (step + 2) ** -0.6 * (np.exp(np.fmax(log_alpha, -np.inf)) - TARGET_ACCEPTANCE)
+        deltas[step % stride] = x - mean
+        mean += deltas[step % stride].mean(axis=0) / (step + 2)
         behind = n_steps - 1 - step
         if step >= first_kept:
             accepted += accept
