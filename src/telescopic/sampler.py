@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import functools
 from collections.abc import Callable, Mapping, Sequence
+from contextlib import nullcontext
 from typing import Any
 
 import numpy as np
 
 from telescopic import diagnostics, engine
+from telescopic._parallel import Interrupt, check_pool, execute, opened
+from telescopic._progress import Progress
 from telescopic._random import MAIN, PILOT, replicate_generator, root_seed
-from telescopic._types import FloatArray, Seed
+from telescopic._types import FloatArray, IntArray, Seed
 from telescopic.estimators import averaging_times
 from telescopic.initial import as_initial, draw
 from telescopic.kernels import HMC, MALA, Independence, Kernel, RandomWalk
@@ -27,7 +31,8 @@ KERNELS: dict[str, Callable[[], Kernel]] = {
 }
 PILOT_REPLICATES = 100
 PILOT_MAX_ITER = 100_000
-# The warnings of spec section 7.4 that a run emits as they happen, not at its end.
+# The warnings of spec section 7.4 that a run emits as they happen, not at its end, or as
+# it ends for slow pairs on a pool.
 _LIVE = ("slow", "tuning")
 
 
@@ -64,6 +69,18 @@ class CoupledSampler:
         ``"independence"``.
     names : sequence of str, optional
         Parameter names for summaries.
+    pool : None, int, executor or pool
+        Where the pilot pairs and the replicates run: ``None`` in this process; an
+        integer, that many worker processes, started for each call of :meth:`run` or
+        :meth:`meeting_times`; or an object with ``submit``, such as a
+        :class:`concurrent.futures.Executor`, or with ``map``, such as an emcee or
+        schwimmbad pool. A pool runs chunks of consecutive indices, at most four per
+        worker; a task in a worker process runs with BLAS pinned to one thread and
+        Ctrl-C ignored. With a log-density evaluated point by point, no replicate
+        depends on the pool (spec sections 6.1 and 6.4).
+    progress : bool
+        Show the progress of the pilot and of each run: a tqdm bar when tqdm is
+        installed, lines on stderr otherwise.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
         The root of every random stream (spec section 6.1).
 
@@ -84,8 +101,12 @@ class CoupledSampler:
         vectorize: bool = False,
         kernel: Kernel | str = "auto",
         names: Sequence[str] | None = None,
+        pool: Any = None,
+        progress: bool = False,
         rng: Seed = None,
     ) -> None:
+        check_pool(pool)
+        self.pool, self.progress = pool, progress
         self.target = Target(log_prob, grad, args=args, kwargs=kwargs, vectorize=vectorize)
         self.initial = as_initial(init)
         self.kernel = _kernel(kernel)
@@ -140,10 +161,15 @@ class CoupledSampler:
         """
         if n < 1:
             raise ValueError(f"n must be at least 1, not {n}")
+        with opened(self.pool) as pool:
+            return self._meeting_times(n, max_iter, pool, self.progress)
+
+    def _meeting_times(self, n: int, max_iter: int, pool: Any, progress: bool) -> FloatArray:
         self.tune()
         start = 0 if self.pilot is None else len(self.pilot)
         settings = {"k": 0, "m": 0, "lag": 1, "thin": 1, "max_iter": max_iter}
-        times = self._run(PILOT, range(start, start + n), settings, store=False).meeting_time
+        indices = np.arange(start, start + n)
+        times = self._run(PILOT, indices, settings, pool, progress).meeting_time
         self.pilot = times if self.pilot is None else np.concatenate([self.pilot, times])
         return times
 
@@ -156,12 +182,18 @@ class CoupledSampler:
         lag: int | str = "auto",
         thin: int | None = None,
         max_iter: int | None = None,
+        progress: bool | None = None,
     ) -> Result:
         """Run ``n_replicates`` more replicates and return the result of all of them so far.
 
         The first call tunes the kernel and runs the pilot when needed, and fixes the
         settings of the later calls (spec R-TUNE-2). The result warns about the
         conditions of spec section 7.4.
+
+        The first Ctrl-C during the replicates lets those in progress finish and returns a
+        result flagged ``interrupted``; the next call runs the missing replicates first. A
+        second Ctrl-C raises ``KeyboardInterrupt`` at once, without a result (spec
+        section 6.5).
 
         Parameters
         ----------
@@ -176,6 +208,9 @@ class CoupledSampler:
         max_iter : int, optional
             Censor pairs still unmet at this time. ``None`` runs every pair until it
             meets on the first call, and keeps the first call's cap on later ones.
+        progress : bool, optional
+            Show the progress of the run and of the pilot it runs; ``None`` takes the
+            sampler's setting.
 
         Returns
         -------
@@ -185,10 +220,15 @@ class CoupledSampler:
         """
         if n_replicates < 1:
             raise ValueError(f"n_replicates must be at least 1, not {n_replicates}")
-        settings = self._configure(k, m, lag, thin, max_iter)
-        start = 0 if self._replicates is None else len(self._replicates.index)
-        self._check_memory(settings, start + n_replicates)
-        part = self._run(MAIN, range(start, start + n_replicates), settings)
+        self._check(k, m, lag, thin, max_iter)
+        show = self.progress if progress is None else progress
+        # Worker processes start before tuning, which runs here meanwhile, and serve the
+        # pilot and the run (DECISIONS #23).
+        with opened(self.pool) as pool:
+            settings = self.settings or self._configure(k, m, lag, thin, max_iter, pool, show)
+            done = 0 if self._replicates is None else len(self._replicates.index)
+            self._check_memory(settings, done + n_replicates)
+            part = self._run(MAIN, self._next_indices(n_replicates), settings, pool, show)
         self.settings = settings
         self._replicates = (
             part if self._replicates is None else engine.merge([self._replicates, part])
@@ -208,21 +248,54 @@ class CoupledSampler:
                 warn(issue.message, ConvergenceWarning)
         return result
 
+    def _next_indices(self, n: int) -> IntArray:
+        # The requested replicates that an interrupted run never started come first, then
+        # new indices, so that a run completes an interrupted one (spec section 6.5).
+        if self._replicates is None:
+            return np.arange(n)
+        requested = self._replicates.requested
+        missing = np.setdiff1d(requested, self._replicates.index, assume_unique=True)
+        top = int(requested[-1]) + 1
+        return np.concatenate([missing, np.arange(top, top + n)])[:n]
+
     def _run(
-        self, namespace: int, indices: range, settings: dict[str, Any], store: bool = True
+        self,
+        namespace: int,
+        indices: IntArray,
+        settings: dict[str, Any],
+        pool: Any,
+        progress: bool,
     ) -> engine.Replicates:
-        # The engine on new replicates, warning live about slow pairs and zero densities.
-        replicates = engine.run(
+        # The engine on the given replicates, here or on the opened pool. A main run stores
+        # its measures and stops on Ctrl-C (spec section 6.5); a pilot run does neither.
+        main = namespace == MAIN
+        job = functools.partial(
+            engine.run,
             self.target,
             self.kernel,
             self.initial,
-            indices,
             root=self.seed,
             namespace=namespace,
-            store=store,
-            monitor=_slow_pairs(settings["lag"], settings["m"]),
+            store=main,
             **settings,
         )
+        slow = _SlowPairs(settings["lag"], settings["m"])
+        bar = Progress(len(indices), "replicates" if main else "pilot pairs") if progress else None
+        interrupt = Interrupt()
+
+        def monitor(status: engine.Status) -> bool:
+            if bar is not None:
+                bar.update(status.finished)
+            slow(status)
+            return interrupt.stopping
+
+        with interrupt.catching() if main else nullcontext():
+            try:
+                replicates = execute(job, indices, pool, monitor)
+            finally:
+                if bar is not None:
+                    bar.close()
+        slow.after(replicates, settings["max_iter"])
         if len(replicates.zero_density):
             warn(
                 f"{len(replicates.zero_density)} replicates start where the target density "
@@ -232,15 +305,11 @@ class CoupledSampler:
             )
         return replicates
 
-    def _configure(
-        self,
-        k: int | str,
-        m: int | str,
-        lag: int | str,
-        thin: int | None,
-        max_iter: int | None,
-    ) -> dict[str, Any]:
-        # The settings of every run of this sampler: fixed by the first (D-21, DECISIONS #4).
+    def _check(
+        self, k: int | str, m: int | str, lag: int | str, thin: int | None, max_iter: int | None
+    ) -> None:
+        # The checks that need no tuning, before any worker starts. Later runs keep the
+        # first run's settings (D-21, DECISIONS #4 and #8).
         if self.settings is not None:
             given = {"k": k, "m": m, "lag": lag, "thin": thin, "max_iter": max_iter}
             for name, value in given.items():
@@ -249,13 +318,28 @@ class CoupledSampler:
                         f"{name} was {self.settings[name]} in the earlier runs; a sampler "
                         f"keeps its settings, so start a new one for {name}={value}"
                     )
-            return self.settings
+            return
         for name, value in (("k", k), ("m", m), ("lag", lag)):
             if value != "auto" and not isinstance(value, int | np.integer):
                 raise ValueError(f"{name} must be an integer or 'auto', not {value!r}")
+
+    def _configure(
+        self,
+        k: int | str,
+        m: int | str,
+        lag: int | str,
+        thin: int | None,
+        max_iter: int | None,
+        pool: Any,
+        progress: bool,
+    ) -> dict[str, Any]:
+        # The first run's settings, which tune the kernel and run the pilot if needed.
         self.tune()
         if k == "auto":
-            k = choose_k(self.pilot if self.pilot is not None else self.meeting_times())
+            pilot = self.pilot
+            if pilot is None:
+                pilot = self._meeting_times(PILOT_REPLICATES, PILOT_MAX_ITER, pool, progress)
+            k = choose_k(pilot)
         settings: dict[str, Any] = {
             "k": int(k),
             "m": 10 * int(k) if m == "auto" else int(m),
@@ -300,6 +384,8 @@ def sample(
     thin: int | None = None,
     max_iter: int | None = None,
     names: Sequence[str] | None = None,
+    pool: Any = None,
+    progress: bool = False,
     rng: Seed = None,
 ) -> Result:
     """Unbiased estimates of expectations under a target, in one call (spec R-API-1).
@@ -320,29 +406,41 @@ def sample(
         vectorize=vectorize,
         kernel=kernel,
         names=names,
+        pool=pool,
+        progress=progress,
         rng=rng,
     )
     return sampler.run(n_replicates, k=k, m=m, lag=lag, thin=thin, max_iter=max_iter)
 
 
-def _slow_pairs(lag: int, m: int) -> Callable[[engine.Status], bool]:
-    # A monitor that warns once when a pair passes the slow-pair threshold (spec section
-    # 6.3); it never stops the run.
-    threshold = diagnostics.slow_pair_threshold(lag, m)
-    warned = False
+class _SlowPairs:
+    # Warns once about a pair still unmet at the slow-pair threshold (spec section 6.3):
+    # from the engine's status as it happens, or from the meeting times after a run on a
+    # pool, whose workers' statuses do not reach the parent.
+    def __init__(self, lag: int, m: int) -> None:
+        self.threshold = diagnostics.slow_pair_threshold(lag, m)
+        self.warned = False
 
-    def monitor(status: engine.Status) -> bool:
-        nonlocal warned
-        if not warned and status.t >= threshold:
-            warned = True
+    def __call__(self, status: engine.Status) -> None:
+        if status.t >= self.threshold:
+            self._warn(status.slowest)
+
+    def after(self, replicates: engine.Replicates, max_iter: int | None) -> None:
+        # A pair is unmet at the threshold when it meets, or is censored, after it.
+        tau = replicates.meeting_time
+        stopped = tau if max_iter is None else np.minimum(tau, max_iter)
+        slow = replicates.index[stopped > self.threshold]
+        if len(slow):
+            self._warn(int(slow[0]))
+
+    def _warn(self, replicate: int) -> None:
+        if not self.warned:
+            self.warned = True
             warn(
-                f"replicate {status.slowest} has not met after {threshold} iterations; the "
+                f"replicate {replicate} has not met after {self.threshold} iterations; the "
                 "meeting times may be heavy-tailed",
                 ConvergenceWarning,
             )
-        return False
-
-    return monitor
 
 
 def _kernel(kernel: Kernel | str) -> Kernel:

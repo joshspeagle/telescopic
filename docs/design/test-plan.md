@@ -215,10 +215,10 @@ Kernel-specific tests:
 
 - **Pools:** for a point-by-point target, the per-replicate results are identical across `pool=None`, a `ProcessPoolExecutor` with 1 and 2 workers, and a `.map`-only pool.
 - **Chunking:** chunks cover the indices exactly once. Results come back in index order.
-- **Interrupts:** a simulated stop returns an `interrupted` result containing every started replicate, which form a prefix of the indices; running chunks are awaited.
+- **Interrupts:** a simulated stop returns an `interrupted` result containing every started replicate, which form a prefix of the indices; running chunks are awaited. The sampler's next run completes an interrupted one, which then equals an uninterrupted run.
 - **Worker hygiene:** tasks run with BLAS pinned to one thread, and workers that telescopic creates ignore SIGINT.
 - **Progress:** without tqdm, progress falls back to lines on stderr.
-- **Budget mode (should):**
+- **Budget mode (should; deferred beyond v0.1 with the mode, DECISIONS #22):**
   - on a toy whose estimate correlates with its cost, the per-lane GH estimator is unbiased;
   - the pooled completed-by-deadline average is biased ($|z| > 10$ in seconds), which documents why it is not offered.
 

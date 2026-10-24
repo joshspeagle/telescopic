@@ -80,8 +80,6 @@ class Result:
         The report of the tuning pilot.
     pilot : ndarray, shape (R0,), optional
         The pilot's lag-1 meeting times, from which ``k`` was chosen.
-    interrupted : bool
-        Whether the run was stopped early (spec section 6.5).
 
     Attributes
     ----------
@@ -99,6 +97,9 @@ class Result:
         Evaluations of the log-density and its gradient during the runs.
     wall_time : float
         Seconds spent in the runs.
+    interrupted : bool
+        Whether a requested replicate never ran, so that the estimates are consistent
+        but not exactly unbiased until it does (spec section 6.5).
     """
 
     def __init__(
@@ -116,7 +117,6 @@ class Result:
         seed: SeedSequence | None = None,
         tuning: TuningReport | None = None,
         pilot: FloatArray | None = None,
-        interrupted: bool = False,
     ) -> None:
         met = np.isfinite(replicates.meeting_time)
         self.n_replicates = int(met.sum())
@@ -141,7 +141,9 @@ class Result:
         self._replicates = replicates
         self.n_log_prob, self.n_grad = replicates.n_log_prob, replicates.n_grad
         self.wall_time = replicates.seconds
-        self.tuning, self.pilot, self.interrupted = tuning, pilot, interrupted
+        self.tuning, self.pilot = tuning, pilot
+        # The engine runs only requested indices, so missing ones make index shorter.
+        self.interrupted = len(replicates.index) < len(replicates.requested)
         # The time each pair stopped: its meeting time, or the cap for a censored pair,
         # which makes the bounds of section 3.6 lower bounds of their estimates.
         stopped = (
@@ -398,7 +400,8 @@ class Result:
         Returns
         -------
         Result
-            The union of the replicates; interrupted if either run was.
+            The union of the replicates and of the requested indices; interrupted if a
+            requested replicate ran in neither.
         """
         if _seed_key(self.seed) != _seed_key(other.seed):
             raise ValueError(
@@ -423,7 +426,6 @@ class Result:
             seed=self.seed,
             tuning=self.tuning,
             pilot=self.pilot,
-            interrupted=self.interrupted or other.interrupted,
         )
 
     def check(self, strict: bool = False) -> None:

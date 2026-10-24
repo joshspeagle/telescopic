@@ -9,7 +9,7 @@ from telescopic import CoupledSampler, sample
 from telescopic.engine import Status
 from telescopic.initial import Empirical, Normal
 from telescopic.kernels import HMC, MALA, Gibbs, Mixture, RandomWalk
-from telescopic.sampler import _slow_pairs
+from telescopic.sampler import _SlowPairs
 from telescopic.warnings import ConvergenceWarning, InputWarning
 
 INIT = Normal([2.0, -1.0], [4.0, 4.0])
@@ -85,7 +85,7 @@ def test_a_seed_reproduces_a_run_and_a_generator_moves_on():
 
 def test_an_explicit_k_of_zero_gets_a_lag_of_one():
     sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=4)
-    settings = sampler._configure(0, "auto", "auto", None, None)
+    settings = sampler._configure(0, "auto", "auto", None, None, None, False)
     assert (settings["k"], settings["lag"], settings["m"]) == (0, 1, 0)
 
 
@@ -156,11 +156,11 @@ def test_gibbs_samplers_and_their_mixtures_run_without_a_log_density(kernel):
 
 def test_a_slow_pair_warns_once_when_unmet_at_the_threshold():
     # A pair still unmet at t = 10^4 meets after it, as diagnostics.issues counts slow.
-    monitor = _slow_pairs(lag=1, m=10)
-    assert not monitor(Status(1, 0, 3, 9_999))
+    slow = _SlowPairs(lag=1, m=10)
+    slow(Status(1, 0, 3, 9_999))
     with pytest.warns(ConvergenceWarning, match="replicate 3 has not met after 10000"):
-        monitor(Status(1, 0, 3, 10_000))
-    monitor(Status(1, 0, 3, 10_001))  # a second warning would fail under -W error
+        slow(Status(1, 0, 3, 10_000))
+    slow(Status(1, 0, 3, 10_001))  # a second warning would fail under -W error
 
 
 def test_tuning_chains_in_separate_modes_warn():

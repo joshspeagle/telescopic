@@ -120,3 +120,28 @@ Append only. One entry per working session or milestone.
   (#18). `Kernel.check_target` holds the checks of what a kernel needs (#19). A
   reference implementation of Hoffman & Gelman's dual averaging pins ours to 1e-12.
   304 fast tests in 23 s.
+
+## 2026-10-23: M7
+
+- M7 implemented: `pool=` (worker processes started by spawn, executors, `map` pools),
+  `progress=`, and Ctrl-C (the first finishes the replicates in progress, the second
+  raises and stops the workers). Results record their requested indices, so
+  `interrupted` is derived and the sampler's next run completes an interrupted one
+  (DECISIONS #20); pools submit four chunks per worker at once (#21); budget mode is
+  deferred, with a question for Josh (#22). Replicates are bitwise identical in-process,
+  on 1 and 2 spawned workers, on thread and process executors and on a `map` pool. On
+  a 2-dimensional Gaussian, a `sample` of 40 replicates took 0.23 s in-process and
+  1.25 s with 2 spawned workers, whose start dominates (Intel Xeon @ 2.10 GHz, 4 cores,
+  Python 3.13.16, NumPy 2.5.4, one measurement). 323 fast tests in 30 s.
+- M7 `/simplify` (`notes/reviews/m7.md`): the first Ctrl-C on a pool now reaches the
+  workers through an event, so the result came 0.85 to 1.15 s after it instead of 13.6
+  to 15.6 s on 2 workers; workers live for one call, start before tuning and serve the
+  pilot and the run (`sample` on 4 workers: 4.1 to 1.8-2.0 s); chunks fill the engine's
+  64 lanes; the engine's monitor is the one channel for progress, slow pairs and the
+  stop, and slow pilot pairs on a pool now warn (DECISIONS #23). A question for Josh on
+  sizing users' pools. 333 fast tests in 36 s.
+- M7 `/code-review` at high effort (`notes/reviews/m7.md`): ten findings, nine fixed.
+  Spawned workers could die from a Ctrl-C while importing, so they are now made while
+  the parent ignores it; a cached BLAS controller missed libraries loaded later; float
+  indices were truncated; workers started before the settings were validated; a
+  `multiprocessing.Pool` was sized by the CPU count. 342 fast tests in 37 s.
