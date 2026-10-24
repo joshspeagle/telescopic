@@ -236,7 +236,7 @@ Kernel-specific tests:
   - initial distributions have the documented shape.
 - **`check_coupling`:**
   - passes the built-in kernels, and in three dimensions checks every built-in coupling;
-  - flags a wrong $Y$ marginal, a coupling that recomputes $Y$ on the meeting branch, a stale cached log-density, and a coupling that never meets.
+  - flags a wrong $Y$ marginal, a coupling that reads another row's state, a coupling that recomputes $Y$ on the meeting branch, a stale cached log-density, and a coupling that never meets.
 
 ### 2.12 Slow statistical tier (`-m slow`)
 

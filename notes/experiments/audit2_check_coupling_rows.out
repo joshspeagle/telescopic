@@ -1,0 +1,17 @@
+At 2fc10f6, before DECISIONS #61:
+x, y = 0.3, 0.6: RandomWalk passed 20 of 20
+x, y = 0.3, 0.6: FirstRow passed 20 of 20
+x, y = 0.3, 0.6: ShiftTwo passed 20 of 20
+x, y = 0.0, 1.0: RandomWalk passed 20 of 20
+x, y = 0.0, 1.0: FirstRow passed 20 of 20
+x, y = 0.0, 1.0: ShiftTwo passed 20 of 20
+FirstRow run: E[x] = 0.995 +- 0.159 (z = 6.3), E[x^2] = 7.711 +- 0.545 (z = 12.3)
+
+With DECISIONS #61:
+x, y = 0.3, 0.6: RandomWalk passed 20 of 20
+x, y = 0.3, 0.6: FirstRow passed 9 of 20
+x, y = 0.3, 0.6: ShiftTwo passed 15 of 20
+x, y = 0.0, 1.0: RandomWalk passed 20 of 20
+x, y = 0.0, 1.0: FirstRow passed 0 of 20
+x, y = 0.0, 1.0: ShiftTwo passed 0 of 20
+FirstRow run: E[x] = 0.995 +- 0.159 (z = 6.3), E[x^2] = 7.711 +- 0.545 (z = 12.3)
