@@ -83,8 +83,10 @@ def test_each_warning_fires_on_a_result_built_to_trigger_it(
     assert any(message in issue.message for issue in found), found
 
 
-def test_a_pair_censored_after_the_slow_threshold_is_slow():
-    found = issues(synthetic([2] * 9 + [-1], np.zeros(9), max_iter=20_000))
+@pytest.mark.parametrize("met", [9, 0], ids=["some met", "none met"])
+def test_a_pair_censored_after_the_slow_threshold_is_slow(met):
+    # Where no pair met, the largest meeting time was nan, and max(nan, max_iter) nan.
+    found = issues(synthetic([2] * met + [-1] * 3, np.zeros(met), max_iter=20_000))
     assert {"censored", "slow"} <= {issue.kind for issue in found}
 
 
@@ -184,6 +186,20 @@ def test_variance_share_ignores_spreads_of_rounding():
 
 
 @pytest.mark.parametrize(
+    ("values", "message"),
+    [
+        # NaN read as no variance, a share of 0.
+        ([0.0, 0.0, np.nan, 100.0], "values must be finite"),
+        (np.zeros((0, 2)), "R >= 1"),
+        (np.zeros((2, 2, 2)), "shape"),
+    ],
+)
+def test_variance_share_refuses_invalid_values(values, message):
+    with pytest.raises(ValueError, match=message):
+        variance_share(values)
+
+
+@pytest.mark.parametrize(
     ("meeting_times", "lag", "t", "message"),
     [([], 1, [0], "non-empty"), ([3, 4], 0, [0], "lag must be"), ([3, 4], 1, [2.9], "integers")],
 )
@@ -206,6 +222,7 @@ def test_the_tv_bound_at_k_of_the_diagnostics_is_the_bounds():
         ([0.0, 1.0, 2.0], 1, ValueError, "values must be positive"),
         ([], 1, ValueError, "below the number of values, 0"),
         ([1.0, 2.0, 3.0], 1.0, TypeError, "n_tail must be an integer"),
+        (np.ones((4, 3)), 1, ValueError, r"values must have shape \(n,\)"),
     ],
 )
 def test_hill_refuses_invalid_arguments(values, n_tail, error, message):

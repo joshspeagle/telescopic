@@ -127,10 +127,12 @@ def hill(values: npt.ArrayLike, n_tail: int) -> float:
     Returns
     -------
     float
-        ``inf`` when the largest values are all equal, and ``nan`` where ties make the
-        smallest value the threshold.
+        ``nan`` where ties make the smallest value the threshold, and otherwise ``inf``
+        when the :math:`k + 1` largest values are equal.
     """
     x = np.sort(np.asarray(values, dtype=np.float64))
+    if x.ndim != 1:
+        raise ValueError(f"values must have shape (n,), not {x.shape}")
     n_tail = integer("n_tail", n_tail)
     if not 1 <= n_tail < len(x):
         raise ValueError(
@@ -158,6 +160,10 @@ def variance_share(values: npt.ArrayLike) -> FloatArray:
         0 for a column without variance, or whose values differ only by rounding.
     """
     values = np.asarray(values, dtype=np.float64)
+    if values.ndim not in (1, 2) or len(values) == 0:
+        raise ValueError(f"values must have shape (R,) or (R, p) with R >= 1, not {values.shape}")
+    if not np.isfinite(values).all():
+        raise ValueError("values must be finite")
     squares = (values - values.mean(axis=0)) ** 2
     total = squares.sum(axis=0)
     # Spreads of a few units in the last place of the values are rounding, not variance.
@@ -235,8 +241,9 @@ def issues(result: Result) -> list[Issue]:
     if disagreement:
         found.append(Issue("tuning", disagreement))
     threshold = slow_pair_threshold(result.lag, result.m)
-    # A censored pair was still unmet at max_iter.
-    slowest = max(values["meeting_time_max"], result.max_iter if result.n_censored else 0)
+    # A censored pair was still unmet at max_iter; the largest meeting time is nan when
+    # every pair is censored.
+    slowest = np.fmax(values["meeting_time_max"], result.max_iter if result.n_censored else 0)
     if slowest > threshold:
         found.append(
             Issue(

@@ -77,4 +77,6 @@ All notable changes to this project are documented here. The format follows
   raises with the point in every kernel, where MALA and HMC rejected the proposal; the
   maximal coupling keeps each chain's law at draws where a log-density is infinite, and
   takes SciPy's Dirichlet laws; `check_coupling` swaps half the pairs, so that it catches a
-  coupling that reads another row's state, and fails a NaN p-value.
+  coupling that reads another row's state, and fails a NaN p-value; `check()` and the
+  summary report a slow pair when every pair is censored; `hill` and `variance_share`
+  check their values.
