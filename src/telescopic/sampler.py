@@ -115,8 +115,7 @@ class CoupledSampler:
         progress: bool = False,
         rng: Seed = None,
     ) -> None:
-        check_pool(pool)
-        self.pool, self.progress = pool, progress
+        self.pool, self.progress = check_pool(pool), progress
         self.target = Target(log_prob, grad, args=args, kwargs=kwargs, vectorize=vectorize)
         self.initial = as_initial(init)
         known = ", ".join(map(repr, KERNELS))

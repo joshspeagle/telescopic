@@ -456,6 +456,13 @@ def test_invalid_pools_raise(pool, error, message):
         telescopic.CoupledSampler(gaussian_log_prob, INIT, pool=pool)
 
 
+def test_a_number_of_processes_as_a_numpy_array_opens_workers():
+    # np.array(1) passed the check, and then served as the pool itself.
+    sampler = telescopic.CoupledSampler(gaussian_log_prob, INIT, pool=np.array(1))
+    with opened(sampler.pool) as pool:
+        assert isinstance(pool, _parallel.Workers)
+
+
 def test_pools_beyond_the_platforms_limit_raise(monkeypatch):
     # ProcessPoolExecutor takes at most 61 processes on Windows.
     monkeypatch.setattr(_parallel, "MAX_PROCESSES", 61)
