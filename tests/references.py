@@ -48,7 +48,7 @@ def synthetic(meeting_times, values, *, k=0, m=None, lag=1, max_iter=None, cost=
             index=np.arange(len(tau)),
             meeting_time=tau,
             cost=np.ones(len(tau), dtype=np.int64) if cost is None else np.asarray(cost),
-            atoms=values[met].reshape(len(met), -1),
+            atoms=values[met] if values.ndim == 2 else values[met, None],
             weights=np.ones(len(met)),
             owner=met,
             distance_owner=np.zeros(0, dtype=np.int64),
