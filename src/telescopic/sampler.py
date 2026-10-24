@@ -317,6 +317,14 @@ class CoupledSampler:
             if bar is not None:
                 bar.close()
         slow.after(replicates)
+        if replicates.n_grad_zeroed:
+            warn(
+                f"{replicates.n_grad_zeroed} gradient evaluations of the {kind}s were not "
+                "finite where the log-density is, and were taken as 0: MALA and HMC stay "
+                "exact but lose their drift there; check grad, unless those points lie far "
+                "in the tails",
+                InputWarning,
+            )
         if len(replicates.zero_density):
             warn(
                 f"{len(replicates.zero_density)} {kind}s start where the target density "

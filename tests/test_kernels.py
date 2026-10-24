@@ -520,19 +520,22 @@ def test_hmc_rejects_invalid_parameters(kwargs, message):
         HMC(cov=np.eye(2), **kwargs)
 
 
-def test_kernels_raise_at_a_proposal_with_a_non_finite_gradient():
-    # Gradient kernels rejected such proposals, and so sampled the target restricted to
-    # where the gradient is finite: on N(0, 1) with a NaN gradient beyond x = 1, MALA's
-    # mean was -0.29. A random walk whose states carry gradients is HMC's meeting step.
+def test_gradient_kernels_move_without_drift_where_the_gradient_is_not_finite():
+    # They rejected proposals there, and so sampled the target restricted to where the
+    # gradient is finite: on N(0, 1) with a NaN gradient beyond 1, MALA's mean was -0.29.
     target = Target(gaussian_log_prob, grad=lambda x: np.where(x > 1, np.nan, -x), vectorize=True)
-    start = State(np.zeros((500, 1)), np.zeros(500), np.zeros((500, 1)))
-    other = State(np.full((500, 1), 0.5), np.full(500, -0.125), np.full((500, 1), -0.5))
-    eye = np.eye(1)
-    for kernel in (RandomWalk(eye, scale=3.0), MALA(2.0, cov=eye), HMC(0.5, 4, cov=eye)):
-        with pytest.raises(ValueError, match="grad returned"):
-            kernel.step(target, start, random_draws(500, 33))
-        with pytest.raises(ValueError, match="grad returned"):
-            kernel.coupled_step(target, start, other, random_draws(500, 34))
+    # From 2, both propose 2.5 without drift, with log alpha = log pi(2.5) - log pi(2)
+    # = -1.125 > log 0.3: MALA from a normal of 0.5, HMC from a momentum of 1 and one
+    # leapfrog step of 0.5, after a first uniform that chooses the trajectory.
+    for kernel, normal, uniforms in (
+        (MALA(1.0, cov=np.eye(1)), 0.5, [0.3]),
+        (HMC(0.5, 1, cov=np.eye(1)), 1.0, [0.1, 0.3]),
+    ):
+        start = kernel.init_state(target, np.array([[2.0]]))
+        np.testing.assert_array_equal(start.grad, 0.0)
+        moved, _ = kernel.step(target, start, fixed_draws([[normal]], [uniforms]))
+        np.testing.assert_array_equal(moved.x, [[2.5]])
+        np.testing.assert_array_equal(moved.grad, 0.0)
 
 
 def test_gradient_kernels_enter_the_support_from_a_start_outside_it():

@@ -74,8 +74,9 @@ All notable changes to this project are documented here. The format follows
   distinct strings, one per coordinate; `Kernel.check_ndim` checks a kernel's dimension;
   variances are computed about the atoms' mean; tuning does not depend on the
   coordinates' scales; the engine advances up to 256 replicates at a time.
-- Fixes from a second audit: a non-finite gradient where the log-density is finite
-  raises with the point in every kernel, where MALA and HMC rejected the proposal; the
+- Fixes from a second audit: a gradient that is not finite where the log-density is
+  finite is taken as 0, which keeps MALA and HMC exact, where they rejected the proposal
+  and so sampled a restricted target, and a run whose replicates met one warns; the
   maximal coupling keeps each chain's law at draws where a log-density is infinite, and
   takes SciPy's Dirichlet laws; `check_coupling` swaps half the pairs, so that it catches a
   coupling that reads another row's state, and fails a NaN p-value; `check()` and the

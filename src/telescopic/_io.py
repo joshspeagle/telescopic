@@ -50,6 +50,7 @@ def save(result: Result, path: str | os.PathLike[str] | IO[bytes]) -> None:
         "counts": {
             "n_log_prob": replicates.n_log_prob,
             "n_grad": replicates.n_grad,
+            "n_grad_zeroed": replicates.n_grad_zeroed,
             "seconds": replicates.seconds,
         },
         "tuning": None

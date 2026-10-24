@@ -62,6 +62,10 @@ Each item has the default that work proceeds on until Josh answers.
 - [ ] **A gradient that is not finite where the density is positive.** MALA and HMC
   rejected such proposals, which sampled the target restricted to where the gradient is
   finite: E[x] = −0.29 for N(0, 1) with a NaN gradient beyond 1
-  (`notes/experiments/audit2_nan_gradient.out`). Every kernel now raises there with the
-  point (DECISIONS #59). Default: raise. Alternative: a zero drift at such points, which
-  keeps every kernel exact but hides the bug in the gradient.
+  (`notes/experiments/audit2_nan_gradient.out`). Raising there (DECISIONS #59) failed
+  default tuning on correct gradients that underflow far in the tails, as a mixture's
+  textbook responsibilities do, in 10 of 10 runs that rejection completed
+  (`notes/experiments/audit2_gradient_mixture.out`). Every kernel now takes such a
+  gradient as 0, which is exact, and a run whose replicates met one warns with their
+  number (DECISIONS #67). Default: zero drift with the warning. Alternatives: raise, with
+  tuning exempt; zero drift without the warning.

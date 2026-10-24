@@ -101,8 +101,12 @@ For the gradient:
 
 - Where the log-density is `-inf`, the gradient is not evaluated, so it may fail there.
   States there carry a gradient of 0, so MALA and HMC propose from them without drift.
-- Where the log-density is finite, a non-finite gradient raises `ValueError` with the
-  point, wherever a kernel evaluates it.
+- Where the log-density is finite, a gradient that is not finite is taken as 0 too, which
+  keeps MALA and HMC exact but takes their drift away there. A run whose replicates met
+  one warns with their number. A gradient that fails only far in the tails, as a
+  mixture's responsibilities computed from densities do where every density underflows,
+  then costs nothing; one that fails where the target has mass slows the chains. Forms in
+  log space avoid both, such as responsibilities from `scipy.special.logsumexp`.
 
 The log-density must be deterministic: the same point must always give the same value.
 Pairs meet when their states are equal, and a log-density estimated by simulation breaks

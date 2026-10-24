@@ -1,3 +1,4 @@
+import dataclasses
 import functools
 import itertools
 from typing import Any, NamedTuple
@@ -86,6 +87,10 @@ def moments(x):
     return np.concatenate([x, x**2], axis=1)
 
 
+# N(0, 1) whose gradient is NaN beyond 1, where the target has mass 0.16.
+BROKEN_GRADIENT = dataclasses.replace(G1, grad=lambda x: np.where(x > 1, np.nan, G1.grad(x)))
+
+
 def run_case(case, n, rng, **options):
     target = Target(case.example.log_prob, grad=case.example.grad, vectorize=True)
     settings = {"k": case.k, "m": case.m, "lag": case.lag, "thin": case.thin}
@@ -105,6 +110,21 @@ def test_estimates_are_unbiased(name):
         return (estimate.value - truth) / estimate.standard_error
 
     assert_z_scores(z_scores, case.replicates, seed=list(CASES).index(name))
+
+
+@pytest.mark.parametrize(
+    "kernel", [MALA(1.0, cov=np.eye(1)), HMC(0.5, 4, cov=np.eye(1))], ids=["mala", "hmc"]
+)
+def test_gradient_kernels_are_unbiased_where_the_gradient_is_not_finite(kernel):
+    # From -1, where the gradient is finite, kernels that rejected proposals where it is
+    # not stayed below 1: E[x] at z of -50 with MALA and -62 with HMC (DECISIONS #67).
+    case = Case(BROKEN_GRADIENT, kernel, Empirical([[-1.0]]), k=5, m=50, lag=5)
+
+    def z_scores(n, rng):
+        estimate = Result(run_case(case, n, rng)).estimate(moments)
+        return (estimate.value - [0.0, 1.0]) / estimate.standard_error
+
+    assert_z_scores(z_scores, 1000, seed=20)
 
 
 class AR1(Kernel):

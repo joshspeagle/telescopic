@@ -299,3 +299,12 @@ def test_the_readme_example_runs_without_a_warning(capsys):
         runpy.run_path(str(script))
     pytest.importorskip("matplotlib.pyplot").close("all")
     assert "slope" in capsys.readouterr().out
+
+
+def test_a_run_that_takes_gradients_as_zero_warns_with_their_number():
+    def grad(x):
+        return np.where(x > 1, np.nan, -x)
+
+    kernel = MALA(1.0, cov=np.eye(1))
+    with pytest.warns(InputWarning, match=r"^\d+ gradient evaluations of the replicates were"):
+        sample(log_prob, Normal([0.0], [1.0]), 20, grad=grad, kernel=kernel, k=10, rng=1)

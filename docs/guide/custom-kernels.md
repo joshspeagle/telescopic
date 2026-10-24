@@ -19,8 +19,8 @@ rest.
   and the second chain of each pair.
 
 `target` is the {class}`telescopic.Target`: `target.log_prob(x)` evaluates the
-log-density at the rows of `x`, and `target.log_prob_and_grad(x)` also the gradient; both
-raise on the values that [Special values](targets.md#special-values) rules out. A
+log-density at the rows of `x`, and `target.log_prob_and_grad(x)` also the gradient, by
+the rules of [Special values](targets.md#special-values). A
 {class}`telescopic.kernels.State` holds `n` chains, batch first: positions `x` of shape
 `(n, d)`, log-densities `log_prob` of shape `(n,)`, and gradients `grad` of shape
 `(n, d)` or `None`. A kernel returns new states with the fields of its input states, all

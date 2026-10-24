@@ -36,7 +36,8 @@ class Target:
     -----
     The functions receive read-only arrays: a function that modifies its input raises
     instead of corrupting the chains. The counters ``n_log_prob`` and ``n_grad`` count
-    evaluations point by point.
+    evaluations point by point, and ``n_grad_zeroed`` the gradients taken as 0 because
+    they were not finite where the log-density is.
     """
 
     def __init__(
@@ -63,6 +64,7 @@ class Target:
         self.vectorize = bool(vectorize)
         self.n_log_prob = 0
         self.n_grad = 0
+        self.n_grad_zeroed = 0
 
     @property
     def has_grad(self) -> bool:
@@ -90,8 +92,10 @@ class Target:
         """Log-densities, shape ``(n,)``, and gradients, shape ``(n, d)``, at the rows of ``x``.
 
         The gradient is evaluated only where the log-density is finite, and is 0 where it
-        is ``-inf``. A non-finite gradient where the log-density is finite raises
-        ``ValueError`` with the point (spec R-INPUT-1).
+        is ``-inf``. Where it is finite, a gradient that is not finite is taken as 0 too,
+        and counted in ``n_grad_zeroed``: MALA and HMC then move without drift there and
+        stay exact, since a Metropolis-Hastings proposal and a leapfrog map stay valid for
+        any drift that depends on the position alone (spec R-INPUT-1).
         """
         if self._grad is None:
             raise ValueError("this target has no gradient; pass grad= to use this kernel")
@@ -106,11 +110,10 @@ class Target:
                 gradients[inside] = self._call(self._grad, x[inside], (x.shape[1],))
             self.n_grad += int(inside.sum())
         if not np.isfinite(gradients).all():
-            row = int(np.argmax(~np.isfinite(gradients).all(axis=1)))
-            raise ValueError(
-                f"grad returned {gradients[row].tolist()} at x = {x[row].tolist()}, where "
-                "log_prob is finite"
-            )
+            bad = ~np.isfinite(gradients).all(axis=1)
+            # A new array: a vectorised grad may return its own.
+            gradients = np.where(bad[:, None], 0.0, gradients)
+            self.n_grad_zeroed += int(bad.sum())
         return values, gradients
 
     def _call(

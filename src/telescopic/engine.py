@@ -87,6 +87,9 @@ class Replicates:
         that an interrupted run never started (spec section 6.5).
     n_log_prob, n_grad : int
         Evaluations of the log-density and its gradient (spec R-EST-7).
+    n_grad_zeroed : int
+        Gradients taken as 0 because they were not finite where the log-density is
+        (spec R-INPUT-1).
     seconds : float
         Wall time of the run.
     paths : dict of int to (ndarray, ndarray)
@@ -108,6 +111,7 @@ class Replicates:
     requested: IntArray
     n_log_prob: int = 0
     n_grad: int = 0
+    n_grad_zeroed: int = 0
     seconds: float = 0.0
     paths: dict[int, tuple[FloatArray, FloatArray]] = field(default_factory=dict)
 
@@ -234,7 +238,7 @@ def run(
     seed, initial = root_seed(rng), as_initial(initial)
     queue = iter(requested.tolist())
     first = next(queue)
-    evaluations, start = (target.n_log_prob, target.n_grad), time.perf_counter()
+    counts, start = _counts(target), time.perf_counter()
     head = _Start(first, initial, seed, None)
     ndim = len(head.x0)
     starts = itertools.chain([head], (_Start(i, initial, seed, ndim) for i in queue))
@@ -247,13 +251,12 @@ def run(
         stopping = (monitor is not None and monitor(batch.status())) or stopping
         if not stopping:
             batch.fill(free, starts)
-    return batch.result(
-        seed,
-        np.sort(requested),
-        target.n_log_prob - evaluations[0],
-        target.n_grad - evaluations[1],
-        start,
-    )
+    used = [now - before for now, before in zip(_counts(target), counts, strict=True)]
+    return batch.result(seed, np.sort(requested), used, start)
+
+
+def _counts(target: Target) -> tuple[int, int, int]:
+    return target.n_log_prob, target.n_grad, target.n_grad_zeroed
 
 
 def check_settings(settings: Settings) -> Settings:
@@ -339,6 +342,7 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
         requested=np.unique(np.concatenate([part.requested for part in parts])),
         n_log_prob=sum(part.n_log_prob for part in parts),
         n_grad=sum(part.n_grad for part in parts),
+        n_grad_zeroed=sum(part.n_grad_zeroed for part in parts),
         seconds=sum(part.seconds for part in parts),
         paths={index: path for part in parts for index, path in part.paths.items()},
     )
@@ -464,7 +468,7 @@ class _Batch:
         return Status(self.n_finished, int(self.replicate[lane]), int(self.t[lane]))
 
     def result(
-        self, seed: SeedSequence, requested: IntArray, n_log_prob: int, n_grad: int, start: float
+        self, seed: SeedSequence, requested: IntArray, counts: list[int], start: float
     ) -> Replicates:
         # The seconds since start include this join, a large part of a run with many atoms.
         index, tau = self.finished.join()
@@ -483,8 +487,9 @@ class _Batch:
             distance=distance,
             zero_density=np.sort(np.array(self.zero_density, dtype=np.int64)),
             requested=requested,
-            n_log_prob=n_log_prob,
-            n_grad=n_grad,
+            n_log_prob=counts[0],
+            n_grad=counts[1],
+            n_grad_zeroed=counts[2],
             seconds=time.perf_counter() - start,
             paths={i: (np.array(x), np.array(y)) for i, (x, y) in self.paths.items()},
         )
