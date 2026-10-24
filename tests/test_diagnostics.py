@@ -168,8 +168,9 @@ def test_the_slow_pair_threshold_is_ten_times_the_larger_of_the_lag_and_m():
 
 
 def test_the_relative_cost_divides_the_mean_cost_by_the_averaged_times():
-    found = synthetic([3] * 4, np.zeros(4), k=2, m=11, cost=[10, 20, 30, 40]).diagnostics()
-    assert (found["mean_cost"], found["relative_cost"]) == (25, 2.5)
+    # Costs max(tau, m) + tau - L: 13, 15, 23 and 39.
+    found = synthetic([3, 5, 12, 20], np.zeros(4), k=2, m=11).diagnostics()
+    assert (found["mean_cost"], found["relative_cost"]) == (22.5, 2.25)
 
 
 def test_hill_is_undefined_where_ties_make_the_smallest_value_the_threshold():

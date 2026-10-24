@@ -73,8 +73,6 @@ class Replicates:
         Replicate indices.
     meeting_time : ndarray of float, shape (R,)
         :math:`\tau = \inf\{t \ge L : X_t = Y_{t-L}\}`, or ``inf`` for a censored pair.
-    cost : ndarray of int, shape (R,)
-        Kernel applications, counting a coupled step before the meeting as two.
     atoms, weights, owner : ndarrays, shapes (N, d), (N,), (N,)
         The signed measures of the replicates that met (spec R-EST-6): the atoms, their
         weights (each replicate's sum to 1), and the index of the replicate each atom
@@ -100,7 +98,6 @@ class Replicates:
     settings: Settings
     index: IntArray
     meeting_time: FloatArray
-    cost: IntArray
     atoms: FloatArray
     weights: FloatArray
     owner: IntArray
@@ -121,21 +118,31 @@ class Replicates:
         stopped: FloatArray = np.minimum(self.meeting_time, np.inf if cap is None else cap)
         return stopped
 
+    @property
+    def cost(self) -> IntArray:
+        r"""Kernel applications, shape (R,), counting a coupled step before the meeting as two.
+
+        X runs to :math:`\max(s, m)` and Y from :math:`L` to :math:`s`, with :math:`s` the
+        time the pair stopped (spec R-EST-7).
+        """
+        stopped = self.stopped
+        cost: IntArray = (stopped + np.maximum(stopped, self.settings.m)).astype(np.int64)
+        return cost - self.settings.lag
+
 
 class Status(NamedTuple):
     """The progress of a run, given to its monitor after every iteration.
 
     Attributes
     ----------
-    started, finished : int
-        Replicates started and finished so far.
+    finished : int
+        Replicates finished so far.
     slowest : int
         Index of the unmet replicate that has run longest, or -1 if every pair has met.
     t : int
         Its time :math:`t`, or 0.
     """
 
-    started: int
     finished: int
     slowest: int
     t: int
@@ -312,7 +319,7 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
                 f"cannot merge runs of dimensions {first.atoms.shape[1]} and {part.atoms.shape[1]}"
             )
     groups = {
-        "index": ("index", "meeting_time", "cost"),
+        "index": ("index", "meeting_time"),
         "owner": ("owner", "atoms", "weights"),
         "distance_owner": ("distance_owner", "distance_time", "distance"),
         "zero_density": ("zero_density",),
@@ -375,12 +382,12 @@ class _Batch:
         self.x = _empty_state(lanes, ndim, kernel.needs_grad)
         self.y = _empty_state(lanes, ndim, kernel.needs_grad)
         integers, reals = np.zeros(0, dtype=np.int64), np.zeros(0)
-        self.finished = _Chunks(integers, integers, integers)
+        self.finished = _Chunks(integers, integers)
         self.atoms = _Chunks(integers, np.zeros((0, ndim)), reals)
         self.distances = _Chunks(integers, integers, reals)
         self.zero_density: list[int] = []
         self.paths: dict[int, tuple[list[FloatArray], list[FloatArray]]] = {}
-        self.n_started = self.n_finished = 0
+        self.n_finished = 0
 
     @property
     def active(self) -> BoolArray:
@@ -406,7 +413,6 @@ class _Batch:
         self.replicate[lanes] = [s.index for s in starting]
         self.t[lanes] = 0
         self.tau[lanes] = -1
-        self.n_started += len(starting)
         self._record(lanes, np.zeros(0, dtype=np.int64))
 
     def advance(self) -> None:
@@ -443,10 +449,7 @@ class _Batch:
             done |= (self.tau < 0) & (self.t >= self.max_iter)
         lanes = (self.active & done).nonzero()[0]
         if len(lanes):
-            t, tau = self.t[lanes], self.tau[lanes]
-            # X ran t steps and Y the coupled ones, from L to tau or, if censored, to t.
-            cost = t + np.where(tau >= 0, tau, t) - self.lag
-            self.finished.add(self.replicate[lanes], tau, cost)
+            self.finished.add(self.replicate[lanes], self.tau[lanes])
             self.replicate[lanes] = -1
             self.n_finished += len(lanes)
         return lanes
@@ -454,17 +457,15 @@ class _Batch:
     def status(self) -> Status:
         unmet = self.active & (self.tau < 0)
         if not unmet.any():
-            return Status(self.n_started, self.n_finished, -1, 0)
+            return Status(self.n_finished, -1, 0)
         lane = int(np.argmax(np.where(unmet, self.t, -1)))
-        return Status(
-            self.n_started, self.n_finished, int(self.replicate[lane]), int(self.t[lane])
-        )
+        return Status(self.n_finished, int(self.replicate[lane]), int(self.t[lane]))
 
     def result(
         self, seed: SeedSequence, requested: IntArray, n_log_prob: int, n_grad: int, start: float
     ) -> Replicates:
         # The seconds since start include this join, a large part of a run with many atoms.
-        index, tau, cost = self.finished.join()
+        index, tau = self.finished.join()
         owner, atoms, weights = self.atoms.join(keep=index[tau >= 0])
         distance_owner, distance_time, distance = self.distances.join()
         return Replicates(
@@ -472,7 +473,6 @@ class _Batch:
             settings=self.settings,
             index=index,
             meeting_time=np.where(tau >= 0, tau, np.inf),
-            cost=cost,
             atoms=atoms,
             weights=weights,
             owner=owner,

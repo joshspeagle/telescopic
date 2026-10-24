@@ -170,6 +170,8 @@ def test_invalid_arguments_raise_before_any_run(call, message):
 def test_unknown_kernel_names_are_listed():
     with pytest.raises(ValueError, match="'auto', 'rwmh', 'mala', 'hmc', 'independence'"):
         CoupledSampler(log_prob, INIT, kernel="nuts")
+    with pytest.raises(TypeError, match="kernel must be a Kernel"):
+        CoupledSampler(log_prob, INIT, kernel=RandomWalk)
 
 
 @pytest.mark.parametrize(("kernel", "kind"), [("mala", MALA), ("hmc", HMC)])
@@ -223,10 +225,10 @@ def test_gibbs_samplers_and_their_mixtures_run_without_a_log_density(kernel):
 def test_a_slow_pair_warns_once_when_unmet_at_the_threshold():
     # A pair still unmet at t = 10^4 meets after it, as diagnostics.issues counts slow.
     slow = _SlowPairs(lag=1, m=10, kind="replicate")
-    slow(Status(1, 0, 3, 9_999))
+    slow(Status(0, 3, 9_999))
     with pytest.warns(ConvergenceWarning, match="replicate 3 has not met after 10000"):
-        slow(Status(1, 0, 3, 10_000))
-    slow(Status(1, 0, 3, 10_001))  # a second warning would fail under -W error
+        slow(Status(0, 3, 10_000))
+    slow(Status(0, 3, 10_001))  # a second warning would fail under -W error
 
 
 def test_tuning_chains_in_separate_modes_warn():

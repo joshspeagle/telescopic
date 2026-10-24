@@ -20,7 +20,6 @@ SCHEMA = 1
 REPLICATE_ARRAYS = (
     "index",
     "meeting_time",
-    "cost",
     "atoms",
     "weights",
     "owner",

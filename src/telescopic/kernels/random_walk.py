@@ -70,7 +70,9 @@ class RandomWalk(Kernel):
         self._factors: tuple[FloatArray, FloatArray] | None = None
         if cov is not None:
             self.cov, chol = covariance("cov", cov)
-            self._factors = _proposal_factors(chol, scale)
+            # The default scale is 2.38 / sqrt(d).
+            scaled = (2.38 / np.sqrt(len(chol)) if self.scale is None else self.scale) * chol
+            self._factors = scaled, inverse_lower(scaled)
 
     @property
     def is_tuned(self) -> bool:
@@ -140,9 +142,3 @@ class _Gaussian:
     def logpdf(self, x: FloatArray) -> float:
         z = self.inverse @ (x - self.mean)
         return float(-0.5 * z @ z)
-
-
-def _proposal_factors(chol: FloatArray, scale: float | None) -> tuple[FloatArray, FloatArray]:
-    # The proposal's Cholesky factor, with the default scale 2.38 / sqrt(d), and its inverse.
-    scaled = (2.38 / np.sqrt(len(chol)) if scale is None else scale) * chol
-    return scaled, inverse_lower(scaled)
