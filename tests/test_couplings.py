@@ -289,6 +289,15 @@ def test_maximal_couples_dirichlet_distributions_by_their_density():
     assert stats.kstest(y[:, 0, 0], stats.beta(2, 1).cdf).pvalue > P_MIN
 
 
+def test_maximal_couples_one_row_matrix_normals():
+    # Their draws have shape (1, k), which their logpdf requires: evaluated as shape (k,),
+    # as Dirichlet draws are, they raised.
+    n = 2000
+    p, q = stats.matrix_normal(np.zeros((1, 2))), stats.matrix_normal([[1.0, 0.0]])
+    _, _, identical, _ = maximal([p] * n, [q] * n, random_draws(n, 14))
+    assert stats.binomtest(int(identical.sum()), n, 2 * stats.norm.cdf(-0.5)).pvalue > P_MIN
+
+
 def test_maximal_rejects_eta_outside_the_unit_interval():
     with pytest.raises(ValueError, match="eta must be in"):
         maximal([], [], fixed_draws(uniforms=[[0.5]]), eta=0.0)

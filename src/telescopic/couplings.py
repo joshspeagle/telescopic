@@ -6,11 +6,14 @@ import math
 from typing import Any
 
 import numpy as np
+from scipy import stats
 from scipy.special import softmax
 
 from telescopic._linalg import matvec
 from telescopic._random import Draws
 from telescopic._types import BoolArray, Distribution, FloatArray, IndexArray, real
+
+_DIRICHLET = type(stats.dirichlet([1.0, 1.0]))
 
 
 def reflection_maximal(
@@ -174,10 +177,10 @@ def _log_uniform(generator: np.random.Generator) -> float:
 
 def _log_density(distribution: Any, value: Any) -> float:
     name = "logpdf" if hasattr(distribution, "logpdf") else "logpmf"
-    if isinstance(value, np.ndarray) and value.ndim == 2 and len(value) == 1:
-        # SciPy's dirichlet and multinomial draw shape (1, k), which dirichlet's logpdf
-        # refuses.
-        value = value[0]
+    if isinstance(distribution, _DIRICHLET):
+        # SciPy's dirichlet draws shape (1, k), and its logpdf reads the first axis as the
+        # components: it refuses (1, k) for k > 2, and reads (1, 2) as two points.
+        value = np.ravel(value)
     log_density = getattr(distribution, name)(value)
     if not isinstance(log_density, float):
         # One value per coordinate, from array parameters: the joint log-density of
