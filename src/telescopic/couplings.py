@@ -74,13 +74,16 @@ def maximal(
     :math:`u > \eta\,p(Y)/q(Y)` (Thorisson's algorithm, Jacob, O'Leary & Atchadé 2020
     Algorithm 2; with :math:`\eta < 1`, the bounded-variance version of Gerber & Lee 2020,
     Atchadé & Jacob 2024 Algorithm 2; spec R-CPL-2). The meeting probability is
-    :math:`\int\min(\eta p, q)`, maximal at :math:`\eta = 1`; the number of draws from
-    ``p`` and ``q`` has mean 2 and variance at most :math:`2\eta/(1-\eta)`.
+    :math:`\int\min(\eta p, q)` over the draws whose log-densities are finite, maximal at
+    :math:`\eta = 1`; the number of draws from ``p`` and ``q`` has mean 2 and variance
+    at most :math:`2\eta/(1-\eta)`.
 
     Where either log-density of a draw is infinite, the pair is not identical and the
     loop accepts the draw. Such a draw, as one that underflowed to the edge of its
     support, stands for the mass of an interval whose ratio of densities is unknown, and
-    each chain keeps its sampler's law.
+    each chain keeps its sampler's law. Such draws can be frequent: a third of
+    Beta(0.01, 0.01)'s are 1.0, its mass within :math:`2^{-53}` of 1, where the pair is
+    not identical even for :math:`p = q`, though its draws can be equal.
 
     Parameters
     ----------
@@ -177,12 +180,16 @@ def _log_density(distribution: Any, value: Any) -> float:
         # SciPy's dirichlet draws shape (1, k), and its logpdf reads the first axis as the
         # components: it refuses (1, k) for k > 2, and reads (1, 2) as two points.
         value = np.ravel(value)
+        # It also refuses a component of 0 whose alpha is below 1, a pole that draws reach
+        # by underflow.
+        if np.any((value == 0) & (distribution.alpha < 1)):
+            return math.inf
     log_density = getattr(distribution, name)(value)
-    if not isinstance(log_density, float):
-        # One value per coordinate, from array parameters: the joint log-density of
-        # independent coordinates is their sum. A float skips np.sum, which doubled the
-        # time of a coupled Gibbs sweep of examples.pumps.
-        log_density = float(np.sum(log_density))
+    # One value per coordinate, from array parameters: the joint log-density of
+    # independent coordinates is their sum. A float skips np.sum, which doubled the time
+    # of a coupled Gibbs sweep of examples.pumps. A Python float, as NumPy's warns at
+    # inf - inf.
+    log_density = float(log_density if isinstance(log_density, float) else np.sum(log_density))
     if math.isnan(log_density):
         raise ValueError(f"{name} returned nan at {np.asarray(value).tolist()}")
     return log_density

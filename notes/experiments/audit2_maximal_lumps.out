@@ -3,9 +3,13 @@ Gamma(0.01) to Gamma(1.01), -inf at 0: Y = 0.0 in 4.60e-04 of coupled draws, 0.0
 Gamma(1.01) to Gamma(0.01), -inf at 0: Y = 0.0 in 0.00e+00 of coupled draws, 5.70e-04 of direct ones
 Beta(0.01, 2) to Beta(0.02, 2), +inf at 0: raised ValueError: logpdf returned inf at 0.0
 Dir(1, 2) to Dir(2, 1): meeting rate 1.0000, mean of Y's first coordinate 0.3326 +- 0.0017
+Dir(0.001, 0.001, 1) to Dir(0.002, 0.001, 1), +inf at 0: raised ValueError: Vector 'x' must have either the same number of entries as, or one entry fewer than, parameter vector 'a', but alpha.shape = (3,) and x.shape = (1, 3).
+Beta(0.01, 0.01) to Beta(0.011, 0.01), +inf at 0 and 1: raised ValueError: logpdf returned inf at 1.0
 
 With DECISIONS #60:
 Gamma(0.01) to Gamma(1.01), -inf at 0: Y = 0.0 in 0.00e+00 of coupled draws, 0.00e+00 of direct ones
 Gamma(1.01) to Gamma(0.01), -inf at 0: Y = 0.0 in 4.70e-04 of coupled draws, 5.70e-04 of direct ones
 Beta(0.01, 2) to Beta(0.02, 2), +inf at 0: Y = 0.0 in 0.00e+00 of coupled draws, 0.00e+00 of direct ones
 Dir(1, 2) to Dir(2, 1): meeting rate 0.4971, mean of Y's first coordinate 0.6672 +- 0.0017
+Dir(0.001, 0.001, 1) to Dir(0.002, 0.001, 1), +inf at 0: Y_1 = 0 in 0.2256 of coupled draws, 0.2264 of direct ones, +- 0.0004 each
+Beta(0.01, 0.01) to Beta(0.011, 0.01), +inf at 0 and 1: 0.345 of p's draws at 1.0; overlap 0.971, meeting rate 0.623, equal pairs 0.959

@@ -323,13 +323,13 @@ X ~ p;  u ~ U(0, 1)
 if log u + log p(X) < log q(X):  return (X, X)
 repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y)
 ```
-- Where either log-density of a draw is infinite, the pair is not identical and the loop accepts the draw. Such a draw, as one that underflowed to the edge of its support, stands for the mass of an interval whose ratio of densities is unknown, so each chain keeps its sampler's law; and $u = 0$ cannot copy $X$ to $Y$ where $q(X) = 0$ (DECISIONS #60).
-- A log-density with one value per coordinate, as from array parameters, is summed: the joint log-density of independent coordinates. A draw of SciPy's `dirichlet`, of shape $(1, k)$, is evaluated as shape $(k,)$; other draws are evaluated as drawn. NaN raises `ValueError`.
+- Where either log-density of a draw is infinite, the pair is not identical and the loop accepts the draw. Such a draw, as one that underflowed to the edge of its support, stands for the mass of an interval whose ratio of densities is unknown, so each chain keeps its sampler's law; and $u = 0$ cannot copy $X$ to $Y$ where $q(X) = 0$ (DECISIONS #60). Such draws can be frequent: a third of Beta(0.01, 0.01)'s are 1.0, its mass within $2^{-53}$ of 1, where the pair is not identical even for $p = q$, though its draws can be equal. No caller in the package couples equal laws: the engine runs X alone once a pair has met, and Gibbs draws once for chains whose conditionals agree.
+- A log-density with one value per coordinate, as from array parameters, is summed: the joint log-density of independent coordinates. A draw of SciPy's `dirichlet`, of shape $(1, k)$, is evaluated as shape $(k,)$, and where a component whose $\alpha$ is below 1 is 0, which SciPy's logpdf refuses, its log-density is $+\infty$; other draws are evaluated as drawn. NaN raises `ValueError`.
 - The expected number of draws is 2, with variance $2(1 - \mathrm{TV})/\mathrm{TV}$ (research note `mh_couplings.md` §1).
 - **Option $\eta \in (0, 1]$** (Gerber & Lee; AJ24 Algorithm 2):
   - the first test becomes $u < \min(\eta, q(X)/p(X))$;
   - the loop condition becomes $u' > \eta\, p(Y)/q(Y)$;
-  - the meeting probability is $\int \min(\eta p, q)$;
+  - the meeting probability is $\int \min(\eta p, q)$ over the draws whose log-densities are finite;
   - the variance of the draw count is at most $2\eta/(1-\eta)$.
 
 **Maximal coupling of finite discrete distributions** $p, q$ on $\{1, \dots, K\}$ (R-CPL-3). This is JOA20 §5.4, computed in log space:
