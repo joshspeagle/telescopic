@@ -13,7 +13,7 @@ import numpy.typing as npt
 from scipy import stats
 
 from telescopic import diagnostics, engine
-from telescopic._types import FloatArray, integer, parameter_names, real
+from telescopic._types import FloatArray, coordinates, integer, parameter_names, real
 from telescopic.engine import Replicates
 from telescopic.estimators import unbiased_covariance, unbiased_variance, weighted_quantile
 from telescopic.measure import SignedMeasure
@@ -266,7 +266,7 @@ class Result:
             bin ``j`` of the second.
         edges : ndarray, shape (bins + 1,), or a list of them for a sequence of coordinates
         """
-        columns = self._columns(dims)
+        columns = coordinates(dims, self.ndim)
         bins = integer("bins", bins, minimum=1)
         expected = (*np.shape(dims), 2)
         if range is not None and np.shape(range) != expected:
@@ -576,17 +576,6 @@ class Result:
             raise RuntimeError("; ".join(messages))
         for message in messages:
             warn(message, ConvergenceWarning)
-
-    def _columns(self, dims: int | Sequence[int]) -> npt.NDArray[np.intp]:
-        # Coordinates given as one integer or a sequence of them, checked.
-        columns = np.atleast_1d(dims)
-        if columns.size == 0:
-            raise ValueError("dims must name at least one coordinate")
-        if columns.ndim != 1 or columns.dtype.kind not in "iu":
-            raise TypeError(f"dims must be an integer or a sequence of integers, not {dims!r}")
-        if np.any((columns < 0) | (columns >= self.ndim)):
-            raise ValueError(f"dims must be in [0, {self.ndim}), not {dims}")
-        return columns.astype(np.intp)
 
     def _bins(
         self, column: int, bins: int, limit: tuple[float, float] | None = None

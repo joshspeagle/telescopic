@@ -72,6 +72,18 @@ def integral(values: npt.NDArray[Any], minimum: int | None = None) -> bool:
     return minimum is None or bool(np.all(values >= minimum))
 
 
+def coordinates(dims: int | Sequence[int], ndim: int) -> npt.NDArray[np.intp]:
+    # Coordinates given as one integer or a sequence of them, each in [0, ndim).
+    columns = np.atleast_1d(dims)
+    if columns.size == 0:
+        raise ValueError("dims must name at least one coordinate")
+    if columns.ndim != 1 or columns.dtype.kind not in "iu":
+        raise TypeError(f"dims must be an integer or a sequence of integers, not {dims!r}")
+    if np.any((columns < 0) | (columns >= ndim)):
+        raise ValueError(f"dims must be in [0, {ndim}), not {dims}")
+    return columns.astype(np.intp)
+
+
 def vector(name: str, values: npt.ArrayLike) -> FloatArray:
     # A finite vector of shape (d,), d >= 1, or a scalar as shape (1,).
     array = np.array(values, dtype=np.float64, ndmin=1)

@@ -70,7 +70,6 @@ class RandomWalk(Kernel):
         self._factors: tuple[FloatArray, FloatArray] | None = None
         if cov is not None:
             self.cov, chol = covariance("cov", cov)
-            # The default scale is 2.38 / sqrt(d).
             scaled = (2.38 / np.sqrt(len(chol)) if self.scale is None else self.scale) * chol
             self._factors = scaled, inverse_lower(scaled)
 

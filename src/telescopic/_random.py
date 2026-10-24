@@ -90,17 +90,16 @@ class Streams:
         buffer, cursor = self._buffers[kind], self._cursors[kind]
         start = cursor[lanes]
         short = start > buffer.shape[1] - size
-        if short.any() and 8 * size > buffer.shape[1]:
-            # Widen on the left, so each lane's unread numbers stay at the end; only before
-            # a top-up, so that a buffer of given numbers is not copied.
-            pad = 8 * size - buffer.shape[1]
-            buffer = self._buffers[kind] = np.pad(buffer, ((0, 0), (pad, 0)))
-            cursor += pad
-            start += pad
-        width = buffer.shape[1]
         if short.any():
+            if 8 * size > buffer.shape[1]:
+                # Widen on the left, so each lane's unread numbers stay at the end; only
+                # before a top-up, so that a buffer of given numbers is not copied.
+                pad = 8 * size - buffer.shape[1]
+                buffer = self._buffers[kind] = np.pad(buffer, ((0, 0), (pad, 0)))
+                cursor += pad
+                start += pad
             for lane in lanes[short].tolist():
-                unread = width - cursor[lane]
+                unread = buffer.shape[1] - cursor[lane]
                 buffer[lane, :unread] = buffer[lane, cursor[lane] :]
                 self._fill(kind, lane, buffer[lane, unread:])
             start[short] = 0
@@ -108,7 +107,7 @@ class Streams:
         # windows[i, j] is buffer[i, j : j + size], so whole windows are gathered without
         # an (n, size) index array.
         windows: FloatArray = np.ndarray(
-            (len(buffer), width - size + 1, size),
+            (len(buffer), buffer.shape[1] - size + 1, size),
             buffer.dtype,
             buffer,
             strides=(buffer.strides[0], buffer.strides[1], buffer.strides[1]),

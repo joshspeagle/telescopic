@@ -139,9 +139,10 @@ def hill(values: npt.ArrayLike, n_tail: int) -> float:
         ``nan`` where ties make the smallest value the threshold, and otherwise ``inf``
         when the :math:`k + 1` largest values are equal.
     """
-    x = np.sort(np.asarray(values, dtype=np.float64))
+    x = np.asarray(values, dtype=np.float64)
     if x.ndim != 1:
         raise ValueError(f"values must have shape (n,), not {x.shape}")
+    x = np.sort(x)
     n_tail = integer("n_tail", n_tail)
     if not 1 <= n_tail < len(x):
         raise ValueError(
@@ -250,10 +251,7 @@ def issues(result: Result) -> list[Issue]:
     if disagreement:
         found.append(Issue("tuning", disagreement))
     threshold = slow_pair_threshold(result.lag, result.m)
-    # A censored pair was still unmet at max_iter; the largest meeting time is nan when
-    # every pair is censored.
-    slowest = np.fmax(values["meeting_time_max"], result.max_iter if result.n_censored else 0)
-    if slowest > threshold:
+    if np.max(result._stopped) > threshold:
         found.append(
             Issue(
                 "slow",

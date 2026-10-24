@@ -118,13 +118,12 @@ class CoupledSampler:
         self.pool, self.progress = check_pool(pool), progress
         self.target = Target(log_prob, grad, args=args, kwargs=kwargs, vectorize=vectorize)
         self.initial = as_initial(init)
-        known = ", ".join(map(repr, KERNELS))
-        if isinstance(kernel, str):
-            if kernel not in KERNELS:
-                raise ValueError(f"kernel must be a Kernel or one of {known}, not {kernel!r}")
+        if isinstance(kernel, str) and kernel in KERNELS:
             kernel = KERNELS[kernel]()
         if not isinstance(kernel, Kernel):
-            raise TypeError(f"kernel must be a Kernel or one of {known}, not {kernel!r}")
+            error = ValueError if isinstance(kernel, str) else TypeError
+            known = ", ".join(map(repr, KERNELS))
+            raise error(f"kernel must be a Kernel or one of {known}, not {kernel!r}")
         self.kernel = kernel
         self.kernel.check_target(self.target)
         self.seed = root_seed(rng)

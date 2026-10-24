@@ -172,7 +172,7 @@ def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike)
             "replicates by R"
         )
     unique, inverse = np.unique(values, return_inverse=True)
-    mass = np.bincount(inverse.ravel(), weights=weights)
+    mass = np.bincount(inverse, weights=weights)
     cdf = np.clip(isotonic_regression(np.cumsum(mass)).x, 0.0, 1.0)
     position = np.searchsorted(cdf, q)
     quantiles: FloatArray = unique[np.minimum(position, len(unique) - 1)]

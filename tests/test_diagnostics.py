@@ -249,6 +249,7 @@ def test_the_tv_bound_at_k_of_the_diagnostics_is_the_bounds():
         ([], 1, ValueError, "below the number of values, 0"),
         ([1.0, 2.0, 3.0], 1.0, TypeError, "n_tail must be an integer"),
         (np.ones((4, 3)), 1, ValueError, r"values must have shape \(n,\)"),
+        (2.0, 1, ValueError, r"values must have shape \(n,\)"),
     ],
 )
 def test_hill_refuses_invalid_arguments(values, n_tail, error, message):

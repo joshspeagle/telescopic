@@ -126,8 +126,10 @@ def test_paths_need_the_paths_of_the_engine():
         plotting.paths(RESULT._replicates)
     with pytest.raises(ValueError, match="n must be at least 1"):
         plotting.paths(replicates, n=0)
-    with pytest.raises(ValueError, match=r"dims must be two coordinates in \[0, 2\)"):
-        plotting.paths(replicates, dims=(0, 2))
+    # An integer raised an error that did not name dims.
+    for dims, message in (((0, 2), r"dims must be in \[0, 2\)"), (1, "dims must be two")):
+        with pytest.raises(ValueError, match=message):
+            plotting.paths(replicates, dims=dims)
 
 
 def test_paths_in_one_dimension_shift_y_by_the_lag():

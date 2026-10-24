@@ -108,19 +108,15 @@ def maximal(
     for row, (p_row, q_row) in enumerate(zip(p, q, strict=True)):
         generator = draws.generator(row)
         x = y = p_row.rvs(random_state=generator)
-        log_p, log_q = _log_density(p_row, x), _log_density(q_row, x)
-        accepted = (
-            math.isfinite(log_p)
-            and math.isfinite(log_q)
-            and _log_uniform(generator) < min(log_eta, log_q - log_p)
-        )
+        # Not finite exactly where either log-density is infinite.
+        log_ratio = _log_density(q_row, x) - _log_density(p_row, x)
+        accepted = math.isfinite(log_ratio) and _log_uniform(generator) < min(log_eta, log_ratio)
         while not accepted:
             y = q_row.rvs(random_state=generator)
             n_draws[row] += 1
-            log_p, log_q = _log_density(p_row, y), _log_density(q_row, y)
+            log_ratio = _log_density(p_row, y) - _log_density(q_row, y)
             accepted = (
-                not (math.isfinite(log_p) and math.isfinite(log_q))
-                or _log_uniform(generator) > log_eta + log_p - log_q
+                not math.isfinite(log_ratio) or _log_uniform(generator) > log_eta + log_ratio
             )
         xs.append(x)
         ys.append(y)
