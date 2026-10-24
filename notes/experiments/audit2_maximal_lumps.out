@@ -1,0 +1,11 @@
+At 2fc10f6, before DECISIONS #60:
+Gamma(0.01) to Gamma(1.01), -inf at 0: Y = 0.0 in 4.60e-04 of coupled draws, 0.00e+00 of direct ones
+Gamma(1.01) to Gamma(0.01), -inf at 0: Y = 0.0 in 0.00e+00 of coupled draws, 5.70e-04 of direct ones
+Beta(0.01, 2) to Beta(0.02, 2), +inf at 0: raised ValueError: logpdf returned inf at 0.0
+Dir(1, 2) to Dir(2, 1): meeting rate 1.0000, mean of Y's first coordinate 0.3326 +- 0.0017
+
+With DECISIONS #60:
+Gamma(0.01) to Gamma(1.01), -inf at 0: Y = 0.0 in 0.00e+00 of coupled draws, 0.00e+00 of direct ones
+Gamma(1.01) to Gamma(0.01), -inf at 0: Y = 0.0 in 4.70e-04 of coupled draws, 5.70e-04 of direct ones
+Beta(0.01, 2) to Beta(0.02, 2), +inf at 0: Y = 0.0 in 0.00e+00 of coupled draws, 0.00e+00 of direct ones
+Dir(1, 2) to Dir(2, 1): meeting rate 0.4971, mean of Y's first coordinate 0.6672 +- 0.0017

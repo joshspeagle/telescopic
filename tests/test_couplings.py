@@ -126,6 +126,19 @@ class PrescribedUniforms:
         return self.values.pop(0)
 
 
+class Tabled:
+    """A distribution with prescribed draws and a table of log-densities."""
+
+    def __init__(self, values, table):
+        self.values, self.table = list(values), table
+
+    def rvs(self, *, random_state):
+        return self.values.pop(0)
+
+    def logpdf(self, x):
+        return self.table[x]
+
+
 class Broken:
     """A distribution whose logpdf is always the same invalid value."""
 
@@ -167,14 +180,42 @@ def test_maximal_never_makes_the_pair_identical_where_q_has_no_density():
     assert (y[0], n_draws[0]) == (2.5, 2)
 
 
-@pytest.mark.parametrize("value", [np.nan, np.inf])
 @pytest.mark.parametrize("broken", ["p", "q"])
-def test_maximal_refuses_a_log_density_of_nan_or_plus_infinity(value, broken):
-    # They gave an identical pair that was not a draw from q, or an endless loop.
+def test_maximal_refuses_a_log_density_of_nan(broken):
+    # It gave an identical pair that was not a draw from q, or an endless loop.
     p, q = Normal(0.0, 1.0), Normal(1.0, 1.0)
-    p, q = (Broken(value), q) if broken == "p" else (p, Broken(value))
-    with pytest.raises(ValueError, match=f"logpdf returned {value} at"):
+    p, q = (Broken(np.nan), q) if broken == "p" else (p, Broken(np.nan))
+    with pytest.raises(ValueError, match="logpdf returned nan at"):
         maximal([p], [q], random_draws(1, 8))
+
+
+@pytest.mark.parametrize(
+    ("log_p", "log_q"),
+    [(-np.inf, -np.inf), (-np.inf, 0.0), (np.inf, 0.0), (np.inf, np.inf), (0.0, np.inf)],
+)
+def test_maximal_never_makes_a_pair_identical_where_a_log_density_is_infinite(log_p, log_q):
+    # X = 0 stands for the mass of p below the smallest double, as a draw of Gamma(0.01)
+    # that underflowed. Where both log-densities were -inf the pair was made identical, so
+    # Y took p's mass there, and a log-density of +inf raised.
+    p, q = Tabled([0.0], {0.0: log_p, 1.0: -10.0}), Tabled([1.0], {0.0: log_q, 1.0: 0.0})
+    draws = fixed_draws(generators=[PrescribedUniforms([0.5, 0.5])])
+    _, y, identical, n_draws = maximal([p], [q], draws)
+    assert not identical[0]
+    assert (y[0], n_draws[0]) == (1.0, 2)
+
+
+@pytest.mark.parametrize(
+    ("log_p", "log_q"),
+    [(-np.inf, -np.inf), (0.0, -np.inf), (np.inf, 0.0), (np.inf, np.inf), (-np.inf, np.inf)],
+)
+def test_maximal_accepts_a_draw_of_q_where_a_log_density_is_infinite(log_p, log_q):
+    # Y = 0 stands for the mass of q below the smallest double; rejecting it took that mass
+    # from Y's law. X = 1 does not meet: log u = log 0.99 > log q(1) - log p(1) = -10.
+    p, q = Tabled([1.0], {0.0: log_p, 1.0: 0.0}), Tabled([0.0], {0.0: log_q, 1.0: -10.0})
+    draws = fixed_draws(generators=[PrescribedUniforms([0.99, 0.99])])
+    _, y, identical, n_draws = maximal([p], [q], draws)
+    assert not identical[0]
+    assert (y[0], n_draws[0]) == (0.0, 2)
 
 
 class UnitNormals:
@@ -234,6 +275,18 @@ def test_maximal_accepts_frozen_scipy_distributions_continuous_and_discrete():
     x, y, _, _ = maximal([stats.poisson(3)] * 4, [stats.poisson(5)] * 4, random_draws(4, 12))
     assert x.dtype == y.dtype == np.float64
     assert np.all(x == np.round(x))
+
+
+def test_maximal_couples_dirichlet_distributions_by_their_density():
+    # SciPy's Dirichlet draws have shape (1, k). Its logpdf refused them for k = 3, and for
+    # k = 2 read them as two points, which gave Dir(1, 2) and Dir(2, 1) the same density.
+    n = 2000
+    p, q = stats.dirichlet([1.0, 2.0]), stats.dirichlet([2.0, 1.0])
+    x, y, identical, _ = maximal([p] * n, [q] * n, random_draws(n, 13))
+    # The densities 2(1 - t) and 2t of the first coordinate overlap with probability 1/2.
+    assert stats.binomtest(int(identical.sum()), n, 0.5).pvalue > P_MIN
+    assert stats.kstest(x[:, 0, 0], stats.beta(1, 2).cdf).pvalue > P_MIN
+    assert stats.kstest(y[:, 0, 0], stats.beta(2, 1).cdf).pvalue > P_MIN
 
 
 def test_maximal_rejects_eta_outside_the_unit_interval():

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import numpy as np
@@ -73,13 +74,18 @@ def maximal(
     :math:`\int\min(\eta p, q)`, maximal at :math:`\eta = 1`; the number of draws from
     ``p`` and ``q`` has mean 2 and variance at most :math:`2\eta/(1-\eta)`.
 
+    Where either log-density of a draw is infinite, the pair is not identical and the
+    loop accepts the draw. Such a draw, as one that underflowed to the edge of its
+    support, stands for the mass of an interval whose ratio of densities is unknown, and
+    each chain keeps its sampler's law.
+
     Parameters
     ----------
     p, q : list of distributions, length n
         Objects with ``rvs(random_state=...)`` and a normalised ``logpdf`` (or ``logpmf``),
         such as frozen SciPy distributions. All draws have the same shape. Values of
         ``logpdf`` for the coordinates of a draw are summed, as the joint log-density of
-        independent coordinates; NaN or ``+inf`` raises ``ValueError``.
+        independent coordinates; NaN raises ``ValueError``.
     draws : Draws
         Random numbers for the ``n`` rows; each row draws from its own generator.
     eta : float
@@ -95,19 +101,25 @@ def maximal(
     """
     if not 0.0 < real("eta", eta) <= 1.0:
         raise ValueError(f"eta must be in (0, 1], not {eta}")
-    log_eta = np.log(eta)
+    log_eta = math.log(eta)
     xs, ys, n_draws = [], [], np.ones(len(p), np.intp)
     for row, (p_row, q_row) in enumerate(zip(p, q, strict=True)):
         generator = draws.generator(row)
         x = y = p_row.rvs(random_state=generator)
-        log_ratio = _log_density(q_row, x) - _log_density(p_row, x)
-        # Strict, so that u = 0 cannot make the pair identical where q(X) = 0.
-        accepted = _log_uniform(generator) < min(log_eta, log_ratio)
+        log_p, log_q = _log_density(p_row, x), _log_density(q_row, x)
+        accepted = (
+            math.isfinite(log_p)
+            and math.isfinite(log_q)
+            and _log_uniform(generator) < min(log_eta, log_q - log_p)
+        )
         while not accepted:
             y = q_row.rvs(random_state=generator)
             n_draws[row] += 1
-            log_ratio = _log_density(p_row, y) - _log_density(q_row, y)
-            accepted = _log_uniform(generator) > log_eta + log_ratio
+            log_p, log_q = _log_density(p_row, y), _log_density(q_row, y)
+            accepted = (
+                not (math.isfinite(log_p) and math.isfinite(log_q))
+                or _log_uniform(generator) > log_eta + log_p - log_q
+            )
         xs.append(x)
         ys.append(y)
     x_array, y_array = np.asarray(xs, dtype=np.float64), np.asarray(ys, dtype=np.float64)
@@ -163,14 +175,18 @@ def _log_uniform(generator: np.random.Generator) -> float:
 
 def _log_density(distribution: Any, value: Any) -> float:
     name = "logpdf" if hasattr(distribution, "logpdf") else "logpmf"
+    if isinstance(value, np.ndarray) and value.ndim == 2 and len(value) == 1:
+        # SciPy's dirichlet and multinomial draw shape (1, k), which dirichlet's logpdf
+        # refuses.
+        value = value[0]
     log_density = getattr(distribution, name)(value)
     if not isinstance(log_density, float):
         # One value per coordinate, from array parameters: the joint log-density of
         # independent coordinates is their sum. A float skips np.sum, which doubled the
         # time of a coupled Gibbs sweep of examples.pumps.
         log_density = float(np.sum(log_density))
-    if not log_density < np.inf:
-        raise ValueError(f"{name} returned {log_density} at {np.asarray(value).tolist()}")
+    if math.isnan(log_density):
+        raise ValueError(f"{name} returned nan at {np.asarray(value).tolist()}")
     return log_density
 
 

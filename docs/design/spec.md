@@ -323,8 +323,8 @@ X ~ p;  u ~ U(0, 1)
 if log u + log p(X) < log q(X):  return (X, X)
 repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y)
 ```
-- The first test is strict, so that $u = 0$ cannot copy $X$ to $Y$ where $q(X) = 0$.
-- A log-density with one value per coordinate, as from array parameters, is summed: the joint log-density of independent coordinates. NaN or $+\infty$ raises `ValueError`.
+- Where either log-density of a draw is infinite, the pair is not identical and the loop accepts the draw. Such a draw, as one that underflowed to the edge of its support, stands for the mass of an interval whose ratio of densities is unknown, so each chain keeps its sampler's law; and $u = 0$ cannot copy $X$ to $Y$ where $q(X) = 0$ (DECISIONS #60).
+- A log-density with one value per coordinate, as from array parameters, is summed: the joint log-density of independent coordinates. A draw of shape $(1, k)$, as SciPy's `dirichlet` gives, is evaluated as shape $(k,)$. NaN raises `ValueError`.
 - The expected number of draws is 2, with variance $2(1 - \mathrm{TV})/\mathrm{TV}$ (research note `mh_couplings.md` §1).
 - **Option $\eta \in (0, 1]$** (Gerber & Lee; AJ24 Algorithm 2):
   - the first test becomes $u < \min(\eta, q(X)/p(X))$;
