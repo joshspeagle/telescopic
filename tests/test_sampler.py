@@ -51,9 +51,50 @@ def test_a_sampler_keeps_its_settings():
         sampler.settings = sampler.settings._replace(lag=2)
 
 
+def unevaluated(x):
+    raise AssertionError("the log-density was evaluated")
+
+
+@pytest.mark.parametrize(
+    ("arguments", "error", "message"),
+    [
+        ({"n_replicates": 10.0}, TypeError, "n_replicates must be an integer, not 10.0"),
+        ({"n_replicates": True}, TypeError, "n_replicates must be an integer, not True"),
+        ({"k": 5.5}, TypeError, "k must be an integer or 'auto', not 5.5"),
+        ({"k": np.array([3, 4])}, TypeError, "k must be an integer or 'auto'"),
+        ({"thin": 2.0}, TypeError, "thin must be an integer or None, not 2.0"),
+        ({"max_iter": "9"}, TypeError, "max_iter must be an integer or None"),
+        ({"lag": 0}, ValueError, "lag must be at least 1, not 0"),
+        ({"thin": 0}, ValueError, "thin must be at least 1, not 0"),
+        ({"m": -1}, ValueError, "m must be at least 0, not -1"),
+        ({"max_iter": 1}, ValueError, r"max_iter must exceed max\(lag, m\) = 1, not 1"),
+        ({"k": -1}, ValueError, "k must be at least 0, not -1"),
+        ({"k": 5, "m": 3}, ValueError, "m must be at least k = 5, not 3"),
+        ({"k": 40, "max_iter": 100}, ValueError, "max_iter must exceed"),
+    ],
+)
+def test_invalid_settings_raise_before_tuning(arguments, error, message):
+    sampler = CoupledSampler(unevaluated, INIT, rng=3)
+    with pytest.raises(error, match=message):
+        sampler.run(**{"n_replicates": 5} | arguments)
+
+
+@pytest.mark.parametrize(
+    ("arguments", "error", "message"),
+    [
+        ({"n": 2.5}, TypeError, "n must be an integer, not 2.5"),
+        ({"max_iter": 1}, ValueError, "max_iter must exceed"),
+    ],
+)
+def test_invalid_pilot_settings_raise_before_tuning(arguments, error, message):
+    sampler = CoupledSampler(unevaluated, INIT, rng=3)
+    with pytest.raises(error, match=message):
+        sampler.meeting_times(**arguments)
+
+
 def test_invalid_first_settings_are_not_kept():
     sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3)
-    with pytest.raises(ValueError, match="0 <= k <= m"):
+    with pytest.raises(ValueError, match="m must be at least k = 40"):
         sampler.run(5, k=40, m=5)
     assert sampler.run(5, k=40, m=50).m == 50
 
@@ -95,10 +136,19 @@ def test_the_pilot_draws_from_streams_of_its_own():
     assert not np.array_equal(pilot, result.meeting_times)
 
 
+def test_a_run_completes_a_pilot_of_fewer_than_100_pairs():
+    sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3)
+    sampler.meeting_times(30)
+    result = sampler.run(20)
+    whole = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3).meeting_times()
+    np.testing.assert_array_equal(result.pilot, whole)
+
+
 def test_an_explicit_k_of_zero_gets_a_lag_of_one():
     sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=4)
-    settings = sampler._configure(0, "auto", "auto", None, None, None, False)
-    assert (settings.k, settings.lag, settings.m) == (0, 1, 0)
+    with pytest.warns(ConvergenceWarning, match="met after k \\+ lag"):  # with k = 0, all do
+        sampler.run(2, k=0)
+    assert (sampler.settings.lag, sampler.settings.m) == (1, 0)
 
 
 @pytest.mark.parametrize(
@@ -106,6 +156,10 @@ def test_an_explicit_k_of_zero_gets_a_lag_of_one():
     [
         (lambda: CoupledSampler(log_prob, INIT, names=["a"]), "names must have 2 entries"),
         (lambda: CoupledSampler(log_prob, INIT, kernel=KERNEL).meeting_times(0), "n must be"),
+        (
+            lambda: CoupledSampler(log_prob, INIT, kernel=RandomWalk(np.eye(3))),
+            "the kernel works in 3 dimensions, but the initial points have 2",
+        ),
     ],
 )
 def test_invalid_arguments_raise_before_any_run(call, message):
@@ -168,7 +222,7 @@ def test_gibbs_samplers_and_their_mixtures_run_without_a_log_density(kernel):
 
 def test_a_slow_pair_warns_once_when_unmet_at_the_threshold():
     # A pair still unmet at t = 10^4 meets after it, as diagnostics.issues counts slow.
-    slow = _SlowPairs(lag=1, m=10)
+    slow = _SlowPairs(lag=1, m=10, kind="replicate")
     slow(Status(1, 0, 3, 9_999))
     with pytest.warns(ConvergenceWarning, match="replicate 3 has not met after 10000"):
         slow(Status(1, 0, 3, 10_000))
@@ -192,20 +246,40 @@ def test_a_run_with_censored_pairs_warns():
     assert any("reached max_iter = 3" in str(warning.message) for warning in record)
 
 
-def test_starts_outside_the_support_warn():
-    def half_normal(x):
-        return -0.5 * x[0] ** 2 if x[0] > 0 else -np.inf
+def half_normal(x):
+    return -0.5 * x[0] ** 2 if x[0] > 0 else -np.inf
 
-    with pytest.warns(InputWarning, match="target density is zero"):
-        sample(
-            half_normal, Empirical([[-1.0], [1.0]]), 6, kernel=RandomWalk(np.eye(1)), k=40, rng=9
-        )
+
+@pytest.mark.parametrize(
+    ("call", "kind"),
+    [
+        (lambda sampler: sampler.run(6, k=40), "replicates"),
+        (lambda sampler: sampler.meeting_times(6), "pilot pairs"),
+    ],
+    ids=["replicates", "pilot"],
+)
+def test_starts_outside_the_support_warn(call, kind):
+    sampler = CoupledSampler(
+        half_normal, Empirical([[-1.0], [1.0]]), kernel=RandomWalk(np.eye(1)), rng=9
+    )
+    with pytest.warns(InputWarning, match=f" {kind} start where the target density is zero"):
+        call(sampler)
 
 
 def test_a_run_that_would_store_gigabytes_warns():
+    # Without building the averaging set, whose 10^18 times would not fit in memory.
     sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=10)
     with pytest.warns(InputWarning, match="GB of atoms"):
-        sampler._check_memory(Settings(0, 10**6, 1), 1000)
+        sampler._check_memory(Settings(0, 10**18, 1), 1)
+
+
+def test_the_memory_estimate_counts_the_distances():
+    # A pilot pair meeting at 1001 stands for 1000 distances of 24 bytes and 2001 atoms
+    # of 32 bytes at k = 0: 1.14 GB for 13,000 replicates, of which the atoms are 0.83.
+    sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=10)
+    sampler.pilot = np.full(100, 1001.0)
+    with pytest.warns(InputWarning, match="about 1.1 GB of atoms and distances"):
+        sampler._check_memory(Settings(0, 0, 1), 13_000)
 
 
 def test_the_specification_example_runs():

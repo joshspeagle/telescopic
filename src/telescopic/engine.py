@@ -13,14 +13,22 @@ import numpy.typing as npt
 from numpy.random import Generator, SeedSequence
 
 from telescopic._random import MAIN, Streams, replicate_generator, root_seed
-from telescopic._types import BoolArray, Distribution, FloatArray, IntArray, Seed
-from telescopic.estimators import averaging_times, correction_coefficients
-from telescopic.initial import draw
+from telescopic._types import (
+    BoolArray,
+    Distribution,
+    FloatArray,
+    IntArray,
+    Seed,
+    averaging,
+    integer,
+)
+from telescopic.estimators import correction_coefficients
+from telescopic.initial import as_initial, draw
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
 
-# Replicates advanced together by default.
-LANES = 64
+# Replicates advanced together by default (DECISIONS #52).
+LANES = 256
 
 
 class Settings(NamedTuple):
@@ -136,7 +144,7 @@ class Status(NamedTuple):
 def run(
     target: Target,
     kernel: Kernel,
-    initial: Distribution,
+    initial: Any,
     indices: npt.ArrayLike,
     *,
     k: int,
@@ -156,15 +164,18 @@ def run(
     stream (spec section 6.1), runs :math:`X` alone for ``lag`` steps, then the coupled
     kernel until :math:`X_t = Y_{t-L}` under ``==``, then :math:`X` alone until :math:`t = m`.
     A replicate's output depends only on the root seed, its index and the arguments,
-    never on the other replicates or on ``lanes``. The engine emits no warning: it
-    records what its caller needs to warn about.
+    never on the other replicates or on ``lanes``: bitwise for a log-density evaluated
+    point by point, up to rounding for a vectorised one (spec R-EXEC-2). The engine emits
+    no warning: it records what its caller needs to warn about.
 
     Parameters
     ----------
     target : Target
     kernel : Kernel
         A tuned kernel.
-    initial : object with ``rvs(random_state=generator)``
+    initial
+        An object with ``rvs(random_state=generator)``, a callable ``initial(rng)`` or an
+        array of points of shape ``(n, d)``, as for :func:`telescopic.initial.as_initial`.
     indices : array_like of int, shape (R,)
         Distinct replicate indices, at least one, started in this order.
     k, m : int
@@ -180,7 +191,7 @@ def run(
         The root seed (spec section 6.1), recorded in the output. Runs of other indices
         with the same ``SeedSequence`` or integer can be merged.
     lanes : int
-        Number of replicates advanced together.
+        Number of replicates advanced together, at most the number requested.
     store : bool
         Whether to store the signed measures and distances; meeting-time pilots do not.
     keep_paths : bool
@@ -197,12 +208,11 @@ def run(
     Notes
     -----
     Memory: the stored atoms take about :math:`R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})
-    (8d + 16)` bytes (spec R-EXEC-7).
+    (8d + 16)` bytes, and the :math:`\tau - L` distances of each replicate 24 bytes each
+    (spec R-EXEC-7).
     """
-    settings = Settings(k, m, lag, thin, max_iter, store)
-    check_settings(settings)
-    if lanes < 1:
-        raise ValueError(f"lanes must be at least 1, not {lanes}")
+    settings = check_settings(Settings(k, m, lag, thin, max_iter, store))
+    lanes = integer("lanes", lanes, minimum=1)
     requested = np.asarray(indices)
     if (
         requested.ndim != 1
@@ -213,7 +223,8 @@ def run(
     ):
         raise ValueError("indices must be a non-empty sequence of distinct integers >= 0")
     requested = requested.astype(np.int64)
-    seed = root_seed(rng)
+    lanes = min(lanes, len(requested))  # empty lanes would only cost time
+    seed, initial = root_seed(rng), as_initial(initial)
     queue = iter(requested.tolist())
     first = next(queue)
     evaluations, start = (target.n_log_prob, target.n_grad), time.perf_counter()
@@ -238,23 +249,36 @@ def run(
     )
 
 
-def check_settings(settings: Settings) -> None:
-    r"""Raise ``ValueError`` unless the settings of a run are valid (spec section 3.2).
+def check_settings(settings: Settings) -> Settings:
+    r"""Check the settings of a run and return them with Python integers (spec section 3.2).
 
-    They need :math:`0 \le k \le m`, :math:`L \ge 1`, ``thin`` :math:`\ge 1`, and a
-    ``max_iter`` above :math:`\max(L, m)` if any.
+    They need integers :math:`0 \le k \le m`, :math:`L \ge 1` and ``thin`` :math:`\ge 1`,
+    and an integer ``max_iter`` above :math:`\max(L, m)` or ``None``. NumPy integers
+    become ``int``.
 
     Parameters
     ----------
     settings : Settings
+
+    Returns
+    -------
+    Settings
+
+    Raises
+    ------
+    TypeError
+        If a setting is not an integer.
+    ValueError
+        If the settings break a bound.
     """
-    k, m, lag, thin, max_iter, _ = settings
-    if not 0 <= k <= m:
-        raise ValueError(f"k and m must satisfy 0 <= k <= m, not k={k}, m={m}")
-    if lag < 1 or thin < 1:
-        raise ValueError(f"lag and thin must be at least 1, not lag={lag}, thin={thin}")
+    k, m, thin = averaging(settings.k, settings.m, settings.thin)
+    lag = integer("lag", settings.lag, minimum=1)
+    max_iter = settings.max_iter
+    if max_iter is not None:
+        max_iter = integer("max_iter", max_iter, "an integer or None")
     if max_iter is not None and max_iter <= max(lag, m):
         raise ValueError(f"max_iter must exceed max(lag, m) = {max(lag, m)}, not {max_iter}")
+    return Settings(k, m, lag, thin, max_iter, settings.store)
 
 
 def merge(parts: Sequence[Replicates]) -> Replicates:
@@ -343,7 +367,7 @@ class _Batch:
         self.target, self.kernel, self.settings = target, kernel, settings
         self.k, self.m, self.lag, self.thin, self.max_iter, self.store = settings
         self.keep_paths = keep_paths
-        self.weight = 1.0 / len(averaging_times(self.k, self.m, self.thin))
+        self.weight = 1.0 / len(range(self.k, self.m + 1, self.thin))  # 1 / |S|
         self.streams = Streams(lanes)
         self.replicate = np.full(lanes, -1, dtype=np.int64)
         self.t = np.zeros(lanes, dtype=np.int64)

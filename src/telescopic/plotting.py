@@ -44,8 +44,12 @@ def meeting_times(result: Result, axes: Sequence[Axes] | None = None) -> list[Ax
     histogram.set(xlabel=r"$\tau - L$", ylabel="pairs")
     stopped = np.sort(result._stopped - result.lag)
     t = np.union1d(0, stopped)  # the function steps only there
-    survival.step(t, 1 - np.searchsorted(stopped, t, side="right") / len(stopped), where="post")
-    survival.set(yscale="log", xlabel="$t$", ylabel=r"$P(\tau - L > t)$")
+    fraction = 1 - np.searchsorted(stopped, t, side="right") / len(stopped)
+    survival.step(t, fraction, where="post")
+    survival.set(xlabel="$t$", ylabel=r"$P(\tau - L > t)$")
+    # A log scale needs a positive value: none when every pair met at t = L.
+    if np.any(fraction > 0):
+        survival.set(yscale="log")
     return [histogram, survival]
 
 
@@ -66,13 +70,16 @@ def tv_bound(result: Result, ax: Axes | None = None) -> Axes:
     """
     ax = plt.subplots(figsize=(5, 3.5))[1] if ax is None else ax
     # At most 4,000 times draw the step function, however long the tail of meeting times.
-    times = result._times()
-    t = times[:: max(1, len(times) // 2000)]
-    bound = result.tv_bound(t)
+    bound = result.tv_bound()
+    step = max(1, len(bound) // 2000)
+    t, bound = np.arange(len(bound))[::step], bound[::step]
     positive = bound > 0
     ax.plot(t[positive], bound[positive])
     ax.axvline(result.k, color="grey", linestyle="--", label="$k$")
-    ax.set(yscale="log", xlabel="$t$", ylabel=r"TV bound on $X_t$")
+    ax.set(xlabel="$t$", ylabel=r"TV bound on $X_t$")
+    # A log scale needs a positive value: none when every pair met at t = L.
+    if np.any(positive):
+        ax.set(yscale="log")
     ax.legend(loc="upper right")
     return ax
 

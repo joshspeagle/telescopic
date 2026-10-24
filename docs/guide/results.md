@@ -45,7 +45,7 @@ A few of the pairs met after `k + lag`, so a few replicates carry bias correctio
 | `names`, `ndim` | the parameter names and the dimension $d$ |
 | `measure` | the replicates' signed measures |
 | `index`, `meeting_times`, `costs` | for every replicate, censored ones included: its index, its meeting time (`inf` if censored) and its kernel applications |
-| `n_log_prob`, `n_grad`, `wall_time` | the evaluations of the log-density and of its gradient, and the seconds, of the runs |
+| `n_log_prob`, `n_grad`, `wall_time` | the evaluations of the log-density and of its gradient, and the seconds, of the replicates, without tuning and the meeting-time pilot |
 | `kernel`, `initial` | the frozen kernel and the initial distribution |
 | `tuning`, `pilot` | the report of the tuning chains, and the meeting times of the lag-1 pilot pairs that chose `k`; `None` when not run |
 | `seed` | the root `numpy.random.SeedSequence`, which reproduces the run |
@@ -54,8 +54,8 @@ A few of the pairs met after `k + lag`, so a few replicates carry bias correctio
 ## Expectations
 
 {meth}`telescopic.Result.estimate` estimates $\pi(h)$ for a function `h` that maps points
-of shape `(n, d)` to values of shape `(n,)` or `(n, p)`; any other shape raises
-`ValueError`. It returns an {class}`telescopic.Estimate`: the mean of the replicates'
+of shape `(n, d)`, a read-only array, to values of shape `(n,)` or `(n, p)`; any other
+shape raises `ValueError`. It returns an {class}`telescopic.Estimate`: the mean of the replicates'
 estimates (`value`), its `standard_error`, a normal `interval` at `level` (0.95 by
 default) and the replicates' estimates (`replicates`). Here $E[x_0 x_1]$ is the
 covariance, 0.9:
@@ -146,9 +146,11 @@ total = result.measure.atoms.sum(axis=1)  # x0 + x1 at every atom
 
 {meth}`telescopic.Result.histogram` returns the mass of each bin, its standard error and
 the edges of the bins. The mass of a half-open bin $[a, b)$ is the average over
-replicates of their signed mass in it. It is unbiased, and it can be negative where few
-atoms fall and the negative weights of the bias corrections outweigh the others. By
-default the bins span the atoms, so the masses sum to 1:
+replicates of their signed mass in it. It is unbiased for a `range` fixed before the
+run, and it can be negative where few atoms fall and the negative weights of the bias
+corrections outweigh the others. By default the bins span the atoms, so the masses sum to
+1, and the two outer bins, whose edges the atoms set, are biased by a term of order
+$1/R$:
 
 ```{code-cell} python
 masses, errors, edges = result.histogram(0, bins=10)
@@ -237,7 +239,7 @@ The lines below it:
   `lag = k` the fraction is close to the bound on the total variation distance at `k`
   ([Distance to stationarity](diagnostics.md#distance-to-stationarity));
 - the largest share of one replicate in the variance of the estimate of a coordinate's
-  mean or second moment, and that estimate
+  mean or variance, and that estimate
   ([`variance`](diagnostics.md#one-replicate-dominating-the-variance-variance));
 - for an interrupted run, that its estimates are consistent but not exactly unbiased
   ([Interrupting a run](parallel.md#interrupting-a-run));
@@ -261,7 +263,9 @@ A sampler needs no merging: each call of `run` returns the result of all its rep
 so far. {meth}`telescopic.Result.merge` joins runs made apart, such as runs of
 {func}`telescopic.engine.run` on separate ranges of replicate indices, on one machine or
 several. The runs must have the same root seed, settings and dimension, and no replicate
-index in common. Here the replicates 1000 to 1199 extend the run above:
+index in common, which `merge` checks. They must also share the target, the kernel and the
+initial distribution, which it cannot check. Here the replicates 1000 to 1199 extend the
+run above:
 
 ```{code-cell} python
 more = telescopic.engine.run(

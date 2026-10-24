@@ -254,3 +254,39 @@ Append only. One entry per working session or milestone.
 - `/code-review` at extra-high effort: ten findings, all fixed, among them a custom kernel
   that could not be tuned inside a mixture, a censored slow pair that `check` missed, and
   twelve broken references in docstrings. 428 fast tests in 37 s.
+
+## 2026-10-23: M11
+
+- The audit (`notes/reviews/m11.md`): six auditors who had not written the code, one per
+  angle: the estimators and couplings against the papers; the engine, its streams, the
+  pools and the sampler's pipeline; numerical robustness; the API and its errors; the
+  tests' power, by mutants; and the documentation against the code. Three fixers worked
+  in separate worktrees, and every line was read before commit.
+- The worst findings: variances lost all precision far from the origin; settings that
+  were not integers gave wrong results without an error (`m=20.5`, a mean 5 standard
+  errors off); tuning depended on the coordinates' scales (k = 7,630 instead of 22 at an
+  sd ratio of 1e8); the first Ctrl-C on a user's process pool lost the run; a test
+  function that wrote to its input corrupted every later estimate. Of 66 mutants, 26
+  survived the fast suite; new tests kill all but one.
+- 256 lanes by default, never more than the replicates, and pool chunks of up to 256
+  (DECISIONS #52): the main run 1.23 to 1.57 times faster at R = 100.
+- `/simplify` with four reviewers: one home for the argument checks, and the variance
+  share about the atoms' mean, which fires in 37 of 200 banana runs instead of 19
+  (DECISIONS #54; QUESTIONS).
+- `/code-review` at extra-high effort: 15 findings. A vector of variances as a Gibbs
+  conditional's covariance gave perfectly correlated draws under common random numbers;
+  a mixture passed no initial distribution to its components' `tune`; bools, array
+  settings and generators of names were mishandled. All fixed; the memory of centring, of
+  the TV bound and of 256 lanes, and common random numbers for conditionals that are not
+  normal (QUESTIONS), are answered in the report.
+- An adversarial review refuted the code review's fix of the tail index (DECISIONS #55):
+  its threshold above ties warned on light tails in 92% to 100% of runs of an
+  independence sampler. The audit's nan stands, with its blind spot documented (#57).
+- The warnings' rates measured again (spec §7.4). 554 fast tests in 39 s and 18 slow in
+  109 s pass; the strict docs build takes 1 min 44 s. Benchmarks at 20b262b, the setup of
+  acb12f9 (`benchmarks/results/20b262b.json`): lockstep 1.30 µs per pair-step at 256
+  lanes and random streams within their targets; a 1 ms log-density 3.89 times faster on
+  4 started workers, 2.28 with their start; point-by-point overhead 90.4 µs against 40;
+  the pipeline's pilots 43% to 63% of a main run that 256 lanes made faster, against
+  15%.
+- The checkpoint report to Josh: `notes/CHECKPOINT.md`.

@@ -44,6 +44,11 @@ def test_root_seed_rejects_other_types(rng):
         root_seed(rng)
 
 
+def test_root_seed_rejects_a_negative_integer_by_name():
+    with pytest.raises(ValueError, match="rng must be a non-negative integer, not -1"):
+        root_seed(-1)
+
+
 def test_replicate_generator_follows_the_spawn_key_convention():
     root = SeedSequence(11, spawn_key=(2,))
     expected = Generator(PCG64DXSM(SeedSequence(11, spawn_key=(2, 0x74656C, MAIN, 4))))

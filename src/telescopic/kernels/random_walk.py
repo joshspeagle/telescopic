@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
 
 from telescopic._linalg import covariance, inverse_lower, matvec
 from telescopic._random import Draws
-from telescopic._types import FloatArray, Seed
+from telescopic._types import FloatArray, Seed, real
 from telescopic.couplings import maximal, reflection_maximal
 from telescopic.kernels.base import (
     Kernel,
@@ -67,14 +67,16 @@ class RandomWalk(Kernel):
     ) -> None:
         if coupling not in ("reflection", "maximal"):
             raise ValueError(f"coupling must be 'reflection' or 'maximal', not {coupling!r}")
-        if scale is not None and not 0 < scale < np.inf:
-            raise ValueError(f"scale must be positive and finite, not {scale}")
+        if scale is not None:
+            scale = real("scale", scale)
+            if not 0 < scale < np.inf:
+                raise ValueError(f"scale must be positive and finite, not {scale}")
         self.scale = scale
         self.coupling = coupling
         self.cov: FloatArray | None = None
         self._factors: tuple[FloatArray, FloatArray] | None = None
         if cov is not None:
-            self.cov, chol = covariance(cov, "cov")
+            self.cov, chol = covariance("cov", cov)
             self._factors = _proposal_factors(chol, scale)
 
     @property
@@ -85,7 +87,9 @@ class RandomWalk(Kernel):
     def ndim(self) -> int | None:
         return None if self.cov is None else len(self.cov)
 
-    def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
+    def _tuned(
+        self, target: Target, initial: Any, pilot: PilotRun, rng: Seed
+    ) -> tuple[Kernel, TuningReport]:
         tuned = type(self)(pilot.cov, scale=self.scale, coupling=self.coupling)
         return tuned, pilot.report()
 

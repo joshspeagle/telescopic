@@ -14,6 +14,7 @@ from telescopic.kernels import (
     RandomWalk,
     State,
 )
+from telescopic.kernels.base import acceptance
 from telescopic.target import Target
 from telescopic.testing import check_coupling, fixed_draws, random_draws
 from telescopic.tuning import PilotRun
@@ -64,15 +65,30 @@ def dense(d):
 def test_random_walk_step_matches_the_reference(accept):
     rng = np.random.default_rng(1)
     cov = np.array([[2.0, 0.5, 0.0], [0.5, 1.0, 0.2], [0.0, 0.2, 0.5]])
-    chol = np.linalg.cholesky(cov)
+    chol = 2.38 / np.sqrt(3) * np.linalg.cholesky(cov)  # the default scale, 2.38 / sqrt(d)
     x, z = rng.standard_normal(3), rng.standard_normal(3)
     ratio = np.exp(gaussian_log_prob(x + chol @ z) - gaussian_log_prob(x))
     u = min(0.999, ratio * (0.5 if accept else 1.5))
-    new, acceptance = RandomWalk(cov, scale=1.0).step(TARGET, state(x), fixed_draws([z], [[u]]))
+    new, acceptance = RandomWalk(cov).step(TARGET, state(x), fixed_draws([z], [[u]]))
     expected = metropolis(x, x + chol @ z, gaussian_log_prob, u)
     np.testing.assert_allclose(acceptance[0], min(1.0, ratio), atol=1e-12)
     np.testing.assert_allclose(new.x[0], expected, atol=1e-12)
     np.testing.assert_allclose(new.log_prob[0], gaussian_log_prob(expected), atol=1e-12)
+
+
+def test_a_uniform_of_zero_rejects_a_proposal_of_zero_density():
+    # random() can draw 0, whose log is -inf: the test log u < log ratio must be strict.
+    half_line = Target(lambda x: np.where(x[:, 0] > 0, 0.0, -np.inf), vectorize=True)
+    start = State(np.array([[1.0]]), np.array([0.0]))
+    draws = fixed_draws([[-5.0]], [[0.0]])
+    moved, _ = RandomWalk(np.eye(1), scale=1.0).step(half_line, start, draws)
+    assert moved.x[0, 0] == 1.0
+
+
+def test_a_nan_log_ratio_has_acceptance_probability_zero():
+    # -inf - -inf, a move between points of zero density; dual averaging needs a number.
+    probabilities = acceptance(np.array([np.nan, -np.inf, 0.5, 0.0]))
+    np.testing.assert_array_equal(probabilities, [0.0, 0.0, 1.0, 1.0])
 
 
 @pytest.mark.parametrize("gap", [3.0, 0.05, 0.0])
@@ -329,6 +345,44 @@ def test_a_non_finite_gradient_at_an_accepted_proposal_raises():
         RandomWalk(np.eye(1), scale=3.0).step(target, start, random_draws(50, 23))
 
 
+class StandardNormal:
+    """A proposal in two dimensions with only the methods that Independence documents."""
+
+    def sample(self, draws):
+        return draws.normal(2)
+
+    def log_density(self, x):
+        return -0.5 * np.sum(x**2, axis=1) - np.log(2 * np.pi)
+
+
+def test_independence_takes_any_proposal_with_sample_and_log_density():
+    # The dimension was read from a mean that the documentation never asks for.
+    kernel = Independence(StandardNormal())
+    assert kernel.ndim is None
+    assert Mixture([RandomWalk(np.eye(2)), kernel], [0.5, 0.5]).ndim == 2
+    # The weights pi / q are constant, so the proposal is accepted.
+    new, _ = kernel.step(TARGET, state([0.1, 0.2]), fixed_draws([[0.3, -0.4]], [[0.5]]))
+    np.testing.assert_array_equal(new.x[0], [0.3, -0.4])
+
+
+def test_independence_refuses_a_proposal_without_sample_and_log_density():
+    with pytest.raises(TypeError, match="proposal must have sample"):
+        Independence(stats.multivariate_normal(np.zeros(2)))
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"mean": [np.nan, 0.0]}, "mean must be finite"),
+        ({"mean": [[0.0, 0.0]]}, "mean must have shape"),
+        ({"df": 0}, "df must be at least 1, not 0"),
+    ],
+)
+def test_multivariate_t_rejects_invalid_parameters(kwargs, message):
+    with pytest.raises(ValueError, match=message):
+        MultivariateT(**({"mean": np.zeros(2), "cov": np.eye(2)} | kwargs))
+
+
 @pytest.mark.parametrize("df", [None, 1, 5])
 def test_multivariate_t_log_density_is_normalised(df):
     mean, cov = np.array([0.5, -1.0]), np.array([[2.0, 0.3], [0.3, 0.5]])
@@ -472,7 +526,7 @@ def test_the_hmc_meeting_step_meets_with_the_reflection_probability():
 @pytest.mark.parametrize(
     ("kwargs", "message"),
     [
-        ({"n_steps": 0}, "n_steps must be a positive integer"),
+        ({"n_steps": 0}, "n_steps must be at least 1"),
         ({"meeting_weight": 0.0}, "meeting_weight must be in"),
         ({"meeting_scale": -1.0}, "meeting_scale must be positive and finite"),
         ({"meeting_scale": np.inf}, "meeting_scale must be positive and finite"),
@@ -623,6 +677,107 @@ def test_crn_gibbs_couplings_map_a_uniform_of_zero_to_a_finite_point():
     assert np.isfinite(new_y.x).all()
 
 
+class Equal:
+    """Two equal coordinates, N(mean, 1): a normal law whose covariance is singular."""
+
+    def __init__(self, mean, cov=((1.0, 1.0), (1.0, 1.0))):
+        self.mean, self.cov = np.full(len(cov), mean), np.array(cov)
+
+
+def test_crn_gibbs_couplings_draw_from_a_singular_multivariate_normal():
+    # It has no Cholesky factor.
+    def given(point, block):
+        return Normal(0.5 * point[1], 1.0) if block == 0 else Equal(0.5 * point[0])
+
+    kernel = Gibbs(given, [[0], [1, 2]], coupling="crn")
+    n = 2000
+    starts = ([0.0, 1.0, 1.0], [2.0, -1.0, -1.0])
+    x, y = (gibbs_state(np.tile(start, (n, 1))) for start in starts)
+    for new in kernel.coupled_step(Target(None), x, y, random_draws(n, 42)):
+        np.testing.assert_allclose(new.x[:, 1], new.x[:, 2], rtol=0, atol=1e-12)
+        assert stats.kstest(new.x[:, 1] - 0.5 * new.x[:, 0], "norm").pvalue > P_MIN
+
+
+@pytest.mark.parametrize(
+    ("cov", "message"),
+    [
+        ([[1.0, 2.0], [2.0, 1.0]], "positive semi-definite"),
+        # A correlation of 1.5 at sd 1e-4, beside a coordinate of sd 1.
+        ([[1.0, 0.0, 0.0], [0.0, 1e-8, 1.5e-8], [0.0, 1.5e-8, 1e-8]], "positive semi-definite"),
+        ([[1.0, 0.9], [0.2, 1.0]], "symmetric"),
+        # Variances, which the symmetry test broadcast to a matrix of ones.
+        ([1.0, 1.0], r"square matrix, not shape \(2,\)"),
+    ],
+)
+def test_crn_gibbs_couplings_refuse_an_invalid_covariance(cov, message):
+    def given(point, block):
+        return Normal(point[1], 1.0) if block == 0 else Equal(0.0, cov)
+
+    kernel = Gibbs(given, [[0], list(range(1, len(cov) + 1))], coupling="crn")
+    x, y = (gibbs_state([0.0] + [value] * len(cov)) for value in (1.0, -1.0))
+    with pytest.raises(ValueError, match=message):
+        kernel.coupled_step(Target(None), x, y, random_draws(1, 43))
+
+
+@pytest.mark.parametrize("coupling", ["maximal", "crn"])
+def test_gibbs_couples_conditionals_with_array_parameters_as_scalar_ones(coupling):
+    # A frozen SciPy normal located at x[[1 - b]] draws arrays of shape (1,), which both
+    # couplings refused for two rows or more. Row 2 has identical conditionals in block 0.
+    def scalar(point, block):
+        return stats.norm(RHO * point[1 - block], np.sqrt(1 - RHO**2))
+
+    def array(point, block):
+        return stats.norm(RHO * point[np.array([1 - block])], np.sqrt(1 - RHO**2))
+
+    x = gibbs_state([[0.5, -1.0], [0.2, 0.7], [0.1, 0.3]])
+    y = gibbs_state([[-0.5, 1.5], [1.0, -0.4], [2.0, 0.3]])
+    expected, moved = (
+        Gibbs(conditional, [[0], [1]], coupling=coupling).coupled_step(
+            Target(None), x, y, random_draws(3, 44)
+        )
+        for conditional in (scalar, array)
+    )
+    for first, second in zip(expected, moved, strict=True):
+        np.testing.assert_array_equal(first.x, second.x)
+
+
+class Fixed:
+    """A conditional law that always draws ``value``."""
+
+    def __init__(self, value):
+        self.value = value
+
+    def rvs(self, *, random_state):
+        return self.value
+
+    def logpdf(self, x):
+        return 0.0
+
+
+@pytest.mark.parametrize("value", [np.nan, np.inf])
+def test_a_gibbs_conditional_that_draws_a_non_finite_value_raises(value):
+    # A NaN never meets, so a run without log_prob hung or returned NaN. The chains agree
+    # after block 0, so block 1 draws once for both.
+    kernel = Gibbs(lambda point, block: Fixed(value if block else 0.5), [[0], [1]])
+    x, y = gibbs_state([0.0, 1.0]), gibbs_state([0.0, 2.0])
+    message = rf"conditional of block 1 given x = \[0.5, 1.0\] drew \[{value}\]"
+    with pytest.raises(ValueError, match=message):
+        kernel.step(Target(None), x, random_draws(1, 45))
+    with pytest.raises(ValueError, match=message):
+        kernel.coupled_step(Target(None), x, y, random_draws(1, 46))
+
+
+def test_a_gibbs_conditional_must_draw_a_point_of_its_blocks_size():
+    # One value for a block of two was broadcast to both coordinates.
+    kernel = Gibbs(lambda point, block: Fixed(0.5), [[0, 1]])
+    x, y = gibbs_state([0.0, 1.0]), gibbs_state([0.0, 2.0])
+    message = r"drew \[0.5\], not a finite point of shape \(2,\)"
+    with pytest.raises(ValueError, match=message):
+        kernel.step(Target(None), x, random_draws(1, 47))
+    with pytest.raises(ValueError, match=message):
+        kernel.coupled_step(Target(None), x, y, random_draws(1, 48))
+
+
 def test_two_scale_gibbs_couplings_switch_at_the_threshold():
     kernel = Gibbs(conditional, [[0], [1]], coupling="two-scale", threshold=1.0)
     far, near = (np.array([[0.5, -1.0], [0.6, -1.1]]), np.array([[-0.5, 1.5], [0.6, -1.0]]))
@@ -659,6 +814,23 @@ def test_identical_conditionals_give_both_chains_the_same_draw():
 def test_gibbs_rejects_invalid_parameters(kwargs, message):
     with pytest.raises(ValueError, match=message):
         Gibbs(conditional, **({"blocks": [[0], [1]]} | kwargs))
+
+
+@pytest.mark.parametrize(
+    ("make", "message"),
+    [
+        (lambda: RandomWalk(np.eye(2), scale="1"), "scale must be a real number, not '1'"),
+        (lambda: MALA("0.1", cov=np.eye(1)), "step_size must be a real number"),
+        (lambda: MALA(0.5, cov=np.eye(1)).with_step_size(np.eye(2)), "step_size must be a real"),
+        (lambda: HMC(0.1, 2.0, cov=np.eye(1)), "n_steps must be an integer or None, not 2.0"),
+        (lambda: Gibbs(conditional, [[0], [1]], eta="1"), "eta must be a real number"),
+        (lambda: Gibbs(conditional, [[0], [1]], eta=True), "eta must be a real number"),
+        (lambda: MultivariateT(np.zeros(2), np.eye(2), df=2.5), "df must be a positive integer"),
+    ],
+)
+def test_kernel_parameters_of_the_wrong_type_raise_type_errors_naming_them(make, message):
+    with pytest.raises(TypeError, match=message):
+        make()
 
 
 # Draws per step (spec R-KER-5): exactly what each kernel documents, checked by running

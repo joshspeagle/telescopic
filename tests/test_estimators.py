@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -88,3 +89,28 @@ def test_quantiles_of_a_signed_measure_merge_project_and_clip_its_cdf():
     weights = np.array([0.5, -0.1, 0.5, -0.3, -0.2, 0.6])
     levels = [0.0, 0.45, 0.5, 0.55, 1.0]
     np.testing.assert_array_equal(weighted_quantile(values, weights, levels), [-1, 1, 1, 3, 3])
+
+
+@pytest.mark.parametrize(
+    ("settings", "error", "message"),
+    [
+        ((4, 2, 1, 1), ValueError, "m must be at least k = 4, not 2"),
+        ((0, 5, 0, 1), ValueError, "lag must be at least 1, not 0"),
+        ((0, 5, 1, 0), ValueError, "thin must be at least 1, not 0"),
+        ((1.5, 5, 1, 1), TypeError, "k must be an integer"),
+        ((0, 5, 1, 2.0), TypeError, "thin must be an integer"),
+    ],
+)
+def test_the_estimator_weights_refuse_invalid_settings(settings, error, message):
+    with pytest.raises(error, match=message):
+        correction_coefficients([5, 6, 7], *settings)
+
+
+def test_the_quantile_at_one_is_the_largest_atom_when_the_weights_sum_below_one():
+    # Ten weights of 0.1 sum to 0.9999999999999999.
+    assert weighted_quantile(np.arange(10.0), np.full(10, 0.1), 1.0) == 9.0
+
+
+def test_weighted_quantiles_refuse_levels_outside_the_unit_interval():
+    with pytest.raises(ValueError, match="q must be in"):
+        weighted_quantile(np.arange(3.0), np.full(3, 1 / 3), np.nan)

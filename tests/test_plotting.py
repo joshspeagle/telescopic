@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import numpy as np
 import pytest
 
@@ -51,6 +53,14 @@ def test_the_tv_bound_plot_draws_the_bound_and_marks_k():
     assert ax.lines[-1].get_xdata()[0] == RESULT.k
 
 
+def test_pairs_that_all_met_at_the_lag_plot_without_a_log_scale():
+    replicates = RESULT._replicates
+    met = np.full(len(replicates.index), float(RESULT.lag))
+    result = telescopic.Result(replace(replicates, meeting_time=met))
+    assert result.plot_meeting_times()[1].get_yscale() == "linear"
+    assert result.plot_tv_bound().get_yscale() == "linear"
+
+
 def test_marginal_plots_draw_signed_densities_with_error_boxes():
     axes = RESULT.plot_marginals(bins=10)
     assert [ax.get_xlabel() for ax in axes] == RESULT.names
@@ -87,8 +97,8 @@ def test_plots_draw_on_the_axes_they_are_given():
     [
         (lambda axes: RESULT.plot_meeting_times(axes[:3]), "axes must hold 2 Axes, not 3"),
         (lambda axes: RESULT.plot_marginals([0, 1], axes=axes[:1]), "axes must hold 2 Axes"),
-        (lambda axes: RESULT.plot_marginals([0, 2]), "dims must be an integer in"),
-        (lambda axes: RESULT.plot_corner([-1]), "dims must be an integer in"),
+        (lambda axes: RESULT.plot_marginals([0, 2]), r"dims must be in \[0, 2\)"),
+        (lambda axes: RESULT.plot_corner([-1]), r"dims must be in \[0, 2\)"),
     ],
 )
 def test_invalid_plot_arguments_raise_before_drawing(call, message):

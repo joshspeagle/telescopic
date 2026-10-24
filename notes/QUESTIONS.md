@@ -40,3 +40,21 @@ Each item has the default that work proceeds on until Josh answers.
   wide π0 against missed modes; or k at a higher quantile or a multiple of it, which costs
   more. Default: keep the recipe, recommend a π0 a few to ten times wider than the target
   (spec §4.2, DECISIONS #35), and rely on the variance warning.
+
+- [ ] **The threshold of the variance warning.** Its share is now taken about the atoms'
+  mean, so that it does not depend on where the origin lies (DECISIONS #54). On 200 runs of
+  the banana at R = 100 it fires in 37 runs instead of 19; the runs it marks covered E[x₀²]
+  at 0.892 against 0.963 in the others (`notes/experiments/m11_variance_share.out`).
+  Default: keep the threshold of a half. Alternative: a higher threshold, calibrated anew.
+
+- [ ] **Common random numbers for Gibbs conditionals that are not normal.** Under
+  `coupling="crn"`, a block of several coordinates, or of one without `ppf`, is drawn as
+  the normal with the conditional's `mean` and `cov` (DECISIONS #48), so a class of one's
+  own with those attributes that is not normal gets the wrong law in the coupled step
+  only. Two M11 reviews proposed drawing both chains with generators in the same state:
+  each draw then has its conditional's law whatever it is, and the code shrinks, but
+  contraction depends on how each distribution draws. SciPy draws a multivariate normal
+  through a decomposition whose signs can flip between covariances; at a 10% difference
+  of scale the draws stayed 0.05 apart, against 1.54 for independent draws
+  (`notes/reviews/m11.md`). Default: keep the normal map, whose Cholesky factor contracts
+  for nearby covariances, and the documented contract.

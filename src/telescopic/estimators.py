@@ -8,11 +8,12 @@ import numpy as np
 import numpy.typing as npt
 from scipy.optimize import isotonic_regression
 
-from telescopic._types import FloatArray, IntArray
+from telescopic._types import FloatArray, IntArray, averaging, integer
 
 
 def averaging_times(k: int, m: int, thin: int) -> IntArray:
     """The averaging set :math:`S = \\{k, k + s, k + 2s, \\dots\\} \\cap [k, m]` for ``thin`` = s."""
+    k, m, thin = averaging(k, m, thin)
     return np.arange(k, m + 1, thin, dtype=np.int64)
 
 
@@ -43,8 +44,10 @@ def correction_coefficients(t: npt.ArrayLike, k: int, m: int, lag: int, thin: in
     -------
     ndarray of float, same shape as ``t``
     """
+    k, m, thin = averaging(k, m, thin)
+    lag = integer("lag", lag, minimum=1)
     t = np.asarray(t, dtype=np.int64)
-    n_averaged = (m - k) // thin + 1
+    n_averaged = len(range(k, m + 1, thin))
     g = gcd(thin, lag)
     period = lag // g
     offset = t - k
@@ -63,8 +66,8 @@ def unbiased_covariance(first: FloatArray, second: FloatArray) -> FloatArray:
 
     with :math:`a_r = \hat\pi_r(h)`, :math:`\bar b` the mean of
     :math:`\hat\pi_r(hh^\top)` and :math:`S_a` the sample covariance of the :math:`a_r`
-    (spec R-EST-8). The last two terms are the U-statistic
-    :math:`\sum_{r \ne s} a_r a_s^\top / (R(R-1))`, unbiased for
+    (spec R-EST-8). The last two terms are minus the U-statistic
+    :math:`\sum_{r \ne s} a_r a_s^\top / (R(R-1))`, which is unbiased for
     :math:`\pi(h)\pi(h)^\top`; the plug-in :math:`\bar a\bar a^\top` is biased by
     :math:`\mathrm{Cov}(\bar a)`.
 
@@ -138,6 +141,9 @@ def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike)
     -------
     ndarray, shape of ``q``
     """
+    q = np.asarray(q, dtype=np.float64)
+    if not np.all((q >= 0) & (q <= 1)):
+        raise ValueError(f"q must be in [0, 1], not {q}")
     unique, inverse = np.unique(values, return_inverse=True)
     mass = np.bincount(inverse.ravel(), weights=weights)
     cdf = np.clip(isotonic_regression(np.cumsum(mass)).x, 0.0, 1.0)

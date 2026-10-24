@@ -9,7 +9,7 @@ import numpy as np
 import numpy.typing as npt
 
 from telescopic._linalg import covariance
-from telescopic._types import Distribution, FloatArray
+from telescopic._types import Distribution, FloatArray, vector
 
 
 class Normal:
@@ -23,10 +23,10 @@ class Normal:
     """
 
     def __init__(self, mean: npt.ArrayLike, cov: npt.ArrayLike) -> None:
-        self.mean = np.array(mean, dtype=np.float64, ndmin=1)
+        self.mean = vector("mean", mean)
         matrix = np.asarray(cov, dtype=np.float64)
         self.cov, self._chol = covariance(
-            np.diag(matrix) if matrix.ndim == 1 else matrix, "cov", len(self.mean)
+            "cov", np.diag(matrix) if matrix.ndim == 1 else matrix, len(self.mean)
         )
 
     def rvs(self, *, random_state: np.random.Generator) -> FloatArray:
@@ -46,8 +46,7 @@ class Uniform:
     """
 
     def __init__(self, low: npt.ArrayLike, high: npt.ArrayLike) -> None:
-        self.low = np.array(low, dtype=np.float64, ndmin=1)
-        self.high = np.array(high, dtype=np.float64, ndmin=1)
+        self.low, self.high = vector("low", low), vector("high", high)
         if self.low.shape != self.high.shape or not np.all(self.low < self.high):
             raise ValueError("low and high must have the same shape, with low < high")
 
@@ -68,12 +67,21 @@ class Empirical:
     Parameters
     ----------
     points : array_like, shape (n, d)
+        Finite, with n >= 1 and d >= 1.
     """
 
     def __init__(self, points: npt.ArrayLike) -> None:
-        self.points = np.array(points, dtype=np.float64, ndmin=2)
-        if self.points.ndim != 2 or len(self.points) == 0:
-            raise ValueError(f"points must have shape (n, d) with n >= 1, not {self.points.shape}")
+        self.points = np.array(points, dtype=np.float64)
+        if self.points.ndim != 2 or self.points.size == 0:
+            raise ValueError(
+                f"points must have shape (n, d) with n >= 1 and d >= 1, not {self.points.shape}"
+            )
+        finite = np.isfinite(self.points).all(axis=1)
+        if not finite.all():
+            row = int(np.argmin(finite))
+            raise ValueError(
+                f"points must be finite, but row {row} is {self.points[row].tolist()}"
+            )
 
     def rvs(self, *, random_state: np.random.Generator) -> FloatArray:
         """One of the points, chosen uniformly, shape ``(d,)``."""
@@ -128,10 +136,15 @@ def as_initial(init: Any) -> Distribution:
 def draw(
     initial: Distribution, generator: np.random.Generator, ndim: int | None = None
 ) -> FloatArray:
-    """One validated draw from ``initial``: finite, of shape ``(d,)`` (or ``(ndim,)``)."""
+    """One validated draw from ``initial``: finite, of shape ``(d,)`` with d >= 1, or ``(ndim,)``.
+
+    A draw of shape ``(1, d)``, as from a frozen ``scipy.stats.dirichlet``, becomes ``(d,)``.
+    """
     point = np.array(initial.rvs(random_state=generator), dtype=np.float64, ndmin=1)
-    if point.ndim != 1 or (ndim is not None and len(point) != ndim):
-        expected = "(d,)" if ndim is None else f"({ndim},)"
+    if point.ndim == 2 and len(point) == 1:
+        point = point[0]
+    if point.ndim != 1 or len(point) == 0 or (ndim is not None and len(point) != ndim):
+        expected = "(d,) with d >= 1" if ndim is None else f"({ndim},)"
         raise ValueError(f"the initial distribution drew shape {point.shape}, not {expected}")
     if not np.all(np.isfinite(point)):
         raise ValueError(f"the initial distribution drew a non-finite point: {point.tolist()}")

@@ -190,7 +190,7 @@ Let $a_r = \hat\pi_r(h) \in \mathbb R^p$ for replicates $r = 1, \dots, R$. Write
 - **Expectations:** $\bar a$, with standard error $\sqrt{\mathrm{diag}(S_a)/R}$ and Monte Carlo covariance $S_a / R$.
 - **Products of expectations:** $\bar a \bar a^\top - S_a/R$ is unbiased for $\pi(h)\pi(h)^\top$ when $R \ge 2$.
 - **Covariance:** $\widehat{\mathrm{Cov}}_\pi(h) = R^{-1}\sum_r \hat\pi_r(hh^\top) - \bar a\bar a^\top + S_a/R$ is unbiased. The plug-in $\sum\omega hh^\top - (\sum \omega h)(\sum\omega h)^\top$ is biased by $-S_a/R$ and is not used. Standard deviations are $\sqrt{\max(0, \widehat{\mathrm{Var}})}$, which is consistent, not unbiased.
-- **Histograms:** each replicate's signed mass in each half-open bin $[a, b)$, averaged over replicates. This is unbiased, with standard errors from the replicates. Bins can be negative.
+- **Histograms:** each replicate's signed mass in each half-open bin $[a, b)$, averaged over replicates. This is unbiased for bins fixed before the run, with standard errors from the replicates; the default range, from the atoms, biases the two outer bins by a term of order $1/R$ (M11 audit). Bins can be negative.
 - **Quantiles:**
   1. Pool all replicates' atoms with weights $\omega/R$, and merge atoms with equal coordinates by summing their weights.
   2. Sort along the coordinate and take the cumulative sum of the weights.
@@ -249,7 +249,7 @@ Averaging only the replicates completed by a deadline is biased by $-\mathbb E[H
 
 - **Log-density:** `log_prob(x, *args, **kwargs)` returns a float for `x` of shape `(d,)`. With `vectorize=True` it takes `(n, d)` and returns `(n,)`.
 - **Gradient:** an optional `grad` with the same signature returns $\nabla \log\pi$, of shape `(d,)` or `(n, d)`. A kernel that needs a gradient raises `ValueError` without one.
-- **Special values:** `-inf` is a valid value and is rejected by every Metropolis step. NaN or `+inf` raises `ValueError` with the offending point. Where the log-density is `-inf`, the gradient may be non-finite, and states there carry a gradient of 0: a gradient kernel proposes from such a point without drift and accepts any proposal of finite density, as RWMH does (DECISIONS #14). Where it is finite, a non-finite gradient raises wherever a cached state would keep it (initial states, and proposals of gradient-free kernels whose states carry gradients); gradient kernels, HMC's meeting step included, reject a proposal that has one.
+- **Special values:** `-inf` is a valid value and is rejected by every Metropolis step. NaN or `+inf` raises `ValueError` with the offending point. Where the log-density is `-inf`, the gradient is not evaluated, and states there carry a gradient of 0: a gradient kernel proposes from such a point without drift and accepts any proposal of finite density, as RWMH does (DECISIONS #14, #49). Where it is finite, a non-finite gradient raises wherever a cached state would keep it (initial states, and proposals of gradient-free kernels whose states carry gradients); gradient kernels, HMC's meeting step included, reject a proposal that has one.
 - **Gibbs:** with a kernel that needs no log-density, a Gibbs kernel or a mixture of them, `log_prob` may be `None` (§5.7).
 - **Determinism:** the log-density must return the same value at the same point. A stochastic log-density can split chains that have met. The documentation says so.
 - **Layer C:** a `Target` object wraps these functions, counts evaluations, and presents a batched interface `(n, d) -> (n,)` to kernels, whether or not the user's function is vectorised.
@@ -257,7 +257,7 @@ Averaging only the replicates completed by a deadline is biased by $-\mathbb E[H
 ### 4.2 Initial distribution (R-INPUT-2)
 
 `init` may be any of:
-- an object with `rvs(random_state=rng)`: a frozen SciPy distribution, or a helper (`telescopic.initial.Normal`, `Uniform`, `Empirical`). A draw is normalised to shape `(d,)` (SciPy returns shape `()` for a one-dimensional multivariate normal);
+- an object with `rvs(random_state=rng)`: a frozen SciPy distribution, or a helper (`telescopic.initial.Normal`, `Uniform`, `Empirical`). A draw is normalised to shape `(d,)` with $d \ge 1$: SciPy returns shape `()` for a one-dimensional multivariate normal, and `(1, d)` for a Dirichlet;
 - a callable `init(rng) -> array (d,)`;
 - an array of points of shape `(n, d)`, used as the uniform distribution over its rows. This lets emcee users start from an existing ensemble without losing unbiasedness.
 
@@ -314,17 +314,20 @@ else:  e = delta / |delta|;  z_y = z - 2 (e . z) e;  y' = mu_y + C z_y
 - It is maximal: $\mathbb P(x' = y') = 2\Phi(-\lVert\delta\rVert/2)$.
 - Its cost is deterministic: $d$ normals and 1 uniform.
 - $\delta = 0$ gives `identical` with probability 1, so $e$ is needed, and computed, only on rows with $\lVert\delta\rVert > 0$. The test is exact: a threshold would copy $Y = X$ for a small non-zero $\delta$ and bias $Y$'s marginal.
+- A $\delta$ that is not finite, from a drift that overflowed, always fails the test; there $e = 0$, so $y' = \mu_y + Cz$, which keeps $Y$'s marginal.
 
 **Rejection maximal coupling** of distributions $p$ and $q$ with samplers and normalised log-densities (R-CPL-2). This is JOA20 Algorithm 2 (Thorisson):
 
 ```text
 X ~ p;  u ~ U(0, 1)
-if log u + log p(X) <= log q(X):  return (X, X)
+if log u + log p(X) < log q(X):  return (X, X)
 repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y)
 ```
+- The first test is strict, so that $u = 0$ cannot copy $X$ to $Y$ where $q(X) = 0$.
+- A log-density with one value per coordinate, as from array parameters, is summed: the joint log-density of independent coordinates. NaN or $+\infty$ raises `ValueError`.
 - The expected number of draws is 2, with variance $2(1 - \mathrm{TV})/\mathrm{TV}$ (research note `mh_couplings.md` §1).
 - **Option $\eta \in (0, 1]$** (Gerber & Lee; AJ24 Algorithm 2):
-  - the first test becomes $u \le \min(\eta, q(X)/p(X))$;
+  - the first test becomes $u < \min(\eta, q(X)/p(X))$;
   - the loop condition becomes $u' > \eta\, p(Y)/q(Y)$;
   - the meeting probability is $\int \min(\eta p, q)$;
   - the variance of the draw count is at most $2\eta/(1-\eta)$.
@@ -332,6 +335,7 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 **Maximal coupling of finite discrete distributions** $p, q$ on $\{1, \dots, K\}$ (R-CPL-3). This is JOA20 §5.4, computed in log space:
 - With probability $\alpha = \sum_i \min(p_i, q_i)$, draw $i \sim \min(p, q)/\alpha$ and return $(i, i)$.
 - Otherwise draw $i$ and $j$ independently from the normalised residuals.
+- Each row of log-probabilities needs a finite maximum and no NaN; otherwise `ValueError`.
 - The cost is deterministic.
 
 ### 5.3 Random-walk Metropolis–Hastings (R-KER-RW)
@@ -350,7 +354,7 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 
 **Tuning (R-TUNE-1):**
 - **Pilot:** 4 adaptive Metropolis chains from $\pi_0$, each running $\max(2000, 200d, 10d^2)$ steps; beyond 20 dimensions they refactor the covariance and keep their states every $\lceil d/20\rceil$ steps (DECISIONS #34). Each chain adapts its own global scale by Robbins–Monro steps of size $(t+1)^{-0.6}$ toward acceptance 0.234 (Andrieu & Thoms 2008). The chains share one proposal covariance: the running mean and covariance, with step $1/(t+1)$, of all their states, started from the variances of 100 draws from $\pi_0$ (Haario et al. 2001; pooled as in Craiu, Rosenthal & Yang 2009; DECISIONS #7).
-- **Covariance:** pooled over the second halves of the chains, plus a ridge of $10^{-10}$ times the mean variance.
+- **Covariance:** pooled over the second halves of the chains, plus $10^{-10}$ times each coordinate's variance on the diagonal, or $10^{-10}$ for a coordinate of variance 0. The pilot's own factorisations add $10^{-12}$ times each variance (DECISIONS #47).
 - **Scale:** $2.38/\sqrt d$, `RandomWalk`'s default (DECISIONS #7).
 - **Report:** the pilot acceptance rates and $\hat R$ per coordinate. A `ConvergenceWarning` when the chains disagree: $\hat R > \sqrt 2$ in some coordinate, where the chain means spread more widely than the chains themselves, a sign of several modes (DECISIONS #6).
 
@@ -402,11 +406,11 @@ The documentation says that settings optimal for HMC alone can fail to contract 
 
 `Gibbs(conditional, blocks, *, coupling="maximal", eta=1.0, threshold=None)`.
 - **Blocks:** a sequence of integer index arrays that partition the coordinates.
-- **Conditionals:** `conditional(x, b)` receives one state `x` of shape `(d,)` and a block number `b`, and returns the full conditional of block `b` given the rest of `x`. It is a frozen SciPy-like distribution with `rvs(random_state=...)` and a normalised `logpdf` (or `logpmf` for discrete ones). Sweeps loop over rows.
+- **Conditionals:** `conditional(x, b)` receives one state `x` of shape `(d,)` and a block number `b`, and returns the full conditional of block `b` given the rest of `x`. It is a frozen SciPy-like distribution with `rvs(random_state=...)` and a normalised `logpdf` (or `logpmf` for discrete ones); one value per coordinate, as from array parameters, is summed. A draw that is not finite, or not of the block's size, raises `ValueError`. Sweeps loop over rows.
 - **Sweep:** blocks are updated in the given order.
 - **Couplings, per block:**
   - `"maximal"`: rejection maximal coupling (§5.2), with the $\eta$ option;
-  - `"crn"`: common random numbers, which contract but do not meet on their own (an `eta` other than 1 raises: DECISIONS #16): a common uniform through `ppf` for blocks of one coordinate, and common standard normals for multivariate normal conditionals (objects with `mean` and `cov`, such as `scipy.stats.multivariate_normal`);
+  - `"crn"`: common random numbers, which contract but do not meet on their own (an `eta` other than 1 raises: DECISIONS #16): a common uniform through each `ppf` for a block of one coordinate whose conditionals have one; otherwise common standard normals through a square root of each conditional's `cov`, which may be singular, added to its `mean`. Such a conditional is taken to be the normal with that mean and covariance, whatever its type (DECISIONS #48);
   - `"two-scale"`: CRN while $\lVert x - y\rVert >$ `threshold`, maximal otherwise (Biswas et al. 2022). The switch depends only on the pair at the start of each sweep, and both branches couple the same conditional, so it is valid (AJ24 §4.2). `threshold` is required.
 - **Identical conditionals:** when the coordinates outside block `b` are equal in the two chains, their conditionals are identical, and both chains receive the same draw. This identity coupling is a valid state-dependent choice; it also keeps equal states equal when $\eta < 1$, which the rejection coupling alone would split with probability $1 - \eta$ (design review D-R2).
 - **Meeting:** the engine's exact comparison after each sweep (R-EST-2). Blocks updated by CRN can become equal without a coupling event.
@@ -434,7 +438,7 @@ The choice of component must not depend on the states (AJ24 §4.2). Switching be
 
 ### 6.2 Engine (R-EXEC-3)
 
-The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each holding one replicate.
+The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each holding one replicate. `B` is 256 by default, or the number of replicates if fewer (DECISIONS #52).
 
 - **Phases:** each slot is in one of three phases: lagging ($X$ alone, $t < L$), coupled, or after-meeting ($X$ alone until $t \ge m$).
 - **Each step:**
@@ -461,7 +465,7 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
   - `None` runs in-process;
   - an integer creates that many worker processes;
   - an object with `submit` (a `concurrent.futures.Executor`), or with `map` (emcee/dynesty/schwimmbad style), is used as given.
-- **Tasks:** chunks of consecutive replicate indices, one per worker at least, more where a chunk would exceed a full set of 64 lanes, and four per worker at most. The workers are counted by the pool's size: an executor's `_max_workers`, a multiprocessing pool's `_processes`, a schwimmbad pool's `size`, or else the CPUs the process may use. Each worker runs the engine on its chunk. Chunks are submitted at once, in index order; a pool with only `map` runs them in waves of one per worker. The job (target, kernel, initial distribution, root and settings) travels with each task (DECISIONS #23).
+- **Tasks:** chunks of consecutive replicate indices, one per worker at least, more where a chunk would exceed a full set of lanes, 256, and four per worker at most. The workers are counted by the pool's size: an executor's `_max_workers`, a multiprocessing pool's `_processes`, a schwimmbad pool's `size`, or else the CPUs the process may use. Each worker runs the engine on its chunk. Chunks are submitted at once, in index order; a pool with only `map` runs them in waves of one per worker. The job (target, kernel, initial distribution, root and settings) travels with each task (DECISIONS #23).
 - **Results:** reduced in index order. The wall time of a pool run is the parent's.
 - **Worker hygiene:**
   - a task in the main thread of another process pins BLAS to one thread and ignores Ctrl-C, in user pools too. Tasks in the parent process, as on a thread pool, or in other threads leave those settings alone: they belong to the process, and concurrent tasks would restore each other's;
@@ -472,7 +476,7 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 
 ### 6.5 Interruption (R-EXEC-6)
 
-- **First Ctrl-C:** no new replicate starts, the ones in progress finish, and the result is flagged `interrupted`. It contains every started replicate. The workers that telescopic creates hear of it through an event: they start no new replicate, and a chunk that starts afterwards runs nothing, except the first, so that a run returns a replicate. On a user's executor the chunks not started are cancelled and the running ones finish; a `.map` pool returns its completed waves only. How the rest of a user's pool reacts to Ctrl-C is up to the pool.
+- **First Ctrl-C:** no new replicate starts, the ones in progress finish, and the result is flagged `interrupted`. It contains every started replicate. The workers that telescopic creates hear of it through an event: they start no new replicate, and a chunk that starts afterwards runs nothing, except the first, so that a run returns a replicate. On a user's executor the chunks not started are cancelled and the running ones finish; a `.map` pool returns its completed waves only. How the rest of a user's pool reacts to Ctrl-C is up to the pool: a process pool whose workers do not ignore SIGINT breaks, and the run returns the chunks that had finished, or raises if none had (DECISIONS #45).
 - **Requested indices:** a result records the indices it was asked for, and `interrupted` is true while one of them has not run. In this process the started replicates form a prefix of the indices; on a pool they need not. The sampler's next run starts with the missing indices, and `merge` joins the requests, so a run that completes an interrupted one clears the flag (DECISIONS #20).
 - **Its estimates are consistent, not exactly unbiased:** the number of replicates depends on their costs, which correlate with $h$ through $\tau$, so the mean is a ratio estimator (Glynn & Heidelberger 1991). The bias is visible with few lanes (one lane: $z = -12.9$ in design review D-R3) and was not detectable with 16 or more. `summary()` says so. Running the remaining replicates of the requested $R$ restores exact unbiasedness, because $R$ is then fixed in advance (D-22).
 - **Second Ctrl-C:** raises `KeyboardInterrupt` at once, without a result, and stops the workers that telescopic started.
@@ -511,7 +515,7 @@ Methods:
 - **Plots:** `plot_meeting_times(axes=None)`, `plot_tv_bound(ax=None)`, `plot_marginals(dims=None, bins=20, axes=None)` and `plot_corner(dims=None, bins=20)` (signed 2-D histograms); the first three draw on given axes (DECISIONS #30).
 - **Persistence and merging:**
   - `save(path)` and `Result.load(path)` use a versioned `.npz` schema, with no pickle: arrays, and the settings, names, seed state and descriptions as JSON (DECISIONS #26, #29). The engine's paths are not saved;
-  - `merge(other)` joins runs with the same configuration and disjoint replicate indices.
+  - `merge(other)` joins runs with the same seed, settings and dimension and disjoint replicate indices. It does not compare kernels or initial distributions, whose descriptions omit parameters and can hold addresses (DECISIONS #53).
 
 ### 7.2 `SignedMeasure` and `Estimate` (R-OUT-2)
 
@@ -535,7 +539,7 @@ Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 - the tail index of warning 4 of §7.4, from 500 replicates (DECISIONS #40);
 - mean cost per replicate, in kernel applications and in seconds;
 - the relative cost, mean cost / $(m - k + 1)$ (R-TUNE-4);
-- the fraction of replicates with a non-zero bias correction, which estimates the TV bound at $k$ (§3.6);
+- the fraction of pairs that met after $k + L$, censored ones included: the first term of the TV bound at $k$ (§3.6);
 - the largest share of warning 3 of §7.4, and the estimate that holds it (DECISIONS #40);
 - for an interrupted run, that its estimates are consistent but not exactly unbiased (§6.5);
 - (should; deferred beyond v0.1, DECISIONS #38) $\hat R$ across the replicates' X-chains;
@@ -550,14 +554,14 @@ Classes: `TelescopicWarning`, with subclasses `ConvergenceWarning` and `InputWar
 `check()` warns on these conditions, and so does each `run` (§8.1). They are heuristics; the thresholds are set so that clean Gaussian runs at the defaults rarely trigger them, and M9 measures and documents each false-alarm rate (D-16):
 1. any censored replicate;
 2. a fraction of replicates with $\tau - L > k$ above 0.25 ("k may be too small"). The recipe itself gives 0.02 to 0.13 (§3.6), so a lower threshold fires on clean runs;
-3. one replicate contributing more than half of the sample variance of the estimate of a coordinate's mean or second moment, with $R \ge 100$ (heavy tails or rare excursions). A quarter, the first draft's threshold, is typical of Gaussian data at $R = 20$ to 30 and was exceeded in 87 of 200 clean runs on the banana at $R = 100$, whose intervals covered as often as the others (DECISIONS #36);
-4. a Hill estimate of the tail index of $\tau - L + 1$ below 2 (finite variance in doubt), from the $\lfloor R/10\rfloor$ largest values, with $R \ge 500$. Applied to $\tau$ itself with $L = k$, the shift by $L$ removes almost all its power;
+3. one replicate contributing more than half of the sample variance of the estimate of a coordinate's mean or variance (its second moment about the atoms' mean, DECISIONS #54), with $R \ge 100$ (heavy tails or rare excursions); a spread of a few units in the last place of the values is rounding, not variance (DECISIONS #56). A quarter, the first draft's threshold, is typical of Gaussian data at $R = 20$ to 30 and was exceeded in 87 of 200 clean runs on the banana at $R = 100$, whose intervals covered as often as the others (DECISIONS #36);
+4. a Hill estimate of the tail index of $\tau - L + 1$ below 2 (finite variance in doubt), from the $\lfloor R/10\rfloor$ largest values, with $R \ge 500$. None where ties make the smallest value the threshold, as when nine pairs in ten or more meet at the first time possible: above such ties the estimate reads a light tail as a heavy one, so a heavy tail behind them goes undetected (DECISIONS #57). Applied to $\tau$ itself with $L = k$, the shift by $L$ removes almost all its power;
 5. pilot chains that disagree (§5.3);
 6. a slow pair (§6.3).
 
-Rates measured at M9, on the first two targets with `sample()`'s defaults and on the third with the settings given (`notes/experiments/m9_warnings.out`, `m9_variance_warning.out`):
-- `examples.gaussian(10)`: no warning in 50 runs at $R = 500$; at $R = 100$, the variance warning in at most 2 of 100 runs and no other.
-- The banana from $U[-5, 5]^2$: at $R = 100$, the variance warning in 19 of 200 runs, where the 95% intervals of $E[x_0^2]$ covered at 0.84 against 0.96 elsewhere; at $R = 500$, the variance warning in at most 6 of 50 runs and the tail warning in 14.
+Rates measured at M11, on the first two targets with `sample()`'s defaults and on the third with the settings given (`notes/experiments/m11_warnings.out`, `m11_variance_share.out`):
+- `examples.gaussian(10)`: no warning in 100 runs at $R = 100$ and 50 at $R = 500$.
+- The banana from $U[-5, 5]^2$: at $R = 100$, the variance warning in 37 of 200 runs, where the 95% intervals of $E[x_0^2]$ covered at 0.89 against 0.96 elsewhere; at $R = 500$, the variance warning in 4 of 50 runs and the tail warning in 14.
 - JOA20's bimodal target from $\mathcal N(10, 1)$ at $R = 1000$: 33 of 50 intervals of $P(x > 3)$ missed the truth, none with a warning; the 17 runs whose replicates found the other mode raised the variance warning and covered.
 
 The documentation explains each, with the failure cases of JOA20 §5.1, and says that a run that never left one mode cannot be detected from its own output at moderate $R$ (design review D-R9).
@@ -600,15 +604,15 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
 
    - `run` tunes and runs the pilot if they have not been done.
    - Each call continues the replicate indices and returns the cumulative result.
-   - The first call fixes `k`, `m`, `lag`, `thin` and `max_iter` (DECISIONS #4). On the first call `"auto"` derives a value, `thin=None` means 1 and `max_iter=None` no cap; on later calls `"auto"` and `None` keep the first call's values, and any other change raises `ValueError` (DECISIONS #8).
+   - The first call fixes `k`, `m`, `lag`, `thin` and `max_iter` (DECISIONS #4). On the first call `"auto"` derives a value, `thin=None` means 1 and `max_iter=None` no cap; on later calls `"auto"` and `None` keep the first call's values, and any other change raises `ValueError` (DECISIONS #8). A setting that is not an integer raises `TypeError` on any call, before tuning, and a broken bound `ValueError`, before tuning too, except the bounds that depend on an automatic `k`, $m \ge k$ and `max_iter` $> \max(L, m)$, which are checked once the pilot has chosen it; the check before tuning takes k = 0 (DECISIONS #44). A run completes a pilot of fewer than 100 pairs before choosing `k` (DECISIONS #46).
    - Each call ends by emitting the warnings of §7.4 that apply to the cumulative result, except slow pairs and disagreeing tuning chains, which are emitted as they happen, or for slow pairs on a pool as each run ends (§6.3, DECISIONS #8).
-3. **Building blocks:** `Target`, `State`, `telescopic.kernels.*`, `telescopic.couplings.*`, `telescopic.engine.run(...)`, `telescopic.estimators.*`, `telescopic.diagnostics.*` and `SignedMeasure`.
+3. **Building blocks:** `Target`, `telescopic.kernels.*` (`State` among them), `telescopic.couplings.*`, `telescopic.engine.run(...)`, `telescopic.estimators.*`, `telescopic.diagnostics.*` and `SignedMeasure`.
 
 ### 8.2 Conventions (R-API-2)
 
 - **Randomness:** every function that draws random numbers takes `rng` (SPEC 7). There is no global state.
 - **Shapes:** batch first. States are `(n, d)`; test functions map `(n, d)` to `(n,)` or `(n, p)`; per-replicate values are `(R, ...)`.
-- **Errors:** `ValueError` or `TypeError` with messages that name the argument and say what was expected. Questionable inputs emit `InputWarning`; reliability problems emit `ConvergenceWarning`.
+- **Errors:** a scalar number argument of the wrong type raises `TypeError`, and one out of bounds `ValueError`, with messages that name it and say what was expected (DECISIONS #50); NumPy converts array arguments, and its errors apply. Questionable inputs emit `InputWarning`; reliability problems emit `ConvergenceWarning`.
 - **Progress:** `progress=True` draws tqdm's text bar when tqdm is installed, in notebooks too, and falls back to periodic lines on stderr (DECISIONS #39).
 - **Types and documentation:** public signatures are typed, with NumPy-style docstrings.
 - **Vocabulary:** the documentation says "replicates" and "pairs", never "walkers".
@@ -669,11 +673,11 @@ These targets are measured by `benchmarks/` and are not gating.
 
 | Operation | Target |
 |---|---|
-| Lockstep coupled RWMH, vectorised Gaussian target, $d = 10$, 256 lanes, main-run settings ($k = L = 141$, $m = 1410$) | ≤ 2 µs per pair-step (research note measurement: 0.37 µs at 1000 lanes without per-replicate streams). Met at M3: 1.2 to 1.5 µs. Meeting-time pilots ($L = 1$, $m = 0$) take 4.2 µs: each replicate's set-up, about 80 µs, adds 1.8 µs per pair-step at a mean $\tau$ of 46 (M3 review). At M9 (`benchmarks/results/acb12f9.json`): 1.27 µs, and 3.81 µs in the pilot |
-| Same, point-by-point log-density, 1 lane | ≤ 40 µs per pair-step of overhead beyond the log-density. Missed at M3: 93 µs in the main run and 150 µs in the pilot. A coupled RWMH step on one row takes 112 µs, of which its two log-density calls through `Target` take 15 µs; the target needs a scalar path for one lane, which v0.1 does not have. At M9: 90.7 µs in the main run and 124.6 µs in the pilot |
-| Per-replicate random streams in lockstep | ≤ 0.5 µs per lane-step for the draws of a coupled RWMH step at 256 lanes, $d = 10$ (one shared generator: 0.15 µs), and ≤ 50 µs per replicate to set up its streams. Met at M9: 0.28 µs and 41 µs |
-| Process pool, log-density ≥ 1 ms | ≥ 3.5× speed-up on 4 workers. Missed at M9: 1.98× for 256 replicates that take 6.3 s in this process, on a 4-CPU machine, with the start of the workers included |
-| Automatic pipeline overhead (both pilots) | ≤ 15% of the main run at the default $R = 100$ for $d \ge 10$. At $d = 2$ the fixed tuning pilot makes it about 30% (design review D-R13); it falls as $1/R$. Missed at M9: 31%, 37% and 39% at $d = 10$, 50 and 100, where the tuning pilot of $10d^2$ steps dominates beyond $d = 20$ (DECISIONS #34) |
+| Lockstep coupled RWMH, vectorised Gaussian target, $d = 10$, 256 lanes, main-run settings ($k = L = 141$, $m = 1410$) | ≤ 2 µs per pair-step (research note measurement: 0.37 µs at 1000 lanes without per-replicate streams). Met at M3: 1.2 to 1.5 µs. Meeting-time pilots ($L = 1$, $m = 0$) take 4.2 µs: each replicate's set-up, about 80 µs, adds 1.8 µs per pair-step at a mean $\tau$ of 46 (M3 review). At M9 (`benchmarks/results/acb12f9.json`): 1.27 µs, and 3.81 µs in the pilot. At M11 (`benchmarks/results/20b262b.json`, the same setup): 1.30 µs, and 3.85 µs in the pilot |
+| Same, point-by-point log-density, 1 lane | ≤ 40 µs per pair-step of overhead beyond the log-density. Missed at M3: 93 µs in the main run and 150 µs in the pilot. A coupled RWMH step on one row takes 112 µs, of which its two log-density calls through `Target` take 15 µs; the target needs a scalar path for one lane, which v0.1 does not have. At M9: 90.7 µs in the main run and 124.6 µs in the pilot; at M11, 90.4 µs and 132.4 µs |
+| Per-replicate random streams in lockstep | ≤ 0.5 µs per lane-step for the draws of a coupled RWMH step at 256 lanes, $d = 10$ (one shared generator: 0.15 µs), and ≤ 50 µs per replicate to set up its streams. Met at M9: 0.28 µs and 41 µs; at M11, 0.275 µs and 40.2 µs |
+| Process pool, log-density ≥ 1 ms | ≥ 3.5× speed-up on 4 workers. Missed at M9: 1.98× for 256 replicates that take 6.3 s in this process, on a 4-CPU machine, with the start of the workers included. At M11: 2.28× with the start included, and 3.89× on 4 workers already started |
+| Automatic pipeline overhead (both pilots) | ≤ 15% of the main run at the default $R = 100$ for $d \ge 10$. At $d = 2$ the fixed tuning pilot makes it about 30% (design review D-R13); it falls as $1/R$. Missed at M9: 31%, 37% and 39% at $d = 10$, 50 and 100, where the tuning pilot of $10d^2$ steps dominates beyond $d = 20$ (DECISIONS #34). At M11: 63%, 47% and 43%, because 256 lanes run the 100 replicates in one wave: the main runs took 0.36, 7.31 and 50.94 s against 0.89, 10.07 and 62.14 s at M9, and the pilots 0.23, 3.40 and 21.69 s against 0.28, 3.70 and 24.20 s |
 
 ---
 

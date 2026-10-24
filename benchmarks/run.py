@@ -8,11 +8,13 @@ records. A pair-step is an iteration of one replicate, max(tau, m) per replicate
 """
 
 import json
+import multiprocessing
 import os
 import platform
 import subprocess
 import time
 import warnings
+from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from pathlib import Path
 
@@ -155,7 +157,8 @@ def slow_log_prob(x):
 
 def pool_speedup():
     # 256 replicates of a fixed random walk on N(0, I_2) with a 1 ms log-density, in this
-    # process and on 4 spawned workers, whose start is included.
+    # process, on 4 workers that the call spawns, and on an executor's 4 workers started by
+    # an earlier run, whose time is then the throughput.
     call = partial(
         telescopic.sample,
         slow_log_prob,
@@ -171,7 +174,11 @@ def pool_speedup():
         "in process": round(best(call, 1)[0], 2),
         "4 workers": round(best(partial(call, pool=4), 1)[0], 2),
     }
+    with ProcessPoolExecutor(4, mp_context=multiprocessing.get_context("spawn")) as executor:
+        call(pool=executor)
+        out["4 started workers"] = round(best(partial(call, pool=executor), 1)[0], 2)
     out["speed-up"] = round(out["in process"] / out["4 workers"], 2)
+    out["speed-up, started"] = round(out["in process"] / out["4 started workers"], 2)
     return out
 
 

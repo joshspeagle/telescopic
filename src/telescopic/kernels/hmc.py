@@ -10,7 +10,7 @@ import numpy.typing as npt
 
 from telescopic._linalg import matvec
 from telescopic._random import Draws
-from telescopic._types import FloatArray
+from telescopic._types import FloatArray, integer, real
 from telescopic.kernels.base import GradientKernel, State, acceptance, evaluate_proposal, select
 from telescopic.kernels.mixture import Mixture
 from telescopic.kernels.random_walk import RandomWalk
@@ -77,6 +77,8 @@ class HMC(Mixture):
         meeting_weight: float = 0.05,
         meeting_scale: float = 1e-3,
     ) -> None:
+        meeting_weight = real("meeting_weight", meeting_weight)
+        meeting_scale = real("meeting_scale", meeting_scale)
         if not 0 < meeting_weight < 1:
             raise ValueError(f"meeting_weight must be in (0, 1), not {meeting_weight}")
         if not 0 < meeting_scale < np.inf:
@@ -122,8 +124,8 @@ class _Leapfrog(GradientKernel):
         self, step_size: float | None, n_steps: int | None, cov: npt.ArrayLike | None
     ) -> None:
         super().__init__(step_size, cov)
-        if n_steps is not None and (not isinstance(n_steps, int | np.integer) or n_steps < 1):
-            raise ValueError(f"n_steps must be a positive integer, not {n_steps!r}")
+        if n_steps is not None:
+            n_steps = integer("n_steps", n_steps, "an integer or None", minimum=1)
         self._n_steps = n_steps
 
     @property

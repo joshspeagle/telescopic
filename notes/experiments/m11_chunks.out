@@ -1,0 +1,5 @@
+{"commit": "10e44a2", "machine": "Intel(R) Xeon(R) Processor @ 2.10GHz, 4 CPUs, Linux 6.18.44-fc-v153", "available CPUs": 4, "blas": [{"internal_api": "openblas", "version": "0.3.34.106.0", "num_threads": 1}, {"internal_api": "openblas", "version": "0.3.31.dev", "num_threads": 1}], "python": "3.13.16", "numpy": "2.5.4", "scipy": "1.18.1", "telescopic": "0.1.0.dev0"}
+gaussian(10), k = 222, 1000 replicates: chunks of at most 64 1.810 s, of at most 256 1.887 s
+line fit, k = 87, 1000 replicates: chunks of at most 64 0.699 s, of at most 256 0.295 s
+banana, pilot settings, 1000 replicates: chunks of at most 64 0.682 s, of at most 256 0.254 s
+0.2 ms point by point, k = 10, 400 replicates: chunks of at most 64 1.359 s, of at most 256 1.189 s

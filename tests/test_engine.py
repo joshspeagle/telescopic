@@ -104,12 +104,28 @@ def test_a_cap_censors_unmet_pairs_and_drops_their_measures():
     np.testing.assert_array_equal(replicates.meeting_time, np.inf)
     assert len(replicates.atoms) == 0
     np.testing.assert_array_equal(np.bincount(replicates.distance_owner), 15)
+    # X's L steps alone, then max_iter - L coupled steps of both chains.
+    np.testing.assert_array_equal(replicates.cost, 1 + 2 * (15 - 1))
+
+
+class Beside(Tagged):
+    """Y lands beside X: equal in the first coordinate, 1e-12 away in the second."""
+
+    def coupled_step(self, target, state_x, state_y, draws):
+        moved, _ = self.step(target, state_x, draws)
+        y = moved.x + np.array([0.0, 1e-12])
+        return moved, State(y, target.log_prob(y))
+
+
+def test_pairs_meet_only_when_every_coordinate_is_exactly_equal():
+    replicates = simulate(Beside(np.eye(2)), n=3, max_iter=12)
+    np.testing.assert_array_equal(replicates.meeting_time, np.inf)
 
 
 @pytest.mark.parametrize(
     ("options", "message"),
     [
-        ({"k": 3, "m": 2}, "0 <= k <= m"),
+        ({"k": 3, "m": 2}, "m must be at least k = 3, not 2"),
         ({"lag": 0}, "at least 1"),
         ({"thin": 0}, "at least 1"),
         ({"max_iter": 10}, "max_iter must exceed"),
@@ -123,6 +139,22 @@ def test_a_cap_censors_unmet_pairs_and_drops_their_measures():
 def test_invalid_settings_raise(options, message):
     with pytest.raises(ValueError, match=message):
         simulate(**options)
+
+
+@pytest.mark.parametrize("name", ["k", "m", "lag", "thin", "max_iter"])
+def test_a_setting_that_is_not_an_integer_raises(name):
+    # A float k or m would give biased measures without an error.
+    options = {"k": 2, "m": 10, "lag": 1, "thin": 1, "max_iter": 50}
+    with pytest.raises(TypeError, match=f"{name} must be an integer"):
+        simulate(**options | {name: options[name] + 0.5})
+
+
+def test_numpy_integer_settings_run_as_python_integers():
+    numpy = simulate(
+        k=np.int64(2), m=np.int32(10), lag=np.uint8(2), thin=np.int16(3), max_iter=np.int64(60)
+    )
+    assert all(type(value) is int for value in numpy.settings[:5])
+    assert_same_replicates(numpy, simulate(k=2, m=10, lag=2, thin=3, max_iter=60))
 
 
 def test_pilot_mode_returns_meeting_times_only():
@@ -153,7 +185,7 @@ def test_the_run_records_its_evaluations_and_the_starts_outside_the_support():
         target,
         RandomWalk(np.eye(1)),
         Empirical([[-1.0], [1.0]]),
-        range(10),
+        range(30),
         rng=2,
         k=0,
         m=2,
@@ -161,7 +193,14 @@ def test_the_run_records_its_evaluations_and_the_starts_outside_the_support():
         max_iter=50,
     )
     assert replicates.n_log_prob == target.n_log_prob > 0
-    assert 0 < len(replicates.zero_density) < 10
+    # Each replicate starts outside with probability 3/4, so 0 < count < 30 but for 2e-4.
+    assert 0 < len(replicates.zero_density) < 30
+
+
+def test_the_engine_takes_an_array_of_points_as_its_initial_distribution():
+    # As sample and tune do, through as_initial.
+    replicates = simulate(initial=np.array([[3.0, -1.0], [2.0, 0.0]]), n=3)
+    assert len(replicates.index) == 3
 
 
 def test_a_kernel_of_another_dimension_than_the_points_raises():

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, NamedTuple
 import numpy as np
 import numpy.typing as npt
 
-from telescopic._types import FloatArray
+from telescopic._types import FloatArray, integer
 
 if TYPE_CHECKING:
     from telescopic.results import Result
@@ -42,9 +42,10 @@ def tv_bound(meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike) -> FloatA
     function :math:`\hat S(u) = R^{-1}\#\{\tau > u\}`, in :math:`O(R + \max\tau)`.
     """
     tau = np.asarray(meeting_times, dtype=np.float64)
-    if not np.all(np.isfinite(tau) & (tau >= 0)):
+    if tau.ndim != 1 or len(tau) == 0 or not np.all(np.isfinite(tau) & (tau >= 0)):
         raise ValueError(
-            "meeting_times must be finite and non-negative: give a censored pair as its cap"
+            "meeting_times must be a non-empty one-dimensional array, finite and "
+            "non-negative: give a censored pair as its cap"
         )
     survival = 1.0 - np.cumsum(np.bincount(tau.astype(np.int64))) / len(tau)
     bound: FloatArray = np.minimum(1.0, _lagged_tail(survival, lag, t))
@@ -80,6 +81,7 @@ def w1_bound(
     -------
     ndarray, shape of ``t``
     """
+    n_replicates = integer("n_replicates", n_replicates, minimum=1)
     total = np.bincount(
         np.asarray(distance_time, dtype=np.int64), weights=np.asarray(distance, dtype=np.float64)
     )
@@ -90,9 +92,11 @@ def w1_bound(
 def _lagged_tail(values: FloatArray, lag: int, t: npt.ArrayLike) -> FloatArray:
     # sum_{j >= 1} values[t + jL], with values zero past the end. tail[i, r] sums values
     # over the times i'L + r with i' >= i; the padding adds a last row of zeros.
-    t = np.asarray(t, dtype=np.int64)
-    if np.any(t < 0):
-        raise ValueError(f"t must be non-negative, not {t}")
+    lag = integer("lag", lag, minimum=1)
+    times = np.asarray(t)
+    if not np.all(times == np.floor(times)) or np.any(times < 0):
+        raise ValueError(f"t must be non-negative integers, not {times}")
+    t = times.astype(np.int64)
     rows = -(-len(values) // lag) + 1
     padded = np.zeros(rows * lag)
     padded[: len(values)] = values
@@ -109,6 +113,9 @@ def hill(values: npt.ArrayLike, n_tail: int) -> float:
 
     from the :math:`k` = ``n_tail`` largest of :math:`n` values. A tail
     :math:`P(X > x) \propto x^{-\alpha}` has finite moments below :math:`\alpha` only.
+    Where ties make the smallest value the threshold :math:`x_{(n-k)}`, as when most
+    meeting times take their smallest possible value, the estimate is undefined: above such
+    ties it reads a light tail as a heavy one.
 
     Parameters
     ----------
@@ -120,13 +127,19 @@ def hill(values: npt.ArrayLike, n_tail: int) -> float:
     Returns
     -------
     float
-        ``inf`` when the largest values are all equal.
+        ``inf`` when the largest values are all equal, and ``nan`` where ties make the
+        smallest value the threshold.
     """
     x = np.sort(np.asarray(values, dtype=np.float64))
+    n_tail = integer("n_tail", n_tail)
+    if not 1 <= n_tail < len(x):
+        raise ValueError(
+            f"n_tail must be at least 1 and below the number of values, {len(x)}, not {n_tail}"
+        )
     if not x[0] > 0:
         raise ValueError(f"values must be positive, not as small as {x[0]}")
-    if not 1 <= n_tail < len(x):
-        raise ValueError(f"n_tail must be in [1, {len(x) - 1}], not {n_tail}")
+    if x[1] == x[-n_tail - 1] == x[0]:
+        return np.nan
     mean_log = float(np.mean(np.log(x[-n_tail:] / x[-n_tail - 1])))
     return np.inf if mean_log == 0 else 1.0 / mean_log
 
@@ -142,13 +155,15 @@ def variance_share(values: npt.ArrayLike) -> FloatArray:
     Returns
     -------
     ndarray, shape () or (p,)
-        0 for a column without variance.
+        0 for a column without variance, or whose values differ only by rounding.
     """
     values = np.asarray(values, dtype=np.float64)
     squares = (values - values.mean(axis=0)) ** 2
     total = squares.sum(axis=0)
+    # Spreads of a few units in the last place of the values are rounding, not variance.
+    rounding = len(values) * (8 * np.finfo(np.float64).eps * np.abs(values).max(axis=0)) ** 2
     share: FloatArray = np.divide(
-        squares.max(axis=0), total, out=np.zeros_like(total), where=total > 0
+        squares.max(axis=0), total, out=np.zeros_like(total), where=total > rounding
     )
     return share
 
@@ -244,7 +259,7 @@ def slow_pair_threshold(lag: int, m: int) -> int:
     -------
     int
     """
-    return max(10_000, 10 * max(lag, m))
+    return max(10_000, 10 * max(integer("lag", lag), integer("m", m)))
 
 
 def tuning_disagreement(tuning: TuningReport | None) -> str | None:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import functools
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import nullcontext
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -13,8 +13,7 @@ from telescopic import diagnostics, engine
 from telescopic._parallel import Interrupt, check_pool, execute, opened
 from telescopic._progress import Progress
 from telescopic._random import MAIN, PILOT, namespace_seed, replicate_generator, root_seed
-from telescopic._types import FloatArray, IntArray, Seed
-from telescopic.estimators import averaging_times
+from telescopic._types import FloatArray, IntArray, Seed, integer, parameter_names
 from telescopic.initial import as_initial, draw
 from telescopic.kernels import HMC, MALA, Independence, Kernel, RandomWalk
 from telescopic.results import Result
@@ -31,6 +30,8 @@ KERNELS: dict[str, Callable[[], Kernel]] = {
 }
 PILOT_REPLICATES = 100
 PILOT_MAX_ITER = 100_000
+# The meeting-time pilot: lag 1, with nothing stored (spec R-TUNE-2).
+PILOT_SETTINGS = engine.Settings(0, 0, 1, max_iter=PILOT_MAX_ITER, store=False)
 # The warnings of spec section 7.4 that a run emits as they happen, not at its end, or as
 # it ends for slow pairs on a pool.
 _LIVE = ("slow", "tuning")
@@ -60,7 +61,8 @@ class CoupledSampler:
     args, kwargs
         Extra arguments of ``log_prob`` and ``grad``.
     grad : callable, optional
-        :math:`\nabla\log\pi` with the signature of ``log_prob``.
+        :math:`\nabla\log\pi` with the signature of ``log_prob``. Only the kernels that
+        need it, MALA and HMC, evaluate it; ``"auto"`` is random-walk Metropolis.
     vectorize : bool
         Whether ``log_prob`` and ``grad`` take a batch of points.
     kernel : Kernel or str
@@ -120,12 +122,11 @@ class CoupledSampler:
         self.kernel = _kernel(kernel)
         self.kernel.check_target(self.target)
         self.seed = root_seed(rng)
-        # One draw from a throwaway generator gives the dimension, so that names are
-        # checked now rather than after the runs.
+        # One draw from a throwaway generator gives the dimension, so that the kernel's and
+        # the names are checked now rather than after tuning.
         self.ndim = len(draw(self.initial, replicate_generator(self.seed, MAIN, 0)))
-        self.names = None if names is None else list(names)
-        if self.names is not None and len(self.names) != self.ndim:
-            raise ValueError(f"names must have {self.ndim} entries, not {len(self.names)}")
+        self.kernel.check_ndim(self.ndim)
+        self.names = None if names is None else parameter_names(names, self.ndim)
         self.tuning: TuningReport | None = None
         self.pilot: FloatArray | None = None
         self._replicates: engine.Replicates | None = None
@@ -171,15 +172,16 @@ class CoupledSampler:
         ndarray, shape (n,)
             Meeting times, ``inf`` for a censored pair.
         """
-        if n < 1:
-            raise ValueError(f"n must be at least 1, not {n}")
+        n = integer("n", n, minimum=1)
+        settings = engine.check_settings(PILOT_SETTINGS._replace(max_iter=max_iter))
         with opened(self.pool) as pool:
-            return self._meeting_times(n, max_iter, pool, self.progress)
+            return self._meeting_times(n, settings, pool, self.progress)
 
-    def _meeting_times(self, n: int, max_iter: int, pool: Any, progress: bool) -> FloatArray:
+    def _meeting_times(
+        self, n: int, settings: engine.Settings, pool: Any, progress: bool
+    ) -> FloatArray:
         self.tune()
         start = 0 if self.pilot is None else len(self.pilot)
-        settings = engine.Settings(0, 0, 1, max_iter=max_iter, store=False)
         indices = np.arange(start, start + n)
         times = self._run(PILOT, indices, settings, pool, progress).meeting_time
         self.pilot = times if self.pilot is None else np.concatenate([self.pilot, times])
@@ -198,9 +200,9 @@ class CoupledSampler:
     ) -> Result:
         """Run ``n_replicates`` more replicates and return the result of all of them so far.
 
-        The first call tunes the kernel and runs the pilot when needed, and fixes the
-        settings of the later calls (spec R-TUNE-2). The result warns about the
-        conditions of spec section 7.4.
+        The first call tunes the kernel, completes the pilot to 100 pairs for an automatic
+        ``k``, and fixes the settings of the later calls (spec R-TUNE-2). The result warns
+        about the conditions of spec section 7.4.
 
         The first Ctrl-C during the replicates lets those in progress finish and returns a
         result flagged ``interrupted``; the next call runs the missing replicates first. A
@@ -230,14 +232,13 @@ class CoupledSampler:
             Unbiased for an ``n_replicates`` fixed in advance; extending a run after
             looking at it keeps consistency, not exact unbiasedness (spec section 3.3).
         """
-        if n_replicates < 1:
-            raise ValueError(f"n_replicates must be at least 1, not {n_replicates}")
-        self._check(k, m, lag, thin, max_iter)
+        n_replicates = integer("n_replicates", n_replicates, minimum=1)
+        given = self._check(k, m, lag, thin, max_iter)
         show = self.progress if progress is None else progress
         # Worker processes start before tuning, which runs here meanwhile, and serve the
         # pilot and the run (DECISIONS #23).
         with opened(self.pool) as pool:
-            settings = self.settings or self._configure(k, m, lag, thin, max_iter, pool, show)
+            settings = self.settings or self._configure(given, pool, show)
             done = 0 if self._replicates is None else len(self._replicates.index)
             self._check_memory(settings, done + n_replicates)
             part = self._run(MAIN, self._next_indices(n_replicates), settings, pool, show)
@@ -286,8 +287,9 @@ class CoupledSampler:
             rng=self.seed if main else namespace_seed(self.seed, namespace),
             **settings._asdict(),
         )
-        slow = _SlowPairs(settings.lag, settings.m)
-        bar = Progress(len(indices), "replicates" if main else "pilot pairs") if progress else None
+        kind = "replicate" if main else "pilot pair"
+        slow = _SlowPairs(settings.lag, settings.m, kind)
+        bar = Progress(len(indices), f"{kind}s") if progress else None
         interrupt = Interrupt()
 
         def monitor(status: engine.Status) -> bool:
@@ -305,7 +307,7 @@ class CoupledSampler:
         slow.after(replicates)
         if len(replicates.zero_density):
             warn(
-                f"{len(replicates.zero_density)} replicates start where the target density "
+                f"{len(replicates.zero_density)} {kind}s start where the target density "
                 f"is zero (the first is {replicates.zero_density[0]}); the initial "
                 "distribution should lie inside the support of the target",
                 InputWarning,
@@ -314,64 +316,59 @@ class CoupledSampler:
 
     def _check(
         self, k: int | str, m: int | str, lag: int | str, thin: int | None, max_iter: int | None
-    ) -> None:
-        # The checks that need no tuning, before any worker starts. Later runs keep the
-        # first run's settings (D-21, DECISIONS #4 and #8).
+    ) -> dict[str, int]:
+        # The settings given, those not "auto" or None, as integers, checked before any
+        # tuning or worker starts: with an automatic k, at k = 0, whose bounds hold for
+        # every k. Later runs keep the first run's settings (D-21, DECISIONS #4 and #8).
+        given = {}
+        for name, value, default in (
+            ("k", k, "auto"),
+            ("m", m, "auto"),
+            ("lag", lag, "auto"),
+            ("thin", thin, None),
+            ("max_iter", max_iter, None),
+        ):
+            # The type first: == compares an array elementwise.
+            if not (isinstance(value, type(default)) and value == default):
+                given[name] = integer(name, value, f"an integer or {default!r}")
         if self.settings is not None:
-            given = {"k": k, "m": m, "lag": lag, "thin": thin, "max_iter": max_iter}
             for name, value in given.items():
                 kept = getattr(self.settings, name)
-                if value not in ("auto", None) and value != kept:
+                if value != kept:
                     raise ValueError(
                         f"{name} was {kept} in the earlier runs; a sampler keeps its "
                         f"settings, so start a new one for {name}={value}"
                     )
-            return
-        for name, value in (("k", k), ("m", m), ("lag", lag)):
-            if value != "auto" and not isinstance(value, int | np.integer):
-                raise ValueError(f"{name} must be an integer or 'auto', not {value!r}")
+        else:
+            _settings({"k": 0} | given)
+        return given
 
-    def _configure(
-        self,
-        k: int | str,
-        m: int | str,
-        lag: int | str,
-        thin: int | None,
-        max_iter: int | None,
-        pool: Any,
-        progress: bool,
-    ) -> engine.Settings:
-        # The first run's settings, which tune the kernel and run the pilot if needed.
+    def _configure(self, given: dict[str, int], pool: Any, progress: bool) -> engine.Settings:
+        # The first run's settings, which tune the kernel and, for an automatic k, complete
+        # the pilot to 100 pairs: meeting_times can leave fewer.
         self.tune()
-        if k == "auto":
-            pilot = self.pilot
-            if pilot is None:
-                pilot = self._meeting_times(PILOT_REPLICATES, PILOT_MAX_ITER, pool, progress)
-            k = choose_k(pilot)
-        settings = engine.Settings(
-            k=int(k),
-            m=10 * int(k) if m == "auto" else int(m),
-            lag=max(1, int(k)) if lag == "auto" else int(lag),
-            thin=1 if thin is None else thin,
-            max_iter=max_iter,
-        )
-        engine.check_settings(settings)
-        return settings
+        if "k" not in given:
+            done = 0 if self.pilot is None else len(self.pilot)
+            if done < PILOT_REPLICATES:
+                self._meeting_times(PILOT_REPLICATES - done, PILOT_SETTINGS, pool, progress)
+            given = given | {"k": choose_k(cast(FloatArray, self.pilot))}
+        return _settings(given)
 
     def _check_memory(self, settings: engine.Settings, n_replicates: int) -> None:
-        # Spec R-EXEC-7: estimate the atoms to store before running, and warn above 1 GB.
-        # The pilot's meeting times stand in for those of the run.
-        d = self.ndim
-        n_averaged = len(averaging_times(settings.k, settings.m, settings.thin))
-        late = 0.0
+        # Spec R-EXEC-7: estimate the atoms and distances to store before running, and warn
+        # above 1 GB. The pilot's meeting times stand in for those of the run, their
+        # tau - 1 for its tau - L.
+        n_averaged = len(range(settings.k, settings.m + 1, settings.thin))
+        late = distances = 0.0
         if self.pilot is not None and np.isfinite(self.pilot).any():
-            met = self.pilot[np.isfinite(self.pilot)]
-            late = float(np.mean(np.maximum(0, met - 1 - settings.k)))
-        size = n_replicates * (n_averaged + 2 * late) * (8 * d + 16)
+            coupled = self.pilot[np.isfinite(self.pilot)] - 1
+            late = float(np.mean(np.maximum(0, coupled - settings.k)))
+            distances = float(np.mean(coupled))
+        size = n_replicates * ((n_averaged + 2 * late) * (8 * self.ndim + 16) + 24 * distances)
         if size > 1e9:
             warn(
-                f"the run will store about {size / 1e9:.1f} GB of atoms; pass thin= to store "
-                "fewer, or run fewer replicates",
+                f"the run will store about {size / 1e9:.1f} GB of atoms and distances; pass "
+                "thin= to store fewer atoms, or run fewer replicates",
                 InputWarning,
             )
 
@@ -443,9 +440,10 @@ def sample(
 class _SlowPairs:
     # Warns once about a pair still unmet at the slow-pair threshold (spec section 6.3):
     # from the engine's status as it happens, or from the meeting times after a run on a
-    # pool, whose workers' statuses do not reach the parent.
-    def __init__(self, lag: int, m: int) -> None:
+    # pool, whose workers' statuses do not reach the parent. kind names the pairs.
+    def __init__(self, lag: int, m: int, kind: str) -> None:
         self.threshold = diagnostics.slow_pair_threshold(lag, m)
+        self.kind = kind
         self.warned = False
 
     def __call__(self, status: engine.Status) -> None:
@@ -462,10 +460,25 @@ class _SlowPairs:
         if not self.warned:
             self.warned = True
             warn(
-                f"replicate {replicate} has not met after {self.threshold} iterations; the "
-                "meeting times may be heavy-tailed",
+                f"{self.kind} {replicate} has not met after {self.threshold} iterations; "
+                "the meeting times may be heavy-tailed",
                 ConvergenceWarning,
             )
+
+
+def _settings(given: dict[str, int]) -> engine.Settings:
+    # The first run's settings from those given, k among them; lag = max(1, k) and
+    # m = 10 k unless given (spec R-TUNE-2, D-21).
+    k = given["k"]
+    return engine.check_settings(
+        engine.Settings(
+            k=k,
+            m=given.get("m", 10 * k),
+            lag=given.get("lag", max(1, k)),
+            thin=given.get("thin", 1),
+            max_iter=given.get("max_iter"),
+        )
+    )
 
 
 def _kernel(kernel: Kernel | str) -> Kernel:

@@ -61,8 +61,9 @@ result.plot_tv_bound();
 
 {meth}`telescopic.Result.w1_bound` estimates the bound on the 1-Wasserstein distance in
 the same way, from the distances $\lVert X_t - Y_{t-L} \rVert$ that the engine records
-before each pair meets. It depends on the parametrisation of the target through the
-Euclidean norm: in other units or coordinates the bound changes.
+before each pair meets. A censored pair's distances stop at its cap, so with censored
+pairs it too is a lower bound. It depends on the parametrisation of the target through
+the Euclidean norm: in other units or coordinates the bound changes.
 
 ```{code-cell} python
 result.w1_bound([0, result.k // 2, result.k])
@@ -99,14 +100,15 @@ assert abs(values["late_fraction"] - values["tv_bound_at_k"]) < 0.01
 - `meeting_time_50`, `meeting_time_90`, `meeting_time_99`, `meeting_time_max` and
   `censored`: the meeting times of the pairs that met, and the number of censored pairs.
 - `tail_index`: Hill's estimate of the tail index of $\tau - L + 1$, `nan` below 500
-  replicates ([`tail`](#heavy-tailed-meeting-times-tail)).
+  replicates, or when nine pairs in ten or more meet at the first time possible
+  ([`tail`](#heavy-tailed-meeting-times-tail)).
 - `late_fraction` and `late_fraction_upper`: the fraction of pairs that met after
   `k + lag`, censored ones included, and its one-sided 95% Clopper-Pearson upper bound,
   which stays informative when the fraction is 0. The fraction is the leading term of
   `tv_bound_at_k`, the TV bound at $k$, and with `lag = k` the two are close.
 - `variance_share` and `variance_share_of`: the largest share of one replicate in the
-  variance of the estimate of a coordinate's mean or second moment, and that estimate,
-  such as `"the second moment of x1"`; `nan` and `None` below 2 replicates
+  variance of the estimate of a coordinate's mean or variance, and that estimate, such as
+  `"the variance of x1"`; `nan` and `None` below 2 replicates
   ([`variance`](#one-replicate-dominating-the-variance-variance)).
 - `mean_cost`, `seconds_per_replicate` and `relative_cost`: the cost of a replicate
   ([Settings](settings.md#cost)).
@@ -145,7 +147,7 @@ which make the variance high. **Remedy:** a new sampler with a larger `k`
 ### One replicate dominating the variance (`variance`)
 
 **Trigger:** with at least 100 replicates, one replicate holds more than half of the
-sample variance of the estimate of some coordinate's mean or second moment.
+sample variance of the estimate of some coordinate's mean or variance.
 `result.diagnostics()` reports the largest share as `variance_share`, and the estimate
 that holds it as `variance_share_of`, whether or not the warning fires. **Meaning:**
 heavy tails or rare excursions make the error bars unreliable. A replicate whose chain is
@@ -162,14 +164,16 @@ checks a function of your own.
 **Trigger:** with at least 500 replicates, Hill's estimate of the tail index of
 $\tau - L + 1$ ({func}`telescopic.diagnostics.hill`), from its $\lfloor R/10 \rfloor$
 largest values, is below 2. `result.diagnostics()` reports it as `tail_index` whether or
-not the warning fires. **Meaning:** unbiasedness needs moments of the meeting time, and
-valid error bars need a finite variance of the estimates
-([Theory](../theory.md#guarantees-and-their-limits)). Meeting times with a polynomial
-tail can break both: a tail index below 2 means an infinite variance of the meeting
-times, the estimates may have one too, and then their error bars are not reliable at any
-number of replicates. **Remedy:** look at the survival function of `plot_meeting_times`,
-whose tail is straight on its log scale for geometric meeting times, and at the kernel
-([Kernels](kernels.md)).
+not the warning fires. When nine pairs in ten or more meet at the first time possible,
+the estimate is `nan` and the warning silent: above such ties, Hill's estimate reads a
+light tail as a heavy one, so a heavy tail behind them goes undetected.
+**Meaning:** unbiasedness needs moments of the meeting time, and valid error bars need a
+finite variance of the estimates ([Theory](../theory.md#guarantees-and-their-limits)).
+Meeting times with a polynomial tail can break both: a tail index below 2 means an
+infinite variance of the meeting times, the estimates may have one too, and then their
+error bars are not reliable at any number of replicates. **Remedy:** look at the
+survival function of `plot_meeting_times`, whose tail is straight on its log scale for
+geometric meeting times, and at the kernel ([Kernels](kernels.md)).
 
 ### Disagreeing tuning chains (`tuning`)
 
@@ -215,17 +219,15 @@ The warnings say that `k` may be too small: more than a quarter of the pairs met
 
 ## Measured rates
 
-When the thresholds were chosen, repeated runs measured how often each warning fires.
-All used vectorised log-densities, and the first two targets `sample()`'s default
-settings:
+Repeated runs measured how often each warning fires. All used vectorised
+log-densities, and the first two targets `sample()`'s default settings:
 
 - {func}`telescopic.examples.gaussian` in 10 dimensions, from $\mathcal N(0, 4I)$: no
-  warning in 50 runs at $R = 500$; at $R = 100$, the variance warning in at most 2 of 100
-  runs, and no other warning.
+  warning in 100 runs at $R = 100$ and 50 runs at $R = 500$.
 - The banana ({func}`telescopic.examples.banana`) from $U[-5, 5]^2$: at $R = 100$, the
-  variance warning in 19 of 200 runs, whose 95% intervals of $E[x_0^2]$ covered the truth
-  in 84% of them against 96% in the other runs; at $R = 500$, the variance warning in at
-  most 6 of 50 runs and the tail warning in 14.
+  variance warning in 37 of 200 runs, whose 95% intervals of $E[x_0^2]$ covered the truth
+  in 89% of them against 96% in the other runs; at $R = 500$, the variance warning in 4
+  of 50 runs and the tail warning in 14.
 - The bimodal mixture of Jacob, O'Leary & Atchadé (2020, §5.1),
   {func}`telescopic.examples.mixture`, from $\mathcal N(10, 1)$, with a random walk of
   proposal variance 1, `k = 50`, `m = 500`, `lag = 1` and $R = 1000$: the 95% intervals
@@ -248,8 +250,9 @@ of `UserWarning`, is the base class of telescopic's warnings. A
 {class}`telescopic.ConvergenceWarning <telescopic.warnings.ConvergenceWarning>` says that
 a result may be unreliable: the conditions above. An
 {class}`telescopic.InputWarning <telescopic.warnings.InputWarning>` says that an input is
-legal but questionable: replicates whose initial draws have zero target density, and a
-run whose atoms would take more than 1 GB ([Settings](settings.md#memory-and-thinning)).
+legal but questionable: replicates or pilot pairs whose initial draws have zero target
+density, and a run whose atoms and distances would take more than 1 GB
+([Settings](settings.md#memory-and-thinning)).
 Each warning points at the line of your code that called telescopic.
 
 The filters of the `warnings` module select them by class:

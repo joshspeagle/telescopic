@@ -36,6 +36,8 @@ def root_seed(rng: Seed) -> SeedSequence:
     if rng is None:
         return SeedSequence()
     if isinstance(rng, Integral) and not isinstance(rng, bool):
+        if rng < 0:
+            raise ValueError(f"rng must be a non-negative integer, not {rng}")
         return SeedSequence(int(rng))
     raise TypeError(
         "rng must be None, an integer, a numpy.random.SeedSequence or a "

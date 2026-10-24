@@ -6,7 +6,8 @@ import sys
 import threading
 import time
 import warnings
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import Executor, Future, ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 
 import numpy as np
 import pytest
@@ -22,7 +23,8 @@ from telescopic.target import Target
 from telescopic.warnings import ConvergenceWarning
 
 INIT = Normal([2.0, -1.0], [4.0, 4.0])
-SETTINGS = {"k": 3, "m": 30, "lag": 3}
+# The cap makes a bug that keeps pairs apart fail instead of hanging a worker.
+SETTINGS = {"k": 3, "m": 30, "lag": 3, "max_iter": 10_000}
 
 
 def job(log_prob=gaussian_log_prob, args=()):
@@ -87,10 +89,10 @@ def test_the_sampler_runs_its_pilot_and_replicates_on_its_pool():
 
 
 @pytest.mark.parametrize(
-    ("n", "workers", "chunks"), [(3, 4, 3), (200, 4, 4), (600, 4, 10), (1_000, 1, 4)]
+    ("n", "workers", "chunks"), [(3, 4, 3), (200, 4, 4), (2_000, 4, 8), (1_000, 1, 4)]
 )
 def test_a_pool_gets_chunks_of_full_lanes_and_at_most_four_per_worker(n, workers, chunks):
-    # 600 replicates fill 64 lanes 10 times; 1,000 on one worker are cut in four.
+    # 2,000 replicates fill 256 lanes 8 times; 1,000 on one worker are cut in four.
     with Counting(workers) as executor:
         execute(job(), np.arange(n), executor, never)
     assert len(executor.chunks) == chunks
@@ -98,9 +100,9 @@ def test_a_pool_gets_chunks_of_full_lanes_and_at_most_four_per_worker(n, workers
 
 
 def test_a_map_pool_that_reports_its_size_gets_waves_of_that_size():
-    # 1,000 replicates on 2 workers: 8 chunks, in waves of 2.
+    # 2,000 replicates on 2 workers: 8 chunks, in waves of 2.
     pool = Sized()
-    execute(job(), np.arange(1_000), pool, never)
+    execute(job(), np.arange(2_000), pool, never)
     assert pool.waves == [2, 2, 2, 2]
 
 
@@ -162,7 +164,7 @@ def test_invalid_settings_raise_before_workers_start(monkeypatch):
 
     monkeypatch.setattr(_parallel, "Workers", refuse)
     sampler = telescopic.CoupledSampler(gaussian_log_prob, INIT, pool=2)
-    with pytest.raises(ValueError, match="k must be an integer"):
+    with pytest.raises(TypeError, match="k must be an integer or 'auto'"):
         sampler.run(10, k="bad")
 
 
@@ -179,9 +181,9 @@ def test_a_stop_reaches_the_replicates_of_telescopics_workers():
     # The stop comes before the worker has started: its first chunk starts one set of
     # lanes and refills none, and the other chunks run nothing.
     with opened(1) as workers:
-        stopped = execute(job(), np.arange(512), workers, lambda status: True)
+        stopped = execute(job(), np.arange(2048), workers, lambda status: True)
     np.testing.assert_array_equal(stopped.index, np.arange(engine.LANES))
-    np.testing.assert_array_equal(stopped.requested, np.arange(512))
+    np.testing.assert_array_equal(stopped.requested, np.arange(2048))
 
 
 def test_a_chunk_that_starts_after_the_stop_runs_nothing_unless_it_is_the_first(
@@ -191,8 +193,8 @@ def test_a_chunk_that_starts_after_the_stop_runs_nothing_unless_it_is_the_first(
     stop.set()
     monkeypatch.setattr(_parallel, "_stop", stop)
     payload = _parallel._dumps(job())
-    assert _parallel._task(payload, os.getpid(), np.arange(200)) is None
-    first = _parallel._task(payload, os.getpid(), np.arange(200), first=True)
+    assert _parallel._task(payload, os.getpid(), np.arange(600)) is None
+    first = _parallel._task(payload, os.getpid(), np.arange(600), first=True)
     np.testing.assert_array_equal(first.index, np.arange(engine.LANES))
 
 
@@ -200,7 +202,9 @@ def test_a_chunk_that_starts_after_the_stop_runs_nothing_unless_it_is_the_first(
 @pytest.mark.parametrize("at_once", [True, False])
 def test_a_stop_on_a_pool_keeps_the_finished_chunks(pool, at_once, monkeypatch):
     # A stop before any chunk starts, or once one has finished: chunks not started are
-    # dropped, except the first, and the result lacks requested replicates.
+    # dropped, except the first, and the result lacks requested replicates. One worker, so
+    # that the 4 chunks run one at a time.
+    monkeypatch.setattr(_parallel.os, "process_cpu_count", lambda: 1, raising=False)
     monkeypatch.setattr(_parallel.os, "cpu_count", lambda: 1)
     indices = np.arange(1_000)
     with ThreadPoolExecutor(1) as thread:
@@ -211,6 +215,38 @@ def test_a_stop_on_a_pool_keeps_the_finished_chunks(pool, at_once, monkeypatch):
     assert 0 < len(stopped.index) < len(indices)
     np.testing.assert_array_equal(stopped.index, np.arange(len(stopped.index)))
     np.testing.assert_array_equal(stopped.requested, indices)
+
+
+class Broken(Executor):
+    # Runs the first chunk, if asked, and fails the others, as a process pool does once
+    # Ctrl-C has killed one of its idle workers.
+    _max_workers = 2
+
+    def __init__(self, first):
+        self.first = first
+
+    def submit(self, function, piece, first):
+        future = Future()
+        if first and self.first:
+            future.set_result(function(piece, first=True))
+        else:
+            future.set_exception(BrokenProcessPool("a worker died"))
+        return future
+
+
+def test_a_pool_broken_after_a_stop_returns_the_finished_chunks():
+    # 200 replicates in 2 chunks: the first ran.
+    stopped = execute(job(), np.arange(200), Broken(first=True), lambda status: True)
+    np.testing.assert_array_equal(stopped.index, np.arange(100))
+    np.testing.assert_array_equal(stopped.requested, np.arange(200))
+
+
+@pytest.mark.parametrize(
+    ("first", "monitor"), [(True, never), (False, lambda status: True)], ids=["no stop", "no part"]
+)
+def test_a_broken_pool_raises_without_a_stop_or_a_finished_chunk(first, monitor):
+    with pytest.raises(BrokenProcessPool):
+        execute(job(), np.arange(200), Broken(first), monitor)
 
 
 def test_ctrl_c_once_stops_new_replicates_and_twice_raises(capsys):
@@ -240,17 +276,17 @@ def interrupting(after):
 
 
 def test_an_interrupted_run_is_completed_by_the_next_run(capsys):
-    # Ctrl-C after 2,000 evaluations, while the first 64 replicates (one per lane) are in
-    # progress: they finish, and the next run starts with the missing ones, so the two
-    # runs equal one uninterrupted run. k = 40 keeps the pairs from meeting late.
+    # Ctrl-C after 2,000 evaluations, while the first 256 replicates (one per lane) are
+    # in progress: they finish, and the next run starts with the 44 missing ones, so the
+    # two runs equal one uninterrupted run. k = 40 keeps the pairs from meeting late.
     kernel = RandomWalk(np.eye(2))
     sampler = telescopic.CoupledSampler(interrupting(2_000), INIT, kernel=kernel, rng=7)
-    first = sampler.run(90, k=40)
+    first = sampler.run(300, k=40, m=40)
     assert first.interrupted
     np.testing.assert_array_equal(first.index, np.arange(engine.LANES))
-    second = sampler.run(30)
+    second = sampler.run(50)
     assert not second.interrupted
-    whole = telescopic.sample(gaussian_log_prob, INIT, 94, kernel=kernel, k=40, rng=7)
+    whole = telescopic.sample(gaussian_log_prob, INIT, 306, kernel=kernel, k=40, m=40, rng=7)
     assert_same_replicates(second._replicates, whole._replicates)
     assert "press Ctrl-C again" in capsys.readouterr().err
 
@@ -283,7 +319,7 @@ def test_slow_pilot_pairs_on_a_pool_warn_after_the_run():
     sampler = telescopic.CoupledSampler(
         gaussian_log_prob, INIT, kernel=Apart(np.eye(2)), pool=Serial(), rng=9
     )
-    with pytest.warns(ConvergenceWarning, match="has not met after 10000 iterations"):
+    with pytest.warns(ConvergenceWarning, match="pilot pair 0 has not met after 10000"):
         sampler.meeting_times(2, max_iter=10_001)
 
 
@@ -329,17 +365,37 @@ def test_pools_ship_functions_with_cloudpickle_and_say_what_to_do_without(monkey
         execute(nameless, np.arange(4), Serial(), never)
 
 
+def locked_log_prob(x, lock):
+    return gaussian_log_prob(x)
+
+
+@pytest.mark.parametrize("cloudpickle", [True, False], ids=["cloudpickle", "pickle"])
+def test_a_job_that_cannot_be_pickled_names_the_cause(cloudpickle, monkeypatch):
+    # Installing cloudpickle is advised only where it is missing.
+    if not cloudpickle:
+        monkeypatch.setitem(sys.modules, "cloudpickle", None)
+    locked = job(locked_log_prob, (threading.Lock(),))
+    with pytest.raises(TypeError, match=r"cannot pickle '_thread\.lock' object") as error:
+        execute(locked, np.arange(4), Serial(), never)
+    assert ("install cloudpickle" in str(error.value)) is not cloudpickle
+
+
 def test_a_worker_that_cannot_load_the_job_says_why():
     with pytest.raises(RuntimeError, match="could not load the target"):
         _parallel._load(b"not a pickle")
 
 
 @pytest.mark.parametrize(
-    ("pool", "error"),
-    [(True, TypeError), ("four", TypeError), (object(), TypeError), (0, ValueError)],
+    ("pool", "error", "message"),
+    [
+        (True, TypeError, "pool must be None, a number of processes"),
+        ("four", TypeError, "pool must be None, a number of processes"),
+        (object(), TypeError, "pool must be None, a number of processes"),
+        (0, ValueError, "pool must be at least 1, not 0"),
+    ],
 )
-def test_invalid_pools_raise(pool, error):
-    with pytest.raises(error, match="pool must be"):
+def test_invalid_pools_raise(pool, error, message):
+    with pytest.raises(error, match=message):
         telescopic.CoupledSampler(gaussian_log_prob, INIT, pool=pool)
 
 

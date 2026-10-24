@@ -23,15 +23,16 @@ All notable changes to this project are documented here. The format follows
   not depend on the other rows of its batch.
 - The engine (`telescopic.engine.run`): replicates of coupled chains in lockstep lanes
   with refill, exact meeting detection, the lag-$L$ and thinned estimator weights, signed
-  measures, distances between the chains, censoring and a slow-pair warning. A
-  replicate's output does not depend on the number of lanes. The output records the
-  run's settings and root seed, which `Result` and `merge` read.
+  measures, distances between the chains and censoring. A replicate's output does not
+  depend on the number of lanes, bitwise for a log-density evaluated point by point. The
+  output records the run's settings and root seed, which `Result` and `merge` read.
 - `SignedMeasure`, the unbiased covariance estimator and quantiles of signed measures by
   isotonic projection (`telescopic.measure`, `telescopic.estimators`).
 - `Result` with estimates and confidence intervals for any test function, unbiased
-  covariances, quantiles, credible intervals and signed histograms; total variation and
-  1-Wasserstein bounds from the meeting times; a summary table; and the warnings of the
-  specification (`telescopic.results`, `telescopic.diagnostics`).
+  covariances, quantiles, credible intervals and signed histograms; total variation
+  bounds from the meeting times and 1-Wasserstein bounds from the distances between the
+  chains; a summary table; and the warnings of the specification (`telescopic.results`,
+  `telescopic.diagnostics`).
 - Automatic tuning and the sampler: adaptive Metropolis pilots whose chains share their
   adaptation, set the kernels' unset parameters and warn when they disagree; the choice
   of `k`, `m` and the lag from pilot meeting times; `CoupledSampler` and
@@ -67,3 +68,8 @@ All notable changes to this project are documented here. The format follows
   index of the meeting times and the largest share of one replicate in a variance.
 - Documentation: Getting started, a user guide, six tutorials executed when the site is
   built, a theory page, the API reference and a citing page.
+- Fixes from an audit of the whole package: a number argument of the wrong type raises
+  `TypeError`, and one out of bounds `ValueError`, naming the argument; `names` must be
+  distinct strings, one per coordinate; `Kernel.check_ndim` checks a kernel's dimension;
+  variances are computed about the atoms' mean; tuning does not depend on the
+  coordinates' scales; the engine advances up to 256 replicates at a time.

@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 
-from telescopic._types import FloatArray
+from telescopic._types import FloatArray, read_only
 
 
 class Target:
@@ -87,32 +87,47 @@ class Target:
     def log_prob_and_grad(self, x: FloatArray) -> tuple[FloatArray, FloatArray]:
         """Log-densities, shape ``(n,)``, and gradients, shape ``(n, d)``, at the rows of ``x``.
 
-        Gradients are returned as computed: kernels decide what a non-finite one means
-        (spec R-INPUT-1).
+        The gradient is evaluated only where the log-density is finite, and is 0 where it
+        is ``-inf``. Gradients are returned as computed: kernels decide what a non-finite
+        one means (spec R-INPUT-1).
         """
         if self._grad is None:
             raise ValueError("this target has no gradient; pass grad= to use this kernel")
         values = self.log_prob(x)
-        gradients = self._call(self._grad, x, (x.shape[1],))
-        self.n_grad += len(x)
+        if np.min(values, initial=np.inf) > -np.inf:  # every point inside the support
+            gradients = self._call(self._grad, x, (x.shape[1],))
+            self.n_grad += len(x)
+        else:
+            inside = values > -np.inf
+            gradients = np.zeros(x.shape)
+            if inside.any():
+                gradients[inside] = self._call(self._grad, x[inside], (x.shape[1],))
+            self.n_grad += int(inside.sum())
         return values, gradients
 
     def _call(
         self, function: Callable[..., Any], x: FloatArray, event: tuple[int, ...]
     ) -> FloatArray:
-        view = x.view()
-        view.flags.writeable = False
+        view = read_only(x)
         if self.vectorize:
-            out = np.asarray(function(view, *self.args, **self.kwargs), dtype=np.float64)
+            values = function(view, *self.args, **self.kwargs)
+            returned_none = values is None
         else:
-            out = np.asarray(
-                [function(row, *self.args, **self.kwargs) for row in view], dtype=np.float64
-            )
-        if out.shape != (len(x), *event):
+            values = [function(row, *self.args, **self.kwargs) for row in view]
+            returned_none = False
+        out = np.asarray(values, dtype=np.float64)
+        # NumPy reads None as NaN, and the error would then blame the value.
+        if not self.vectorize and np.isnan(out).any():
+            returned_none = any(value is None for value in values)
+        if returned_none or out.shape != (len(x), *event):
+            name = getattr(function, "__name__", "the target function")
             per_point = "a float" if not event else f"shape {event}"
+            if returned_none:
+                raise ValueError(
+                    f"{name} returned None; it must return {per_point} for each point"
+                )
             raise ValueError(
-                f"{getattr(function, '__name__', 'the target function')} returned shape "
-                f"{out.shape} for {len(x)} points; expected {(len(x), *event)}, that is "
-                f"{per_point} for each point"
+                f"{name} returned shape {out.shape} for {len(x)} points; expected "
+                f"{(len(x), *event)}, that is {per_point} for each point"
             )
         return out

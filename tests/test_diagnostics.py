@@ -1,41 +1,21 @@
 import numpy as np
 import pytest
 
-from telescopic._random import root_seed
-from telescopic.diagnostics import hill, issues, tv_bound, variance_share, w1_bound
-from telescopic.engine import Replicates, Settings, run
+from references import synthetic
+from telescopic.diagnostics import (
+    hill,
+    issues,
+    slow_pair_threshold,
+    tv_bound,
+    variance_share,
+    w1_bound,
+)
+from telescopic.engine import run
 from telescopic.initial import Normal
 from telescopic.kernels import RandomWalk
 from telescopic.results import Result
 from telescopic.target import Target
 from telescopic.tuning import TuningReport
-
-
-def synthetic(meeting_times, values, *, k=0, lag=1, max_iter=None, tuning=None):
-    # One atom of weight 1 per replicate that met: its estimate is its value. A meeting
-    # time of -1 marks a censored pair.
-    tau = np.asarray(meeting_times, dtype=np.float64)
-    tau[tau < 0] = np.inf
-    met = np.flatnonzero(np.isfinite(tau))
-    values = np.asarray(values, dtype=np.float64)
-    return Result(
-        Replicates(
-            seed=root_seed(0),
-            settings=Settings(k, k, lag, max_iter=max_iter),
-            index=np.arange(len(tau)),
-            meeting_time=tau,
-            cost=np.ones(len(tau), dtype=np.int64),
-            atoms=values[met].reshape(len(met), -1),
-            weights=np.ones(len(met)),
-            owner=met,
-            distance_owner=np.zeros(0, dtype=np.int64),
-            distance_time=np.zeros(0, dtype=np.int64),
-            distance=np.zeros(0),
-            zero_density=np.zeros(0, dtype=np.int64),
-            requested=np.arange(len(tau)),
-        ),
-        tuning=tuning,
-    )
 
 
 def test_the_tv_bound_sums_the_survival_function_at_lagged_times():
@@ -53,6 +33,8 @@ def test_the_w1_bound_sums_the_distances_at_lagged_times():
     t = np.arange(45)
     expected = [distance[(time > s) & ((time - s) % lag == 0)].sum() / n for s in t]
     np.testing.assert_allclose(w1_bound(time, distance, n, lag, t), expected, atol=1e-12)
+    with pytest.raises(ValueError, match="n_replicates must be at least 1"):
+        w1_bound(time, distance, 0, lag, t)
 
 
 @pytest.mark.parametrize("alpha", [1.5, 3.0])
@@ -60,6 +42,13 @@ def test_hill_recovers_a_pareto_tail_index(alpha):
     n = 10_000
     values = np.random.default_rng(3).pareto(alpha, size=n) + 1
     assert abs(hill(values, n // 10) - alpha) < 4 * alpha / np.sqrt(n // 10)
+
+
+def test_hill_measures_the_tail_from_the_largest_value_below_it():
+    # The 2 largest of [1, 2, 4, 8] over the next, 2: log 4 and log 2. In uint8, -n_tail
+    # would wrap.
+    for n_tail in (2, np.uint8(2)):
+        assert hill([1.0, 2.0, 4.0, 8.0], n_tail) == pytest.approx(2 / (3 * np.log(2)), rel=1e-12)
 
 
 def test_the_tv_bound_refuses_censored_pairs_given_as_infinite():
@@ -136,29 +125,89 @@ def test_no_warning_fires_on_a_clean_gaussian_run():
 
 
 def test_the_variance_share_names_the_moment_and_coordinate_that_hold_it():
-    # x1 is +-1 but for one replicate at 3, whose square, the only one apart from the 99
-    # others, holds the share 1 - 1/R of their variance; it holds less of the mean's.
-    rng = np.random.default_rng(7)
-    normal = rng.standard_normal((100, 2))
-    values = np.column_stack([normal[:, 0], np.r_[rng.choice([-1, 1], 99), 3], normal[:, 1]])
-    found = synthetic([2] * 100, values, k=5).diagnostics()
-    assert found["variance_share_of"] == "the second moment of x1"
-    assert found["variance_share"] == pytest.approx(0.99)
+    # x1 is 1 or -1 about its mean 0 but for one replicate at 3, whose squared deviation,
+    # the only one apart from the 99 others, holds the share 1 - 1/R of their variance; it
+    # holds less of the mean's. Far from 0 the share is the same.
+    normal = np.random.default_rng(7).standard_normal((100, 2))
+    x1 = np.r_[np.repeat([1.0, -1.0], [48, 51]), 3.0]
+    for offset in (0.0, 1000.0):
+        values = np.column_stack([normal[:, 0], x1 + offset, normal[:, 1]])
+        found = synthetic([2] * 100, values, k=5).diagnostics()
+        assert found["variance_share_of"] == "the variance of x1"
+        assert found["variance_share"] == pytest.approx(0.99)
 
 
-def test_the_tail_index_needs_500_replicates():
+def test_the_tail_index_is_that_of_tau_minus_the_lag_from_500_replicates():
+    # With L = 30, tau - L + 1 = tau' for meeting times tau' + 29.
     tau = np.random.default_rng(8).geometric(0.1, size=500) + 1
-    assert np.isnan(synthetic(tau[:499], np.zeros(499)).diagnostics()["tail_index"])
-    expected = hill(tau, 50)  # tau - L + 1 with L = 1
-    assert synthetic(tau, np.zeros(500)).diagnostics()["tail_index"] == expected
+    found = synthetic(tau[:499] + 29, np.zeros(499), lag=30).diagnostics()["tail_index"]
+    assert np.isnan(found)
+    found = synthetic(tau + 29, np.zeros(500), lag=30).diagnostics()["tail_index"]
+    assert found == hill(tau, 50)
 
 
 def test_without_late_pairs_the_upper_bound_of_the_late_fraction_is_the_rule_of_three():
-    found = synthetic([2] * 50, np.zeros(50), k=5).diagnostics()
+    # Pairs that meet at k + L need no bias correction, so they are not late.
+    found = synthetic([6] * 50, np.zeros(50), k=5).diagnostics()
     assert found["late_fraction"] == 0
     assert abs(found["late_fraction_upper"] - (1 - 0.05 ** (1 / 50))) < 1e-12
 
 
-def test_hill_refuses_non_positive_values():
-    with pytest.raises(ValueError, match="positive"):
-        hill([0.0, 1.0, 2.0], 1)
+def test_censored_pairs_count_as_late():
+    found = synthetic([2] * 8 + [-1] * 2, np.zeros(8), k=5, max_iter=50).diagnostics()
+    assert found["late_fraction"] == 0.2
+
+
+def test_the_slow_pair_threshold_is_ten_times_the_larger_of_the_lag_and_m():
+    assert slow_pair_threshold(1, 10) == 10_000
+    assert slow_pair_threshold(1, 2_000) == slow_pair_threshold(2_000, 1) == 20_000
+    with pytest.raises(TypeError, match="lag must be an integer"):
+        slow_pair_threshold("1", 2)
+
+
+def test_the_relative_cost_divides_the_mean_cost_by_the_averaged_times():
+    found = synthetic([3] * 4, np.zeros(4), k=2, m=11, cost=[10, 20, 30, 40]).diagnostics()
+    assert (found["mean_cost"], found["relative_cost"]) == (25, 2.5)
+
+
+def test_hill_is_undefined_where_ties_make_the_smallest_value_the_threshold():
+    # 92% ones and 8% twos gave 1.80, and a threshold moved to 2 gave inf; a light tail
+    # above 98% twos read as heavy (DECISIONS #57).
+    assert np.isnan(hill([1.0] * 460 + [2.0] * 40, 50))
+    assert np.isnan(hill(np.r_[np.full(490, 2.0), np.arange(3.0, 13.0)], 50))
+    # Without ties, the smallest value is the threshold at n_tail = n - 1.
+    assert hill([1.0, 2.0, 4.0, 8.0], 3) == pytest.approx(1 / (2 * np.log(2)), rel=1e-12)
+
+
+def test_variance_share_ignores_spreads_of_rounding():
+    assert variance_share(np.r_[np.ones(99), 1 + 2**-52]) == 0
+
+
+@pytest.mark.parametrize(
+    ("meeting_times", "lag", "t", "message"),
+    [([], 1, [0], "non-empty"), ([3, 4], 0, [0], "lag must be"), ([3, 4], 1, [2.9], "integers")],
+)
+def test_the_tv_bound_refuses_invalid_arguments(meeting_times, lag, t, message):
+    with pytest.raises(ValueError, match=message):
+        tv_bound(meeting_times, lag, t)
+
+
+def test_the_tv_bound_at_k_of_the_diagnostics_is_the_bounds():
+    rng = np.random.default_rng(9)
+    result = synthetic(rng.geometric(0.2, size=200) + 3, rng.standard_normal(200), k=4, lag=3)
+    assert result.diagnostics()["tv_bound_at_k"] == pytest.approx(
+        result.tv_bound([4])[0], rel=1e-12
+    )
+
+
+@pytest.mark.parametrize(
+    ("values", "n_tail", "error", "message"),
+    [
+        ([0.0, 1.0, 2.0], 1, ValueError, "values must be positive"),
+        ([], 1, ValueError, "below the number of values, 0"),
+        ([1.0, 2.0, 3.0], 1.0, TypeError, "n_tail must be an integer"),
+    ],
+)
+def test_hill_refuses_invalid_arguments(values, n_tail, error, message):
+    with pytest.raises(error, match=message):
+        hill(values, n_tail)

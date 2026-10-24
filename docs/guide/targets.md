@@ -99,8 +99,8 @@ restricted.log_prob(np.array([[0.0, 1.0], [0.0, -1.0]]))
 
 For the gradient:
 
-- Where the log-density is `-inf`, the gradient can take any value, NaN included. States
-  there carry a gradient of 0, so MALA and HMC propose from them without drift.
+- Where the log-density is `-inf`, the gradient is not evaluated, so it may fail there.
+  States there carry a gradient of 0, so MALA and HMC propose from them without drift.
 - Where the log-density is finite, a non-finite gradient raises `ValueError` at a
   starting point, and at a proposal of a kernel that uses no gradient but whose states
   carry one, as in a mixture with MALA. MALA and HMC reject a proposal with a non-finite
@@ -159,9 +159,9 @@ the initial distribution $\pi_0$, with its own random stream. `init` can be:
   an ensemble sampler like emcee. A single point of shape `(d,)` is refused;
   `Empirical([point])` starts every chain there.
 
-The dimension `d` comes from a draw. Draws are converted to shape `(d,)`, since SciPy
-returns a scalar in one dimension; a draw of another shape, or with a non-finite
-coordinate, raises `ValueError`. Each form, on the Gaussian above:
+The dimension `d` comes from a draw. Draws are converted to shape `(d,)`: SciPy returns
+a scalar for a normal in one dimension, and shape `(1, d)` for a Dirichlet. A draw of
+another shape, or with a non-finite coordinate, raises `ValueError`. Each form, on the Gaussian above:
 
 ```{code-cell} python
 points = stats.multivariate_normal(mean, np.diag(sd**2)).rvs(size=50, random_state=1)

@@ -1,10 +1,9 @@
 # Plan
 
-**Current position:** Phase 4, milestones M0 to M10 implemented and reviewed. M11 (the
-independent audit) is under way: four auditors (estimators and couplings, the engine,
-numerical robustness, the API) have reported, and a fifth measures the tests' power with
-mutants. Their findings, the items deferred from M10 and the performance items of M9 are
-M11's work, then the checkpoint report to Josh.
+**Current position:** Phase 7. Milestones M0 to M11 are implemented and reviewed, and the
+first draft is complete. The checkpoint report to Josh is `notes/CHECKPOINT.md`. Work
+waits on his answers to `notes/QUESTIONS.md`, whose defaults stand meanwhile; the items
+deferred beyond v0.1 are listed in `notes/reviews/m11.md`.
 
 ## Phases
 
@@ -14,10 +13,10 @@ M11's work, then the checkpoint report to Josh.
 | 1 | Research census: theory, couplings by sampler family, diagnostics, software, API/UX, parallelism, validation | `research_notes/Unbiased MCMC with couplings landscape/`, `reports/Unbiased MCMC with couplings landscape.md` | done |
 | 2 | Design, with prototypes where a choice needs evidence, and an adversarial review | `docs/design/spec.md`, `test-plan.md`, `implementation-plan.md`; `notes/experiments/`; `notes/reviews/design-review.md` | done |
 | 3 | Scaffold: packaging, CI, pre-commit, docs skeleton, `CLAUDE.md` | repository infrastructure | done |
-| 4 | Implementation milestones M0 to M11 (implementation plan §3), each a reviewed unit | `src/telescopic/`, `tests/` | in progress |
+| 4 | Implementation milestones M0 to M11 (implementation plan §3), each a reviewed unit | `src/telescopic/`, `tests/` | done |
 | 5 | Documentation: theory, user guide, executed tutorials, API reference, README | `docs/` | done (M10) |
-| 6 | Independent audit of the whole package, fixes, benchmarks | `notes/reviews/` | pending |
-| 7 | Checkpoint report to Josh: first draft complete | log entry and summary | pending |
+| 6 | Independent audit of the whole package, fixes, benchmarks | `notes/reviews/m11.md` | done (M11) |
+| 7 | Checkpoint report to Josh: first draft complete | `notes/CHECKPOINT.md`, log entry | done |
 
 ## Milestone status
 
@@ -34,24 +33,10 @@ M11's work, then the checkpoint report to Josh.
 | M8 | IO, plotting, examples, `check_coupling` | yes | done, fixed | done, fixed | `notes/reviews/m8.md` |
 | M9 | Slow statistical suite, benchmarks, warning calibration | yes | done, fixed | done, fixed | `notes/reviews/m9.md` |
 | M10 | Documentation and tutorials | yes | done, fixed | done, fixed | `notes/reviews/m10.md` |
-| M11 | Independent audit, checkpoint report | no | | | |
+| M11 | Independent audit, checkpoint report | yes | done, fixed | done, fixed | `notes/reviews/m11.md` |
 
 ## Interface changes deferred from M8
 
 Done before M9, so that its tests and benchmarks use the final interfaces: the
 replicates record their run's seed and settings, and `engine.run` takes `rng`
 (DECISIONS #31, #32; `notes/reviews/run-settings.md`).
-
-## M11 scope
-
-- An independent audit by reviewers who did not write the code, one per angle: the
-  estimators, weights and couplings against the papers and `docs/theory.md`; the engine's
-  meetings, censoring and streams; numerical robustness; the API and its errors; the
-  tests' power (mutants); and the documentation against the code.
-- Performance left open by M9: the pool benchmark with started workers, `sample()`'s fixed
-  64 lanes (a second wave at R = 100), and the point-by-point overhead at one lane.
-- Found while writing the documentation: `Result.summary(level)` changes nothing;
-  `diagnostics.issues` reports a slow pair only once it met, while the live warning also
-  counts censored ones; `import telescopic` does not import `telescopic.examples`.
-- The checkpoint report to Josh: what exists, what was measured, the open questions.
-

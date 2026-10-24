@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -10,7 +11,7 @@ from scipy.special import gammaln
 
 from telescopic._linalg import covariance, inverse_lower, matvec
 from telescopic._random import Draws
-from telescopic._types import FloatArray, Seed
+from telescopic._types import FloatArray, Seed, integer, vector
 from telescopic.kernels.base import Kernel, State, acceptance, evaluate, log_ratio, select
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport
@@ -32,11 +33,10 @@ class MultivariateT:
     """
 
     def __init__(self, mean: npt.ArrayLike, cov: npt.ArrayLike, df: int | None = 5) -> None:
-        self.mean = np.array(mean, dtype=np.float64, ndmin=1)
-        self.cov, self._chol = covariance(cov, "cov", len(self.mean))
-        if df is not None and (int(df) != df or df < 1):
-            raise ValueError(f"df must be a positive integer or None, not {df}")
-        self.df = None if df is None else int(df)
+        self.mean = vector("mean", mean)
+        self.cov, self._chol = covariance("cov", cov, len(self.mean))
+        expected = "a positive integer, or None for the Gaussian"
+        self.df = None if df is None else integer("df", df, expected, minimum=1)
         self._inverse = inverse_lower(self._chol)
         self._log_det = 2.0 * np.log(np.diag(self._chol)).sum()
 
@@ -80,11 +80,12 @@ class Independence(Kernel):
     Parameters
     ----------
     proposal : MultivariateT, optional
-        Any object with ``sample(draws)`` and ``log_density(x)``. ``None`` leaves the
-        kernel untuned: :meth:`~telescopic.kernels.Kernel.tune` fits a Student-:math:`t_5` located at the mean of
-        adaptive Metropolis pilot chains, with their covariance as its scale matrix (spec
-        section 5.6, D-25). Its report gives the largest weight :math:`\pi/q` of the
-        pilot's draws relative to their median.
+        Any object with ``sample(draws)`` and ``log_density(x)``; its ``mean``, if it has
+        one, fixes the dimension. ``None`` leaves the kernel untuned:
+        :meth:`~telescopic.kernels.Kernel.tune` fits a Student-:math:`t_5` located at the
+        mean of adaptive Metropolis pilot chains, with their covariance as its scale
+        matrix (spec section 5.6, D-25). Its report gives the largest weight
+        :math:`\pi/q` of the pilot's draws relative to their median.
 
     Notes
     -----
@@ -96,6 +97,13 @@ class Independence(Kernel):
     """
 
     def __init__(self, proposal: MultivariateT | None = None) -> None:
+        if proposal is not None and not (
+            hasattr(proposal, "sample") and hasattr(proposal, "log_density")
+        ):
+            raise TypeError(
+                "proposal must have sample(draws) and log_density(x), as MultivariateT "
+                f"does, not {type(proposal).__name__}"
+            )
         self.proposal = proposal
 
     @property
@@ -104,9 +112,12 @@ class Independence(Kernel):
 
     @property
     def ndim(self) -> int | None:
-        return None if self.proposal is None else len(self.proposal.mean)
+        mean = getattr(self.proposal, "mean", None)
+        return None if mean is None else len(mean)
 
-    def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
+    def _tuned(
+        self, target: Target, initial: Any, pilot: PilotRun, rng: Seed
+    ) -> tuple[Kernel, TuningReport]:
         proposal = MultivariateT(pilot.mean, pilot.cov, df=5)
         draws = pilot.samples.reshape(-1, pilot.samples.shape[2])
         log_weights = pilot.log_prob.ravel() - proposal.log_density(draws)

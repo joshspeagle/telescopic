@@ -14,7 +14,7 @@ import sys
 import threading
 import time
 from collections.abc import Callable, Iterator
-from concurrent.futures import Executor, Future, ProcessPoolExecutor
+from concurrent.futures import BrokenExecutor, Executor, Future, ProcessPoolExecutor
 from contextlib import contextmanager
 from dataclasses import replace
 from typing import Any
@@ -113,8 +113,11 @@ def check_pool(pool: Any) -> None:
             "pool must be None, a number of processes, an executor with submit, or an "
             f"object with map, not {type(pool).__name__}"
         )
-    if isinstance(pool, int | np.integer) and not 1 <= pool <= MAX_PROCESSES:
-        raise ValueError(f"pool must be from 1 to {MAX_PROCESSES} processes, not {pool}")
+    if isinstance(pool, int | np.integer):
+        if pool < 1:
+            raise ValueError(f"pool must be at least 1, not {pool}")
+        if pool > MAX_PROCESSES:
+            raise ValueError(f"pool must be from 1 to {MAX_PROCESSES} processes, not {pool}")
 
 
 @contextmanager
@@ -143,7 +146,7 @@ def execute(job: Job, indices: IntArray, pool: Any, monitor: Monitor) -> engine.
         return job(indices, monitor=monitor)
     start = time.perf_counter()
     workers = pool.n if isinstance(pool, Workers) else _workers(pool)
-    # Chunks of at least a full set of lanes where there are enough replicates.
+    # Chunks of at most a full set of lanes, where four per worker allow (DECISIONS #52).
     count = max(workers, math.ceil(len(indices) / engine.LANES))
     pieces = np.array_split(indices, min(len(indices), CHUNKS_PER_WORKER * workers, count))
     task = functools.partial(_task, _dumps(job), os.getpid())
@@ -178,7 +181,10 @@ def _gather(
 ) -> list[engine.Replicates]:
     # Every chunk is submitted at once, in index order. Once the monitor asks to stop,
     # the chunks not started are cancelled, except the first, so that a run returns a
-    # replicate, as the engine's first fill does.
+    # replicate, as the engine's first fill does. Ctrl-C also kills the idle workers of a
+    # user's process pool that does not ignore it, and the pool then fails every chunk
+    # left, after any finished one. After a stop those chunks count as not run; with none
+    # finished, the pool's error stands, as there is no result to return.
     if stop is not None:
         stop.clear()
     done: queue.SimpleQueue[Future[engine.Replicates | None]] = queue.SimpleQueue()
@@ -195,7 +201,12 @@ def _gather(
                 pass
             else:
                 remaining -= 1
-                part = None if future.cancelled() else future.result()
+                try:
+                    part = None if future.cancelled() else future.result()
+                except BrokenExecutor:
+                    if not (parts and monitor(engine.Status(finished, finished, -1, 0))):
+                        raise
+                    part = None
                 if part is not None:
                     parts.append(part)
                     finished += len(part.index)
@@ -240,10 +251,15 @@ def _dumps(job: Job) -> bytes:
     try:
         payload: bytes = module.dumps(job)
     except Exception as error:
+        advice = (
+            "; install cloudpickle (pip install 'telescopic[parallel]'), or define their "
+            "functions at the top level of a module"
+            if module is pickle
+            else ""
+        )
         raise TypeError(
             "to run on a pool, the target, the kernel and the initial distribution must be "
-            "picklable: install cloudpickle (pip install 'telescopic[parallel]'), or "
-            "define their functions at the top level of a module"
+            f"picklable: {error}{advice}"
         ) from error
     return payload
 
