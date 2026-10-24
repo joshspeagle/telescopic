@@ -76,4 +76,5 @@ All notable changes to this project are documented here. The format follows
 - Fixes from a second audit: a non-finite gradient where the log-density is finite
   raises with the point in every kernel, where MALA and HMC rejected the proposal; the
   maximal coupling keeps each chain's law at draws where a log-density is infinite, and
-  takes SciPy's Dirichlet laws.
+  takes SciPy's Dirichlet laws; `check_coupling` swaps half the pairs, so that it catches a
+  coupling that reads another row's state, and fails a NaN p-value.

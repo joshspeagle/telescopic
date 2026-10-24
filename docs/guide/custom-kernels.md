@@ -157,15 +157,17 @@ would then have to evaluate `target.log_prob_and_grad` at its new positions.
 
 ## Testing
 
-{func}`telescopic.testing.check_coupling` starts `n` copies of a pair at `x` and `y`,
-and compares one coupled step with one step of the kernel alone from each point: how
-often each chain stays put (Fisher's exact test), and where it moves (Kolmogorov-Smirnov
-tests along random directions and of the distance moved). It also reports the fraction
-of pairs that met; the states whose log-density or gradient differs from a fresh
-evaluation; and the pairs that nearly met, within 64 units in the last place, the mark
-of a recomputed proposal. `passed()` requires every p-value to be at least $10^{-3}$,
-some pairs to meet, and no stale state or near miss. `x` and `y` should be close enough
-to meet in one step sometimes.
+{func}`telescopic.testing.check_coupling` starts `n` pairs, `(x, y)` or `(y, x)` in
+random rows, and compares one coupled step with one step of the kernel alone from the
+same points, among the chains that start at each point: how often each chain stays put
+(Fisher's exact test), and where it moves (Kolmogorov-Smirnov tests along random
+directions and of the distance moved). The swapped pairs catch a coupling that reads
+another row's state, the more surely the more the log-densities at `x` and `y` differ.
+It also reports the fraction of pairs that met; the states whose log-density or gradient
+differs from a fresh evaluation; and the pairs that nearly met, within 64 units in the
+last place, the mark of a recomputed proposal. `passed()` requires every p-value to be
+at least $10^{-3}$, some pairs to meet, and no stale state or near miss. `x` and `y`
+should be close enough to meet in one step sometimes.
 
 ```{code-cell} python
 from telescopic.testing import check_coupling, fixed_draws

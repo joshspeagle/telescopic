@@ -58,6 +58,15 @@ def positive_first(x):
     return np.where(x[..., 0] > 0, -0.5 * np.sum(x**2, axis=-1), -np.inf)
 
 
+class FirstRow(RandomWalk):
+    # X's acceptance reads the log-density of the first row's X.
+    def coupled_step(self, target, state_x, state_y, draws):
+        shared = State(state_x.x, np.full(len(state_x), state_x.log_prob[0]))
+        new_x, new_y = super().coupled_step(target, shared, state_y, draws)
+        stayed = np.all(new_x.x == state_x.x, axis=1)
+        return State(new_x.x, np.where(stayed, state_x.log_prob, new_x.log_prob)), new_y
+
+
 class Independent(RandomWalk):
     # Each chain steps alone: the marginals are right, but the chains never meet.
     def coupled_step(self, target, state_x, state_y, draws):
@@ -66,10 +75,19 @@ class Independent(RandomWalk):
 
 def test_check_coupling_flags_a_wrong_marginal():
     report = check_coupling(
-        WrongY(COV, scale=1.0), TARGET, [0.1, 0.2], [0.3, -0.1], n=2_000, rng=3
+        WrongY(COV, scale=1.0), TARGET, [0.1, 0.2], [0.3, -0.1], n=4_000, rng=3
     )
     assert report.stay[1] < P_MIN < report.stay[0]
     assert report.moves[1] < P_MIN < report.moves[0]
+
+
+def test_check_coupling_flags_a_coupling_that_reads_another_rows_state():
+    # From copies of one pair, every row held the same state, and the p-values were those
+    # of the right coupling; in a run, such a coupling biased E[x] by 6 standard errors.
+    target = Target(lambda x: -0.5 * np.sum(x**2, axis=-1), vectorize=True)
+    report = check_coupling(FirstRow(np.eye(1)), target, [0.0], [1.0], rng=8)
+    assert report.stay[0] < P_MIN
+    assert not report.passed()
 
 
 def test_check_coupling_flags_a_coupling_that_recomputes_y_where_the_chains_meet():

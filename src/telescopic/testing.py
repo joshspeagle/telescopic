@@ -29,12 +29,14 @@ class CouplingReport:
     Attributes
     ----------
     stay : tuple of two floats
-        For X and for Y, the p-value of Fisher's exact test that the chain stays put as
-        often in a coupled step as in a step of the kernel alone.
+        For the first and the second chain of the pairs, the p-value of Fisher's exact
+        test that the chain stays put as often in a coupled step as in a step of the
+        kernel alone.
     moves : tuple of two floats
-        For X and for Y, the Bonferroni-corrected p-value of two-sample
+        For the first and the second chain, the Bonferroni-corrected p-value of two-sample
         Kolmogorov-Smirnov tests that compare the moved positions of a coupled step with
-        those of a step alone, along random directions and in the distance moved.
+        those of a step alone, along random directions and in the distance moved; NaN
+        where a position is NaN.
     met : float
         The fraction of pairs that met: a coupling that never meets gives no estimate.
     stale : int
@@ -55,6 +57,8 @@ class CouplingReport:
     def passed(self, alpha: float = 1e-3) -> bool:
         """Whether every p-value is at least ``alpha`` and pairs met, with no stale state or near miss.
 
+        A p-value of NaN fails.
+
         Parameters
         ----------
         alpha : float
@@ -66,7 +70,11 @@ class CouplingReport:
         if not 0 < real("alpha", alpha) < 1:
             raise ValueError(f"alpha must be in (0, 1), not {alpha}")
         p_values = (*self.stay, *self.moves)
-        return min(p_values) >= alpha and self.met > 0 and not (self.stale or self.near_misses)
+        return (
+            bool(np.min(p_values) >= alpha)
+            and self.met > 0
+            and not (self.stale or self.near_misses)
+        )
 
 
 def check_coupling(
@@ -79,11 +87,12 @@ def check_coupling(
 ) -> CouplingReport:
     """Check a kernel's coupling as the engine uses it (spec section 9).
 
-    From ``n`` copies of the pair ``(x, y)``, one coupled step is compared with one step
-    of the kernel alone from ``x`` and one from ``y``: how often each chain stays put,
-    and where it moves to. It also counts the pairs that meet, the states whose cached
-    log-density or gradient is stale, and the pairs that nearly meet. Custom kernels
-    should pass it before use.
+    From ``n`` pairs, ``(x, y)`` or ``(y, x)`` in random rows, one coupled step is compared
+    with one step of the kernel alone from the first points and one from the second: how
+    often each chain stays put, and where it moves to. Swapped pairs in one batch catch a
+    coupling that reads another row's state. It also counts the pairs that meet, the
+    states whose cached log-density or gradient is stale, and the pairs that nearly
+    meet. Custom kernels should pass it before use.
 
     Parameters
     ----------
@@ -94,7 +103,7 @@ def check_coupling(
         The starting points, close enough for the coupling to meet them in one step
         sometimes: for HMC, within about its ``meeting_scale``.
     n : int
-        Copies of the pair; at least 2. More detect smaller differences.
+        Pairs; at least 2. More detect smaller differences.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
 
     Returns
@@ -111,8 +120,10 @@ def check_coupling(
         raise ValueError(f"x and y must be points of one shape (d,), not {x.shape} and {y.shape}")
     n = integer("n", n, minimum=2)
     seeds = root_seed(rng).spawn(4)
+    generator = np.random.default_rng(seeds[3])
+    swapped = (generator.random(n) < 0.5).astype(np.intp)
     starts = kernel.init_state(target, np.stack([x, y]))
-    start_x, start_y = (starts.take(np.full(n, row)) for row in (0, 1))
+    start_x, start_y = starts.take(swapped), starts.take(1 - swapped)
     new_x, new_y = kernel.coupled_step(target, start_x, start_y, random_draws(n, seeds[0]))
     alone = [
         kernel.step(target, start, random_draws(n, seed))[0]
@@ -120,14 +131,18 @@ def check_coupling(
     ]
     # In one dimension every projection gives the same test.
     projections = PROJECTIONS if len(x) > 1 else 1
-    directions = np.random.default_rng(seeds[3]).standard_normal((projections, len(x)))
+    directions = generator.standard_normal((projections, len(x)))
+    # Each chain's steps are compared among the rows that start it at the same point, and
+    # the two points' p-values Bonferroni-corrected.
+    rows = (swapped == 0, swapped == 1)
     stay, moves = [], []
-    for point, coupled, single in ((x, new_x.x, alone[0].x), (y, new_y.x, alone[1].x)):
-        stayed = [np.all(chain == point, axis=1) for chain in (coupled, single)]
-        table = [[int(s.sum()), int(n - s.sum())] for s in stayed]
-        stay.append(float(stats.fisher_exact(table).pvalue))
-        moved = [chain[~s] for chain, s in zip((coupled, single), stayed, strict=True)]
-        moves.append(_compare_moves(point, moved[0], moved[1], directions))
+    for points, coupled, single in (((x, y), new_x.x, alone[0].x), ((y, x), new_y.x, alone[1].x)):
+        tests = [
+            _compare(point, coupled[group], single[group], directions)
+            for point, group in zip(points, rows, strict=True)
+        ]
+        stay.append(min(1.0, 2 * min(test[0] for test in tests)))
+        moves.append(float(np.minimum(1.0, 2 * np.min([test[1] for test in tests]))))
     gap = np.abs(new_x.x - new_y.x)
     ulp = np.spacing(np.maximum(np.abs(new_x.x), np.abs(new_y.x)))
     near = np.any(gap > 0, axis=1) & np.all(gap <= NEAR_MISS_ULPS * ulp, axis=1)
@@ -140,18 +155,22 @@ def check_coupling(
     )
 
 
-def _compare_moves(
+def _compare(
     point: FloatArray, coupled: FloatArray, single: FloatArray, directions: FloatArray
-) -> float:
-    # Kolmogorov-Smirnov tests along each direction and of the distance moved,
-    # Bonferroni-corrected; with fewer than two moves on a side there is nothing to test.
-    if min(len(coupled), len(single)) < 2:
-        return 1.0
-    samples = [(coupled @ direction, single @ direction) for direction in directions] + [
-        (np.linalg.norm(coupled - point, axis=1), np.linalg.norm(single - point, axis=1))
-    ]
-    smallest = min(float(stats.ks_2samp(a, b).pvalue) for a, b in samples)
-    return min(1.0, len(samples) * smallest)
+) -> tuple[float, float]:
+    # For chains that start at point: Fisher's exact test of how often they stay put, and
+    # Kolmogorov-Smirnov tests of their moves along each direction and of their lengths,
+    # Bonferroni-corrected, which need two moves on a side. A NaN position gives NaN.
+    stayed = [np.all(chain == point, axis=1) for chain in (coupled, single)]
+    table = [[int(s.sum()), int(len(s) - s.sum())] for s in stayed]
+    stay = float(stats.fisher_exact(table).pvalue)
+    moved = [(chain - point)[~s] for chain, s in zip((coupled, single), stayed, strict=True)]
+    if min(len(m) for m in moved) < 2:
+        return stay, 1.0
+    samples = [(moved[0] @ direction, moved[1] @ direction) for direction in directions]
+    samples.append((np.linalg.norm(moved[0], axis=1), np.linalg.norm(moved[1], axis=1)))
+    smallest = np.min([stats.ks_2samp(a, b).pvalue for a, b in samples])
+    return stay, float(np.minimum(1.0, len(samples) * smallest))
 
 
 def _stale(kernel: Kernel, target: Target, state: State) -> int:
