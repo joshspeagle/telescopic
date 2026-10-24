@@ -27,3 +27,7 @@ All notable changes to this project are documented here. The format follows
   replicate's output does not depend on the number of lanes.
 - `SignedMeasure`, the unbiased covariance estimator and quantiles of signed measures by
   isotonic projection (`telescopic.measure`, `telescopic.estimators`).
+- `Result` with estimates and confidence intervals for any test function, unbiased
+  covariances, quantiles, credible intervals and signed histograms; total variation and
+  1-Wasserstein bounds from the meeting times; a summary table; and the warnings of the
+  specification (`telescopic.results`, `telescopic.diagnostics`).

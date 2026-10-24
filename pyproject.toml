@@ -40,6 +40,7 @@ dev = [
     "mypy==2.4.0",
     # scipy ships no type information; scipy-stubs 1.18 needs Python 3.12.
     "scipy-stubs==1.18.1.1; python_version >= '3.12'",
+    "pandas-stubs==3.0.5.260914",
     "pre-commit",
     "matplotlib>=3.8",
 ]

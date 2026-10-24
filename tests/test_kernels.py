@@ -2,17 +2,10 @@ import numpy as np
 import pytest
 from scipy import integrate, stats
 
-from references import metropolis, reflection
+from references import P_MIN, gaussian_log_prob, metropolis, reflection
 from telescopic.kernels import Independence, Kernel, Mixture, MultivariateT, RandomWalk, State
 from telescopic.target import Target
 from telescopic.testing import fixed_draws, random_draws
-
-P_MIN = 1e-5
-
-
-def gaussian_log_prob(x):
-    return -0.5 * np.sum(x**2, axis=-1)
-
 
 TARGET = Target(gaussian_log_prob, vectorize=True)
 
@@ -22,15 +15,19 @@ def state(points):
     return State(points, gaussian_log_prob(points))
 
 
-def kernels(d):
+def kernels(cov):
     return {
-        "reflection": RandomWalk(np.eye(d), scale=1.0),
-        "maximal": RandomWalk(np.eye(d), scale=1.0, coupling="maximal"),
-        "independence": Independence(MultivariateT(np.zeros(d), 1.5 * np.eye(d), df=None)),
-        "mixture": Mixture(
-            [RandomWalk(np.eye(d), scale=0.5), RandomWalk(np.eye(d), scale=2.0)], [0.3, 0.7]
-        ),
+        "reflection": RandomWalk(cov, scale=1.0),
+        "maximal": RandomWalk(cov, scale=1.0, coupling="maximal"),
+        "independence": Independence(MultivariateT(np.zeros(len(cov)), 1.5 * cov, df=None)),
+        "mixture": Mixture([RandomWalk(cov, scale=0.5), RandomWalk(cov, scale=2.0)], [0.3, 0.7]),
     }
+
+
+def dense(d):
+    # A dense covariance near the identity, so that most proposals are accepted.
+    a = np.random.default_rng(14).standard_normal((d, d))
+    return (a @ a.T + d * np.eye(d)) / (2 * d)
 
 
 # Oracle tests: draw for draw against independent references.
@@ -132,22 +129,21 @@ def one_step_law(kernel, x):
 @pytest.mark.parametrize("name", ["reflection", "maximal", "independence", "mixture"])
 @pytest.mark.parametrize("gap", [0.0, 0.1, 3.0])
 def test_each_chain_of_a_coupled_step_has_the_exact_one_step_law(name, gap):
-    kernel = kernels(1)[name]
+    kernel = kernels(np.eye(1))[name]
     n = 20_000
     x0, y0 = 0.4, 0.4 + gap
-    start_x = State(np.full((n, 1), x0), np.full(n, gaussian_log_prob(np.array([x0]))))
-    start_y = State(np.full((n, 1), y0), np.full(n, gaussian_log_prob(np.array([y0]))))
+    start_x, start_y = state(np.full((n, 1), x0)), state(np.full((n, 1), y0))
     new_x, new_y = kernel.coupled_step(TARGET, start_x, start_y, random_draws(n, 4))
     for start, new in ((x0, new_x.x[:, 0]), (y0, new_y.x[:, 0])):
         stay, cdf = one_step_law(kernel, start)
         stayed = new == start
-        assert abs(stayed.mean() - stay) < 5 * np.sqrt(stay * (1 - stay) / n)
+        assert stats.binomtest(int(stayed.sum()), n, stay).pvalue > P_MIN
         assert stats.kstest(new[~stayed], cdf).pvalue > P_MIN
 
 
 @pytest.mark.parametrize("name", ["reflection", "independence", "mixture"])
 def test_coupled_marginals_match_single_steps_in_three_dimensions(name):
-    kernel = kernels(3)[name]
+    kernel = kernels(dense(3))[name]
     n = 20_000
     rng = np.random.default_rng(5)
     x0, y0 = rng.standard_normal(3), rng.standard_normal(3)
@@ -166,7 +162,7 @@ def test_coupled_marginals_match_single_steps_in_three_dimensions(name):
 
 @pytest.mark.parametrize("name", ["reflection", "maximal", "independence", "mixture"])
 def test_equal_states_stay_equal(name):
-    kernel = kernels(2)[name]
+    kernel = kernels(np.eye(2))[name]
     points = np.random.default_rng(9).standard_normal((50, 2))
     state_x, state_y = state(points), state(points.copy())
     for step in range(100):
@@ -175,23 +171,54 @@ def test_equal_states_stay_equal(name):
         np.testing.assert_array_equal(state_x.log_prob, state_y.log_prob)
 
 
-def dense_kernels(d):
-    # A dense covariance near the identity, so that most proposals are accepted.
-    a = np.random.default_rng(14).standard_normal((d, d))
-    cov = (a @ a.T + d * np.eye(d)) / (2 * d)
-    return {
-        "reflection": RandomWalk(cov, scale=0.5),
-        "maximal": RandomWalk(cov, scale=0.5, coupling="maximal"),
-        "independence": Independence(MultivariateT(np.zeros(d), cov, df=5)),
-        "mixture": Mixture([RandomWalk(cov, scale=0.3), RandomWalk(cov, scale=1.0)], [0.5, 0.5]),
-    }
+GRADIENT_TARGET = Target(gaussian_log_prob, grad=lambda x: -x, vectorize=True)
+
+
+def with_gradients(points):
+    return State(points, gaussian_log_prob(points), -points)
+
+
+@pytest.mark.parametrize("name", ["reflection", "maximal", "independence", "mixture"])
+def test_kernels_leave_their_input_states_unchanged(name):
+    kernel = kernels(np.eye(2))[name]
+    rng = np.random.default_rng(17)
+    x, y = state(rng.standard_normal((30, 2))), state(rng.standard_normal((30, 2)))
+    before = [a.copy() for a in (x.x, x.log_prob, y.x, y.log_prob)]
+    kernel.step(TARGET, x, random_draws(30, 18))
+    kernel.coupled_step(TARGET, x, y, random_draws(30, 19))
+    for array, copy in zip((x.x, x.log_prob, y.x, y.log_prob), before, strict=True):
+        np.testing.assert_array_equal(array, copy)
+
+
+@pytest.mark.parametrize("name", ["reflection", "maximal", "independence", "mixture"])
+def test_states_that_carry_gradients_get_them_at_every_new_position(name):
+    # A gradient kernel mixed with this one must find valid gradients in the states.
+    kernel = kernels(np.eye(2))[name]
+    rng = np.random.default_rng(20)
+    x, y = (with_gradients(rng.standard_normal((40, 2))) for _ in range(2))
+    moved, _ = kernel.step(GRADIENT_TARGET, x, random_draws(40, 21))
+    new_x, new_y = kernel.coupled_step(GRADIENT_TARGET, x, y, random_draws(40, 22))
+    for result in (moved, new_x, new_y):
+        np.testing.assert_array_equal(result.grad, -result.x)
+
+
+class NeedsGradient(RandomWalk):
+    @property
+    def needs_grad(self):
+        return True
+
+
+def test_a_non_finite_gradient_at_an_initial_state_raises():
+    target = Target(gaussian_log_prob, grad=lambda x: np.full_like(x, np.nan), vectorize=True)
+    with pytest.raises(ValueError, match="grad returned"):
+        NeedsGradient(np.eye(2)).init_state(target, np.zeros((1, 2)))
 
 
 @pytest.mark.parametrize("name", ["reflection", "maximal", "independence", "mixture"])
 def test_a_rows_transition_does_not_depend_on_the_rest_of_the_batch(name):
     # Spec R-KER-6: a BLAS product gives most rows other bits in a batch of one.
     d, n = 10, 16
-    kernel = dense_kernels(d)[name]
+    kernel = kernels(0.25 * dense(d))[name]
     rng = np.random.default_rng(15)
     x, y = rng.standard_normal((n, d)), rng.standard_normal((n, d))
     normals, uniforms = rng.standard_normal((n, 2 * d + 5)), rng.random((n, 3))
@@ -231,6 +258,28 @@ def test_an_untuned_random_walk_refuses_to_step():
 def test_random_walk_rejects_invalid_parameters(kwargs, message):
     with pytest.raises(ValueError, match=message):
         RandomWalk(**kwargs)
+
+
+@pytest.mark.parametrize(
+    ("weights", "message"),
+    [([np.nan, 1.0], "finite, non-negative"), ([0.0, 0.0], "not all zero"), ([1.0], "per kernel")],
+)
+def test_mixture_rejects_invalid_weights(weights, message):
+    with pytest.raises(ValueError, match=message):
+        Mixture([RandomWalk(np.eye(1)), RandomWalk(np.eye(1))], weights)
+
+
+def test_mixture_refuses_components_of_different_dimensions():
+    with pytest.raises(ValueError, match="different dimensions"):
+        Mixture([RandomWalk(np.eye(1)), RandomWalk(np.eye(2))], [0.5, 0.5])
+
+
+def test_a_non_finite_gradient_at_an_accepted_proposal_raises():
+    # A gradient-free kernel whose states carry gradients must not cache a bad one.
+    target = Target(gaussian_log_prob, grad=lambda x: np.where(x > 0, np.nan, -x), vectorize=True)
+    start = State(np.full((50, 1), -1.0), np.full(50, -0.5), np.full((50, 1), 1.0))
+    with pytest.raises(ValueError, match="grad returned"):
+        RandomWalk(np.eye(1), scale=3.0).step(target, start, random_draws(50, 23))
 
 
 @pytest.mark.parametrize("df", [None, 1, 5])

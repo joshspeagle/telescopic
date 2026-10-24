@@ -126,7 +126,7 @@ This section is normative. Code, docstrings and `docs/theory.md` use exactly thi
   1. Draw $X_0$ and $Y_0$ from $\pi_0$ independently.
   2. Draw $X_t \sim P(X_{t-1}, \cdot)$ for $t = 1, \dots, L$.
   3. For $t = L, L+1, \dots$ while $t < \max(\tau, m)$: before the meeting, draw $(X_{t+1}, Y_{t+1-L}) \sim \bar P((X_t, Y_{t-L}), \cdot)$; after it, draw $X_{t+1} \sim P(X_t, \cdot)$ and set $Y_{t+1-L} := X_{t+1}$.
-- **Meeting time (R-EST-2):** $\tau = \inf\{t \ge L : X_t = Y_{t-L}\}$ (AJ24's convention, equal to JOA20's for $L = 1$). Equality is exact: the engine compares the positions bitwise once at $t = L$ and after every coupled step. It never uses a tolerance.
+- **Meeting time (R-EST-2):** $\tau = \inf\{t \ge L : X_t = Y_{t-L}\}$ (AJ24's convention, equal to JOA20's for $L = 1$). Equality is exact: the engine compares the positions with `==` once at $t = L$ and after every coupled step, so $+0.0$ and $-0.0$ are the same point. It never uses a tolerance.
 - **Faithfulness (R-EST-3):** $X_t = Y_{t-L}$ for all $t \ge \tau$. The engine enforces it by simulating only $X$ after the meeting (step 3). It does not rely on the coupled kernel keeping equal states together.
 
 ### 3.2 The estimator
@@ -220,7 +220,7 @@ For any $L$ and $t \ge 0$ (Biswas, Jacob & Vanetti 2019, Thm. 2.5):
 
 $$d_{TV}(\pi_t, \pi) \le \mathbb E\big[\max(0, \lceil (\tau - L - t)/L \rceil)\big] = \sum_{j \ge 1} \mathbb P(\tau > t + jL).$$
 
-- **Estimate:** the bound is estimated by the replicate average, reported as $\min(1, \cdot)$, with a binomial upper confidence bound where the average is 0.
+- **Estimate:** the bound is estimated by the replicate average, reported as $\min(1, \cdot)$. The result also reports its leading term at $k$, the fraction of pairs with $\tau - L > k$, with a one-sided 95% Clopper–Pearson upper bound, which stays informative when the fraction is 0.
 - **Censored pairs** count as meeting at the cap, so with censoring the estimate is a lower bound. It is reported with the number censored.
 - **Use for $k$:** with $L = k$ the bound at $t = k$ is close to $\mathbb P(\tau - L > k)$, which the main run estimates and reports. It exceeds the pilot's $1 - \beta$, because the main run's $\tau - L$ is longer than the pilot's $\tau - 1$: the coupled phase starts from a near-stationary $X_L$. With $\beta = 0.99$ in E01's setting it is 0.019 at $d = 10$ and 0.029 at $d = 30$ (design review D-R5).
 - **1-Wasserstein (should):**
@@ -249,17 +249,17 @@ Averaging only the replicates completed by a deadline is biased by $-\mathbb E[H
 
 - **Log-density:** `log_prob(x, *args, **kwargs)` returns a float for `x` of shape `(d,)`. With `vectorize=True` it takes `(n, d)` and returns `(n,)`.
 - **Gradient:** an optional `grad` with the same signature returns $\nabla \log\pi$, of shape `(d,)` or `(n, d)`. A kernel that needs a gradient raises `ValueError` without one.
-- **Special values:** `-inf` is a valid value and is rejected by every Metropolis step. NaN or `+inf` raises `ValueError` with the offending point. Where the log-density is `-inf`, the gradient may be non-finite.
+- **Special values:** `-inf` is a valid value and is rejected by every Metropolis step. NaN or `+inf` raises `ValueError` with the offending point. Where the log-density is `-inf`, the gradient may be non-finite. Where it is finite, a non-finite gradient raises wherever a cached state would keep it (initial states, and proposals of gradient-free kernels whose states carry gradients); gradient kernels reject a proposal that has one.
+- **Gibbs:** with a Gibbs kernel, `log_prob` may be `None` (§5.7).
 - **Determinism:** the log-density must return the same value at the same point. A stochastic log-density can split chains that have met. The documentation says so.
 - **Layer C:** a `Target` object wraps these functions, counts evaluations, and presents a batched interface `(n, d) -> (n,)` to kernels, whether or not the user's function is vectorised.
 
 ### 4.2 Initial distribution (R-INPUT-2)
 
 `init` may be any of:
+- an object with `rvs(random_state=rng)`: a frozen SciPy distribution, or a helper (`telescopic.initial.Normal`, `Uniform`, `Empirical`). A draw is normalised to shape `(d,)` (SciPy returns shape `()` for a one-dimensional multivariate normal);
 - a callable `init(rng) -> array (d,)`;
-- a frozen SciPy distribution, used through `rvs(random_state=rng)`, whose draw is normalised to shape `(d,)` (SciPy returns shape `()` for a one-dimensional multivariate normal);
-- an array of points of shape `(n, d)`, used as the uniform distribution over its rows. This lets emcee users start from an existing ensemble without losing unbiasedness;
-- a helper object (`telescopic.initial.Normal`, `Uniform`, `Empirical`).
+- an array of points of shape `(n, d)`, used as the uniform distribution over its rows. This lets emcee users start from an existing ensemble without losing unbiasedness.
 
 Rules:
 - $X_0$ and $Y_0$ are independent draws from the replicate's own stream.
@@ -288,7 +288,7 @@ coupled_step(target, sx, sy, draws) -> (sx, sy)             # one coupled transi
 tune(target, initial, rng, **options) -> (kernel, report)   # only if it has unset parameters
 ```
 
-- **States:** `State(x, log_prob, grad)` are batch-first: `x` is `(n, d)`, `log_prob` is `(n,)`, and `grad` is `(n, d)` or `None`.
+- **States:** `State(x, log_prob, grad)` are batch-first: `x` is `(n, d)`, `log_prob` is `(n,)`, and `grad` is `(n, d)` or `None`. A kernel returns states with the fields of its input states, valid at the returned positions, so a kernel that needs no gradient still evaluates one for states that carry it: mixtures of gradient and gradient-free kernels then keep valid caches. Kernels never modify their input states.
 - **Randomness:** `draws` supplies random numbers row by row from each replicate's stream (§6.1). Its `normal(d)`, `uniform()`, `log_uniform()` and `generator(i)` give `(n, d)` normals, `(n,)` uniforms and their logarithms, and row `i`'s `numpy.random.Generator`.
 - **R-KER-2:** each marginal of `coupled_step` has exactly the law of `step`.
 - **R-KER-3:** the engine declares a meeting when the returned positions of a pair are bitwise equal (R-EST-2). A coupling that makes the two proposals identical gives $Y$ a copy of $X$'s proposal and its cached log-density, never a recomputation, so that equality is exact.
@@ -422,7 +422,7 @@ The choice of component must not depend on the states (AJ24 §4.2). Switching be
 ### 6.1 Replicates and random streams (R-EXEC-1)
 
 - **Root seed:** `rng` (SPEC 7) is normalised to a root `SeedSequence`. `None` draws fresh entropy, an integer seeds it, and a `SeedSequence` is used as given. A `Generator` gives the `SeedSequence` of four integers drawn from it: the run is then a function of the generator's state, and passing the same generator twice gives two different runs (D-26). The root entropy and spawn key are recorded.
-- **Per-replicate streams:** replicate `i` in namespace `ns` has the generator `G = Generator(PCG64DXSM(SeedSequence(root.entropy, spawn_key=root.spawn_key + (ns, i))))`.
+- **Per-replicate streams:** replicate `i` in namespace `ns` has the generator `G = Generator(PCG64DXSM(SeedSequence(root.entropy, spawn_key=root.spawn_key + (T, ns, i))))`, where the branch `T = 0x74656C` ("tel" in ASCII) keeps these keys away from the small integers that `SeedSequence.spawn` gives a caller's own children of `root`.
   - `G` draws $X_0$, then $Y_0$, and serves `draws.generator(i)`.
   - The replicate's normals and uniforms come from `G.spawn(2)`: the generators with spawn keys `+ (0,)` and `+ (1,)` under `G`'s seed sequence. Each is read in order (D-8).
 - **Buffering:** each lane pre-draws its replicate's normals and uniforms into buffers, so a lockstep batch gathers them with array indexing. A request that needs more numbers than a buffer holds tops it up and keeps the unread ones, so the buffer width changes no number.
@@ -449,7 +449,7 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
   - it is excluded from the estimates, from $R$ and from the signed measure;
   - it is reported by a `ConvergenceWarning` stating that the estimates are biased.
 - Censored pairs are never dropped silently, and never averaged as if they had met.
-- **Slow-pair warning:** when a pair passes $t = \max(10^4, 10\max(L, m))$, the engine emits one `ConvergenceWarning` naming the replicate. With the recipe of R-TUNE-2 and $m \ge 1000$ this is 100 times the pilot's $\hat q_\beta$; it needs no pilot, and in the meeting-time pilot ($L = 1$, $m = 0$) it is $10^4$.
+- **Slow-pair warning:** when a pair passes $t = \max(10^4, 10\max(L, m))$, the sampler emits one `ConvergenceWarning` naming the replicate, from the engine's progress reports. With the recipe of R-TUNE-2 and $m \ge 1000$ this is 100 times the pilot's $\hat q_\beta$; it needs no pilot, and in the meeting-time pilot ($L = 1$, $m = 0$) it is $10^4$.
 - **Meeting-time pilot:** it is capped at `pilot_max_iter` (default $10^5$). Capped pairs are censored and sort above every finite meeting time; if $\hat q_\beta$ falls on a censored pair, the pilot raises `ValueError` with advice (a wider $\pi_0$, a better kernel, or explicit `k`, `lag` and `m`). So `sample()` cannot run forever on a target where the coupling never meets (D-23).
 
 ### 6.4 Parallel execution (R-EXEC-5)
@@ -463,7 +463,8 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 - **Worker hygiene:**
   - every task runs under `threadpool_limits(1)`, so BLAS is pinned to one thread in user pools too;
   - in pools that telescopic creates, the target is shipped once per worker and workers ignore SIGINT. With a user executor the target travels with each task.
-- **Picklability:** telescopic ships the target to the workers it creates with `cloudpickle` when it is installed (the `parallel` extra), so a `log_prob` defined in a notebook works under the spawn and forkserver start methods (D-27). Otherwise the target must be picklable, and the error says how to fix it. The documentation covers the `if __name__ == "__main__"` guard.
+- **Picklability:** telescopic ships the target, the initial distribution and the kernel (which can hold user functions, such as Gibbs conditionals) to the workers it creates with `cloudpickle` when it is installed (the `parallel` extra), so functions defined in a notebook work under the spawn and forkserver start methods (D-27). Otherwise they must be picklable, and the error says how to fix it. The documentation covers the `if __name__ == "__main__"` guard.
+- **Counters:** each task returns its own numbers of log-density and gradient evaluations, since the `Target` counters of a worker process are not the parent's.
 
 ### 6.5 Interruption (R-EXEC-6)
 

@@ -3,23 +3,21 @@
 from __future__ import annotations
 
 import itertools
-import warnings
-from collections.abc import Callable, Iterable, Iterator
+import time
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, NamedTuple
 
 import numpy as np
 import numpy.typing as npt
 from numpy.random import Generator, SeedSequence
 
-from telescopic._random import FloatArray, Streams, replicate_generator
-from telescopic.estimators import IntArray, averaging_times, correction_coefficients
-from telescopic.initial import Initial, draw
+from telescopic._random import Streams, replicate_generator
+from telescopic._types import BoolArray, Distribution, FloatArray, IntArray
+from telescopic.estimators import averaging_times, correction_coefficients
+from telescopic.initial import draw
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
-from telescopic.warnings import ConvergenceWarning, InputWarning
-
-BoolArray = npt.NDArray[np.bool_]
 
 
 @dataclass
@@ -30,39 +28,67 @@ class Replicates:
     ----------
     index : ndarray of int, shape (R,)
         Replicate indices.
-    meeting_time : ndarray of int, shape (R,)
-        :math:`\tau = \inf\{t \ge L : X_t = Y_{t-L}\}`, or -1 for a censored pair.
+    meeting_time : ndarray of float, shape (R,)
+        :math:`\tau = \inf\{t \ge L : X_t = Y_{t-L}\}`, or ``inf`` for a censored pair.
     cost : ndarray of int, shape (R,)
         Kernel applications, counting a coupled step before the meeting as two.
-    atoms, weights, owner, correction : ndarrays, shapes (N, d), (N,), (N,), (N,)
+    atoms, weights, owner : ndarrays, shapes (N, d), (N,), (N,)
         The signed measures of the replicates that met (spec R-EST-6): the atoms, their
-        weights (each replicate's sum to 1), the index of the replicate each atom belongs
-        to, and whether it is a bias-correction atom. Sorted by owner.
+        weights (each replicate's sum to 1), and the index of the replicate each atom
+        belongs to. Sorted by owner.
     distance_owner, distance_time, distance : ndarrays, shape (M,)
         :math:`\lVert X_t - Y_{t-L}\rVert` for each pair, at each time :math:`L \le t < \tau`
         (to the cap for a censored pair).
+    zero_density : ndarray of int
+        The replicates whose :math:`X_0` or :math:`Y_0` has zero target density.
+    n_log_prob, n_grad : int
+        Evaluations of the log-density and its gradient (spec R-EST-7).
+    seconds : float
+        Wall time of the run.
     paths : dict of int to (ndarray, ndarray)
         With ``keep_paths``: the paths of :math:`X` and :math:`Y` of each replicate,
         shapes ``(T + 1, d)`` and ``(T_Y + 1, d)``, where :math:`Y` stops at the meeting.
     """
 
     index: IntArray
-    meeting_time: IntArray
+    meeting_time: FloatArray
     cost: IntArray
     atoms: FloatArray
     weights: FloatArray
     owner: IntArray
-    correction: BoolArray
     distance_owner: IntArray
     distance_time: IntArray
     distance: FloatArray
+    zero_density: IntArray
+    n_log_prob: int = 0
+    n_grad: int = 0
+    seconds: float = 0.0
     paths: dict[int, tuple[FloatArray, FloatArray]] = field(default_factory=dict)
+
+
+class Status(NamedTuple):
+    """The progress of a run, given to its monitor after every iteration.
+
+    Attributes
+    ----------
+    started, finished : int
+        Replicates started and finished so far.
+    slowest : int
+        Index of the unmet replicate that has run longest, or -1 if every pair has met.
+    t : int
+        Its time :math:`t`, or 0.
+    """
+
+    started: int
+    finished: int
+    slowest: int
+    t: int
 
 
 def run(
     target: Target,
     kernel: Kernel,
-    initial: Initial,
+    initial: Distribution,
     indices: Iterable[int],
     *,
     root: SeedSequence,
@@ -75,8 +101,7 @@ def run(
     lanes: int = 64,
     store: bool = True,
     keep_paths: bool = False,
-    slow_after: int | None = None,
-    stop: Callable[[], bool] | None = None,
+    monitor: Callable[[Status], bool] | None = None,
 ) -> Replicates:
     r"""Run the replicates ``indices`` of the estimator :math:`H_S` (spec sections 3.1, 6.2).
 
@@ -84,14 +109,15 @@ def run(
     stream (spec section 6.1), runs :math:`X` alone for ``lag`` steps, then the coupled
     kernel until :math:`X_t = Y_{t-L}` bitwise, then :math:`X` alone until :math:`t = m`.
     A replicate's output depends only on ``root``, ``namespace``, its index and the
-    arguments, never on the other replicates or on ``lanes``.
+    arguments, never on the other replicates or on ``lanes``. The engine emits no
+    warning: it records what its caller needs to warn about.
 
     Parameters
     ----------
     target : Target
     kernel : Kernel
         A tuned kernel.
-    initial : Initial
+    initial : object with ``rvs(random_state=generator)``
     indices : iterable of int
         Replicate indices, started in this order.
     root : numpy.random.SeedSequence
@@ -113,12 +139,10 @@ def run(
         Whether to store the signed measures and distances; meeting-time pilots do not.
     keep_paths : bool
         Whether to keep the paths of both chains, for inspection.
-    slow_after : int, optional
-        Warn once when a pair is still unmet after this time; defaults to
-        ``max(10_000, 10 * max(lag, m))`` (spec section 6.3).
-    stop : callable, optional
-        Polled every iteration; once it returns true, no new replicate starts and the
-        ones in progress finish, so the completed indices are those started.
+    monitor : callable, optional
+        Called with a :class:`Status` after every iteration. Once it returns true, no
+        new replicate starts and the ones in progress finish, so the finished indices
+        are those started (spec section 6.5).
 
     Returns
     -------
@@ -141,33 +165,69 @@ def run(
     first = next(queue, None)
     if first is None:
         raise ValueError("indices must not be empty")
+    evaluations, start = (target.n_log_prob, target.n_grad), time.perf_counter()
     head = _Start(first, initial, root, namespace, None)
     ndim = len(head.x0)
     starts = itertools.chain([head], (_Start(i, initial, root, namespace, ndim) for i in queue))
     batch = _Batch(target, kernel, ndim, lanes, k, m, lag, thin, max_iter, store, keep_paths)
     batch.fill(np.arange(lanes), starts)
-    slow_after = max(10_000, 10 * max(lag, m)) if slow_after is None else slow_after
-    stopping = warned = False
+    stopping = False
     while batch.active.any():
-        stopping = stopping or (stop is not None and stop())
         batch.advance()
-        if not warned and (slow := batch.slow(slow_after)) is not None:
-            warned = True
-            warnings.warn(
-                f"replicate {slow} has not met after {slow_after} iterations; "
-                "the meeting times may be heavy-tailed",
-                ConvergenceWarning,
-                stacklevel=2,
-            )
-        if len(free := batch.finish()):
-            batch.fill(free, iter(()) if stopping else starts)
-    return batch.result()
+        free = batch.finish()
+        stopping = (monitor is not None and monitor(batch.status())) or stopping
+        if not stopping:
+            batch.fill(free, starts)
+    return batch.result(
+        target.n_log_prob - evaluations[0],
+        target.n_grad - evaluations[1],
+        time.perf_counter() - start,
+    )
+
+
+def merge(parts: Sequence[Replicates]) -> Replicates:
+    """Join the outputs of disjoint sets of replicates, sorted by replicate index.
+
+    Parameters
+    ----------
+    parts : sequence of Replicates
+
+    Returns
+    -------
+    Replicates
+    """
+    groups = {
+        "index": ("index", "meeting_time", "cost"),
+        "owner": ("owner", "atoms", "weights"),
+        "distance_owner": ("distance_owner", "distance_time", "distance"),
+        "zero_density": ("zero_density",),
+    }
+    index = np.concatenate([part.index for part in parts])
+    if len(np.unique(index)) != len(index):
+        raise ValueError("the parts share replicate indices; each replicate must run once")
+    columns: dict[str, Any] = {}
+    for key, names in groups.items():
+        order = np.argsort(np.concatenate([getattr(part, key) for part in parts]), kind="stable")
+        for name in names:
+            columns[name] = np.concatenate([getattr(part, name) for part in parts])[order]
+    return Replicates(
+        **columns,
+        n_log_prob=sum(part.n_log_prob for part in parts),
+        n_grad=sum(part.n_grad for part in parts),
+        seconds=sum(part.seconds for part in parts),
+        paths={index: path for part in parts for index, path in part.paths.items()},
+    )
 
 
 class _Start:
     # A replicate's generator and initial states, drawn X_0 first (spec section 6.1).
     def __init__(
-        self, index: int, initial: Initial, root: SeedSequence, namespace: int, ndim: int | None
+        self,
+        index: int,
+        initial: Distribution,
+        root: SeedSequence,
+        namespace: int,
+        ndim: int | None,
     ) -> None:
         self.index = index
         self.generator: Generator = replicate_generator(root, namespace, index)
@@ -191,7 +251,7 @@ class _Batch:
         store: bool,
         keep_paths: bool,
     ) -> None:
-        self.target, self.kernel, self.ndim = target, kernel, ndim
+        self.target, self.kernel = target, kernel
         self.k, self.m, self.lag, self.thin, self.max_iter = k, m, lag, thin, max_iter
         self.store, self.keep_paths = store, keep_paths
         self.weight = 1.0 / len(averaging_times(k, m, thin))
@@ -202,11 +262,13 @@ class _Batch:
         self.cost = np.zeros(lanes, dtype=np.int64)
         self.x = _empty_state(lanes, ndim, kernel.needs_grad)
         self.y = _empty_state(lanes, ndim, kernel.needs_grad)
-        self.finished: list[tuple[int, int, int]] = []
-        self.atoms = _Chunks()
-        self.distances = _Chunks()
+        integers, reals = np.zeros(0, dtype=np.int64), np.zeros(0)
+        self.finished = _Chunks(integers, integers, integers)
+        self.atoms = _Chunks(integers, np.zeros((0, ndim)), reals)
+        self.distances = _Chunks(integers, integers, reals)
+        self.zero_density: list[int] = []
         self.paths: dict[int, tuple[list[FloatArray], list[FloatArray]]] = {}
-        self.warned_zero = False
+        self.n_started = self.n_finished = 0
 
     @property
     def active(self) -> BoolArray:
@@ -221,15 +283,10 @@ class _Batch:
         states = self.kernel.init_state(
             self.target, np.array([p for s in starting for p in (s.x0, s.y0)])
         )
-        if not self.warned_zero and np.isneginf(states.log_prob).any():
-            self.warned_zero = True
-            warnings.warn(
-                "an initial draw has zero target density; the chains start outside the support",
-                InputWarning,
-                stacklevel=3,
-            )
         self.x.put(lanes, states.take(slice(0, None, 2)))
         self.y.put(lanes, states.take(slice(1, None, 2)))
+        outside = np.isneginf(states.log_prob).reshape(-1, 2).any(axis=1)
+        self.zero_density += [s.index for s, bad in zip(starting, outside, strict=True) if bad]
         for lane, start in zip(lanes.tolist(), starting, strict=True):
             self.streams.assign(lane, start.generator)
             if self.keep_paths:
@@ -238,7 +295,8 @@ class _Batch:
         self.t[lanes] = 0
         self.tau[lanes] = -1
         self.cost[lanes] = 0
-        self._record(lanes, np.zeros(0, dtype=np.intp))
+        self.n_started += len(starting)
+        self._record(lanes, np.zeros(0, dtype=np.int64))
 
     def advance(self) -> None:
         # One iteration: X alone in the lagging and met lanes, the coupled kernel in the
@@ -268,49 +326,45 @@ class _Batch:
                 self.paths[int(self.replicate[lane])][1].append(self.y.x[lane].copy())
         self._record(np.flatnonzero(active), compared[~met])
 
-    def slow(self, after: int) -> int | None:
-        slow = np.flatnonzero(self.active & (self.tau < 0) & (self.t > after))
-        return int(self.replicate[slow[0]]) if len(slow) else None
-
     def finish(self) -> IntArray:
         # Frees the lanes of the pairs that met and reached m, and of censored pairs.
         done = (self.tau >= 0) & (self.t >= self.m)
         if self.max_iter is not None:
             done |= (self.tau < 0) & (self.t >= self.max_iter)
         lanes = np.flatnonzero(self.active & done)
-        self.finished.extend(
-            zip(
-                self.replicate[lanes].tolist(),
-                self.tau[lanes].tolist(),
-                self.cost[lanes].tolist(),
-                strict=True,
-            )
-        )
+        self.finished.add(self.replicate[lanes], self.tau[lanes], self.cost[lanes])
         self.replicate[lanes] = -1
+        self.n_finished += len(lanes)
         return lanes
 
-    def result(self) -> Replicates:
-        index, meeting_time, cost = (
-            np.array(column, dtype=np.int64) for column in zip(*sorted(self.finished), strict=True)
+    def status(self) -> Status:
+        unmet = self.active & (self.tau < 0)
+        if not unmet.any():
+            return Status(self.n_started, self.n_finished, -1, 0)
+        lane = int(np.argmax(np.where(unmet, self.t, -1)))
+        return Status(
+            self.n_started, self.n_finished, int(self.replicate[lane]), int(self.t[lane])
         )
-        owner, (atoms, weights, correction) = self.atoms.join(
-            [np.zeros((0, self.ndim)), np.zeros(0), np.zeros(0, dtype=bool)]
-        )
-        met = np.isin(owner, index[meeting_time >= 0])
-        distance_owner, (distance_time, distance) = self.distances.join(
-            [np.zeros(0, dtype=np.int64), np.zeros(0)]
-        )
+
+    def result(self, n_log_prob: int, n_grad: int, seconds: float) -> Replicates:
+        index, tau, cost = self.finished.join()
+        owner, atoms, weights = self.atoms.join()
+        met = np.isin(owner, index[tau >= 0])
+        distance_owner, distance_time, distance = self.distances.join()
         return Replicates(
             index=index,
-            meeting_time=meeting_time,
+            meeting_time=np.where(tau >= 0, tau, np.inf),
             cost=cost,
             atoms=atoms[met],
             weights=weights[met],
             owner=owner[met],
-            correction=correction[met],
             distance_owner=distance_owner,
             distance_time=distance_time,
             distance=distance,
+            zero_density=np.sort(np.array(self.zero_density, dtype=np.int64)),
+            n_log_prob=n_log_prob,
+            n_grad=n_grad,
+            seconds=seconds,
             paths={i: (np.array(x), np.array(y)) for i, (x, y) in self.paths.items()},
         )
 
@@ -322,19 +376,13 @@ class _Batch:
         t = self.t[stepped]
         averaged = stepped[(t >= self.k) & (t <= self.m) & ((t - self.k) % self.thin == 0)]
         self.atoms.add(
-            self.replicate[averaged],
-            self.x.x[averaged],
-            np.full(len(averaged), self.weight),
-            np.zeros(len(averaged), dtype=bool),
+            self.replicate[averaged], self.x.x[averaged], np.full(len(averaged), self.weight)
         )
         coefficient = correction_coefficients(self.t[unmet], self.k, self.m, self.lag, self.thin)
         corrected = unmet[coefficient > 0]
         for chain, sign in ((self.x, 1.0), (self.y, -1.0)):
             self.atoms.add(
-                self.replicate[corrected],
-                chain.x[corrected],
-                sign * coefficient[coefficient > 0],
-                np.ones(len(corrected), dtype=bool),
+                self.replicate[corrected], chain.x[corrected], sign * coefficient[coefficient > 0]
             )
         self.distances.add(
             self.replicate[unmet],
@@ -344,24 +392,19 @@ class _Batch:
 
 
 class _Chunks:
-    # Arrays appended iteration by iteration with their owners, joined and sorted by
-    # owner once at the end.
-    def __init__(self) -> None:
-        self.owners: list[IntArray] = []
-        self.columns: list[list[npt.NDArray[Any]]] = []
+    # Columns appended iteration by iteration, the owning replicate first, then joined and
+    # sorted by owner once. The empty columns given at construction fix shapes and dtypes.
+    def __init__(self, *empty: npt.NDArray[Any]) -> None:
+        self.chunks: list[tuple[npt.NDArray[Any], ...]] = [empty]
 
-    def add(self, owner: IntArray, *columns: npt.NDArray[Any]) -> None:
-        if len(owner):
-            self.owners.append(owner)
-            self.columns.append(list(columns))
+    def add(self, *columns: npt.NDArray[Any]) -> None:
+        if len(columns[0]):
+            self.chunks.append(columns)
 
-    def join(self, empty: list[npt.NDArray[Any]]) -> tuple[IntArray, list[npt.NDArray[Any]]]:
-        if not self.owners:
-            return np.zeros(0, dtype=np.int64), empty
-        owner = np.concatenate(self.owners)
-        order = np.argsort(owner, kind="stable")
-        columns = [np.concatenate(parts)[order] for parts in zip(*self.columns, strict=True)]
-        return owner[order], columns
+    def join(self) -> list[npt.NDArray[Any]]:
+        columns = [np.concatenate(parts) for parts in zip(*self.chunks, strict=True)]
+        order = np.argsort(columns[0], kind="stable")
+        return [column[order] for column in columns]
 
 
 def _empty_state(lanes: int, ndim: int, with_grad: bool) -> State:

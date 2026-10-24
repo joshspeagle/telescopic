@@ -1,6 +1,6 @@
 # Plan
 
-**Current position:** Phase 4, milestones M0 to M3 implemented; the M1 to M3 review gates
+**Current position:** Phase 4, milestones M0 to M4 implemented; the M1 to M3 review gates
 are in progress.
 
 ## Phases
@@ -24,7 +24,7 @@ are in progress.
 | M1 | Coupling primitives | yes | in progress (with M2) | with M0 to M3 | `notes/reviews/m1-m2.md` |
 | M2 | Target, initial, kernels | yes | in progress (with M1) | with M0 to M3 | `notes/reviews/m1-m2.md` |
 | M3 | Estimators, measure, engine | yes | pending | with M0 to M3 | `notes/reviews/m3.md` |
-| M4 | Results, diagnostics, warnings, summary | no | | | |
+| M4 | Results, diagnostics, warnings, summary | yes | pending | | `notes/reviews/m4.md` |
 | M5 | Tuning, sampler, `sample` | no | | | |
 | M6 | MALA, HMC, Gibbs | no | | | |
 | M7 | Parallel execution, interrupts, budgets | no | | | |

@@ -36,8 +36,14 @@ def test_root_seed_rejects_other_types(rng):
 
 def test_replicate_generator_follows_the_spawn_key_convention():
     root = SeedSequence(11, spawn_key=(2,))
-    expected = Generator(PCG64DXSM(SeedSequence(11, spawn_key=(2, MAIN, 4))))
+    expected = Generator(PCG64DXSM(SeedSequence(11, spawn_key=(2, 0x74656C, MAIN, 4))))
     assert replicate_generator(root, MAIN, 4).random() == expected.random()
+
+
+def test_replicate_streams_avoid_the_callers_own_spawned_streams():
+    root = SeedSequence(11)
+    grandchild = Generator(PCG64DXSM(root.spawn(1)[0].spawn(1)[0]))
+    assert replicate_generator(SeedSequence(11), MAIN, 0).random() != grandchild.random()
 
 
 def test_namespaces_and_indices_give_different_streams():

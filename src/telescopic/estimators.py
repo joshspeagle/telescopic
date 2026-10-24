@@ -8,9 +8,7 @@ import numpy as np
 import numpy.typing as npt
 from scipy.optimize import isotonic_regression
 
-from telescopic._random import FloatArray
-
-IntArray = npt.NDArray[np.int64]
+from telescopic._types import FloatArray, IntArray
 
 
 def averaging_times(k: int, m: int, thin: int) -> IntArray:
@@ -63,9 +61,10 @@ def unbiased_covariance(first: FloatArray, second: FloatArray) -> FloatArray:
 
     .. math:: \widehat{\mathrm{Cov}}_\pi(h) = \bar b - \bar a\bar a^\top + S_a/R
 
-    with :math:`a_r = \hat\pi_r(h)`, :math:`b_r = \hat\pi_r(hh^\top)` and :math:`S_a` the
-    sample covariance of the :math:`a_r` (spec R-EST-8). The last two terms are the
-    U-statistic :math:`\sum_{r \ne s} a_r a_s^\top / (R(R-1))`, unbiased for
+    with :math:`a_r = \hat\pi_r(h)`, :math:`\bar b` the mean of
+    :math:`\hat\pi_r(hh^\top)` and :math:`S_a` the sample covariance of the :math:`a_r`
+    (spec R-EST-8). The last two terms are the U-statistic
+    :math:`\sum_{r \ne s} a_r a_s^\top / (R(R-1))`, unbiased for
     :math:`\pi(h)\pi(h)^\top`; the plug-in :math:`\bar a\bar a^\top` is biased by
     :math:`\mathrm{Cov}(\bar a)`.
 
@@ -73,8 +72,9 @@ def unbiased_covariance(first: FloatArray, second: FloatArray) -> FloatArray:
     ----------
     first : ndarray, shape (R, p)
         The values :math:`a_r`.
-    second : ndarray, shape (R, p, p)
-        The values :math:`b_r`.
+    second : ndarray, shape (p, p)
+        The mean :math:`\bar b` over replicates of :math:`\hat\pi_r(hh^\top)`, which
+        pools all atoms: :math:`R^{-1}\sum_i \omega_i h(x_i)h(x_i)^\top`.
 
     Returns
     -------
@@ -84,10 +84,35 @@ def unbiased_covariance(first: FloatArray, second: FloatArray) -> FloatArray:
     if n < 2:
         raise ValueError(f"an unbiased covariance needs at least 2 replicates, not {n}")
     mean = first.mean(axis=0)
-    centred = first - mean
-    sample = centred.T @ centred / (n - 1)
-    covariance: FloatArray = second.mean(axis=0) - np.outer(mean, mean) + sample / n
+    sample = np.atleast_2d(np.cov(first, rowvar=False))
+    # Symmetrising the second moments makes the result exactly symmetric.
+    covariance: FloatArray = (second + second.T) / 2 - np.outer(mean, mean) + sample / n
     return covariance
+
+
+def unbiased_variance(first: FloatArray, second: FloatArray) -> FloatArray:
+    r"""Unbiased estimates of the variances of :math:`h` (spec R-EST-8).
+
+    The diagonal of :func:`unbiased_covariance`, without the off-diagonal cost:
+    :math:`\bar b_j - \bar a_j^2 + S_{a,jj}/R`.
+
+    Parameters
+    ----------
+    first : ndarray, shape (R, p)
+        The values :math:`a_r = \hat\pi_r(h)`.
+    second : ndarray, shape (p,)
+        The mean over replicates of :math:`\hat\pi_r(h^2)`.
+
+    Returns
+    -------
+    ndarray, shape (p,)
+    """
+    n = len(first)
+    if n < 2:
+        raise ValueError(f"an unbiased variance needs at least 2 replicates, not {n}")
+    mean = first.mean(axis=0)
+    variance: FloatArray = second - mean**2 + first.var(axis=0, ddof=1) / n
+    return variance
 
 
 def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike) -> FloatArray:
@@ -96,7 +121,9 @@ def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike)
     Equal values are merged, the cumulative weights are projected onto non-decreasing
     sequences by isotonic regression and clipped to [0, 1], and the quantile at level
     :math:`\beta` is the smallest value whose projected cumulative weight is at least
-    :math:`\beta`. For non-negative weights this is the inverted-CDF quantile. The
+    :math:`\beta`; at a level that a cumulative weight equals exactly, rounding of the
+    sums decides between two neighbouring values. For non-negative weights this is the
+    inverted-CDF quantile. The
     result is consistent as the number of replicates grows, not unbiased (Jacob,
     O'Leary & Atchade 2020, Proposition 3.2).
 
@@ -111,10 +138,9 @@ def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike)
     -------
     ndarray, shape of ``q``
     """
-    order = np.argsort(values, kind="stable")
-    unique, first = np.unique(values[order], return_index=True)
-    mass = np.add.reduceat(weights[order], first)
+    unique, inverse = np.unique(values, return_inverse=True)
+    mass = np.bincount(inverse.ravel(), weights=weights)
     cdf = np.clip(isotonic_regression(np.cumsum(mass)).x, 0.0, 1.0)
-    position = np.searchsorted(cdf, q, side="left")
+    position = np.searchsorted(cdf, q)
     quantiles: FloatArray = unique[np.minimum(position, len(unique) - 1)]
     return quantiles

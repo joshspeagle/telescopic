@@ -8,11 +8,10 @@ from dataclasses import dataclass
 import numpy as np
 import numpy.typing as npt
 
-from telescopic._random import FloatArray
-from telescopic.estimators import IntArray
+from telescopic._types import FloatArray, IntArray
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class SignedMeasure:
     r"""The signed measures :math:`\hat\pi_r` of :math:`R` replicates (spec R-EST-6, R-OUT-2).
 
@@ -57,7 +56,9 @@ class SignedMeasure:
                 f"h must map atoms of shape (n, d) to shape (n,) or (n, p); for n = "
                 f"{len(self.atoms)} it returned shape {values.shape}"
             )
-        columns = values.reshape(len(values), -1) * self.weights[:, None]
+        columns = (
+            values.reshape(len(values), int(np.prod(values.shape[1:]))) * self.weights[:, None]
+        )
         sums = np.stack(
             [
                 np.bincount(self.replicate, weights=column, minlength=self.n_replicates)
@@ -67,3 +68,24 @@ class SignedMeasure:
         )
         per_replicate: FloatArray = sums.reshape(self.n_replicates, *values.shape[1:])
         return per_replicate
+
+    def mass(self, cell: IntArray, n_cells: int) -> FloatArray:
+        """Each replicate's signed mass in each of ``n_cells`` cells, such as histogram bins.
+
+        Parameters
+        ----------
+        cell : ndarray of int, shape (N,)
+            The cell of each atom, from 0 to ``n_cells - 1``, or -1 for none.
+        n_cells : int
+
+        Returns
+        -------
+        ndarray, shape (R, n_cells)
+        """
+        inside = cell >= 0
+        masses: FloatArray = np.bincount(
+            self.replicate[inside] * n_cells + cell[inside],
+            weights=self.weights[inside],
+            minlength=self.n_replicates * n_cells,
+        ).reshape(self.n_replicates, n_cells)
+        return masses

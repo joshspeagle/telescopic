@@ -7,17 +7,18 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
-import numpy.typing as npt
 
-from telescopic._random import Draws, FloatArray
+from telescopic._random import Draws
+from telescopic._types import BoolArray, FloatArray
 from telescopic.target import Target
-
-BoolArray = npt.NDArray[np.bool_]
 
 
 @dataclass
 class State:
     """Positions, log-densities and (optionally) gradients of ``n`` chains, batch first.
+
+    A kernel returns states with the fields of its input states, valid at the returned
+    positions: a state that carries gradients gets them evaluated at every new position.
 
     Attributes
     ----------
@@ -34,7 +35,8 @@ class State:
         return len(self.log_prob)
 
     def take(self, rows: Any) -> State:
-        """The chains in ``rows``."""
+        """A copy of the chains in ``rows`` (an index, an index array, a mask or a slice)."""
+        rows = np.arange(len(self))[rows]
         return State(
             self.x[rows], self.log_prob[rows], None if self.grad is None else self.grad[rows]
         )
@@ -43,7 +45,7 @@ class State:
         """Overwrite the chains in ``rows`` with ``other``, in place."""
         self.x[rows] = other.x
         self.log_prob[rows] = other.log_prob
-        if self.grad is not None and other.grad is not None:
+        if self.grad is not None:
             self.grad[rows] = other.grad
 
 
@@ -68,8 +70,29 @@ class Kernel(ABC):
         """Whether every parameter is set, so the kernel can run."""
         return True
 
+    @property
+    def ndim(self) -> int | None:
+        """The dimension that the kernel's parameters fix, or ``None``."""
+        return None
+
     def init_state(self, target: Target, x: FloatArray) -> State:
-        """Evaluate the target at the rows of ``x``."""
+        """Evaluate the target at the rows of ``x``, with gradients if the kernel needs them.
+
+        Parameters
+        ----------
+        target : Target
+        x : ndarray, shape (n, d)
+            Initial points, whose dimension must be the kernel's.
+
+        Returns
+        -------
+        State
+        """
+        if self.ndim is not None and x.shape[1] != self.ndim:
+            raise ValueError(
+                f"the kernel works in {self.ndim} dimensions, but the initial points have "
+                f"{x.shape[1]}"
+            )
         return evaluate(target, x, self.needs_grad)
 
     @abstractmethod
@@ -96,11 +119,33 @@ class Kernel(ABC):
 
 
 def evaluate(target: Target, x: FloatArray, need_grad: bool) -> State:
-    """The state at the rows of ``x``: log-densities, and gradients if needed."""
-    if need_grad:
-        log_prob, grad = target.log_prob_and_grad(x)
-        return State(x, log_prob, grad)
-    return State(x, target.log_prob(x))
+    """The state at the rows of ``x``: log-densities, and gradients if needed.
+
+    A non-finite gradient where the log-density is finite raises ``ValueError``: a cache
+    must stay valid (spec R-INPUT-1). Gradient kernels that reject such proposals call
+    the target directly.
+
+    Parameters
+    ----------
+    target : Target
+    x : ndarray, shape (n, d)
+    need_grad : bool
+
+    Returns
+    -------
+    State
+    """
+    if not need_grad:
+        return State(x, target.log_prob(x))
+    log_prob, grad = target.log_prob_and_grad(x)
+    bad = np.isfinite(log_prob) & ~np.isfinite(grad).all(axis=1)
+    if bad.any():
+        row = int(np.argmax(bad))
+        raise ValueError(
+            f"grad returned {grad[row].tolist()} at x = {x[row].tolist()}, where log_prob "
+            "is finite"
+        )
+    return State(x, log_prob, grad)
 
 
 def evaluate_pair(
@@ -109,30 +154,57 @@ def evaluate_pair(
     """States at the coupled proposals ``x`` and ``y`` in one batched call.
 
     Identical proposals are evaluated once and their state is shared.
+
+    Parameters
+    ----------
+    target : Target
+    x, y : ndarray, shape (n, d)
+    identical : ndarray of bool, shape (n,)
+        Rows where ``y`` is a copy of ``x``.
+    need_grad : bool
+
+    Returns
+    -------
+    state_x, state_y : State
     """
-    distinct = ~identical
+    distinct = np.flatnonzero(~identical)
     both = evaluate(target, np.concatenate([x, y[distinct]]), need_grad)
-    state_x = both.take(slice(0, len(x)))
-    state_y = State(
-        y, state_x.log_prob.copy(), None if both.grad is None else both.grad[: len(x)].copy()
-    )
-    state_y.put(distinct, both.take(slice(len(x), None)))
-    return state_x, state_y
+    source = np.arange(len(x))
+    source[distinct] = np.arange(len(x), len(both))
+    return both.take(slice(0, len(x))), both.take(source)
 
 
 def log_ratio(new: FloatArray, old: FloatArray) -> FloatArray:
-    """``new - old`` for log-densities; ``-inf - -inf`` gives NaN, which every Metropolis
-    test rejects, without a warning."""
+    """The difference ``new - old`` of log-densities, without a warning for ``-inf - -inf``.
+
+    That difference is NaN, which every Metropolis test ``log u < ratio`` rejects.
+
+    Parameters
+    ----------
+    new, old : ndarray, shape (n,)
+
+    Returns
+    -------
+    ndarray, shape (n,)
+    """
     with np.errstate(invalid="ignore"):
         return new - old
 
 
 def select(accepted: BoolArray, proposal: State, current: State) -> State:
-    """Row by row, ``proposal`` where ``accepted`` and ``current`` elsewhere."""
+    """Row by row, ``proposal`` where ``accepted`` and ``current`` elsewhere.
+
+    Parameters
+    ----------
+    accepted : ndarray of bool, shape (n,)
+    proposal, current : State
+
+    Returns
+    -------
+    State
+    """
     return State(
         np.where(accepted[:, None], proposal.x, current.x),
         np.where(accepted, proposal.log_prob, current.log_prob),
-        None
-        if current.grad is None or proposal.grad is None
-        else np.where(accepted[:, None], proposal.grad, current.grad),
+        None if current.grad is None else np.where(accepted[:, None], proposal.grad, current.grad),
     )

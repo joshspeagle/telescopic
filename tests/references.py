@@ -2,6 +2,16 @@
 
 import numpy as np
 
+# One-sample and frequency tests use this p-value threshold, which keeps each module's
+# family-wise false-positive rate below about 1e-3 (CLAUDE.md: tolerances from the Monte
+# Carlo error).
+P_MIN = 1e-5
+
+
+def gaussian_log_prob(x):
+    # The standard normal log-density, up to a constant, of a point or of rows of points.
+    return -0.5 * np.sum(np.square(x), axis=-1)
+
 
 def reflection(mu_x, mu_y, chol, z, u):
     # Jacob, O'Leary & Atchade (2020), section 4.1.

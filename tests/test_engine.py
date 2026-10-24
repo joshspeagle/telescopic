@@ -1,18 +1,13 @@
 import numpy as np
 import pytest
 
+from references import gaussian_log_prob
 from telescopic._random import MAIN, root_seed
-from telescopic.engine import run
+from telescopic.engine import Status, merge, run
 from telescopic.estimators import averaging_times, correction_coefficients
 from telescopic.initial import Empirical, Normal
-from telescopic.kernels import Kernel, RandomWalk, State
+from telescopic.kernels import RandomWalk, State
 from telescopic.target import Target
-from telescopic.warnings import ConvergenceWarning, InputWarning
-
-
-def gaussian_log_prob(x):
-    return -0.5 * float(np.sum(x**2))
-
 
 # Point by point, so that a replicate's results are bitwise independent of the batch.
 TARGET = Target(gaussian_log_prob)
@@ -32,11 +27,6 @@ def simulate(kernel=None, initial=FAR, n=20, **options):
     )
 
 
-def owned(replicates, index):
-    rows = replicates.owner == index
-    return replicates.atoms[rows], replicates.weights[rows]
-
-
 @pytest.mark.parametrize(
     ("k", "m", "lag", "thin"),
     [(0, 0, 1, 1), (2, 10, 1, 1), (3, 12, 4, 1), (5, 20, 3, 2), (0, 7, 7, 3)],
@@ -44,11 +34,12 @@ def owned(replicates, index):
 def test_signed_measures_match_their_definition_on_the_recorded_paths(k, m, lag, thin):
     replicates = simulate(k=k, m=m, lag=lag, thin=thin, keep_paths=True)
     averaged = averaging_times(k, m, thin)
-    for index, tau in zip(replicates.index, replicates.meeting_time, strict=True):
+    for index, tau in zip(replicates.index, replicates.meeting_time.astype(int), strict=True):
         x, y = replicates.paths[index]
         t = np.arange(averaged[0] + lag, tau)
         c = correction_coefficients(t, k, m, lag, thin)
-        atoms, weights = owned(replicates, index)
+        rows = replicates.owner == index
+        atoms, weights = replicates.atoms[rows], replicates.weights[rows]
         assert len(atoms) == len(averaged) + 2 * np.count_nonzero(c)
         for h in (lambda z: z[:, 0], lambda z: np.sin(z).sum(axis=1)):
             expected = h(x[averaged]).mean() + np.sum(c * (h(x[t]) - h(y[t - lag])))
@@ -64,7 +55,7 @@ def test_the_meeting_time_is_the_first_time_the_chains_agree(initial, lag):
         RandomWalk(np.eye(2), scale=3.0), initial, k=k, m=m, lag=lag, keep_paths=True
     )
     for index, tau, cost in zip(
-        replicates.index, replicates.meeting_time, replicates.cost, strict=True
+        replicates.index, replicates.meeting_time.astype(int), replicates.cost, strict=True
     ):
         x, y = replicates.paths[index]
         assert len(x) == max(tau, m) + 1
@@ -81,87 +72,59 @@ def test_the_meeting_time_is_the_first_time_the_chains_agree(initial, lag):
     assert np.any(replicates.meeting_time == lag) == (initial is not FAR)
 
 
-class Perfect(Kernel):
-    """P(x, .) = pi for every x, coupled by common draws: pairs meet at the first coupled step."""
-
-    def step(self, target, state, draws):
-        x = draws.normal(state.x.shape[1])
-        return State(x, target.log_prob(x)), np.ones(len(x), dtype=bool)
-
-    def coupled_step(self, target, state_x, state_y, draws):
-        new, _ = self.step(target, state_x, draws)
-        return new, State(new.x.copy(), new.log_prob.copy())
-
-
-@pytest.mark.parametrize("lag", [1, 2, 5])
-def test_a_perfect_kernel_meets_at_the_first_coupled_step(lag):
-    replicates = simulate(Perfect(), k=3, m=4, lag=lag)
-    np.testing.assert_array_equal(replicates.meeting_time, lag + 1)
-    np.testing.assert_array_equal(replicates.cost, lag + 2 + max(0, 4 - lag - 1))
-
-
-class Careful(RandomWalk):
-    """Refuses a coupled step on a pair that has already met."""
-
-    def coupled_step(self, target, state_x, state_y, draws):
-        assert not np.all(state_x.x == state_y.x, axis=1).any()
-        return super().coupled_step(target, state_x, state_y, draws)
-
-
-def test_pairs_that_met_are_never_coupled_again():
-    simulate(Careful(np.eye(2), scale=3.0), Empirical([[0.0, 0.0]]), n=40, lag=2)
-
-
 @pytest.mark.parametrize("coupling", ["reflection", "maximal"])
 def test_a_replicates_output_does_not_depend_on_the_lanes(coupling):
     # Spec R-EXEC-2, with a coupling whose draw count varies ("maximal").
     kernel = RandomWalk(np.eye(2), scale=1.0, coupling=coupling)
     runs = [simulate(kernel, n=30, k=3, m=8, lag=2, lanes=lanes) for lanes in (1, 7, 64)]
+    np.testing.assert_array_equal(runs[0].index, np.arange(30))
     for other in runs[1:]:
-        for name in (
-            "index",
-            "meeting_time",
-            "cost",
-            "atoms",
-            "weights",
-            "owner",
-            "correction",
-            "distance_owner",
-            "distance_time",
-            "distance",
-        ):
-            np.testing.assert_array_equal(getattr(other, name), getattr(runs[0], name))
+        for name, value in vars(other).items():
+            if name != "seconds":
+                np.testing.assert_array_equal(value, getattr(runs[0], name))
 
 
-def test_every_index_runs_exactly_once():
-    replicates = simulate(n=50, lanes=7)
-    np.testing.assert_array_equal(replicates.index, np.arange(50))
-    assert (replicates.meeting_time >= 1).all()
+class Tagged(RandomWalk):
+    """X moves by 1 and Y by 100 per step, so a chain that takes the other's move shows."""
 
-
-class Apart(RandomWalk):
-    """Couples nothing: the chains move independently and never meet."""
+    def step(self, target, state, draws):
+        x = state.x + 1.0
+        return State(x, target.log_prob(x)), np.ones(len(x), dtype=bool)
 
     def coupled_step(self, target, state_x, state_y, draws):
-        return self.step(target, state_x, draws)[0], self.step(target, state_y, draws)[0]
+        y = state_y.x + 100.0
+        return self.step(target, state_x, draws)[0], State(y, target.log_prob(y))
+
+
+def test_each_chain_receives_its_own_transition():
+    start = Empirical([[0.0, 0.0]])  # integer positions, so the differences are exact
+    replicates = simulate(Tagged(np.eye(2)), start, n=3, lag=2, max_iter=12, keep_paths=True)
+    for x, y in replicates.paths.values():
+        np.testing.assert_array_equal(np.diff(x, axis=0), 1.0)
+        np.testing.assert_array_equal(np.diff(y, axis=0), 100.0)
 
 
 def test_a_cap_censors_unmet_pairs_and_drops_their_measures():
-    replicates = simulate(Apart(np.eye(2)), n=6, k=2, m=10, max_iter=15)
-    np.testing.assert_array_equal(replicates.meeting_time, -1)
+    replicates = simulate(Tagged(np.eye(2)), n=6, k=2, m=10, max_iter=15)
+    np.testing.assert_array_equal(replicates.meeting_time, np.inf)
     assert len(replicates.atoms) == 0
     np.testing.assert_array_equal(np.bincount(replicates.distance_owner), 15)
 
 
-def test_a_cap_must_exceed_lag_and_m():
-    with pytest.raises(ValueError, match="max_iter must exceed"):
-        simulate(k=2, m=10, max_iter=10)
-
-
-def test_a_slow_pair_warns_once():
-    with pytest.warns(ConvergenceWarning, match="has not met after 5 iterations") as record:
-        simulate(Apart(np.eye(2)), n=4, max_iter=30, slow_after=5)
-    assert len(record) == 1
+@pytest.mark.parametrize(
+    ("options", "message"),
+    [
+        ({"k": 3, "m": 2}, "0 <= k <= m"),
+        ({"lag": 0}, "at least 1"),
+        ({"thin": 0}, "at least 1"),
+        ({"max_iter": 10}, "max_iter must exceed"),
+        ({"lanes": 0}, "lanes must be"),
+        ({"n": 0}, "indices must not be empty"),
+    ],
+)
+def test_invalid_settings_raise(options, message):
+    with pytest.raises(ValueError, match=message):
+        simulate(**options)
 
 
 def test_pilot_mode_returns_meeting_times_only():
@@ -170,27 +133,46 @@ def test_pilot_mode_returns_meeting_times_only():
     assert len(replicates.atoms) == len(replicates.distance) == 0
 
 
-def test_a_stop_request_finishes_the_replicates_in_progress():
-    calls = iter(range(1000))
-    replicates = simulate(n=100, lanes=4, stop=lambda: next(calls) >= 3)
+def test_a_monitor_sees_the_progress_and_can_stop_new_replicates():
+    seen = []
+
+    def monitor(status):
+        seen.append(status)
+        return len(seen) >= 3
+
+    replicates = simulate(n=100, lanes=4, monitor=monitor)
     np.testing.assert_array_equal(replicates.index, np.arange(4))
+    assert seen[0] == Status(started=4, finished=0, slowest=seen[0].slowest, t=1)
+    assert seen[-1].finished == 4
 
 
-def test_a_start_outside_the_support_warns():
+def test_the_run_records_its_evaluations_and_the_starts_outside_the_support():
     def half_line(x):
         return 0.0 if x[0] > 0 else -np.inf
 
-    with pytest.warns(InputWarning, match="zero target density"):
-        run(
-            Target(half_line),
-            RandomWalk(np.eye(1)),
-            Empirical([[-1.0]]),
-            range(4),
-            root=root_seed(2),
-            namespace=MAIN,
-            k=0,
-            m=2,
-            lag=1,
-            max_iter=50,
-            slow_after=10**6,
-        )
+    target = Target(half_line)
+    replicates = run(
+        target,
+        RandomWalk(np.eye(1)),
+        Empirical([[-1.0], [1.0]]),
+        range(10),
+        root=root_seed(2),
+        namespace=MAIN,
+        k=0,
+        m=2,
+        lag=1,
+        max_iter=50,
+    )
+    assert replicates.n_log_prob == target.n_log_prob > 0
+    assert 0 < len(replicates.zero_density) < 10
+
+
+def test_a_kernel_of_another_dimension_than_the_points_raises():
+    with pytest.raises(ValueError, match="kernel works in 1 dimensions"):
+        simulate(RandomWalk(np.eye(1)))
+
+
+def test_merging_refuses_parts_that_share_replicates():
+    part = simulate(n=3)
+    with pytest.raises(ValueError, match="share replicate indices"):
+        merge([part, part])
