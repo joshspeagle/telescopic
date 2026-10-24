@@ -311,6 +311,33 @@ def test_discrete_maximal_matches_the_exact_coupling_table():
     assert stats.chisquare(counts[support], n * table[support]).pvalue > P_MIN
 
 
+def test_discrete_maximal_couples_every_pair_of_rows_of_a_transition_matrix():
+    # Test plan 2.4, item 5: all 16 pairs of 4 states in one batch, so that a row reading
+    # another row's distributions would fail. Each pair's coupled transition has P's rows
+    # as marginals, and equal states stay equal.
+    P = np.array([[0.5, 0.3, 0.2, 0.0], [0.1, 0.6, 0.2, 0.1], [0.0, 0.3, 0.4, 0.3], [0.25] * 4])
+    a, b = np.divmod(np.arange(16), 4)
+    n = 4000
+    with np.errstate(divide="ignore"):
+        log_p = np.log(P)
+    i, j = discrete_maximal(
+        log_p[np.repeat(a, n)], log_p[np.repeat(b, n)], random_draws(16 * n, 6)
+    )
+    for pair, (p, q) in enumerate(zip(P[a], P[b], strict=True)):
+        overlap = np.minimum(p, q)
+        alpha = overlap.sum()
+        exact = np.diag(overlap)
+        if alpha < 1:
+            exact += np.outer(p - overlap, q - overlap) / (1 - alpha)
+        np.testing.assert_allclose(exact.sum(axis=1), p, atol=1e-15)
+        np.testing.assert_allclose(exact.sum(axis=0), q, atol=1e-15)
+        counts = np.zeros((4, 4))
+        np.add.at(counts, (i[pair * n : (pair + 1) * n], j[pair * n : (pair + 1) * n]), 1)
+        support = exact > 0
+        assert counts[~support].sum() == 0
+        assert stats.chisquare(counts[support], n * exact[support]).pvalue > P_MIN / 16
+
+
 @pytest.mark.parametrize(
     "row", [[-np.inf, -np.inf], [0.0, np.nan], [np.inf, 0.0]], ids=["no mass", "nan", "inf"]
 )

@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from scipy import stats
 
-from references import synthetic
+from references import gaussian_log_prob, synthetic
 from telescopic.diagnostics import w1_bound
 from telescopic.engine import run
 from telescopic.estimators import unbiased_covariance
@@ -16,7 +16,7 @@ from telescopic.results import Result
 from telescopic.target import Target
 from telescopic.warnings import ConvergenceWarning
 
-TARGET = Target(lambda x: -0.5 * np.sum(x**2, axis=1), vectorize=True)
+TARGET = Target(gaussian_log_prob, vectorize=True)
 SETTINGS = {"k": 2, "m": 12, "lag": 2}
 
 

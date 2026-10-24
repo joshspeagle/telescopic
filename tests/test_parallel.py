@@ -360,12 +360,13 @@ class Apart(RandomWalk):
         return self.step(target, state_x, draws)[0], State(y, target.log_prob(y))
 
 
-def test_slow_pilot_pairs_on_a_pool_warn_after_the_run():
+def test_slow_pilot_pairs_on_a_pool_warn_after_the_run(monkeypatch):
+    monkeypatch.setattr("telescopic.diagnostics.slow_pair_threshold", lambda lag, m: 100)
     sampler = telescopic.CoupledSampler(
         gaussian_log_prob, INIT, kernel=Apart(np.eye(2)), pool=Serial(), rng=9
     )
-    with pytest.warns(ConvergenceWarning, match="pilot pair 0 has not met after 10000"):
-        sampler.meeting_times(2, max_iter=10_001)
+    with pytest.warns(ConvergenceWarning, match="pilot pair 0 has not met after 100 "):
+        sampler.meeting_times(2, max_iter=101)
 
 
 def progressing(pool=None):
