@@ -283,11 +283,12 @@ class Result:
         inside = np.all((which >= 0) & (which < bins), axis=0)
         cell = np.where(inside, np.ravel_multi_index(which, shape, mode="clip"), -1)
         n_cells, n = bins ** len(columns), self.n_replicates
-        masses = self.measure.mass(cell, n_cells).tocoo()
-        mean = np.bincount(masses.col, masses.data, n_cells) / n
+        masses = self.measure.mass(cell, n_cells)
+        column, value = masses.indices, masses.data
+        mean = np.bincount(column, value, n_cells) / n
         # The squared deviations of the stored masses, and of the other replicates' zeros.
-        squares = np.bincount(masses.col, (masses.data - mean[masses.col]) ** 2, n_cells)
-        squares += (n - np.bincount(masses.col, minlength=n_cells)) * mean**2
+        squares = np.bincount(column, (value - mean[column]) ** 2, n_cells)
+        squares += (n - np.bincount(column, minlength=n_cells)) * mean**2
         error = np.sqrt(squares / (n - 1) / n)
         return mean.reshape(shape), error.reshape(shape), edges if np.ndim(dims) else edges[0]
 
