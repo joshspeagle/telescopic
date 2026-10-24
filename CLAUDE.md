@@ -50,8 +50,8 @@ Rhee (2014) and Jacob, O'Leary & Atchadé (2020).
 
 ## Milestones
 
-Each milestone of the implementation plan is one reviewed unit, the equivalent of a
-pull request (DECISIONS #2).
+Each milestone of the implementation plan is one reviewed unit, landed on `main` as a
+pull request (DECISIONS #2, #58).
 
 1. Implement it with its tests, docstrings and CHANGELOG line, in commits that each make
    one logical change.
@@ -76,8 +76,10 @@ pull request (DECISIONS #2).
 
 ## Git
 
-- Work on `claude/coupled-mcmc-package-btpupz`. No pull requests or issues unless Josh
-  asks.
+- Work on `claude/coupled-mcmc-package-btpupz`. It reaches `main` through pull requests,
+  one per milestone or group of issues, each closing its issue, each branch a commit of
+  the development branch whose CI passed, merged with a merge commit; a tracking issue
+  lists them by phase (DECISIONS #58).
 - A commit passes every test that passed before it. Subject in the imperative, at most
   72 characters; a body only for why.
 - Push only after the commands pass. Never force-push, and never rebase or amend a pushed
