@@ -240,12 +240,12 @@ def test_the_recorded_seed_reproduces_a_run_from_a_generator():
 
 
 def test_the_replicates_count_the_gradients_taken_as_zero():
-    target = Target(gaussian_log_prob, grad=lambda x: np.where(x > 1, np.nan, -x), vectorize=True)
-    parts = [
-        run(
-            target, MALA(1.0, cov=np.eye(1)), Normal([2.0], [1.0]), indices, rng=3, k=1, m=5, lag=1
-        )
-        for indices in (range(5), range(5, 10))
-    ]
-    assert all(part.n_grad_zeroed > 0 for part in parts)
-    assert merge(parts).n_grad_zeroed == sum(part.n_grad_zeroed for part in parts)
+    target = Target(gaussian_log_prob, grad=lambda x: np.where(x > 1, np.nan, -x))
+
+    def part(indices):
+        kernel = MALA(1.0, cov=np.eye(1))
+        return run(target, kernel, Normal([2.0], [1.0]), indices, rng=3, k=1, m=5, lag=1)
+
+    whole = part(range(10))
+    assert whole.n_grad_zeroed > 0
+    assert_same_replicates(merge([part(range(5)), part(range(5, 10))]), whole)

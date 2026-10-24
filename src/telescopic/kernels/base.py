@@ -272,7 +272,7 @@ def evaluate(target: Target, x: FloatArray, need_grad: bool) -> State:
 
     Where the log-density is ``-inf`` the target gives a gradient of 0, so a gradient
     kernel proposes from there without drift, and accepts any proposal of finite density,
-    as random-walk Metropolis does. It also gives 0 where the gradient is not finite.
+    as random-walk Metropolis does.
 
     Parameters
     ----------

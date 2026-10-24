@@ -36,6 +36,9 @@ BANANA, PUMPS, MIXTURE = examples.banana(), examples.pumps(), examples.mixture()
 # of 0.002 needs 500 leapfrog steps, and the automatic step does not couple (QUESTIONS,
 # "The automatic steps of HMC and MALA").
 RIDGE = Normal([3.0, 9.0], 0.01 * np.eye(2))
+# N(0, 1) whose gradient is NaN beyond 1, where the target has mass 0.16. Kernels that
+# rejected proposals there stayed below 1 from -1 (DECISIONS #67).
+BROKEN_GRADIENT = dataclasses.replace(G1, grad=lambda x: np.where(x > 1, np.nan, G1.grad(x)))
 
 
 def far(d):
@@ -80,15 +83,17 @@ CASES = {
     "mixture-d5": Case(
         G5, Mixture([RandomWalk(G5.cov), MALA(1.0, cov=G5.cov)], [0.5, 0.5]), far(5), k=2, m=20
     ),
+    "mala-nan-gradient": Case(
+        BROKEN_GRADIENT, MALA(1.0, cov=G1.cov), Empirical([[-1.0]]), k=5, m=50, lag=5
+    ),
+    "hmc-nan-gradient": Case(
+        BROKEN_GRADIENT, HMC(0.5, 4, cov=G1.cov), Empirical([[-1.0]]), k=5, m=50, lag=5
+    ),
 }
 
 
 def moments(x):
     return np.concatenate([x, x**2], axis=1)
-
-
-# N(0, 1) whose gradient is NaN beyond 1, where the target has mass 0.16.
-BROKEN_GRADIENT = dataclasses.replace(G1, grad=lambda x: np.where(x > 1, np.nan, G1.grad(x)))
 
 
 def run_case(case, n, rng, **options):
@@ -110,21 +115,6 @@ def test_estimates_are_unbiased(name):
         return (estimate.value - truth) / estimate.standard_error
 
     assert_z_scores(z_scores, case.replicates, seed=list(CASES).index(name))
-
-
-@pytest.mark.parametrize(
-    "kernel", [MALA(1.0, cov=np.eye(1)), HMC(0.5, 4, cov=np.eye(1))], ids=["mala", "hmc"]
-)
-def test_gradient_kernels_are_unbiased_where_the_gradient_is_not_finite(kernel):
-    # From -1, where the gradient is finite, kernels that rejected proposals where it is
-    # not stayed below 1: E[x] at z of -50 with MALA and -62 with HMC (DECISIONS #67).
-    case = Case(BROKEN_GRADIENT, kernel, Empirical([[-1.0]]), k=5, m=50, lag=5)
-
-    def z_scores(n, rng):
-        estimate = Result(run_case(case, n, rng)).estimate(moments)
-        return (estimate.value - [0.0, 1.0]) / estimate.standard_error
-
-    assert_z_scores(z_scores, 1000, seed=20)
 
 
 class AR1(Kernel):

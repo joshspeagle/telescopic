@@ -93,9 +93,7 @@ class Target:
 
         The gradient is evaluated only where the log-density is finite, and is 0 where it
         is ``-inf``. Where it is finite, a gradient that is not finite is taken as 0 too,
-        and counted in ``n_grad_zeroed``: MALA and HMC then move without drift there and
-        stay exact, since a Metropolis-Hastings proposal and a leapfrog map stay valid for
-        any drift that depends on the position alone (spec R-INPUT-1).
+        and counted in ``n_grad_zeroed`` (spec R-INPUT-1).
         """
         if self._grad is None:
             raise ValueError("this target has no gradient; pass grad= to use this kernel")
@@ -109,10 +107,12 @@ class Target:
             if inside.any():
                 gradients[inside] = self._call(self._grad, x[inside], (x.shape[1],))
             self.n_grad += int(inside.sum())
-        if not np.isfinite(gradients).all():
-            bad = ~np.isfinite(gradients).all(axis=1)
-            # A new array: a vectorised grad may return its own.
-            gradients = np.where(bad[:, None], 0.0, gradients)
+        finite = np.isfinite(gradients)
+        if not finite.all():
+            bad = ~finite.all(axis=1)
+            # A copy: a vectorised grad may return its own array.
+            gradients = gradients.copy()
+            gradients[bad] = 0.0
             self.n_grad_zeroed += int(bad.sum())
         return values, gradients
 

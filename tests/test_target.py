@@ -79,7 +79,8 @@ def test_the_gradient_is_evaluated_only_where_the_log_density_is_finite():
 def test_a_non_finite_gradient_where_the_log_density_is_finite_is_zero_and_counted(bad):
     gradients = np.array([[1.0], [bad]])
     target = Target(gaussian, grad=lambda x: gradients, vectorize=True)
-    _, given = target.log_prob_and_grad(np.array([[-1.0], [1.0]]))
+    values, given = target.log_prob_and_grad(np.array([[-1.0], [1.0]]))
+    np.testing.assert_array_equal(values, [-0.5, -0.5])
     np.testing.assert_array_equal(given, [[1.0], [0.0]])
     assert (target.n_grad, target.n_grad_zeroed) == (2, 1)
     assert gradients[1, 0] != 0  # the function's own array is left alone
