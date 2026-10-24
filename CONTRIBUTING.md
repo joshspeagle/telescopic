@@ -34,9 +34,9 @@ uv pip install -e . --group docs && .venv/bin/sphinx-build -W --keep-going docs 
   exact finite-state expectations before any statistical test. Index bugs in the
   bias correction shift estimates by a fraction of a percent of their spread, far below
   what replicate averages can detect.
-- **Tolerances come from the Monte Carlo error.** Statistical tests use 5 standard
-  errors, with one rerun at four times the replicates when the first run lands between
-  4 and 6. Seeds are never tuned to make a test pass.
+- **Tolerances come from the Monte Carlo error**, by the one rule of
+  `docs/design/test-plan.md` section 1, which `references.assert_z_scores` applies.
+  Seeds are never tuned to make a test pass.
 - **A test earns its place** by catching a plausible bug that no other test catches.
 
 ## Style

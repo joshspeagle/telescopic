@@ -81,9 +81,8 @@ meeting times of 100 pilot pairs, and ran 100 replicates.
 
 The table has one row per parameter: the estimate of the posterior mean, which is
 unbiased, and its standard error, the standard deviation and the 16th, 50th and 84th
-percentiles, which are consistent. Below it are the settings, the meeting times, the
-cost of a replicate, the fraction of pairs that met late, and the warnings that apply.
-[Results](guide/results.md#the-summary) defines each entry, and
+percentiles, which are consistent. Below it are the run's diagnostics and the warnings
+that apply: [Results](guide/results.md#the-summary) defines each entry, and
 [Diagnostics and warnings](guide/diagnostics.md) says what each warning means.
 
 The default of 100 replicates is too few for one of the checks behind the warnings
