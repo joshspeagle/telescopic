@@ -48,7 +48,8 @@ def z_scores(values, expected):
     return (values.mean(axis=0) - expected) / (values.std(axis=0, ddof=1) / np.sqrt(n))
 
 
-@pytest.mark.parametrize("name", EXAMPLES)
+# The banana's moments are checked exactly, from its conditionals, below.
+@pytest.mark.parametrize("name", [name for name in EXAMPLES if name != "banana"])
 def test_the_exact_means_match_independent_draws(name):
     def z(n, rng):
         return z_scores(exact_draws(name, n, rng), EXAMPLES[name].mean)
@@ -56,7 +57,7 @@ def test_the_exact_means_match_independent_draws(name):
     assert_z_scores(z, 20_000, seed=1)
 
 
-@pytest.mark.parametrize("name", ["gaussian", "banana", "mixture", "pumps"])
+@pytest.mark.parametrize("name", ["gaussian", "mixture", "pumps"])
 def test_the_exact_covariances_match_independent_draws(name):
     # The funnel is left out: its fourth moments, about 3 e^18, leave no usable error bar.
     def z(n, rng):

@@ -1,10 +1,14 @@
 import itertools
+import re
+import runpy
+import tempfile
+from pathlib import Path
 
 import numpy as np
 import pytest
-from scipy import stats
 
-import telescopic
+from references import Normal as Conditional
+from references import gaussian_log_prob
 from telescopic import CoupledSampler, sample
 from telescopic.engine import Settings, Status
 from telescopic.initial import Empirical, Normal
@@ -16,8 +20,7 @@ INIT = Normal([2.0, -1.0], [4.0, 4.0])
 KERNEL = RandomWalk(np.eye(2))
 
 
-def log_prob(x):
-    return -0.5 * float(np.sum(x**2))
+log_prob = gaussian_log_prob
 
 
 def test_a_run_tunes_runs_the_pilot_and_records_both():
@@ -183,7 +186,7 @@ def test_gradient_kernels_are_tuned_by_name(kernel, kind):
 
 
 def conditional(point, block):
-    return stats.norm(0.8 * point[1 - block], 0.6)
+    return Conditional(0.8 * point[1 - block], 0.6)
 
 
 @pytest.mark.parametrize(
@@ -284,18 +287,15 @@ def test_the_memory_estimate_counts_the_distances():
         sampler._check_memory(Settings(0, 0, 1), 13_000)
 
 
-def test_the_specification_example_runs():
-    # Spec section 8.3, with synthetic data.
-    rng = np.random.default_rng(11)
-    x = np.sort(rng.uniform(0, 10, 20))
-    yerr = 0.5 + rng.random(20)
-    y = 1.5 * x - 2.0 + yerr * rng.standard_normal(20)
-
-    def line(theta, x, y, yerr):
-        slope, intercept = theta
-        return -0.5 * np.sum(((y - slope * x - intercept) / yerr) ** 2)
-
-    init = telescopic.initial.Normal(mean=[0.0, 0.0], cov=np.diag([10.0, 10.0]))
-    result = telescopic.sample(line, init, args=(x, y, yerr), names=["slope", "intercept"], rng=42)
-    assert "slope" in repr(result.summary())
-    assert np.isfinite(result.estimate(lambda t: t[:, 0] * t[:, 1]).value)
+def test_the_readme_example_runs_without_a_warning(capsys):
+    # Its code block as written; an earlier test ran the first draft's example, which
+    # the README and the spec replaced (DECISIONS #35). Warnings are errors here.
+    pytest.importorskip("matplotlib").use("Agg")
+    text = (Path(__file__).parents[1] / "README.md").read_text()
+    code = re.search(r"```python\n(.*?)```", text, re.DOTALL).group(1)
+    with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
+        script = Path(directory) / "readme.py"
+        script.write_text(code)
+        runpy.run_path(str(script))
+    pytest.importorskip("matplotlib.pyplot").close("all")
+    assert "slope" in capsys.readouterr().out

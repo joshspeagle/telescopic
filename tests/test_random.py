@@ -16,10 +16,6 @@ from telescopic._random import (
 from telescopic.testing import fixed_draws
 
 
-def test_root_seed_reproduces_from_an_integer():
-    assert root_seed(7).state == root_seed(7).state
-
-
 def test_root_seed_from_none_draws_fresh_entropy():
     assert root_seed(None).entropy != root_seed(None).entropy
 

@@ -49,7 +49,7 @@ def test_the_tuning_chains_agree_and_find_the_covariance_in_ten_dimensions():
     # Chains adapting alone at the rate t^-0.6 gave R-hat 2 to 3 and a smallest
     # eigenvalue of 0.25 here; over 20 seeds the pooled chains gave at most 1.09 and at
     # least 0.58.
-    target = Target(lambda x: -0.5 * np.sum(x**2, axis=1), vectorize=True)
+    target = Target(references.gaussian_log_prob, vectorize=True)
     pilot = adaptive_metropolis(target, Normal(np.full(10, 3.0), np.eye(10)), 4)
     assert pilot.rhat.max() < 1.15
     assert np.linalg.eigvalsh(pilot.cov).min() > 0.4
@@ -124,7 +124,7 @@ def test_tuning_checks_the_target_before_running_the_pilot():
         return rng.normal(size=5)
 
     # The message shows the kernel as given, not with a tuned step size.
-    without_grad = Target(lambda x: -0.5 * np.sum(x**2, axis=1), vectorize=True)
+    without_grad = Target(references.gaussian_log_prob, vectorize=True)
     with pytest.raises(ValueError, match=r"MALA\(step_size=None, cov=None\).* needs the grad"):
         MALA().tune(without_grad, initial, 1)
     assert drawn == []

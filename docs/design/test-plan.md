@@ -97,7 +97,7 @@ Each kernel ($\times$ each coupling it offers) gets the same suite, via a parame
    Moved values are accepted proposals, whose law is not Gaussian, and the stay probability in $d > 1$ is a $d$-dimensional integral. So for $d > 1$ each coupled marginal is compared with `step` from the same state by two-sample tests: a two-proportion test of the stay frequency, and KS tests of the moved values on random projections and on the norm, with a larger $n$ (design review D-R8). One-sample tests against the exact law are about 10× more sample-efficient than two-sample tests (census). These tests run with $n = 2\times10^4$ in the fast tier and $2\times10^5$ in the slow tier.
 3. **Faithfulness:** from equal states, 100 coupled steps keep the states bitwise equal, with equal log-densities and gradients.
 4. **Batch invariance (R-KER-6):** a step and a coupled step on a batch of 1 equal the same rows in batches of 2 and 64, bitwise, at $d \ge 5$ with a dense $\Sigma$.
-5. **Finite-state exactness:** a test-only kernel on 4 states uses `discrete_maximal` to couple transition rows. Its empirical coupled transitions match the exact coupled transition matrix, computed independently in the test, whose marginals equal $P$ and whose diagonal is absorbing.
+5. **Finite-state exactness** (in `tests/test_couplings.py`): `discrete_maximal` couples the rows of a transition matrix $P$ on 4 states, all 16 pairs of states in one batch. The empirical coupled transitions match the exact coupled transition matrix, computed independently in the test, whose marginals equal $P$'s rows and whose diagonal is absorbing.
 
 Kernel-specific tests:
 - **RWMH:**

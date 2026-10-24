@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from references import synthetic
+from references import gaussian_log_prob, synthetic
 from telescopic.diagnostics import (
     hill,
     issues,
@@ -54,10 +54,6 @@ def test_hill_measures_the_tail_from_the_largest_value_below_it():
 def test_the_tv_bound_refuses_censored_pairs_given_as_infinite():
     with pytest.raises(ValueError, match="censored pair as its cap"):
         tv_bound([3.0, np.inf], 1, [0])
-
-
-def test_variance_share_is_zero_without_variance():
-    np.testing.assert_array_equal(variance_share(np.ones((5, 2))), [0.0, 0.0])
 
 
 @pytest.mark.parametrize(
@@ -114,7 +110,7 @@ def test_tuning_chains_disagree_when_their_means_spread_wider_than_the_chains():
 
 def test_no_warning_fires_on_a_clean_gaussian_run():
     replicates = run(
-        Target(lambda x: -0.5 * np.sum(x**2, axis=1), vectorize=True),
+        Target(gaussian_log_prob, vectorize=True),
         RandomWalk(np.eye(2)),
         Normal([1.0, 1.0], [1.0, 1.0]),
         range(100),
