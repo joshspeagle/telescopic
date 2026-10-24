@@ -55,9 +55,6 @@ class RandomWalk(Kernel):
     one when the proposals coincide.
     """
 
-    # Evaluates proposals; HMC's meeting step rejects where its trajectories do.
-    _evaluate = staticmethod(evaluate)
-
     def __init__(
         self,
         cov: npt.ArrayLike | None = None,
@@ -96,7 +93,7 @@ class RandomWalk(Kernel):
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         chol, _ = self._ready()
         x = state.x + matvec(chol, draws.normal(len(chol)))
-        proposal = self._evaluate(target, x, state.grad is not None)
+        proposal = evaluate(target, x, state.grad is not None)
         log_alpha = log_ratio(proposal.log_prob, state.log_prob)
         accepted = draws.log_uniform() < log_alpha
         return select(accepted, proposal, state), acceptance(log_alpha)
@@ -114,7 +111,7 @@ class RandomWalk(Kernel):
                 draws,
             )
         proposal_x, proposal_y = evaluate_pair(
-            partial(self._evaluate, target, need_grad=state_x.grad is not None), x, y, identical
+            partial(evaluate, target, need_grad=state_x.grad is not None), x, y, identical
         )
         log_u = draws.log_uniform()
         state_x = select(

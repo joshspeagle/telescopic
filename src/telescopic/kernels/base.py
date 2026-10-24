@@ -277,11 +277,9 @@ def _checked_step_size(step_size: float) -> float:
 def evaluate(target: Target, x: FloatArray, need_grad: bool) -> State:
     """The state at the rows of ``x``: log-densities, and gradients if needed.
 
-    A non-finite gradient where the log-density is finite raises ``ValueError``: a cache
-    must stay valid (spec R-INPUT-1). Gradient kernels reject such proposals instead,
-    with :func:`evaluate_proposal`. Where the log-density is ``-inf`` the target gives a
-    gradient of 0, so a gradient kernel proposes from there without drift, and accepts
-    any proposal of finite density, as random-walk Metropolis does.
+    Where the log-density is ``-inf`` the target gives a gradient of 0, so a gradient
+    kernel proposes from there without drift, and accepts any proposal of finite density,
+    as random-walk Metropolis does.
 
     Parameters
     ----------
@@ -295,24 +293,15 @@ def evaluate(target: Target, x: FloatArray, need_grad: bool) -> State:
     """
     if not need_grad:
         return State(x, target.log_prob(x))
-    log_prob, grad = target.log_prob_and_grad(x)
-    bad = ~np.isfinite(grad).all(axis=1)
-    if bad.any():
-        row = int(np.argmax(bad))
-        raise ValueError(
-            f"grad returned {grad[row].tolist()} at x = {x[row].tolist()}, where log_prob "
-            "is finite"
-        )
-    return State(x, log_prob, grad)
+    return State(x, *target.log_prob_and_grad(x))
 
 
 def evaluate_proposal(target: Target, x: FloatArray, live: BoolArray | None = None) -> State:
     """The states of a gradient kernel's proposals at the rows of ``x``.
 
-    A proposal can be accepted only where its position, its log-density and its gradient
-    are finite (spec R-INPUT-1). The others get a log-density of ``-inf``, which every
-    Metropolis test rejects, and a zero gradient. Non-finite positions, and rows that
-    ``live`` excludes, are not evaluated.
+    Non-finite positions, such as those of a diverging trajectory, and rows that ``live``
+    excludes are not evaluated: they get a log-density of ``-inf``, which every Metropolis
+    test rejects, and a zero gradient.
 
     Parameters
     ----------
@@ -329,16 +318,11 @@ def evaluate_proposal(target: Target, x: FloatArray, live: BoolArray | None = No
     if live is not None:
         usable &= live
     if usable.all():
-        log_prob, grad = target.log_prob_and_grad(x)
-    else:
-        log_prob, grad = np.full(len(x), -np.inf), np.zeros_like(x)
-        rows = usable.nonzero()[0]
-        if len(rows):
-            log_prob[rows], grad[rows] = target.log_prob_and_grad(x[rows])
-    bad = ~np.isfinite(grad).all(axis=1)
-    if bad.any():
-        # New arrays: those of a vectorised target may be its own.
-        log_prob, grad = np.where(bad, -np.inf, log_prob), np.where(bad[:, None], 0.0, grad)
+        return State(x, *target.log_prob_and_grad(x))
+    log_prob, grad = np.full(len(x), -np.inf), np.zeros_like(x)
+    rows = usable.nonzero()[0]
+    if len(rows):
+        log_prob[rows], grad[rows] = target.log_prob_and_grad(x[rows])
     return State(x, log_prob, grad)
 
 

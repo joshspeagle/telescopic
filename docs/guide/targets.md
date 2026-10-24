@@ -101,10 +101,8 @@ For the gradient:
 
 - Where the log-density is `-inf`, the gradient is not evaluated, so it may fail there.
   States there carry a gradient of 0, so MALA and HMC propose from them without drift.
-- Where the log-density is finite, a non-finite gradient raises `ValueError` at a
-  starting point, and at a proposal of a kernel that uses no gradient but whose states
-  carry one, as in a mixture with MALA. MALA and HMC reject a proposal with a non-finite
-  gradient.
+- Where the log-density is finite, a non-finite gradient raises `ValueError` with the
+  point, wherever a kernel evaluates it.
 
 The log-density must be deterministic: the same point must always give the same value.
 Pairs meet when their states are equal, and a log-density estimated by simulation breaks

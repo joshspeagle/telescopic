@@ -88,8 +88,8 @@ class Target:
         """Log-densities, shape ``(n,)``, and gradients, shape ``(n, d)``, at the rows of ``x``.
 
         The gradient is evaluated only where the log-density is finite, and is 0 where it
-        is ``-inf``. Gradients are returned as computed: kernels decide what a non-finite
-        one means (spec R-INPUT-1).
+        is ``-inf``. A non-finite gradient where the log-density is finite raises
+        ``ValueError`` with the point (spec R-INPUT-1).
         """
         if self._grad is None:
             raise ValueError("this target has no gradient; pass grad= to use this kernel")
@@ -103,6 +103,12 @@ class Target:
             if inside.any():
                 gradients[inside] = self._call(self._grad, x[inside], (x.shape[1],))
             self.n_grad += int(inside.sum())
+        if not np.isfinite(gradients).all():
+            row = int(np.argmax(~np.isfinite(gradients).all(axis=1)))
+            raise ValueError(
+                f"grad returned {gradients[row].tolist()} at x = {x[row].tolist()}, where "
+                "log_prob is finite"
+            )
         return values, gradients
 
     def _call(

@@ -17,10 +17,6 @@ from telescopic.kernels import (
 from telescopic.kernels.base import acceptance
 from telescopic.target import Target
 from telescopic.testing import check_coupling, fixed_draws, random_draws
-from telescopic.tuning import PilotRun
-
-# The fields of a PilotRun after its samples.
-PILOT_REST = (np.zeros((4, 50)), np.full(4, 0.3), 100)
 
 # N(0, I); gradient-free kernels evaluate the gradient only for states that carry one.
 TARGET = Target(gaussian_log_prob, grad=lambda x: -x, vectorize=True)
@@ -261,18 +257,6 @@ def test_states_that_carry_gradients_get_them_at_every_new_position(name):
         np.testing.assert_array_equal(result.grad, -result.x)
 
 
-class NeedsGradient(RandomWalk):
-    @property
-    def needs_grad(self):
-        return True
-
-
-def test_a_non_finite_gradient_at_an_initial_state_raises():
-    target = Target(gaussian_log_prob, grad=lambda x: np.full_like(x, np.nan), vectorize=True)
-    with pytest.raises(ValueError, match="grad returned"):
-        NeedsGradient(np.eye(2)).init_state(target, np.zeros((1, 2)))
-
-
 @pytest.mark.parametrize("name", NAMES)
 def test_a_rows_transition_does_not_depend_on_the_rest_of_the_batch(name):
     # Spec R-KER-6: a BLAS product gives most rows other bits in a batch of one.
@@ -335,14 +319,6 @@ def test_mixture_rejects_invalid_weights(weights, message):
 def test_mixture_refuses_components_of_different_dimensions():
     with pytest.raises(ValueError, match="different dimensions"):
         Mixture([RandomWalk(np.eye(1)), RandomWalk(np.eye(2))], [0.5, 0.5])
-
-
-def test_a_non_finite_gradient_at_an_accepted_proposal_raises():
-    # A gradient-free kernel whose states carry gradients must not cache a bad one.
-    target = Target(gaussian_log_prob, grad=lambda x: np.where(x > 0, np.nan, -x), vectorize=True)
-    start = State(np.full((50, 1), -1.0), np.full(50, -0.5), np.full((50, 1), 1.0))
-    with pytest.raises(ValueError, match="grad returned"):
-        RandomWalk(np.eye(1), scale=3.0).step(target, start, random_draws(50, 23))
 
 
 class StandardNormal:
@@ -537,20 +513,19 @@ def test_hmc_rejects_invalid_parameters(kwargs, message):
         HMC(cov=np.eye(2), **kwargs)
 
 
-def test_gradient_kernels_reject_proposals_without_a_finite_gradient():
-    # The gradient is NaN beyond x = 1; proposals there are rejected, never raised on,
-    # including by HMC's meeting step, here wide enough to propose there, after tuning.
+def test_kernels_raise_at_a_proposal_with_a_non_finite_gradient():
+    # Gradient kernels rejected such proposals, and so sampled the target restricted to
+    # where the gradient is finite: on N(0, 1) with a NaN gradient beyond x = 1, MALA's
+    # mean was -0.29. A random walk whose states carry gradients is HMC's meeting step.
     target = Target(gaussian_log_prob, grad=lambda x: np.where(x > 1, np.nan, -x), vectorize=True)
     start = State(np.zeros((500, 1)), np.zeros(500), np.zeros((500, 1)))
     other = State(np.full((500, 1), 0.5), np.full(500, -0.125), np.full((500, 1), -0.5))
-    pilot = PilotRun(np.random.default_rng(32).standard_normal((4, 50, 1)), *PILOT_REST)
-    meeting, _ = HMC(0.5, 4, meeting_weight=0.5, meeting_scale=2.0).tune(target, None, pilot=pilot)
-    for kernel in (MALA(2.0, cov=np.eye(1)), HMC(0.5, 4, cov=np.eye(1)), meeting):
-        moved, _ = kernel.step(target, start, random_draws(500, 33))
-        new_x, new_y = kernel.coupled_step(target, start, other, random_draws(500, 34))
-        for result in (moved, new_x, new_y):
-            assert np.all(result.x <= 1)
-        assert np.any(moved.x != 0)
+    eye = np.eye(1)
+    for kernel in (RandomWalk(eye, scale=3.0), MALA(2.0, cov=eye), HMC(0.5, 4, cov=eye)):
+        with pytest.raises(ValueError, match="grad returned"):
+            kernel.step(target, start, random_draws(500, 33))
+        with pytest.raises(ValueError, match="grad returned"):
+            kernel.coupled_step(target, start, other, random_draws(500, 34))
 
 
 def test_gradient_kernels_enter_the_support_from_a_start_outside_it():
