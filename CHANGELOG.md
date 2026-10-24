@@ -31,3 +31,7 @@ All notable changes to this project are documented here. The format follows
   covariances, quantiles, credible intervals and signed histograms; total variation and
   1-Wasserstein bounds from the meeting times; a summary table; and the warnings of the
   specification (`telescopic.results`, `telescopic.diagnostics`).
+- Automatic tuning and the sampler: adaptive Metropolis pilots whose chains share their
+  adaptation, set the kernels' unset parameters and warn when they disagree; the choice
+  of `k`, `m` and the lag from pilot meeting times; `CoupledSampler` and
+  `telescopic.sample`, whose runs warn about the conditions of the specification.

@@ -8,7 +8,7 @@ import numpy as np
 import numpy.typing as npt
 from numpy.random import PCG64DXSM, Generator, SeedSequence
 
-from telescopic._types import FloatArray, IndexArray
+from telescopic._types import FloatArray, IndexArray, Seed
 
 # Namespaces of replicate streams (spec section 6.1).
 MAIN = 0
@@ -24,7 +24,7 @@ UNIFORM = 1
 _BRANCH = 0x74656C
 
 
-def root_seed(rng: int | SeedSequence | Generator | None) -> SeedSequence:
+def root_seed(rng: Seed) -> SeedSequence:
     # The root seed of a run from a SPEC 7 rng (spec section 6.1). A generator gives the
     # seed of four integers drawn from it, so the run depends only on its state.
     if isinstance(rng, SeedSequence):

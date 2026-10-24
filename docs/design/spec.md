@@ -209,7 +209,7 @@ Let $a_r = \hat\pi_r(h) \in \mathbb R^p$ for replicates $r = 1, \dots, R$. Write
 
   - **Level:** $\beta$ is 0.99 by default. Larger values give a more conservative mode and smaller values a cheaper one with more replicates per unit of compute. $\beta \le 1 - 1/R_0$ is required, so that $\hat q_\beta$ is not the sample maximum; 0.999 therefore needs $R_0 \ge 1000$.
   - **Pilot size:** with $R_0 = 100$, $k$ varies by about ±20% between pilots (5% to 95% range 117 to 168 at $d = 10$; design review D-R5). This changes the cost and the variance, never the bias.
-  - **Partial `"auto"` (D-21):** a value given explicitly is kept. A missing `lag` or `m` is derived from `k` ($L = k$, $m = 10k$) without a pilot, and the pilot runs only when `k` is `"auto"`.
+  - **Partial `"auto"` (D-21):** a value given explicitly is kept. A missing `lag` or `m` is derived from `k` ($L = \max(1, k)$, $m = 10k$) without a pilot, and the pilot runs only when `k` is `"auto"`.
   - **Evidence:** E01 (Appendix A) used a 2000-replicate pilot; the design review measured the 100-replicate pilot.
 - **R-TUNE-3:** pilots draw from their own random-stream namespaces (§6.1). Their replicates never enter estimates; they are reported.
 - **R-TUNE-4:** the result records every tuned value, the pilot meeting times, and the measured inefficiency: the mean cost per replicate divided by $m - k + 1$. (JOA20 §3.1 approximates it by $1 + (k + \mathbb E[\tau - L])/(m - k)$; with $\bar\tau$ in place of $\mathbb E[\tau - L]$ the approximation is too high by $L/(m-k)$ when $L > 1$.)
@@ -285,11 +285,12 @@ A kernel is a picklable configuration object with:
 needs_grad: bool
 step(target, state, draws) -> (state, accepted)            # one transition for n chains
 coupled_step(target, sx, sy, draws) -> (sx, sy)             # one coupled transition for n pairs
-tune(target, initial, rng, **options) -> (kernel, report)   # only if it has unset parameters
+tune(target, initial, rng=None, *, pilot=None) -> (kernel, report)   # (self, None) if nothing is unset
 ```
 
 - **States:** `State(x, log_prob, grad)` are batch-first: `x` is `(n, d)`, `log_prob` is `(n,)`, and `grad` is `(n, d)` or `None`. A kernel returns states with the fields of its input states, valid at the returned positions, so a kernel that needs no gradient still evaluates one for states that carry it: mixtures of gradient and gradient-free kernels then keep valid caches. Kernels never modify their input states.
 - **Randomness:** `draws` supplies random numbers row by row from each replicate's stream (§6.1). Its `normal(d)`, `uniform()`, `log_uniform()` and `generator(i)` give `(n, d)` normals, `(n,)` uniforms and their logarithms, and row `i`'s `numpy.random.Generator`.
+- **Tuning:** `tune` returns a tuned copy. `pilot` passes adaptive Metropolis chains already run, so a `Mixture` tunes its components on one pilot (DECISIONS #5).
 - **R-KER-2:** each marginal of `coupled_step` has exactly the law of `step`.
 - **R-KER-3:** the engine declares a meeting when the returned positions of a pair are bitwise equal (R-EST-2). A coupling that makes the two proposals identical gives $Y$ a copy of $X$'s proposal and its cached log-density, never a recomputation, so that equality is exact.
 - **R-KER-4:** the built-in couplings keep equal states equal. The engine does not rely on this: it never applies `coupled_step` to an equal pair.
@@ -346,10 +347,10 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 - `"maximal"`: rejection maximal coupling with independent residuals, for comparison and teaching. Its meeting times grow exponentially with $d$ (JOA20 §4.2), and the documentation says so.
 
 **Tuning (R-TUNE-1):**
-- **Pilot:** 4 independent adaptive Metropolis chains from $\pi_0$, each running $\max(2000, 200d)$ steps. They use Haario-type covariance adaptation with global-scale Robbins–Monro steps toward acceptance 0.234 (Andrieu & Thoms 2008, Algorithm 4).
+- **Pilot:** 4 adaptive Metropolis chains from $\pi_0$, each running $\max(2000, 200d)$ steps. Each chain adapts its own global scale by Robbins–Monro steps of size $(t+1)^{-0.6}$ toward acceptance 0.234 (Andrieu & Thoms 2008). The chains share one proposal covariance: the running mean and covariance, with step $1/(t+1)$, of all their states, started from the variances of 100 draws from $\pi_0$ (Haario et al. 2001; pooled as in Craiu, Rosenthal & Yang 2009; DECISIONS #7).
 - **Covariance:** pooled over the second halves of the chains, plus a ridge of $10^{-10}$ times the mean variance.
-- **Scale:** the adapted scale.
-- **Report:** the pilot acceptance rates, and a warning if the chains disagree by more than their spread (a sign of multimodality).
+- **Scale:** $2.38/\sqrt d$, `RandomWalk`'s default (DECISIONS #7).
+- **Report:** the pilot acceptance rates and $\hat R$ per coordinate. A `ConvergenceWarning` when the chains disagree: $\hat R > \sqrt 2$ in some coordinate, where the chain means spread more widely than the chains themselves, a sign of several modes (DECISIONS #6).
 
 ### 5.4 MALA (R-KER-MALA)
 
@@ -474,7 +475,8 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 
 ### 6.6 Memory (R-EXEC-7)
 
-- **Atoms:** storage needs about $R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})\,(8d + 16)$ bytes for positions, weights and replicate indices, plus 24 bytes per stored distance.
+- **Atoms:** storage needs about $R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})\,(8d + 16)$ bytes for positions, weights and replicate indices, plus 24 bytes per stored distance. The engine stores each iteration's rows as small arrays and merges every 256 of them into one block, so at $d = 10$ a row holds 94 to 103 bytes against 92 of payload at 1 to 256 lanes (M3 review).
+- **Join:** at the end of a run, sorting the atoms by replicate holds about three times their size for a moment (3.1 times at $d = 10$).
 - **Estimate first:** the sampler estimates this before the main run and warns above 1 GB, suggesting `thin`.
 - **Streaming:** a streaming mode with a fixed `h` and constant memory is on the roadmap.
 
@@ -538,7 +540,7 @@ Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 
 Classes: `TelescopicWarning`, with subclasses `ConvergenceWarning` and `InputWarning`.
 
-`check()` warns on these conditions. They are heuristics; the thresholds are set so that clean Gaussian runs at the defaults rarely trigger them, and M9 measures and documents each false-alarm rate (D-16):
+`check()` warns on these conditions, and so does each `run` (§8.1). They are heuristics; the thresholds are set so that clean Gaussian runs at the defaults rarely trigger them, and M9 measures and documents each false-alarm rate (D-16):
 1. any censored replicate;
 2. a fraction of replicates with $\tau - L > k$ above 0.25 ("k may be too small"). The recipe itself gives 0.02 to 0.13 (§3.6), so a lower threshold fires on clean runs;
 3. one replicate contributing more than 25% of the sample variance of any reported estimate, with $R \ge 100$ (heavy tails or rare excursions). At $R = 20$ to 30 that share is typical of Gaussian data;
@@ -566,7 +568,7 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
 
    ```python
    telescopic.sample(log_prob, init, n_replicates=100, *, args=(), kwargs=None, grad=None,
-                     vectorize=False, kernel="auto", k="auto", m="auto", lag="auto", thin=1,
+                     vectorize=False, kernel="auto", k="auto", m="auto", lag="auto", thin=None,
                      max_iter=None, pool=None, names=None, progress=False, rng=None) -> Result
    ```
 
@@ -579,14 +581,15 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
                                        progress=False, rng=None)
    sampler.tune()                                  # pilot runs; freezes sampler.kernel
    times = sampler.meeting_times(n=100)            # pilot meeting times, lag 1
-   result = sampler.run(500, k="auto", m="auto", lag="auto", thin=1, max_iter=None,
+   result = sampler.run(500, k="auto", m="auto", lag="auto", thin=None, max_iter=None,
                         progress=None)             # None: the sampler's setting
    result = sampler.run(500)                       # 500 more replicates, same k, m, lag
    ```
 
    - `run` tunes and runs the pilot if they have not been done.
    - Each call continues the replicate indices and returns the cumulative result.
-   - Changing `k`, `m`, `lag` or `thin` between calls raises `ValueError`.
+   - The first call fixes `k`, `m`, `lag`, `thin` and `max_iter` (DECISIONS #4). On the first call `"auto"` derives a value, `thin=None` means 1 and `max_iter=None` no cap; on later calls `"auto"` and `None` keep the first call's values, and any other change raises `ValueError` (DECISIONS #8).
+   - Each call ends by emitting the warnings of §7.4 that apply to the cumulative result, except slow pairs and disagreeing tuning chains, which are emitted as they happen (DECISIONS #8).
 3. **Building blocks:** `Target`, `State`, `telescopic.kernels.*`, `telescopic.couplings.*`, `telescopic.engine.run(...)`, `telescopic.estimators.*`, `telescopic.diagnostics.*` and `SignedMeasure`.
 
 ### 8.2 Conventions (R-API-2)
@@ -641,8 +644,8 @@ These targets are measured by `benchmarks/` and are not gating.
 
 | Operation | Target |
 |---|---|
-| Lockstep coupled RWMH, vectorised Gaussian target, $d = 10$, 256 lanes | ≤ 2 µs per pair-step (research note measurement: 0.37 µs at 1000 lanes without per-replicate streams) |
-| Same, point-by-point log-density, 1 lane | ≤ 40 µs per pair-step of overhead beyond the log-density |
+| Lockstep coupled RWMH, vectorised Gaussian target, $d = 10$, 256 lanes, main-run settings ($k = L = 141$, $m = 1410$) | ≤ 2 µs per pair-step (research note measurement: 0.37 µs at 1000 lanes without per-replicate streams). Met at M3: 1.2 to 1.5 µs. Meeting-time pilots ($L = 1$, $m = 0$) take 4.2 µs: each replicate's set-up, about 80 µs, adds 1.8 µs per pair-step at a mean $\tau$ of 46 (M3 review) |
+| Same, point-by-point log-density, 1 lane | ≤ 40 µs per pair-step of overhead beyond the log-density. Missed at M3: 93 µs in the main run and 150 µs in the pilot. A coupled RWMH step on one row takes 112 µs, of which its two log-density calls through `Target` take 15 µs; the target needs a scalar path for one lane, which v0.1 does not have |
 | Per-replicate random streams in lockstep | ≤ 0.5 µs per lane-step for the draws of a coupled RWMH step at 256 lanes, $d = 10$ (one shared generator: 0.15 µs), and ≤ 50 µs per replicate to set up its streams |
 | Process pool, log-density ≥ 1 ms | ≥ 3.5× speed-up on 4 workers |
 | Automatic pipeline overhead (both pilots) | ≤ 15% of the main run at the default $R = 100$ for $d \ge 10$. At $d = 2$ the fixed tuning pilot makes it about 30% (design review D-R13); it falls as $1/R$ |

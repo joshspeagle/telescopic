@@ -9,8 +9,9 @@ from typing import Any
 import numpy as np
 
 from telescopic._random import Draws
-from telescopic._types import BoolArray, FloatArray
+from telescopic._types import BoolArray, Distribution, FloatArray, Seed
 from telescopic.target import Target
+from telescopic.tuning import PilotRun, TuningReport, adaptive_metropolis
 
 
 @dataclass
@@ -74,6 +75,45 @@ class Kernel(ABC):
     def ndim(self) -> int | None:
         """The dimension that the kernel's parameters fix, or ``None``."""
         return None
+
+    def tune(
+        self,
+        target: Target,
+        initial: Distribution,
+        rng: Seed = None,
+        *,
+        pilot: PilotRun | None = None,
+    ) -> tuple[Kernel, TuningReport | None]:
+        """A copy with the unset parameters tuned on pilot chains (spec R-TUNE-1).
+
+        Each kernel's documentation says which parameters it tunes and how.
+
+        Parameters
+        ----------
+        target : Target
+        initial : object with ``rvs(random_state=generator)``
+        rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
+            Seed of the pilot chains (tuning namespace, spec section 6.1).
+        pilot : PilotRun, optional
+            Adaptive Metropolis chains already run, from
+            :func:`telescopic.tuning.adaptive_metropolis`, so that several kernels can be
+            tuned on one pilot.
+
+        Returns
+        -------
+        kernel : Kernel
+        report : TuningReport or None
+            ``None``, with the kernel itself, when there is nothing to tune.
+        """
+        if self.is_tuned:
+            return self, None
+        pilot = adaptive_metropolis(target, initial, rng) if pilot is None else pilot
+        return self._tuned(target, pilot, rng)
+
+    def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
+        raise NotImplementedError(
+            f"{type(self).__name__} has unset parameters but cannot tune them"
+        )
 
     def init_state(self, target: Target, x: FloatArray) -> State:
         """Evaluate the target at the rows of ``x``, with gradients if the kernel needs them.

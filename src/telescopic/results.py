@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import warnings
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -17,7 +16,8 @@ from telescopic._types import FloatArray
 from telescopic.engine import Replicates
 from telescopic.estimators import unbiased_covariance, unbiased_variance, weighted_quantile
 from telescopic.measure import SignedMeasure
-from telescopic.warnings import ConvergenceWarning
+from telescopic.tuning import TuningReport
+from telescopic.warnings import ConvergenceWarning, warn
 
 
 @dataclass(frozen=True, eq=False)
@@ -76,8 +76,10 @@ class Result:
         The frozen kernel and the initial distribution, for the record.
     seed : numpy.random.SeedSequence, optional
         The root seed, whose ``entropy`` and ``spawn_key`` reproduce the run.
-    tuning, pilot : optional
-        Reports of the pilot runs.
+    tuning : TuningReport, optional
+        The report of the tuning pilot.
+    pilot : ndarray, shape (R0,), optional
+        The pilot's lag-1 meeting times, from which ``k`` was chosen.
     interrupted : bool
         Whether the run was stopped early (spec section 6.5).
 
@@ -112,8 +114,8 @@ class Result:
         kernel: Any = None,
         initial: Any = None,
         seed: SeedSequence | None = None,
-        tuning: Any = None,
-        pilot: Any = None,
+        tuning: TuningReport | None = None,
+        pilot: FloatArray | None = None,
         interrupted: bool = False,
     ) -> None:
         met = np.isfinite(replicates.meeting_time)
@@ -146,7 +148,6 @@ class Result:
             self.meeting_times if max_iter is None else np.minimum(self.meeting_times, max_iter)
         )
         self._stopped = stopped.astype(np.int64)
-        self._distance_time, self._distance = replicates.distance_time, replicates.distance
 
     def estimate(self, h: Callable[[FloatArray], npt.ArrayLike], level: float = 0.95) -> Estimate:
         r"""Estimate :math:`\pi(h)` with a confidence interval (spec section 3.3).
@@ -166,8 +167,7 @@ class Result:
             raise ValueError(f"level must be in (0, 1), not {level}")
         self._require(2)
         values = self.measure.per_replicate(h)
-        value = values.mean(axis=0)
-        error = values.std(axis=0, ddof=1) / np.sqrt(self.n_replicates)
+        value, error = values.mean(axis=0), np.asarray(stats.sem(values, axis=0))
         z = stats.norm.ppf((1 + level) / 2)
         return Estimate(value, error, (value - z * error, value + z * error), level, values)
 
@@ -193,7 +193,7 @@ class Result:
         self._require(2)
         first = self.measure.per_replicate(lambda x: x)
         atoms, weights = self.measure.atoms, self.measure.weights
-        second = (weights[:, None] * atoms**2).sum(axis=0) / self.n_replicates
+        second = np.einsum("i,ij,ij->j", weights, atoms, atoms) / self.n_replicates
         return unbiased_variance(first, second)
 
     def std(self) -> FloatArray:
@@ -221,8 +221,11 @@ class Result:
         if np.any((q < 0) | (q > 1)):
             raise ValueError(f"q must be in [0, 1], not {q}")
         self._require(1)
-        weights = self.measure.weights / self.n_replicates
-        columns = [weighted_quantile(column, weights, q) for column in self.measure.atoms.T]
+        # Rejections repeat atoms; merging consecutive equal rows first shortens every sort.
+        atoms = self.measure.atoms
+        first = np.concatenate([[True], np.any(atoms[1:] != atoms[:-1], axis=1)]).nonzero()[0]
+        weights = np.add.reduceat(self.measure.weights, first) / self.n_replicates
+        columns = [weighted_quantile(column, weights, q) for column in atoms[first].T]
         quantiles: FloatArray = np.stack(columns, axis=-1)
         return quantiles
 
@@ -275,8 +278,7 @@ class Result:
             edges[-1] = np.nextafter(edges[-1], np.inf)  # keep the largest atom inside
         which = np.searchsorted(edges, values, side="right") - 1
         masses = self.measure.mass(np.where(which < bins, which, -1), bins)
-        errors = masses.std(axis=0, ddof=1) / np.sqrt(self.n_replicates)
-        return masses.mean(axis=0), errors, edges
+        return masses.mean(axis=0), np.asarray(stats.sem(masses, axis=0)), edges
 
     def tv_bound(self, t: npt.ArrayLike | None = None) -> FloatArray:
         """Estimated upper bound on the total variation distance from the law of X_t to the target.
@@ -310,8 +312,8 @@ class Result:
         ndarray, shape of ``t``
         """
         return diagnostics.w1_bound(
-            self._distance_time,
-            self._distance,
+            self._replicates.distance_time,
+            self._replicates.distance,
             len(self.index),
             self.lag,
             self._times() if t is None else t,
@@ -335,7 +337,7 @@ class Result:
         quantiles = np.quantile(met, [0.5, 0.9, 0.99]) if len(met) else np.full(3, np.nan)
         n_late = int(np.sum(self.meeting_times - self.lag > self.k))
         n_total = len(self.meeting_times)
-        upper = 1.0 if n_late == n_total else stats.beta.ppf(0.95, n_late + 1, n_total - n_late)
+        upper = stats.binomtest(n_late, n_total, alternative="less").proportion_ci(0.95).high
         mean_cost = float(self.costs.mean())
         return {
             "meeting_time_50": float(quantiles[0]),
@@ -382,7 +384,7 @@ class Result:
             "kernel": repr(self.kernel),
             **self.diagnostics(),
             "interrupted": self.interrupted,
-            "warnings": diagnostics.issues(self),
+            "warnings": [issue.message for issue in diagnostics.issues(self)],
         }
         return Summary(self.names, table, footer)
 
@@ -398,6 +400,10 @@ class Result:
         Result
             The union of the replicates; interrupted if either run was.
         """
+        if _seed_key(self.seed) != _seed_key(other.seed):
+            raise ValueError(
+                "cannot merge runs with different seeds: their indices differ in meaning"
+            )
         for name in ("k", "m", "lag", "thin", "max_iter", "ndim"):
             if getattr(self, name) != getattr(other, name):
                 raise ValueError(
@@ -428,11 +434,11 @@ class Result:
         strict : bool
             Raise ``RuntimeError`` instead of warning.
         """
-        messages = diagnostics.issues(self)
+        messages = [issue.message for issue in diagnostics.issues(self)]
         if strict and messages:
             raise RuntimeError("; ".join(messages))
         for message in messages:
-            warnings.warn(message, ConvergenceWarning, stacklevel=2)
+            warn(message, ConvergenceWarning)
 
     def _require(self, n: int) -> None:
         if self.n_replicates < n:
@@ -445,6 +451,7 @@ class Result:
         return np.arange(max(1, int(np.max(self._stopped)) - self.lag))
 
 
+@dataclass(eq=False)
 class Summary:
     """Estimates per parameter and the diagnostics of a run, printable as a table.
 
@@ -458,10 +465,9 @@ class Summary:
         The configuration and diagnostics of the run, and the warnings that apply.
     """
 
-    def __init__(
-        self, names: list[str], table: dict[str, FloatArray], footer: dict[str, Any]
-    ) -> None:
-        self.names, self.table, self.footer = names, table, footer
+    names: list[str]
+    table: dict[str, FloatArray]
+    footer: dict[str, Any]
 
     def to_dict(self) -> dict[str, Any]:
         """The summary as nested dictionaries of Python numbers."""
@@ -511,3 +517,10 @@ class Summary:
             )
         lines += [f"warning: {message}" for message in footer["warnings"]]
         return "\n".join([header, *rows, "", *lines])
+
+
+def _seed_key(seed: SeedSequence | None) -> tuple[Any, ...] | None:
+    # Entropy may be an int, a sequence or an array; lists compare by value.
+    if seed is None:
+        return None
+    return np.atleast_1d(seed.entropy).tolist(), seed.spawn_key, seed.pool_size

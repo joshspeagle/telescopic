@@ -17,18 +17,21 @@ TARGET = Target(lambda x: -0.5 * np.sum(x**2, axis=1), vectorize=True)
 SETTINGS = {"k": 2, "m": 12, "lag": 2}
 
 
-def gaussian_result(n=40, **options):
-    settings = SETTINGS | options
-    replicates = run(
+def gaussian_run(indices, seed=1, **settings):
+    return run(
         TARGET,
         RandomWalk(np.eye(2)),
         Normal([2.0, -1.0], [1.0, 1.0]),
-        range(n),
-        root=root_seed(1),
+        indices,
+        root=root_seed(seed),
         namespace=MAIN,
         **settings,
     )
-    return Result(replicates, names=["a", "b"], **settings)
+
+
+def gaussian_result(n=40, **options):
+    settings = SETTINGS | options
+    return Result(gaussian_run(range(n), **settings), names=["a", "b"], **settings)
 
 
 RESULT = gaussian_result()
@@ -124,52 +127,37 @@ def test_the_summary_converts_to_pandas():
 
 
 def test_an_interrupted_run_says_its_estimates_are_not_exactly_unbiased():
-    replicates = run(
-        TARGET,
-        RandomWalk(np.eye(2)),
-        Normal([0.0, 0.0], [1.0, 1.0]),
-        range(5),
-        root=root_seed(2),
-        namespace=MAIN,
-        **SETTINGS,
-    )
-    result = Result(replicates, interrupted=True, **SETTINGS)
+    result = Result(RESULT._replicates, interrupted=True, **SETTINGS)
     assert "not exactly unbiased" in repr(result.summary())
 
 
 def test_names_must_match_the_dimension():
-    replicates = run(
-        TARGET,
-        RandomWalk(np.eye(2)),
-        Normal([0.0, 0.0], [1.0, 1.0]),
-        range(3),
-        root=root_seed(3),
-        namespace=MAIN,
-        **SETTINGS,
-    )
     with pytest.raises(ValueError, match="names must have 2 entries"):
-        Result(replicates, names=["a"], **SETTINGS)
+        Result(RESULT._replicates, names=["a"], **SETTINGS)
 
 
 def test_merging_two_runs_equals_one_run_over_both_sets_of_replicates():
-    def part(indices):
-        replicates = run(
-            Target(lambda x: -0.5 * float(np.sum(x**2))),
-            RandomWalk(np.eye(2)),
-            Normal([2.0, -1.0], [1.0, 1.0]),
-            indices,
-            root=root_seed(4),
-            namespace=MAIN,
-            **SETTINGS,
-        )
-        return Result(replicates, **SETTINGS)
+    def part(indices, seed=4):
+        return Result(gaussian_run(indices, seed, **SETTINGS), seed=root_seed(seed), **SETTINGS)
 
     merged, whole = part(range(5)).merge(part(range(5, 12))), part(range(12))
     np.testing.assert_array_equal(merged.meeting_times, whole.meeting_times)
     np.testing.assert_array_equal(merged.measure.atoms, whole.measure.atoms)
     np.testing.assert_array_equal(merged.measure.replicate, whole.measure.replicate)
     with pytest.raises(ValueError, match="different lag"):
-        part(range(3)).merge(Result(part(range(3, 5))._replicates, k=2, m=12, lag=1))
+        part(range(3)).merge(
+            Result(part(range(3, 5))._replicates, k=2, m=12, lag=1, seed=root_seed(4))
+        )
+    with pytest.raises(ValueError, match="different seeds"):
+        part(range(3)).merge(part(range(3, 5), seed=5))
+
+
+def test_results_from_equal_array_seeds_merge():
+    def part(indices):
+        seed = np.random.SeedSequence(np.array([1, 2, 3, 4]))
+        return Result(gaussian_run(indices, seed, **SETTINGS), seed=seed, **SETTINGS)
+
+    assert part(range(3)).merge(part(range(3, 5))).n_replicates == 5
 
 
 @pytest.mark.parametrize(

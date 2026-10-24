@@ -187,10 +187,12 @@ Kernel-specific tests:
 
 **Tuning**
 - **Adaptive Metropolis:**
-  - on a correlated Gaussian ($d = 5$, condition number 100), the pilot covariance is within 20% of the truth in Frobenius norm;
+  - on a correlated Gaussian ($d = 5$, condition number 100), whitening by the pilot covariance brings the condition number below 4 (over 20 seeds at most 1.54; the shape, not the norm, sets the efficiency of RWMH), and the chains' $\hat R$ is below 1.1;
+  - on $\mathcal N(0, I_{10})$ from $\mathcal N(3, I)$, $\hat R < 1.15$ and the smallest eigenvalue of the pilot covariance exceeds 0.4 (over 20 seeds at most 1.09 and at least 0.58; chains adapting alone at rate $t^{-0.6}$ gave 2 to 3 and 0.25);
+  - $\hat R$ exceeds $\sqrt 2$ for chains started in two separated modes;
   - the acceptance rate is within 0.05 of 0.234.
-- **`choose_kml`:**
-  - gives $k$ = the inverted-CDF $q_{0.99}(\tau - 1)$, $L = k$ and $m = 10k$;
+- **`choose_k`:**
+  - gives $k$ = the inverted-CDF $q_{0.99}(\tau - 1)$, and the sampler $L = k$ and $m = 10k$;
   - the floor $k \ge 1$ holds;
   - $\beta > 1 - 1/R_0$ raises, and so does a quantile that falls on a censored pilot pair;
   - explicit values are kept, and `lag` and `m` follow an explicit `k` without a pilot.
@@ -199,7 +201,7 @@ Kernel-specific tests:
 **`CoupledSampler`**
 - `run` tunes and pilots when needed, and records the reports.
 - A second `run` continues the indices; with the same seed, two runs of 50 equal one run of 100.
-- Changing `k`, `m`, `lag` or `thin` between runs raises.
+- Changing `k`, `m`, `lag`, `thin` or `max_iter` between runs raises.
 - Pilot replicates never appear in the measure.
 
 **API**

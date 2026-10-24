@@ -153,12 +153,7 @@ def run(
     Memory: the stored atoms take about :math:`R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})
     (8d + 16)` bytes (spec R-EXEC-7).
     """
-    if not 0 <= k <= m:
-        raise ValueError(f"k and m must satisfy 0 <= k <= m, not k={k}, m={m}")
-    if lag < 1 or thin < 1:
-        raise ValueError(f"lag and thin must be at least 1, not lag={lag}, thin={thin}")
-    if max_iter is not None and max_iter <= max(lag, m):
-        raise ValueError(f"max_iter must exceed max(lag, m) = {max(lag, m)}, not {max_iter}")
+    check_settings(k, m, lag, thin, max_iter)
     if lanes < 1:
         raise ValueError(f"lanes must be at least 1, not {lanes}")
     queue = iter(indices)
@@ -178,11 +173,25 @@ def run(
         stopping = (monitor is not None and monitor(batch.status())) or stopping
         if not stopping:
             batch.fill(free, starts)
-    return batch.result(
-        target.n_log_prob - evaluations[0],
-        target.n_grad - evaluations[1],
-        time.perf_counter() - start,
-    )
+    return batch.result(target.n_log_prob - evaluations[0], target.n_grad - evaluations[1], start)
+
+
+def check_settings(k: int, m: int, lag: int, thin: int, max_iter: int | None) -> None:
+    r"""Raise ``ValueError`` unless the settings of a run are valid (spec section 3.2).
+
+    Parameters
+    ----------
+    k, m, lag, thin : int
+        :math:`0 \le k \le m`, :math:`L \ge 1` and ``thin`` :math:`\ge 1`.
+    max_iter : int, optional
+        Above :math:`\max(L, m)`.
+    """
+    if not 0 <= k <= m:
+        raise ValueError(f"k and m must satisfy 0 <= k <= m, not k={k}, m={m}")
+    if lag < 1 or thin < 1:
+        raise ValueError(f"lag and thin must be at least 1, not lag={lag}, thin={thin}")
+    if max_iter is not None and max_iter <= max(lag, m):
+        raise ValueError(f"max_iter must exceed max(lag, m) = {max(lag, m)}, not {max_iter}")
 
 
 def merge(parts: Sequence[Replicates]) -> Replicates:
@@ -259,7 +268,6 @@ class _Batch:
         self.replicate = np.full(lanes, -1, dtype=np.int64)
         self.t = np.zeros(lanes, dtype=np.int64)
         self.tau = np.full(lanes, -1, dtype=np.int64)
-        self.cost = np.zeros(lanes, dtype=np.int64)
         self.x = _empty_state(lanes, ndim, kernel.needs_grad)
         self.y = _empty_state(lanes, ndim, kernel.needs_grad)
         integers, reals = np.zeros(0, dtype=np.int64), np.zeros(0)
@@ -294,7 +302,6 @@ class _Batch:
         self.replicate[lanes] = [s.index for s in starting]
         self.t[lanes] = 0
         self.tau[lanes] = -1
-        self.cost[lanes] = 0
         self.n_started += len(starting)
         self._record(lanes, np.zeros(0, dtype=np.int64))
 
@@ -302,8 +309,8 @@ class _Batch:
         # One iteration: X alone in the lagging and met lanes, the coupled kernel in the
         # others, then the exact comparison of R-EST-2 for every unmet lane past the lag.
         active, unmet = self.active, self.tau < 0
-        solo = np.flatnonzero(active & ((self.t < self.lag) | ~unmet))
-        coupled = np.flatnonzero(active & unmet & (self.t >= self.lag))
+        solo = (active & ((self.t < self.lag) | ~unmet)).nonzero()[0]
+        coupled = (active & unmet & (self.t >= self.lag)).nonzero()[0]
         if len(solo):
             moved, _ = self.kernel.step(self.target, self.x.take(solo), self.streams.view(solo))
             self.x.put(solo, moved)
@@ -313,28 +320,31 @@ class _Batch:
             )
             self.x.put(coupled, new_x)
             self.y.put(coupled, new_y)
-        self.t[active] += 1
-        self.cost[solo] += 1
-        self.cost[coupled] += 2
-        compared = np.flatnonzero(active & unmet & (self.t >= self.lag))
+        self.t += 1  # idle lanes' clocks are never read
+        compared = (active & unmet & (self.t >= self.lag)).nonzero()[0]
         met = np.all(self.x.x[compared] == self.y.x[compared], axis=1)
         self.tau[compared[met]] = self.t[compared[met]]
+        stepped = active.nonzero()[0]
         if self.keep_paths:
-            for lane in np.flatnonzero(active).tolist():
+            for lane in stepped.tolist():
                 self.paths[int(self.replicate[lane])][0].append(self.x.x[lane].copy())
             for lane in coupled.tolist():
                 self.paths[int(self.replicate[lane])][1].append(self.y.x[lane].copy())
-        self._record(np.flatnonzero(active), compared[~met])
+        self._record(stepped, compared[~met])
 
     def finish(self) -> IntArray:
         # Frees the lanes of the pairs that met and reached m, and of censored pairs.
         done = (self.tau >= 0) & (self.t >= self.m)
         if self.max_iter is not None:
             done |= (self.tau < 0) & (self.t >= self.max_iter)
-        lanes = np.flatnonzero(self.active & done)
-        self.finished.add(self.replicate[lanes], self.tau[lanes], self.cost[lanes])
-        self.replicate[lanes] = -1
-        self.n_finished += len(lanes)
+        lanes = (self.active & done).nonzero()[0]
+        if len(lanes):
+            t, tau = self.t[lanes], self.tau[lanes]
+            # X ran t steps and Y the coupled ones, from L to tau or, if censored, to t.
+            cost = t + np.where(tau >= 0, tau, t) - self.lag
+            self.finished.add(self.replicate[lanes], tau, cost)
+            self.replicate[lanes] = -1
+            self.n_finished += len(lanes)
         return lanes
 
     def status(self) -> Status:
@@ -346,44 +356,50 @@ class _Batch:
             self.n_started, self.n_finished, int(self.replicate[lane]), int(self.t[lane])
         )
 
-    def result(self, n_log_prob: int, n_grad: int, seconds: float) -> Replicates:
+    def result(self, n_log_prob: int, n_grad: int, start: float) -> Replicates:
+        # The seconds since start include this join, a large part of a run with many atoms.
         index, tau, cost = self.finished.join()
-        owner, atoms, weights = self.atoms.join()
-        met = np.isin(owner, index[tau >= 0])
+        owner, atoms, weights = self.atoms.join(keep=index[tau >= 0])
         distance_owner, distance_time, distance = self.distances.join()
         return Replicates(
             index=index,
             meeting_time=np.where(tau >= 0, tau, np.inf),
             cost=cost,
-            atoms=atoms[met],
-            weights=weights[met],
-            owner=owner[met],
+            atoms=atoms,
+            weights=weights,
+            owner=owner,
             distance_owner=distance_owner,
             distance_time=distance_time,
             distance=distance,
             zero_density=np.sort(np.array(self.zero_density, dtype=np.int64)),
             n_log_prob=n_log_prob,
             n_grad=n_grad,
-            seconds=seconds,
+            seconds=time.perf_counter() - start,
             paths={i: (np.array(x), np.array(y)) for i, (x, y) in self.paths.items()},
         )
 
     def _record(self, stepped: IntArray, unmet: IntArray) -> None:
         # The averaged atoms X_t, t in S, of the lanes that moved, and the bias-correction
-        # atoms and distances of the unmet pairs (spec R-EST-6, section 3.6).
+        # atoms and distances of the unmet pairs (spec R-EST-6, section 3.6). Kinds without
+        # rows are skipped: at one lane most iterations lack one, and its calls add up.
         if not self.store:
             return
         t = self.t[stepped]
         averaged = stepped[(t >= self.k) & (t <= self.m) & ((t - self.k) % self.thin == 0)]
-        self.atoms.add(
-            self.replicate[averaged], self.x.x[averaged], np.full(len(averaged), self.weight)
-        )
-        coefficient = correction_coefficients(self.t[unmet], self.k, self.m, self.lag, self.thin)
-        corrected = unmet[coefficient > 0]
-        for chain, sign in ((self.x, 1.0), (self.y, -1.0)):
+        if len(averaged):
             self.atoms.add(
-                self.replicate[corrected], chain.x[corrected], sign * coefficient[coefficient > 0]
+                self.replicate[averaged], self.x.x[averaged], np.full(len(averaged), self.weight)
             )
+        if not len(unmet):
+            return
+        coefficient = correction_coefficients(self.t[unmet], self.k, self.m, self.lag, self.thin)
+        positive = coefficient > 0
+        if positive.any():
+            corrected = unmet[positive]
+            for chain, sign in ((self.x, 1.0), (self.y, -1.0)):
+                self.atoms.add(
+                    self.replicate[corrected], chain.x[corrected], sign * coefficient[positive]
+                )
         self.distances.add(
             self.replicate[unmet],
             self.t[unmet],
@@ -394,17 +410,29 @@ class _Batch:
 class _Chunks:
     # Columns appended iteration by iteration, the owning replicate first, then joined and
     # sorted by owner once. The empty columns given at construction fix shapes and dtypes.
+    # Every 256 chunks merge into one block: at one lane a chunk holds one row, and its
+    # arrays' overhead would cost several times the row.
     def __init__(self, *empty: npt.NDArray[Any]) -> None:
-        self.chunks: list[tuple[npt.NDArray[Any], ...]] = [empty]
+        self.blocks: list[tuple[npt.NDArray[Any], ...]] = [empty]
+        self.chunks: list[tuple[npt.NDArray[Any], ...]] = []
 
     def add(self, *columns: npt.NDArray[Any]) -> None:
-        if len(columns[0]):
-            self.chunks.append(columns)
+        self.chunks.append(columns)
+        if len(self.chunks) == 256:
+            self.blocks.append(_concatenate(self.chunks))
+            self.chunks = []
 
-    def join(self) -> list[npt.NDArray[Any]]:
-        columns = [np.concatenate(parts) for parts in zip(*self.chunks, strict=True)]
+    def join(self, keep: IntArray | None = None) -> list[npt.NDArray[Any]]:
+        # The rows whose owners are in keep (all by default), gathered once.
+        columns = _concatenate(self.blocks + self.chunks)
         order = np.argsort(columns[0], kind="stable")
+        if keep is not None:
+            order = order[np.isin(columns[0][order], keep)]
         return [column[order] for column in columns]
+
+
+def _concatenate(chunks: list[tuple[npt.NDArray[Any], ...]]) -> tuple[npt.NDArray[Any], ...]:
+    return tuple(np.concatenate(parts) for parts in zip(*chunks, strict=True))
 
 
 def _empty_state(lanes: int, ndim: int, with_grad: bool) -> State:

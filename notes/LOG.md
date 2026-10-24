@@ -48,3 +48,44 @@ Append only. One entry per working session or milestone.
   `lag_weights` was removed: the engine needs only the thinned coefficients, and the
   tests anchor them to JOA20 equation 2.1. 146 fast tests in 18 s, coverage 96%. Nine
   mutants of the engine and the weights were all caught by the new tests.
+
+## 2026-10-23: M1 to M3 reviews, M4, the M0 to M4 code review, M5
+
+- M1 and M2 review (`notes/reviews/m1-m2.md`, 5529215): `State.take` returned views, so
+  `Mixture` wrote into its callers' states; kernels dropped carried gradients, which
+  would bias a mixture of MALA and RWMH (z = +20 on E[x^2], measured by the reviewer).
+- M3 review (`notes/reviews/m3.md`, 99768aa): engine warnings never reach the parent
+  from a pool worker, so the engine records facts and reports to a monitor, and the
+  sampler warns. Censored meeting times are `inf`.
+- M4 implemented (0e8703b): `Result`, estimates, quantiles, histograms, TV and W1
+  bounds, the warnings of spec §7.4 and the summary.
+- `/code-review` of M0 to M4 at high effort (`notes/reviews/code-review-m0-m4.md`,
+  3c8b0fd): 22 findings. One was high: a kernel of another dimension than the target ran
+  silently, broadcast by `einsum`; kernels now report `ndim` and `init_state` refuses a
+  mismatch.
+- M5 implemented: adaptive Metropolis pilots (4 chains, max(2000, 200d) steps, second
+  halves), `Kernel.tune` with a shared pilot (DECISIONS #5), `choose_kml`,
+  `CoupledSampler` and `sample`, a sampler's settings fixed by its first run, `max_iter`
+  included (DECISIONS #4), and the warning on tuning chains that disagree,
+  R-hat > sqrt 2 (DECISIONS #6). The test plan's adaptive Metropolis criterion changed:
+  over 20 seeds at d = 5 and condition number 100, the pilot covariance's relative
+  Frobenius error had median 0.14 and maximum 0.25, against a bound of 0.20; the
+  whitened condition number had median 1.48 and maximum 1.75, and the test bounds it by
+  4. Pools and progress (spec §8.1) come with M7.
+- M3 efficiency review applied (`notes/reviews/m3.md`, Efficiency): outputs bitwise
+  identical on 54 configurations; one lane 156 to 101 µs per pair-step in the main run;
+  memory per stored row at one lane 519 to 103 bytes (92 of payload). Spec §10 now
+  records the standing: 256 lanes met (1.2 to 1.5 µs), one lane missed (93 µs of
+  overhead against 40).
+- M4 and M5 `/simplify` (`notes/reviews/m4-m5.md`): the tuning pilot did not converge
+  for d ≥ 10 (R-hat about 1.9 on N(0, I₁₀) from a stationary start), so k came out 5 to
+  50 times too large, and at d = 20 the pilot pairs never met. The four chains now share
+  one covariance at rate 1/(t + 1), started from π0's variances (DECISIONS #7): median k
+  at most 1.3 times the exact covariance's for d ≤ 20, 4.4 times at d = 50. Runs
+  now warn about censoring and the other §7.4 conditions; `thin` and `max_iter` default
+  to the first run's values (DECISIONS #8); `summary()` on 1.27 million atoms takes
+  0.44 s instead of 1.59 s.
+- M5 `/code-review` at high effort (`notes/reviews/m4-m5.md`): ten findings, all fixed,
+  among them a slow pair that warned nowhere (an off-by-one between the live monitor
+  and `issues`), `names` checked only after the whole run, and pilot chains that never
+  moved silencing the disagreement warning. 226 fast tests in 16 s.

@@ -9,7 +9,7 @@ import numpy.typing as npt
 
 from telescopic._linalg import covariance, inverse_lower, matvec
 from telescopic._random import Draws
-from telescopic._types import BoolArray, FloatArray
+from telescopic._types import BoolArray, FloatArray, Seed
 from telescopic.couplings import maximal, reflection_maximal
 from telescopic.kernels.base import (
     Kernel,
@@ -20,6 +20,7 @@ from telescopic.kernels.base import (
     select,
 )
 from telescopic.target import Target
+from telescopic.tuning import PilotRun, TuningReport
 
 
 class RandomWalk(Kernel):
@@ -33,9 +34,11 @@ class RandomWalk(Kernel):
     ----------
     cov : array_like, shape (d, d), optional
         Shape of the proposal, usually an estimate of the target covariance. ``None``
-        leaves the kernel untuned: a sampler tunes it on a pilot run.
+        leaves the kernel untuned: :meth:`tune` sets it to the covariance of adaptive
+        Metropolis pilot chains (spec section 5.3).
     scale : float, optional
-        Scale :math:`\lambda`; defaults to :math:`2.38/\sqrt d`.
+        Scale :math:`\lambda`; defaults to :math:`2.38/\sqrt d`, the optimal scale for a
+        Gaussian target whose covariance is ``cov`` (Roberts, Gelman & Gilks 1997).
     coupling : {"reflection", "maximal"}
         ``"reflection"`` couples the proposals by the reflection-maximal coupling and
         uses one uniform for both acceptances (Jacob, O'Leary & Atchade 2020; O'Leary
@@ -76,6 +79,9 @@ class RandomWalk(Kernel):
     @property
     def ndim(self) -> int | None:
         return None if self.cov is None else len(self.cov)
+
+    def _tuned(self, target: Target, pilot: PilotRun, rng: Seed) -> tuple[Kernel, TuningReport]:
+        return RandomWalk(pilot.cov, scale=self.scale, coupling=self.coupling), pilot.report()
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, BoolArray]:
         chol, _ = self._ready()

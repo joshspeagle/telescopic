@@ -8,9 +8,10 @@ from telescopic.initial import Normal
 from telescopic.kernels import RandomWalk
 from telescopic.results import Result
 from telescopic.target import Target
+from telescopic.tuning import TuningReport
 
 
-def synthetic(meeting_times, values, *, k=0, lag=1, max_iter=None):
+def synthetic(meeting_times, values, *, k=0, lag=1, max_iter=None, tuning=None):
     # One atom of weight 1 per replicate that met: its estimate is its value. A meeting
     # time of -1 marks a censored pair.
     tau = np.asarray(meeting_times, dtype=np.float64)
@@ -34,6 +35,7 @@ def synthetic(meeting_times, values, *, k=0, lag=1, max_iter=None):
         m=k,
         lag=lag,
         max_iter=max_iter,
+        tuning=tuning,
     )
 
 
@@ -61,6 +63,11 @@ def test_hill_recovers_a_pareto_tail_index(alpha):
     assert abs(hill(values, n // 10) - alpha) < 4 * alpha / np.sqrt(n // 10)
 
 
+def test_the_tv_bound_refuses_censored_pairs_given_as_infinite():
+    with pytest.raises(ValueError, match="censored pair as its cap"):
+        tv_bound([3.0, np.inf], 1, [0])
+
+
 def test_variance_share_is_zero_without_variance():
     np.testing.assert_array_equal(variance_share(np.ones((5, 2))), [0.0, 0.0])
 
@@ -85,7 +92,16 @@ def test_each_warning_fires_on_a_result_built_to_trigger_it(
     meeting_times, values, options, message
 ):
     found = issues(synthetic(meeting_times, values, **options))
-    assert any(message in issue for issue in found), found
+    assert any(message in issue.message for issue in found), found
+
+
+def test_tuning_chains_disagree_when_their_means_spread_wider_than_the_chains():
+    def result(rhat):
+        report = TuningReport(np.zeros(2), np.eye(2), np.full(4, 0.23), rhat, 100)
+        return synthetic([2, 3], [0.0, 1.0], k=5, tuning=report)
+
+    assert issues(result(np.array([1.0, 1.41]))) == []
+    assert [issue.kind for issue in issues(result(np.array([1.0, 1.42])))] == ["tuning"]
 
 
 def test_no_warning_fires_on_a_clean_gaussian_run():

@@ -30,10 +30,10 @@ telescopic/
 │   ├── estimators.py         # lag weights, thinning coefficients, unbiased covariance, quantiles, histograms
 │   ├── engine.py             # lockstep lanes with refill; Replicate records
 │   ├── parallel.py           # in-process and pool execution of index chunks; worker set-up; interrupts
-│   ├── tuning.py             # adaptive Metropolis pilot, dual averaging, choose_kml
+│   ├── tuning.py             # adaptive Metropolis pilot, TuningReport, dual averaging, choose_k
 │   ├── measure.py            # SignedMeasure
 │   ├── diagnostics.py        # TV and W1 bounds, tail index, variance shares, warning checks
-│   ├── results.py            # Result, Estimate, Summary, MeetingTimes, TuningReport
+│   ├── results.py            # Result, Estimate, Summary
 │   ├── sampler.py            # CoupledSampler, sample
 │   ├── io.py                 # versioned .npz save and load
 │   ├── plotting.py           # matplotlib helpers (optional dependency)
@@ -86,7 +86,7 @@ Kernel
   needs_grad: bool
   step(target, state, draws) -> (state, accepted (n,))
   coupled_step(target, sx, sy, draws) -> (sx, sy)
-  tune(target, initial, rng, **options) -> (kernel, TuningReport)    # returns self when already tuned
+  tune(target, initial, rng=None, *, pilot=None) -> (kernel, TuningReport | None)   # (self, None) when tuned
   init_state(target, x) -> State                                   # evaluates log_prob (and grad if needed)
 ```
 
@@ -155,9 +155,9 @@ make_chunks(indices, chunk_size) -> list[array]
 ### 2.8 Tuning (`tuning.py`)
 
 ```text
-adaptive_metropolis(target, initial, root, n_chains=4, n_steps=None) -> AdaptiveRun(cov, scale, acceptance, chains)
+adaptive_metropolis(target, initial, rng, *, n_steps=None) -> PilotRun(samples, log_prob, acceptance, n_steps)   # 4 chains, pooled adaptation
 dual_averaging(make_kernel, target, initial_states, root, target_accept, n_steps) -> step_size
-choose_kml(meeting_times, quantile=0.99, multiple=10) -> (k, m, lag)    # spec R-TUNE-2; inverted-CDF quantile; censored = inf
+choose_k(meeting_times, quantile=0.99) -> k    # spec R-TUNE-2; inverted-CDF quantile; censored = inf
 ```
 
 ### 2.9 Results (`results.py`, `diagnostics.py`)
@@ -168,7 +168,7 @@ choose_kml(meeting_times, quantile=0.99, multiple=10) -> (k, m, lag)    # spec R
   - the tuning and pilot reports.
 
   It computes estimates with `estimators` and diagnostics with `diagnostics`.
-- **`diagnostics.check(result) -> list[Issue]`** implements spec §7.4. `Result.check` emits the issues as warnings.
+- **`diagnostics.issues(result) -> list[Issue]`** implements spec §7.4. `Result.check` emits the issues as warnings, and the sampler emits them at the end of each run.
 
 ### 2.10 Sampler (`sampler.py`)
 
