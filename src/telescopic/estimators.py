@@ -8,7 +8,7 @@ import numpy as np
 import numpy.typing as npt
 from scipy.optimize import isotonic_regression
 
-from telescopic._types import FloatArray, IntArray, averaging, integer
+from telescopic._types import FloatArray, IntArray, averaging, integer, integral
 
 
 def averaging_times(k: int, m: int, thin: int) -> IntArray:
@@ -47,16 +47,18 @@ def correction_coefficients(t: npt.ArrayLike, k: int, m: int, lag: int, thin: in
     k, m, thin = averaging(k, m, thin)
     lag = integer("lag", lag, minimum=1)
     times = np.asarray(t)
-    if not np.all(np.isfinite(times) & (times == np.floor(times))):
-        raise ValueError(f"t must be integers, not {times}")
-    t = times.astype(np.int64)
+    # A float beyond int64 would cast to -2**63.
+    if not integral(times) or (times.dtype.kind == "f" and np.any(np.abs(times) >= 2.0**63)):
+        raise ValueError(f"t must be integers within int64, not {times}")
+    t = times.astype(np.int64, copy=False)
     n_averaged = len(range(k, m + 1, thin))
     g = gcd(thin, lag)
     period = lag // g
     offset = t - k
     solvable = (offset % g == 0) & (t >= k + lag)
-    # The smallest j >= 0 with j * thin = offset (mod lag), and the largest admissible j.
-    first = (offset // g) * pow(thin // g, -1, period) % period
+    # The smallest j >= 0 with j * thin = offset (mod lag), and the largest admissible j;
+    # reducing before the product keeps it within int64.
+    first = (offset // g) % period * pow(thin // g, -1, period) % period
     last = np.minimum(n_averaged - 1, (t - lag - k) // thin)
     count = np.where(solvable & (first <= last), (last - first) // period + 1, 0)
     return count / n_averaged

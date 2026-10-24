@@ -62,6 +62,16 @@ def real(
     return number
 
 
+def integral(values: npt.NDArray[Any], minimum: int | None = None) -> bool:
+    # Whether every value is an integer from minimum up: an integer, or a float with an
+    # integral value. Integers skip the float tests, as on the engine's path.
+    if values.dtype.kind not in "iu" and not np.all(
+        np.isfinite(values) & (values == np.floor(values))
+    ):
+        return False
+    return minimum is None or bool(np.all(values >= minimum))
+
+
 def vector(name: str, values: npt.ArrayLike) -> FloatArray:
     # A finite vector of shape (d,), d >= 1, or a scalar as shape (1,).
     array = np.array(values, dtype=np.float64, ndmin=1)

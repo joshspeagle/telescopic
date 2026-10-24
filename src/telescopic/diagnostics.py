@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 import numpy.typing as npt
 
-from telescopic._types import FloatArray, integer
+from telescopic._types import FloatArray, integer, integral
 
 if TYPE_CHECKING:
     from telescopic.results import Result
@@ -42,7 +42,7 @@ def tv_bound(meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike) -> FloatA
     function :math:`\hat S(u) = R^{-1}\#\{\tau > u\}`, in :math:`O(R + \max\tau)`.
     """
     tau = np.asarray(meeting_times, dtype=np.float64)
-    if tau.ndim != 1 or len(tau) == 0 or not _counts(tau):
+    if tau.ndim != 1 or len(tau) == 0 or not integral(tau, 0):
         raise ValueError(
             "meeting_times must be a non-empty one-dimensional array of non-negative "
             "integers: give a censored pair as its cap"
@@ -88,7 +88,7 @@ def w1_bound(
             f"distance_time and distance must have one shape (M,), not {times.shape} and "
             f"{distances.shape}"
         )
-    if not _counts(times):
+    if not integral(times, 0):
         raise ValueError("distance_time must be non-negative integers")
     if not np.all(np.isfinite(distances) & (distances >= 0)):
         raise ValueError("distance must be finite and non-negative")
@@ -102,7 +102,7 @@ def _lagged_tail(values: FloatArray, lag: int, t: npt.ArrayLike) -> FloatArray:
     # over the times i'L + r with i' >= i; the padding adds a last row of zeros.
     lag = integer("lag", lag, minimum=1)
     times = np.asarray(t)
-    if not _counts(times):
+    if not integral(times, 0):
         raise ValueError(f"t must be non-negative integers, not {times}")
     # Past the end every sum is 0, so a larger t needs no larger integer.
     t = np.minimum(times, len(values)).astype(np.int64)
@@ -112,11 +112,6 @@ def _lagged_tail(values: FloatArray, lag: int, t: npt.ArrayLike) -> FloatArray:
     tail = np.cumsum(padded.reshape(rows, lag)[::-1], axis=0)[::-1]
     sums: FloatArray = tail[np.minimum(t // lag + 1, rows - 1), t % lag]
     return sums
-
-
-def _counts(values: npt.NDArray[Any]) -> bool:
-    # Whether every value is a non-negative integer, as a float or an integer.
-    return bool(np.all(np.isfinite(values) & (values >= 0) & (values == np.floor(values))))
 
 
 def hill(values: npt.ArrayLike, n_tail: int) -> float:
