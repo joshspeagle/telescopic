@@ -1,0 +1,282 @@
+# telescopic: test plan (v0.1)
+
+This plan turns the requirements of [`spec.md`](spec.md) into tests. It has three goals:
+
+1. Every public behaviour is covered by a fast, deterministic test.
+2. Every coupling and every estimator is shown to be correct against exact references, not only by statistical agreement.
+3. The documentation and tutorials stay executable.
+
+Most estimator bugs cannot be caught statistically. In the census, an off-by-one in the bias-correction weights shifted the estimate by 0.0025 standard deviations; detecting it at 5σ would take about 4 million replicates (`research_notes/.../validation_benchmarks.md`, Q2). The deterministic tier therefore carries correctness, and the statistical tier confirms it end to end.
+
+## 1. Principles
+
+- **Deterministic.** Every random test passes a fixed seed through `rng`.
+  - Statistical tests use tolerances of 5 Monte Carlo standard errors.
+  - When $4 < |z| \le 6$, a test reruns once with 4× the replicates and a fresh seed, and fails only if the rerun also exceeds 4 (Gandy-style escalation, never `--reruns`).
+  - Seeds are never chosen to make a test pass.
+- **Exact references first.** In order of preference:
+  1. draw-for-draw oracles with injected random numbers;
+  2. closed forms (Gaussian total-variation distances, meeting probabilities);
+  3. finite-state computations;
+  4. statistical comparisons.
+- **Two tiers.**
+  - The default `pytest` runs the fast tier in under 2 minutes.
+  - `pytest -m slow` runs the statistical tier: unbiasedness at scale, coverage, total-variation bounds and calibration of the warnings.
+- **Warnings are errors** (`filterwarnings = error` in `pyproject.toml`). Tests that expect a warning use `pytest.warns`.
+- **Test names** are sentences that state the behaviour. Docstrings cite requirement IDs where they apply.
+- **A test earns its place** by catching a plausible bug that no other test catches (`CLAUDE.md`).
+
+## 2. Test inventory
+
+### 2.1 `tests/test_random.py` (R-EXEC-1, R-EXEC-2)
+
+- `root_seed` accepts `None`, an integer, a `SeedSequence` and a `Generator`. The same integer gives the same streams, and different namespaces give different streams.
+- `replicate_generator(root, ns, i)` equals the generator built from `SeedSequence(root.entropy, spawn_key=root.spawn_key + (ns, i))`.
+- `Streams`/`Draws`:
+  - the draws a lane receives depend only on its generator and its request sizes, not on the other lanes or on the order in which lanes request;
+  - refills are deterministic;
+  - `subset` keeps the row-to-lane mapping;
+  - a sequence of requests of mixed sizes from one lane equals the same sequence drawn with a single-lane `Streams`.
+
+### 2.2 `tests/test_couplings.py` (R-CPL-1–3)
+
+**Reflection-maximal**
+- **Oracle:** with injected normals and uniforms, `reflection_maximal` equals an independent NumPy reference at `atol=1e-12`. Uniforms are chosen on both sides of the meeting threshold so both branches run.
+- **Algebra (Hypothesis):**
+  - the reflection is an involution and preserves norms;
+  - `identical` holds if and only if the outputs are bitwise equal;
+  - $\delta = 0$ always gives `identical`.
+- **Meeting probability:** a binomial test of the meeting frequency against $2\Phi(-\lVert\delta\rVert/2)$. Use $n = 2\times10^5$ per case for three distances in $d = 1, 3, 10$, with a dense $\Sigma$. This is the test that catches a coupling that recomputes $Y$ (spec Appendix A, E-R2).
+- **Marginal law:** $Y$'s whitened coordinates are $\mathcal N(0, I)$ (one-sample KS per coordinate, and KS of $\lVert\cdot\rVert^2$ against $\chi^2_d$, Bonferroni-corrected). The same holds for $X$.
+
+**Rejection maximal**
+- **Oracle:**
+  - a draw-for-draw reference for $\eta = 1$ and $\eta < 1$;
+  - from $p = q$, the output is `identical` for $\eta = 1$;
+  - the draw count follows the algorithm.
+- **Statistics, for Gaussians with unequal means and variances:**
+  - the meeting frequency equals $\int\min(\eta p, q)$ (binomial test);
+  - both marginals are exact (one-sample KS);
+  - the mean draw count is 2.
+
+**Discrete maximal**
+- The exact joint table, computed by enumeration in exact mode, has the right row and column sums and diagonal mass $1 - \mathrm{TV}$, to $10^{-15}$.
+- Log-space inputs with very peaked probabilities do not underflow.
+
+### 2.3 `tests/test_target.py`, `tests/test_initial.py` (R-INPUT-1, R-INPUT-2)
+
+**Target**
+- **Batching:** a vectorised and a point-by-point target agree.
+- **Invalid values:**
+  - NaN or `+inf` raises `ValueError` naming the point;
+  - `-inf` passes through.
+- **Wrappers:** `args` and `kwargs` are forwarded. Counters count evaluations. Input arrays are never modified.
+- **Gradients:** `log_prob_and_grad` without a gradient raises.
+
+**Initial distributions**
+- **Each input form:**
+  - callables, SciPy frozen distributions and point arrays all give draws of shape `(d,)`;
+  - point arrays are sampled uniformly over their rows (chi-square test on row counts).
+- **Validation:**
+  - wrong shapes or non-finite draws raise;
+  - a draw with $\log\pi = -\infty$ emits `InputWarning`.
+- **Independence:** $X_0$ and $Y_0$ are drawn independently from the replicate's stream.
+
+### 2.4 `tests/test_kernels.py` (R-KER-*)
+
+Each kernel ($\times$ each coupling it offers) gets the same suite, via a parametrised fixture:
+
+1. **Oracle draw-for-draw:** with `FixedDraws`, `step` and each marginal of `coupled_step` equal an independent NumPy reference kernel at `atol=1e-12`.
+   - Pairs are far apart, close, and equal.
+   - Uniforms are chosen to exercise both acceptance and rejection.
+   - For mixtures, both components are exercised.
+2. **Marginal preservation:** from fixed pairs (equal; $0.1\sigma$ apart; $3\sigma$ apart), the empirical law of each marginal after one coupled step equals the exact one-step law. For RWMH, MALA and IMH on a Gaussian target this is:
+   - a binomial test of the probability of staying;
+   - a KS test of moved values against the normalised $q(x' \mid x)\,\alpha(x, x')$, by one-dimensional quadrature in $d = 1$;
+   - KS tests on whitened coordinates for $d > 1$.
+
+   One-sample tests against the exact law are about 10× more sample-efficient than two-sample tests (census). This test runs with $n = 2\times10^4$ in the fast tier and $2\times10^5$ in the slow tier.
+3. **Faithfulness:** from equal states, 100 coupled steps keep the states bitwise equal and `met` true at every step.
+4. **Flag contract:** over many steps from random pairs, `met[i]` holds if and only if the returned states are bitwise equal. Met pairs carry equal log-densities and gradients.
+5. **Finite-state exactness:** a test-only kernel on 4 states uses `discrete_maximal` to couple transition rows. Built through the same code paths, its coupled transition matrix (enumerated in exact mode) has marginals equal to $P$ and an absorbing diagonal.
+
+Kernel-specific tests:
+- **RWMH:**
+  - `"reflection"` meets more often than `"maximal"` at $d = 10$ (O'Leary 2021 Table 1 reference: about 30 vs 279 mean meeting time, checked loosely in the slow tier);
+  - draws per step as documented.
+- **MALA:** the acceptance ratio includes both proposal densities. Checked against a reference for a non-Gaussian target, where omitting the reverse term changes the answer.
+- **HMC:**
+  - the leapfrog integrator is reversible and volume-preserving to rounding on a Gaussian;
+  - shared momentum contracts two chains on a Gaussian;
+  - the meeting component meets with the probability of §5.2;
+  - a common uniform chooses the same component for both chains.
+- **IMH:** both chains propose the same point; a meeting happens exactly when both accept.
+- **Gibbs:**
+  - `"maximal"` couplings of conditionals have exact marginals (KS against the conditional's CDF);
+  - `"crn"` uses a common uniform through `ppf`;
+  - `"two-scale"` switches at the threshold;
+  - a meeting is declared only when the whole state is equal at the end of a sweep.
+- **Mixture:** the component frequencies match the weights. Component choice does not depend on the states (structural test with `FixedDraws`).
+
+### 2.5 `tests/test_estimators.py` (R-EST-4–8)
+
+**Algebraic identities (Hypothesis).** Paths are synthetic: random arrays $X_{0..T}$ and $Y_{0..T-L}$ with a forced meeting time $\tau$, and random $0 \le k \le m$, $L \ge 1$, `thin` $\ge 1$. On them:
+- The weighted sum of §3.2 equals the definitional average of $H_l$ over the averaging set, to `1e-12`. This is the main guard against weight and index bugs.
+- `lag_weights` with $L = 1$ equals $\min(t - k, m - k + 1)$.
+- `correction_coefficients` with `thin=1` equals `lag_weights`$/(m - k + 1)$.
+- The weights of the signed measure sum to 1, and $\hat\pi(h)$ equals $H$ for several $h$.
+- $\tau \le k + L$ implies a zero bias correction. $m = k$ gives $H_k$.
+- The JRSSB-reply weight differs from `lag_weights` for some $L \ge 2$ inputs. This documents why it is not used.
+- The cost equals $L + 2(\tau - L) + \max(0, m - \tau)$.
+
+**Derived estimators**
+- `unbiased_covariance` matches the U-statistic $\frac{1}{R(R-1)}\sum_{r \ne s} a_r a_s^\top$ form exactly. Averaged over many synthetic replicate sets with known moments, it is unbiased where the plug-in is not.
+- `weighted_quantile`:
+  - reproduces NumPy's inverted-CDF quantiles for positive weights;
+  - is monotone in $q$;
+  - returns finite answers for non-monotone signed CDFs.
+- Histograms use half-open bins, and their bin masses sum to the total weight inside the range.
+
+**Exact finite-state expectation** (slow tier). For a 4-state chain coupled by `discrete_maximal`, $\mathbb E[H_{k:m}]$ computed by recursion on the joint chain equals $\pi(h)$. The engine's average over $10^6$ replicates matches it within 5 standard errors, for several $(k, m, L)$ including $L \ge 2$ and `thin` $> 1$.
+
+**Perfect kernel.** A test-only kernel with $P(x, \cdot) = \pi$ for every $x$, coupled by common draws, meets at the first coupled step. The engine records $\tau = L + 1$ ($\tau = L$ when $X_L = Y_0$). This checks the meeting-time bookkeeping and the lag indexing deterministically.
+
+### 2.6 `tests/test_engine.py` (R-EST-1–3, R-EST-7, R-EXEC-3, R-EXEC-4)
+
+- **Estimates against recorded paths:** with `keep_paths=True`, every replicate's stored signed measure equals the one computed by a reference implementation of §3.2 from the recorded paths. Exact to `1e-12`, for random $(k, m, L, \text{thin})$.
+- **Lag:** $X$ runs exactly $L$ steps alone before the first coupled step.
+- **Meeting:**
+  - $\tau$ is the first $t \ge L$ with $X_t = Y_{t-L}$;
+  - after the meeting only $X$ is simulated;
+  - the cost formula holds.
+- **Refill:** with $R > B$ lanes, every requested index is run exactly once, and per-replicate results do not depend on $B$ (1, 7, 64) for a point-by-point target. This is the invariance contract of R-EXEC-2.
+- **Censoring:**
+  - with `max_iter`, unmet pairs are returned as censored, never dropped;
+  - without it, a slow pair triggers the one-time `ConvergenceWarning`.
+- **Pilot mode:** `k=0, m=0, store=False` returns meeting times only.
+
+### 2.7 `tests/test_results.py`, `tests/test_measure.py` (R-OUT-1–3)
+
+- **Pooled estimates:** `estimate(h)` equals the mean of `measure.per_replicate(h)`, with standard error `std/√R` and a CLT interval at the requested level. Vector-valued `h` works.
+- **Moments:** `mean`, `cov`, `var` and `std` follow §3.4. `cov` is symmetric.
+- **Quantiles:** `quantile` and `interval` use the isotonic rule.
+- **Histograms:** `histogram` returns masses, standard errors and edges.
+- **Summary:** `summary()` contains the fields of §7.3 and converts with `to_dict()`. `to_pandas()` is skipped without pandas.
+- **Merging:** `merge` rejects different configurations and overlapping indices, and its output equals one run over the union of indices.
+- **Censored replicates** are excluded from estimates and counted.
+
+### 2.8 `tests/test_diagnostics.py` (R-DIAG-1, R-DIAG-2)
+
+- **TV bound:**
+  - the formula equals $\sum_{j\ge1}\hat{\mathbb P}(\tau > t + jL)$ (identity on random meeting times);
+  - it is reported as $\min(1, \cdot)$ with an upper confidence bound at 0.
+- **Exact reference:** for a finite chain, the bound computed from the exact meeting-time distribution is at least the exact TV distance at every $t$.
+- **Hill tail index:** recovers the index of Pareto samples within 10% at $n = 10^4$.
+- **`check` warnings:** each fires on a synthetic result built to trigger it:
+  - a censored replicate;
+  - more than 5% bias corrections;
+  - one replicate holding more than 25% of the variance;
+  - a tail index below 2;
+  - disagreeing pilots.
+
+  None fires on a clean Gaussian run.
+
+### 2.9 `tests/test_tuning.py`, `tests/test_sampler.py`, `tests/test_api.py` (R-TUNE-*, R-API-*)
+
+**Tuning**
+- **Adaptive Metropolis:**
+  - on a correlated Gaussian ($d = 5$, condition number 100), the pilot covariance is within 20% of the truth in Frobenius norm;
+  - the acceptance rate is within 0.05 of 0.234.
+- **`choose_kml`:**
+  - gives $k = \lceil q_{0.99}(\tau - 1)\rceil$, $L = k$ and $m = 10k$;
+  - the floor $k \ge 1$ holds.
+- **Dual averaging:** reaches its target acceptance within 0.05 on a Gaussian.
+
+**`CoupledSampler`**
+- `run` tunes and pilots when needed, and records the reports.
+- A second `run` continues the indices; with the same seed, two runs of 50 equal one run of 100.
+- Changing `k`, `m`, `lag` or `thin` between runs raises.
+- Pilot replicates never appear in the measure.
+
+**API**
+- `sample` accepts every documented input form.
+- Unknown kernel names raise with the list of valid names. A gradient-requiring kernel without `grad` raises.
+- `rng` reproducibility holds.
+- `telescopic.__all__` exports what the README uses, and `__version__` is defined.
+- The README example runs, extracted by a test.
+
+### 2.10 `tests/test_parallel.py` (R-EXEC-5, R-EXEC-6)
+
+- **Pools:** for a point-by-point target, the per-replicate results are identical across `pool=None`, a `ProcessPoolExecutor` with 1 and 2 workers, and a `.map`-only pool.
+- **Chunking:** chunks cover the indices exactly once. Results come back in index order.
+- **Interrupts:** a simulated stop after $j$ completed replicates returns an `interrupted` result whose indices are a prefix.
+- **Budget mode (should):**
+  - on a toy whose estimate correlates with its cost, the per-lane GH estimator is unbiased;
+  - the pooled completed-by-deadline average is biased ($|z| > 10$ in seconds), which documents why it is not offered.
+
+### 2.11 `tests/test_io.py`, `tests/test_plotting.py`, `tests/test_examples.py`, `tests/test_testing.py`
+
+- **IO:**
+  - `save` and `load` round-trip every field, including the measure and the seed;
+  - a file from a future schema version raises;
+  - no pickle is used (`allow_pickle=False`).
+- **Plotting:** every plot function runs under the Agg backend and returns its axes. It is skipped without matplotlib.
+- **Examples:**
+  - exact moments match long reference runs or quadrature (banana, funnel, mixture);
+  - gradients match finite differences;
+  - initial distributions have the documented shape.
+- **`check_coupling`:**
+  - passes the built-in kernels;
+  - flags a deliberately broken coupling (wrong $Y$ marginal) and a non-faithful one.
+
+### 2.12 Slow statistical tier (`-m slow`)
+
+- **Unbiasedness, end to end.** For each kernel family, on targets with exact $\pi(h)$, $R$ is set from a pilot so that the standard error is at most 1/5 of the smallest bias of interest. The assertion is $|z| \le 5$ with escalation. Heavy-tail statistics (kurtosis, maximum variance share) are recorded with each run. The cases are:
+  - a Gaussian in $d = 1, 5, 20$ from $\pi_0 = \mathcal N(3, I)$ and from a point mass;
+  - the banana with HMC;
+  - the pump-failure model with Gibbs;
+  - $L \in \{1, 7\}$;
+  - `thin` $\in \{1, 3\}$;
+  - small $k$, so the bias correction matters.
+- **Coverage.** 1,000 intervals of $R = 200$ from near-stationary starts; coverage of the 95% interval in [0.93, 0.97]. Coverage from far starts is recorded, not asserted, to document the heavy-tail caveat.
+- **TV bounds against exact TV.** For an exact AR(1) kernel ($x' = \rho x + \sqrt{1-\rho^2}\,\xi$), coupled by `reflection_maximal`, with $10^4$ meeting times: $\widehat{\text{bound}}(t) \ge \mathrm{TV}(t) - 5\,\mathrm{SE}(t)$ on a grid of $t$. The exact TV between Gaussians comes from quadrature.
+- **Literature reproductions** (loose bands): RWMH reflection-maximal mean $\tau \approx 30$ at $d = 10$ (O'Leary 2021); the HMC logistic regression meeting times of Heng & Jacob, order of magnitude.
+- **Warning calibration.** On clean targets, the warnings of §7.4 fire in under 1% of runs. On JOA20's bimodal case with a narrow $\pi_0$, warning 3 or 4 fires in most runs at $R = 1000$.
+- **Linear SBC (should).** On conjugate Normal–Normal and Gamma–Poisson models, $\mathbb E[\hat\pi(\phi) - \phi(\tilde\theta, y)] = 0$ for $\phi \in \{\theta, \theta^2, \mathbb 1(\theta \le c), \log p(y \mid \theta)\}$, at $|z| \le 5$.
+
+### 2.13 Docs, examples and packaging
+
+- The tutorials (MyST notebooks) execute in the docs CI job, each in under 2 minutes.
+- The README example is extracted and run by a test.
+- `python -m build` produces a wheel and an sdist. A clean environment installs the wheel and imports it.
+
+### 2.14 Benchmarks (non-gating)
+
+`benchmarks/run.py` prints JSON with the commit, machine, thread settings and versions (`CLAUDE.md`, Measurements). It times these cases:
+- lockstep coupled RWMH per pair-step, against lanes and the random-number mode;
+- point-by-point overhead per step;
+- pool speed-up for a 1 ms log-density;
+- the overhead of the automatic pipeline;
+- meeting times and relative inefficiency of RWMH, MALA and HMC on the examples.
+
+## 3. Mapping from requirements to tests
+
+| Requirement | Tests |
+|---|---|
+| R-EST-1–3 (construction, meeting, faithfulness) | 2.4 faithfulness and flag; 2.5 perfect kernel; 2.6 lag and meeting |
+| R-EST-4–6 (weights, thinning, signed measure) | 2.5 identities; 2.6 recorded paths; 2.12 unbiasedness |
+| R-EST-7 (cost) | 2.5; 2.6 |
+| R-EST-8 (derived estimators) | 2.5; 2.7 |
+| R-THEORY-1 | docs review; 2.12 coverage and failure-mode runs |
+| R-CPL-1–3 | 2.2 |
+| R-KER-* | 2.4; 2.12 |
+| R-INPUT-1–2 | 2.3 |
+| R-EXEC-1–2 (streams, invariance) | 2.1; 2.6; 2.10 |
+| R-EXEC-3–4 (engine, censoring) | 2.6 |
+| R-EXEC-5–6 (parallel, interrupts) | 2.10 |
+| R-EXEC-7 (memory) | 2.9 (warning on the estimate) |
+| R-TUNE-1–4 | 2.9 |
+| R-OUT-1–3 | 2.7; 2.11 |
+| R-DIAG-1–2 | 2.8; 2.12 |
+| R-API-1–2 | 2.9 |
+| R-ENG | CI jobs; 2.13 |

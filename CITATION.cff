@@ -1,0 +1,40 @@
+cff-version: 1.2.0
+message: "If you use telescopic, please cite the software and the methods papers it implements."
+title: "telescopic: unbiased Markov chain Monte Carlo with coupled chains and telescoping sums"
+type: software
+authors:
+  - family-names: Speagle
+    given-names: Joshua S.
+license: MIT
+repository-code: "https://github.com/joshspeagle/telescopic"
+version: 0.1.0.dev0
+references:
+  - type: article
+    title: "Unbiased Markov chain Monte Carlo methods with couplings"
+    authors:
+      - family-names: Jacob
+        given-names: Pierre E.
+      - family-names: O'Leary
+        given-names: John
+      - family-names: Atchadé
+        given-names: Yves F.
+    journal: "Journal of the Royal Statistical Society: Series B"
+    volume: 82
+    issue: 3
+    start: 543
+    end: 600
+    year: 2020
+    doi: "10.1111/rssb.12336"
+  - type: article
+    title: "Exact estimation for Markov chain equilibrium expectations"
+    authors:
+      - family-names: Glynn
+        given-names: Peter W.
+      - family-names: Rhee
+        given-names: Chang-han
+    journal: "Journal of Applied Probability"
+    volume: 51
+    issue: "A"
+    start: 377
+    end: 389
+    year: 2014

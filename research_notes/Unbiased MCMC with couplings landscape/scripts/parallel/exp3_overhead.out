@@ -1,0 +1,15 @@
+(a) scalar coupled step, 1-D: numpy-Generator scalars 1.21 us/step; stdlib random 0.70 us/step
+(b) lockstep batch, d=10, batch RNG:
+    B=     1:      38.5 us/step,   38501.7 ns per pair-iteration
+    B=    10:      44.3 us/step,    4427.8 ns per pair-iteration
+    B=   100:      73.7 us/step,     737.5 ns per pair-iteration
+    B=  1000:     370.1 us/step,     370.1 ns per pair-iteration
+    B= 10000:    4294.1 us/step,     429.4 ns per pair-iteration
+    B=100000:   59510.8 us/step,     595.1 ns per pair-iteration
+(c) per-replicate RNG streams in lockstep, d=10:
+    B=   100: batch     76.8 us/step | per-lane Generator     205.3 us/step | per-lane block K=64     84.0 us/step (incl. Generator creation)
+    B=  1000: batch    401.6 us/step | per-lane Generator    1596.9 us/step | per-lane block K=64    685.1 us/step (incl. Generator creation)
+    B= 10000: batch   4266.4 us/step | per-lane Generator   21491.7 us/step | per-lane block K=64  17686.5 us/step (incl. Generator creation)
+(d) Generator(PCG64) per replicate: 11.5 us each; Generator(Philox): 12.4 us each
+    SeedSequence(root).spawn(5)[i] == SeedSequence(root, spawn_key=(i,)) : True; kids[3].spawn_key=(3,)
+    Generator.spawn available: True; numpy 2.5.3

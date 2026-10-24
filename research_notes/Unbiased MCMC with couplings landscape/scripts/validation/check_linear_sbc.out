@@ -1,0 +1,10 @@
+== k m = 10 50
+bug=None        R=20000: E[tau]=9.5; theta: z=-1.26 (sd(D)=2.83); theta^2: z=+1.62 (sd(D)=8.71); loglik(y|theta): z=-0.50 (sd(D)=27.19)
+bug=prior_only  R=20000: E[tau]=8.5; theta: z=+0.28 (sd(D)=4.76); theta^2: z=-1.30 (sd(D)=11.17); loglik(y|theta): z=-18.60 (sd(D)=34.67)
+bug=lik_var     R=20000: E[tau]=9.2; theta: z=+0.20 (sd(D)=3.02); theta^2: z=-1.73 (sd(D)=9.64); loglik(y|theta): z=-0.35 (sd(D)=29.49)
+bug=flat_prior  R=20000: E[tau]=9.4; theta: z=-0.54 (sd(D)=3.29); theta^2: z=+5.24 (sd(D)=9.99); loglik(y|theta): z=+0.18 (sd(D)=34.02)
+== k m = 40 400
+bug=None        R=20000: E[tau]=9.5; theta: z=-1.82 (sd(D)=0.41); theta^2: z=+0.56 (sd(D)=0.79); loglik(y|theta): z=+0.17 (sd(D)=0.70)
+bug=prior_only  R=20000: E[tau]=8.5; theta: z=-0.11 (sd(D)=1.01); theta^2: z=+0.71 (sd(D)=1.44); loglik(y|theta): z=-162.45 (sd(D)=4.37)
+bug=lik_var     R=20000: E[tau]=9.2; theta: z=+1.79 (sd(D)=0.42); theta^2: z=-10.67 (sd(D)=0.81); loglik(y|theta): z=-47.60 (sd(D)=0.71)
+bug=flat_prior  R=20000: E[tau]=9.5; theta: z=+0.63 (sd(D)=0.45); theta^2: z=+59.82 (sd(D)=0.95); loglik(y|theta): z=+0.71 (sd(D)=0.72)

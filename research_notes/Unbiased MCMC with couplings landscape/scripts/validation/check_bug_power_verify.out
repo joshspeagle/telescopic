@@ -1,0 +1,3 @@
+unmet fraction: 0.0
+correct            mean=2.8854 SE=0.0176 pi(h)=2.8750 sd=11.113
+weight_off_by_one  mean=2.9104 SE=0.0191 pi(h)=2.8750 sd=12.105

@@ -1,0 +1,6 @@
+B=   100 RNG-only us/step: batch     29.4 | per-lane     139.4 | block K=64     27.3 | one-off creation of B Generators 16.8 ms
+B=  1000 RNG-only us/step: batch    140.5 | per-lane    1099.4 | block K=64    194.8 | one-off creation of B Generators 14.5 ms
+B= 10000 RNG-only us/step: batch   1544.5 | per-lane   11232.9 | block K=64   4061.3 | one-off creation of B Generators 116.1 ms
+scripts/parallel/exp3b_rng_steady.py:39: RuntimeWarning: invalid value encountered in divide
+  z = (x - y) / sigma; nz = math.sqrt(float(z @ z)); e = z / nz
+scalar (one pair, d=10, NumPy small arrays + Python logpdf): 11.7 us per coupled iteration
