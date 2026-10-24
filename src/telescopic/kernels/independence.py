@@ -118,7 +118,7 @@ class Independence(Kernel):
     def _tuned(
         self, target: Target, initial: Any, pilot: PilotRun, rng: Seed
     ) -> tuple[Kernel, TuningReport]:
-        proposal = MultivariateT(pilot.mean, pilot.cov, df=5)
+        proposal = MultivariateT(pilot.mean, pilot.cov, df=5)  # D-25's t_5, whatever the default
         draws = pilot.samples.reshape(-1, pilot.samples.shape[2])
         log_weights = pilot.log_prob.ravel() - proposal.log_density(draws)
         ratio = float(np.exp(np.max(log_weights) - np.median(log_weights)))

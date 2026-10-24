@@ -172,7 +172,7 @@ def test_a_monitor_sees_the_progress_and_can_stop_new_replicates():
 
     replicates = simulate(n=100, lanes=4, monitor=monitor)
     np.testing.assert_array_equal(replicates.index, np.arange(4))
-    assert seen[0] == Status(started=4, finished=0, slowest=seen[0].slowest, t=1)
+    assert seen[0] == Status(finished=0, slowest=seen[0].slowest, t=1)
     assert seen[-1].finished == 4
 
 

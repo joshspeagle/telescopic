@@ -166,8 +166,6 @@ def _gather(
     # user's process pool that does not ignore it, and the pool then fails every chunk
     # left, after any finished one. After a stop those chunks count as not run; with none
     # finished, the pool's error stands, as there is no result to return.
-    if stop is not None:
-        stop.clear()
     done: queue.SimpleQueue[Future[engine.Replicates | None]] = queue.SimpleQueue()
     futures = [executor.submit(task, piece, first=i == 0) for i, piece in enumerate(pieces)]
     for future in futures:
@@ -185,13 +183,13 @@ def _gather(
                 try:
                     part = None if future.cancelled() else future.result()
                 except BrokenExecutor:
-                    if not (parts and monitor(engine.Status(finished, finished, -1, 0))):
+                    if not (parts and monitor(engine.Status(finished, -1, 0))):
                         raise
                     part = None
                 if part is not None:
                     parts.append(part)
                     finished += len(part.index)
-            if monitor(engine.Status(finished, finished, -1, 0)):
+            if monitor(engine.Status(finished, -1, 0)):
                 if stop is not None:
                     stop.set()
                 for waiting in futures[1:]:
@@ -217,7 +215,7 @@ def _waves(
         for part in pool.map(task, pieces[start : start + workers]):
             parts.append(part)
             finished += len(part.index)
-        if monitor(engine.Status(finished, finished, -1, 0)):
+        if monitor(engine.Status(finished, -1, 0)):
             break
     return parts
 

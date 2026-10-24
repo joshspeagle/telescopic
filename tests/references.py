@@ -34,9 +34,9 @@ def assert_z_scores(z_scores, n, seed):
         assert rerun <= 4, f"|z| = {largest:.2f}, then {rerun:.2f} with 4n draws"
 
 
-def synthetic(meeting_times, values, *, k=0, m=None, lag=1, max_iter=None, cost=None, tuning=None):
+def synthetic(meeting_times, values, *, k=0, m=None, lag=1, max_iter=None, tuning=None):
     # One atom of weight 1 per replicate that met: its estimate is its value. A meeting
-    # time of -1 marks a censored pair. m is k and each replicate costs 1 unless given.
+    # time of -1 marks a censored pair. m is k unless given.
     tau = np.asarray(meeting_times, dtype=np.float64)
     tau[tau < 0] = np.inf
     met = np.flatnonzero(np.isfinite(tau))
@@ -47,7 +47,6 @@ def synthetic(meeting_times, values, *, k=0, m=None, lag=1, max_iter=None, cost=
             settings=Settings(k, k if m is None else m, lag, max_iter=max_iter),
             index=np.arange(len(tau)),
             meeting_time=tau,
-            cost=np.ones(len(tau), dtype=np.int64) if cost is None else np.asarray(cost),
             atoms=values[met] if values.ndim == 2 else values[met, None],
             weights=np.ones(len(met)),
             owner=met,

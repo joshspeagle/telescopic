@@ -118,7 +118,14 @@ class CoupledSampler:
         self.pool, self.progress = pool, progress
         self.target = Target(log_prob, grad, args=args, kwargs=kwargs, vectorize=vectorize)
         self.initial = as_initial(init)
-        self.kernel = _kernel(kernel)
+        known = ", ".join(map(repr, KERNELS))
+        if isinstance(kernel, str):
+            if kernel not in KERNELS:
+                raise ValueError(f"kernel must be a Kernel or one of {known}, not {kernel!r}")
+            kernel = KERNELS[kernel]()
+        if not isinstance(kernel, Kernel):
+            raise TypeError(f"kernel must be a Kernel or one of {known}, not {kernel!r}")
+        self.kernel = kernel
         self.kernel.check_target(self.target)
         self.seed = root_seed(rng)
         # One draw from a throwaway generator gives the dimension, so that the kernel's and
@@ -485,14 +492,4 @@ def _settings(given: dict[str, int]) -> engine.Settings:
             thin=given.get("thin", 1),
             max_iter=given.get("max_iter"),
         )
-    )
-
-
-def _kernel(kernel: Kernel | str) -> Kernel:
-    if isinstance(kernel, Kernel):
-        return kernel
-    if isinstance(kernel, str) and kernel in KERNELS:
-        return KERNELS[kernel]()
-    raise ValueError(
-        f"kernel must be a Kernel or one of {', '.join(map(repr, KERNELS))}, not {kernel!r}"
     )

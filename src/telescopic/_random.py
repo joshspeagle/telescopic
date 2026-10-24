@@ -142,9 +142,6 @@ class Draws:
         self._streams = streams
         self._lanes = lanes
 
-    def __len__(self) -> int:
-        return len(self._lanes)
-
     def normal(self, size: int) -> FloatArray:
         """Standard normal draws, shape ``(n, size)``."""
         return self._streams._take(NORMAL, self._lanes, size)
