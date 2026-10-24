@@ -91,9 +91,11 @@ class SignedMeasure:
                 f"cell must give each of the {len(self.weights)} atoms a cell from 0 to "
                 f"n_cells - 1 = {n_cells - 1}, or -1"
             )
-        inside = (cell >= 0).nonzero()[0]
+        # Built as CSR directly: each row holds at most one entry, already in order.
+        inside = cell >= 0
+        indptr = np.concatenate([[0], np.cumsum(inside)])
         indicator: csr_array = csr_array(
-            (np.ones(len(inside)), (inside, cell[inside])), shape=(len(cell), n_cells)
+            (np.ones(indptr[-1]), cell[inside], indptr), shape=(len(cell), n_cells)
         )
         masses: csr_array = self._sums @ indicator
         return masses

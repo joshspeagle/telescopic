@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from references import P_MIN
+from references import P_MIN, gaussian_log_prob
 from telescopic import examples
 from telescopic.kernels import MALA, Gibbs, RandomWalk, State
 from telescopic.target import Target
@@ -84,7 +84,7 @@ def test_check_coupling_flags_a_wrong_marginal():
 def test_check_coupling_flags_a_coupling_that_reads_another_rows_state():
     # From copies of one pair, every row held the same state, and the p-values were those
     # of the right coupling; in a run, such a coupling biased E[x] by 6 standard errors.
-    target = Target(lambda x: -0.5 * np.sum(x**2, axis=-1), vectorize=True)
+    target = Target(gaussian_log_prob, vectorize=True)
     report = check_coupling(FirstRow(np.eye(1)), target, [0.0], [1.0], rng=8)
     assert report.stay[0] < P_MIN
     assert not report.passed()

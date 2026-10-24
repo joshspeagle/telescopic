@@ -6,11 +6,14 @@ import math
 from typing import Any
 
 import numpy as np
+from scipy import stats
 from scipy.special import softmax
 
 from telescopic._linalg import matvec
 from telescopic._random import Draws
 from telescopic._types import BoolArray, Distribution, FloatArray, IndexArray, real
+
+_DIRICHLET = type(stats.dirichlet([1.0, 1.0]))
 
 
 def reflection_maximal(
@@ -105,19 +108,15 @@ def maximal(
     for row, (p_row, q_row) in enumerate(zip(p, q, strict=True)):
         generator = draws.generator(row)
         x = y = p_row.rvs(random_state=generator)
-        log_p, log_q = _log_density(p_row, x), _log_density(q_row, x)
-        accepted = (
-            math.isfinite(log_p)
-            and math.isfinite(log_q)
-            and _log_uniform(generator) < min(log_eta, log_q - log_p)
-        )
+        # Not finite exactly where either log-density is infinite.
+        log_ratio = _log_density(q_row, x) - _log_density(p_row, x)
+        accepted = math.isfinite(log_ratio) and _log_uniform(generator) < min(log_eta, log_ratio)
         while not accepted:
             y = q_row.rvs(random_state=generator)
             n_draws[row] += 1
-            log_p, log_q = _log_density(p_row, y), _log_density(q_row, y)
+            log_ratio = _log_density(p_row, y) - _log_density(q_row, y)
             accepted = (
-                not (math.isfinite(log_p) and math.isfinite(log_q))
-                or _log_uniform(generator) > log_eta + log_p - log_q
+                not math.isfinite(log_ratio) or _log_uniform(generator) > log_eta + log_ratio
             )
         xs.append(x)
         ys.append(y)
@@ -174,10 +173,10 @@ def _log_uniform(generator: np.random.Generator) -> float:
 
 def _log_density(distribution: Any, value: Any) -> float:
     name = "logpdf" if hasattr(distribution, "logpdf") else "logpmf"
-    if isinstance(value, np.ndarray) and value.ndim == 2 and len(value) == 1:
-        # SciPy's dirichlet and multinomial draw shape (1, k), which dirichlet's logpdf
-        # refuses.
-        value = value[0]
+    if isinstance(distribution, _DIRICHLET):
+        # SciPy's dirichlet draws shape (1, k), and its logpdf reads the first axis as the
+        # components: it refuses (1, k) for k > 2, and reads (1, 2) as two points.
+        value = np.ravel(value)
     log_density = getattr(distribution, name)(value)
     if not isinstance(log_density, float):
         # One value per coordinate, from array parameters: the joint log-density of

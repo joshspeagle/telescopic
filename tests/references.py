@@ -91,6 +91,17 @@ def reflection(mu_x, mu_y, chol, z, u):
     return x, mu_y + chol @ (z - 2 * (e @ z) * e), False
 
 
+def maximal_table(p, q):
+    # P(i = a, j = b) under the maximal coupling of discrete p and q: the overlap on the
+    # diagonal, and the normalised residuals, independent, elsewhere.
+    overlap = np.minimum(p, q)
+    alpha = overlap.sum()
+    table = np.diag(overlap)
+    if alpha < 1:
+        table += np.outer(p - overlap, q - overlap) / (1 - alpha)
+    return table
+
+
 def metropolis(current, proposal, log_prob, u):
     return proposal if np.log(u) < log_prob(proposal) - log_prob(current) else current
 

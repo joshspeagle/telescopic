@@ -13,7 +13,7 @@ import numpy.typing as npt
 from scipy import stats
 
 from telescopic import diagnostics, engine
-from telescopic._types import FloatArray, integer, parameter_names, real
+from telescopic._types import FloatArray, coordinates, integer, parameter_names, real
 from telescopic.engine import Replicates
 from telescopic.estimators import unbiased_covariance, unbiased_variance, weighted_quantile
 from telescopic.measure import SignedMeasure
@@ -266,7 +266,7 @@ class Result:
             bin ``j`` of the second.
         edges : ndarray, shape (bins + 1,), or a list of them for a sequence of coordinates
         """
-        columns = self._columns(dims)
+        columns = coordinates(dims, self.ndim)
         bins = integer("bins", bins, minimum=1)
         expected = (*np.shape(dims), 2)
         if range is not None and np.shape(range) != expected:
@@ -283,11 +283,12 @@ class Result:
         inside = np.all((which >= 0) & (which < bins), axis=0)
         cell = np.where(inside, np.ravel_multi_index(which, shape, mode="clip"), -1)
         n_cells, n = bins ** len(columns), self.n_replicates
-        masses = self.measure.mass(cell, n_cells).tocoo()
-        mean = np.bincount(masses.col, masses.data, n_cells) / n
+        masses = self.measure.mass(cell, n_cells)
+        column, value = masses.indices, masses.data
+        mean = np.bincount(column, value, n_cells) / n
         # The squared deviations of the stored masses, and of the other replicates' zeros.
-        squares = np.bincount(masses.col, (masses.data - mean[masses.col]) ** 2, n_cells)
-        squares += (n - np.bincount(masses.col, minlength=n_cells)) * mean**2
+        squares = np.bincount(column, (value - mean[column]) ** 2, n_cells)
+        squares += (n - np.bincount(column, minlength=n_cells)) * mean**2
         error = np.sqrt(squares / (n - 1) / n)
         return mean.reshape(shape), error.reshape(shape), edges if np.ndim(dims) else edges[0]
 
@@ -575,17 +576,6 @@ class Result:
             raise RuntimeError("; ".join(messages))
         for message in messages:
             warn(message, ConvergenceWarning)
-
-    def _columns(self, dims: int | Sequence[int]) -> npt.NDArray[np.intp]:
-        # Coordinates given as one integer or a sequence of them, checked.
-        columns = np.atleast_1d(dims)
-        if columns.size == 0:
-            raise ValueError("dims must name at least one coordinate")
-        if columns.ndim != 1 or columns.dtype.kind not in "iu":
-            raise TypeError(f"dims must be an integer or a sequence of integers, not {dims!r}")
-        if np.any((columns < 0) | (columns >= self.ndim)):
-            raise ValueError(f"dims must be in [0, {self.ndim}), not {dims}")
-        return columns.astype(np.intp)
 
     def _bins(
         self, column: int, bins: int, limit: tuple[float, float] | None = None

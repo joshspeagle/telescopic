@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 
-from telescopic._types import integer
+from telescopic._types import coordinates, integer
 from telescopic.engine import Replicates
 from telescopic.results import Result
 
@@ -111,7 +111,7 @@ def marginals(
     -------
     list of Axes
     """
-    columns = range(result.ndim) if dims is None else result._columns(dims)
+    columns = range(result.ndim) if dims is None else coordinates(dims, result.ndim)
     n = len(columns)
     if axes is None:
         axes = plt.subplots(1, n, figsize=(3.5 * n, 3), squeeze=False)[1][0]
@@ -145,7 +145,7 @@ def corner(result: Result, dims: int | Sequence[int] | None = None, bins: int = 
     -------
     ndarray of Axes, shape (len(dims), len(dims))
     """
-    columns = range(result.ndim) if dims is None else result._columns(dims)
+    columns = range(result.ndim) if dims is None else coordinates(dims, result.ndim)
     n = len(columns)
     grid = plt.subplots(n, n, figsize=(2.5 * n, 2.5 * n), squeeze=False)[1]
     # Each coordinate binned once, as Result.histogram bins it; a pair's masses are then one
@@ -199,13 +199,13 @@ def paths(
     if not replicates.paths:
         raise ValueError("the replicates hold no paths: run the engine with keep_paths=True")
     n = integer("n", n, minimum=1)
-    d = next(iter(replicates.paths.values()))[0].shape[1]
-    if d > 1 and not (len(dims) == 2 and all(0 <= integer("dims", c) < d for c in dims)):
+    d = replicates.atoms.shape[1]
+    if d > 1 and len(coordinates(dims, d)) != 2:
         raise ValueError(f"dims must be two coordinates in [0, {d}), not {dims}")
     ax = plt.subplots(figsize=(5, 4))[1] if ax is None else ax
     for index in sorted(replicates.paths)[:n]:
         x, y = replicates.paths[index]
-        if x.shape[1] == 1:
+        if d == 1:
             line = ax.plot(np.arange(len(x)), x[:, 0])[0]
             shifted = replicates.settings.lag + np.arange(len(y))
             ax.plot(shifted, y[:, 0], linestyle="--", color=line.get_color())

@@ -134,14 +134,14 @@ def check_coupling(
     # Each chain's steps are compared among the rows that start it at the same point, and
     # the two points' p-values Bonferroni-corrected.
     rows = (swapped == 0, swapped == 1)
-    stay, moves = [], []
+    p_values = []
     for points, coupled, single in (((x, y), new_x.x, alone[0].x), ((y, x), new_y.x, alone[1].x)):
         tests = [
             _compare(point, coupled[group], single[group], directions)
             for point, group in zip(points, rows, strict=True)
         ]
-        stay.append(min(1.0, 2 * min(test[0] for test in tests)))
-        moves.append(float(np.minimum(1.0, 2 * np.min([test[1] for test in tests]))))
+        p_values.append(np.minimum(1.0, 2 * np.min(tests, axis=0)))
+    stay, moves = np.transpose(p_values).tolist()
     gap = np.abs(new_x.x - new_y.x)
     ulp = np.spacing(np.maximum(np.abs(new_x.x), np.abs(new_y.x)))
     near = np.any(gap > 0, axis=1) & np.all(gap <= NEAR_MISS_ULPS * ulp, axis=1)

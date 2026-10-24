@@ -250,16 +250,10 @@ def test_a_broken_pool_raises_without_a_stop_or_a_finished_chunk(first, monitor)
         execute(job(), np.arange(200), Broken(first), monitor)
 
 
-def test_ctrl_c_raises_until_the_replicates_start():
-    with Interrupt().catching(), pytest.raises(KeyboardInterrupt):
-        signal.raise_signal(signal.SIGINT)
-
-
 def test_ctrl_c_once_stops_new_replicates_and_twice_raises(capsys):
     previous = signal.getsignal(signal.SIGINT)
     interrupt = Interrupt()
     with interrupt.catching():
-        interrupt.armed = True
         signal.raise_signal(signal.SIGINT)
         assert interrupt.stopping
         assert "press Ctrl-C again" in capsys.readouterr().err
@@ -334,6 +328,21 @@ def test_a_handler_that_python_did_not_install_is_left_alone(monkeypatch):
     with Interrupt().catching(), _parallel._sigint(signal.SIG_IGN):
         pass
     assert calls == []
+
+
+def test_ctrl_c_during_tuning_reaches_the_callers_handler():
+    # A handler set for the whole of run raised KeyboardInterrupt during tuning instead.
+    # The default kernel's tuning makes the first evaluation.
+    calls = []
+    previous = signal.signal(signal.SIGINT, lambda signum, frame: calls.append(signum))
+    try:
+        result = telescopic.sample(interrupting(1), INIT, 5, k=40, rng=7)
+    except KeyboardInterrupt:
+        pytest.fail("Ctrl-C during tuning raised KeyboardInterrupt")
+    finally:
+        signal.signal(signal.SIGINT, previous)
+    assert calls == [signal.SIGINT]
+    assert not result.interrupted
 
 
 def test_ctrl_c_during_the_pilot_raises():
@@ -445,6 +454,13 @@ def test_a_worker_that_cannot_load_the_job_says_why():
 def test_invalid_pools_raise(pool, error, message):
     with pytest.raises(error, match=message):
         telescopic.CoupledSampler(gaussian_log_prob, INIT, pool=pool)
+
+
+def test_a_number_of_processes_as_a_numpy_array_opens_workers():
+    # np.array(1) passed the check, and then served as the pool itself.
+    sampler = telescopic.CoupledSampler(gaussian_log_prob, INIT, pool=np.array(1))
+    with opened(sampler.pool) as pool:
+        assert isinstance(pool, _parallel.Workers)
 
 
 def test_pools_beyond_the_platforms_limit_raise(monkeypatch):

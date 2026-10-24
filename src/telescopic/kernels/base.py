@@ -309,7 +309,7 @@ def evaluate_proposal(target: Target, x: FloatArray, live: BoolArray | None = No
     """
     # Whole-array tests first: row-wise ones cost several times more.
     if np.isfinite(x).all() and (live is None or live.all()):
-        return State(x, *target.log_prob_and_grad(x))
+        return evaluate(target, x, True)
     usable = np.isfinite(x).all(axis=1)
     if live is not None:
         usable &= live

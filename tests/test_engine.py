@@ -60,7 +60,7 @@ def test_the_meeting_time_is_the_first_time_the_chains_agree(initial, lag):
         equal = np.all(x[lag : tau + 1] == y, axis=1)
         assert equal[-1]
         assert not equal[:-1].any()
-        assert cost == lag + 2 * (tau - lag) + max(0, m - tau)
+        assert cost == len(x) + len(y) - 2
         rows = replicates.distance_owner == index
         np.testing.assert_array_equal(replicates.distance_time[rows], np.arange(lag, tau))
         np.testing.assert_allclose(

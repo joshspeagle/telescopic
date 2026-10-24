@@ -100,8 +100,7 @@ assert abs(values["late_fraction"] - values["tv_bound_at_k"]) < 0.01
 - `meeting_time_50`, `meeting_time_90`, `meeting_time_99`, `meeting_time_max` and
   `censored`: the meeting times of the pairs that met, and the number of censored pairs.
 - `tail_index`: Hill's estimate of the tail index of $\tau - L + 1$, `nan` below 500
-  replicates, or when nine pairs in ten or more share the earliest meeting time
-  ([`tail`](#heavy-tailed-meeting-times-tail)).
+  replicates or behind ties ([`tail`](#heavy-tailed-meeting-times-tail)).
 - `late_fraction` and `late_fraction_upper`: the fraction of pairs that met after
   `k + lag`, censored ones included, and its one-sided 95% Clopper-Pearson upper bound,
   which stays informative when the fraction is 0. The fraction is the leading term of

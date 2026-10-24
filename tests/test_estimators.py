@@ -106,10 +106,20 @@ def test_the_estimator_weights_refuse_invalid_settings(settings, error, message)
         correction_coefficients([5, 6, 7], *settings)
 
 
-def test_the_estimator_weights_refuse_times_that_are_not_integers():
-    # 6.5 was truncated to 6.
+@pytest.mark.parametrize("t", [[5, 6.5], [1e19]], ids=["fraction", "beyond int64"])
+def test_the_estimator_weights_refuse_times_that_are_not_integers(t):
+    # 6.5 was truncated to 6, and 1e19 cast to -2**63, which gave c_t = 0 for 1.
     with pytest.raises(ValueError, match="t must be integers"):
-        correction_coefficients([5, 6.5], 0, 5, 1, 1)
+        correction_coefficients(t, 0, 5, 1, 1)
+
+
+def test_the_estimator_weights_are_exact_up_to_the_largest_int64():
+    # The congruence's product overflowed int64 from t near 2**61.
+    k, m, lag, thin = 3, 40, 7, 3
+    t = np.array([2**62 + 5, 2**63 - 1, 2**63 - 2])
+    counts = [sum((u - s) % lag == 0 for s in range(k, m + 1, thin)) for u in t.tolist()]
+    expected = np.array(counts) / len(range(k, m + 1, thin))
+    np.testing.assert_array_equal(correction_coefficients(t, k, m, lag, thin), expected)
 
 
 @pytest.mark.parametrize(

@@ -42,16 +42,15 @@ Monitor = Callable[[engine.Status], bool]
 
 
 class Interrupt:
-    # Ctrl-C while catching. Once armed, as a run's replicates start, the first sets
-    # stopping and the second raises at once; before, Ctrl-C raises, as by default.
+    # Ctrl-C while catching: the first sets stopping, the second raises at once.
     def __init__(self) -> None:
-        self.armed = self.stopping = False
+        self.stopping = False
 
     def catching(self) -> AbstractContextManager[None]:
         return _sigint(self._handle)
 
     def _handle(self, signum: int, frame: Any) -> None:
-        if self.stopping or not self.armed:
+        if self.stopping:
             raise KeyboardInterrupt
         self.stopping = True
         print(
@@ -91,24 +90,27 @@ class Workers:
         self.executor.shutdown(wait=False, cancel_futures=True)
 
 
-def check_pool(pool: Any) -> None:
+def check_pool(pool: Any) -> Any:
+    # The pool, with a number of processes as an int.
     if isinstance(pool, type):
         raise TypeError(f"pool must be an executor or a pool, not the class {pool.__name__}")
     if pool is None or hasattr(pool, "submit") or hasattr(pool, "map"):
-        return
+        return pool
     expected = "None, a number of processes, an executor with submit, or an object with map"
-    if integer("pool", pool, expected, minimum=1) > MAX_PROCESSES:
-        raise ValueError(f"pool must be from 1 to {MAX_PROCESSES} processes, not {pool}")
+    count = integer("pool", pool, expected, minimum=1)
+    if count > MAX_PROCESSES:
+        raise ValueError(f"pool must be from 1 to {MAX_PROCESSES} processes, not {count}")
+    return count
 
 
 @contextmanager
 def opened(pool: Any) -> Iterator[Any]:
     # The pool as execute takes it: for a number, worker processes that live for the
     # block, stopped at once by an error or a second Ctrl-C.
-    if not isinstance(pool, int | np.integer):
+    if not isinstance(pool, int):
         yield pool
         return
-    workers = Workers(int(pool))
+    workers = Workers(pool)
     try:
         workers.start()
         yield workers

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Callable, Mapping, Sequence
+from contextlib import ExitStack
 from typing import Any, cast
 
 import numpy as np
@@ -114,17 +115,15 @@ class CoupledSampler:
         progress: bool = False,
         rng: Seed = None,
     ) -> None:
-        check_pool(pool)
-        self.pool, self.progress = pool, progress
+        self.pool, self.progress = check_pool(pool), progress
         self.target = Target(log_prob, grad, args=args, kwargs=kwargs, vectorize=vectorize)
         self.initial = as_initial(init)
-        known = ", ".join(map(repr, KERNELS))
-        if isinstance(kernel, str):
-            if kernel not in KERNELS:
-                raise ValueError(f"kernel must be a Kernel or one of {known}, not {kernel!r}")
+        if isinstance(kernel, str) and kernel in KERNELS:
             kernel = KERNELS[kernel]()
         if not isinstance(kernel, Kernel):
-            raise TypeError(f"kernel must be a Kernel or one of {known}, not {kernel!r}")
+            error = ValueError if isinstance(kernel, str) else TypeError
+            known = ", ".join(map(repr, KERNELS))
+            raise error(f"kernel must be a Kernel or one of {known}, not {kernel!r}")
         self.kernel = kernel
         self.kernel.check_target(self.target)
         self.seed = root_seed(rng)
@@ -241,11 +240,8 @@ class CoupledSampler:
         n_replicates = integer("n_replicates", n_replicates, minimum=1)
         given = self._check(k, m, lag, thin, max_iter)
         show = self.progress if progress is None else progress
-        # From the start of the replicates until the result returns, the first Ctrl-C
-        # lets the run finish (spec section 6.5): after the replicates, while the workers
-        # stop and the result is built, it would lose them.
         interrupt = Interrupt()
-        with interrupt.catching():
+        with ExitStack() as catching:
             # Worker processes start before tuning, which runs here meanwhile, and serve
             # the pilot and the run (DECISIONS #23).
             with opened(self.pool) as pool:
@@ -253,6 +249,10 @@ class CoupledSampler:
                 done = 0 if self._replicates is None else len(self._replicates.index)
                 self._check_memory(settings, done + n_replicates)
                 indices = self._next_indices(n_replicates)
+                # From the start of the replicates until the result returns, the first
+                # Ctrl-C lets the run finish (spec section 6.5): after the replicates,
+                # while the workers stop and the result is built, it would lose them.
+                catching.enter_context(interrupt.catching())
                 part = self._run(MAIN, indices, settings, pool, show, interrupt)
             self._replicates = (
                 part if self._replicates is None else engine.merge([self._replicates, part])
@@ -311,8 +311,6 @@ class CoupledSampler:
             slow(status)
             return interrupt is not None and interrupt.stopping
 
-        if interrupt is not None:
-            interrupt.armed = True
         try:
             replicates = execute(job, indices, pool, monitor)
         finally:

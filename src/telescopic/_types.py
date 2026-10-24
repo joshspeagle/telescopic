@@ -62,6 +62,28 @@ def real(
     return number
 
 
+def integral(values: npt.NDArray[Any], minimum: int | None = None) -> bool:
+    # Whether every value is an integer from minimum up: an integer, or a float with an
+    # integral value. Integers skip the float tests, as on the engine's path.
+    if values.dtype.kind not in "iu" and not np.all(
+        np.isfinite(values) & (values == np.floor(values))
+    ):
+        return False
+    return minimum is None or bool(np.all(values >= minimum))
+
+
+def coordinates(dims: int | Sequence[int], ndim: int) -> npt.NDArray[np.intp]:
+    # Coordinates given as one integer or a sequence of them, each in [0, ndim).
+    columns = np.atleast_1d(dims)
+    if columns.size == 0:
+        raise ValueError("dims must name at least one coordinate")
+    if columns.ndim != 1 or columns.dtype.kind not in "iu":
+        raise TypeError(f"dims must be an integer or a sequence of integers, not {dims!r}")
+    if np.any((columns < 0) | (columns >= ndim)):
+        raise ValueError(f"dims must be in [0, {ndim}), not {dims}")
+    return columns.astype(np.intp)
+
+
 def vector(name: str, values: npt.ArrayLike) -> FloatArray:
     # A finite vector of shape (d,), d >= 1, or a scalar as shape (1,).
     array = np.array(values, dtype=np.float64, ndmin=1)

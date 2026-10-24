@@ -324,7 +324,7 @@ if log u + log p(X) < log q(X):  return (X, X)
 repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y)
 ```
 - Where either log-density of a draw is infinite, the pair is not identical and the loop accepts the draw. Such a draw, as one that underflowed to the edge of its support, stands for the mass of an interval whose ratio of densities is unknown, so each chain keeps its sampler's law; and $u = 0$ cannot copy $X$ to $Y$ where $q(X) = 0$ (DECISIONS #60).
-- A log-density with one value per coordinate, as from array parameters, is summed: the joint log-density of independent coordinates. A draw of shape $(1, k)$, as SciPy's `dirichlet` gives, is evaluated as shape $(k,)$. NaN raises `ValueError`.
+- A log-density with one value per coordinate, as from array parameters, is summed: the joint log-density of independent coordinates. A draw of SciPy's `dirichlet`, of shape $(1, k)$, is evaluated as shape $(k,)$; other draws are evaluated as drawn. NaN raises `ValueError`.
 - The expected number of draws is 2, with variance $2(1 - \mathrm{TV})/\mathrm{TV}$ (research note `mh_couplings.md` §1).
 - **Option $\eta \in (0, 1]$** (Gerber & Lee; AJ24 Algorithm 2):
   - the first test becomes $u < \min(\eta, q(X)/p(X))$;
@@ -480,7 +480,7 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 - **Requested indices:** a result records the indices it was asked for, and `interrupted` is true while one of them has not run. In this process the started replicates form a prefix of the indices; on a pool they need not. The sampler's next run starts with the missing indices, and `merge` joins the requests, so a run that completes an interrupted one clears the flag (DECISIONS #20).
 - **Its estimates are consistent, not exactly unbiased:** the number of replicates depends on their costs, which correlate with $h$ through $\tau$, so the mean is a ratio estimator (Glynn & Heidelberger 1991). The bias is visible with few lanes (one lane: $z = -12.9$ in design review D-R3) and was not detectable with 16 or more. `summary()` says so. Running the remaining replicates of the requested $R$ restores exact unbiasedness, because $R$ is then fixed in advance (D-22).
 - **Second Ctrl-C:** raises `KeyboardInterrupt` at once, without a result, and stops the workers that telescopic started.
-- **Scope:** from the start of the replicates until `run` returns, so that a first Ctrl-C while the workers stop or the result is built is only noted. Tuning and the meeting-time pilot have no result to return early: Ctrl-C there raises `KeyboardInterrupt`. A process that ignores Ctrl-C, and one whose handler Python did not set (an embedding host's, which Python could not restore), keeps its handler.
+- **Scope:** from the start of the replicates until `run` returns, so that a first Ctrl-C while the workers stop or the result is built is only noted. Tuning and the meeting-time pilot have no result to return early: Ctrl-C there is the caller's, by default `KeyboardInterrupt`. A process that ignores Ctrl-C, and one whose handler Python did not set (an embedding host's, which Python could not restore), keeps its handler.
 
 ### 6.6 Memory (R-EXEC-7)
 

@@ -5,7 +5,7 @@ from hypothesis import strategies as st
 from scipy import stats
 from scipy.integrate import quad
 
-from references import P_MIN, Normal, reflection
+from references import P_MIN, Normal, maximal_table, reflection
 from telescopic.couplings import discrete_maximal, maximal, reflection_maximal
 from telescopic.testing import fixed_draws, random_draws
 
@@ -126,14 +126,12 @@ class PrescribedUniforms:
         return self.values.pop(0)
 
 
-class Tabled:
+class Tabled(Prescribed):
     """A distribution with prescribed draws and a table of log-densities."""
 
     def __init__(self, values, table):
-        self.values, self.table = list(values), table
-
-    def rvs(self, *, random_state):
-        return self.values.pop(0)
+        super().__init__(None, values)
+        self.table = table
 
     def logpdf(self, x):
         return self.table[x]
@@ -289,6 +287,15 @@ def test_maximal_couples_dirichlet_distributions_by_their_density():
     assert stats.kstest(y[:, 0, 0], stats.beta(2, 1).cdf).pvalue > P_MIN
 
 
+def test_maximal_couples_one_row_matrix_normals():
+    # Their draws have shape (1, k), which their logpdf requires: evaluated as shape (k,),
+    # as Dirichlet draws are, they raised.
+    n = 2000
+    p, q = stats.matrix_normal(np.zeros((1, 2))), stats.matrix_normal([[1.0, 0.0]])
+    _, _, identical, _ = maximal([p] * n, [q] * n, random_draws(n, 14))
+    assert stats.binomtest(int(identical.sum()), n, 2 * stats.norm.cdf(-0.5)).pvalue > P_MIN
+
+
 def test_maximal_rejects_eta_outside_the_unit_interval():
     with pytest.raises(ValueError, match="eta must be in"):
         maximal([], [], fixed_draws(uniforms=[[0.5]]), eta=0.0)
@@ -301,14 +308,16 @@ def test_discrete_maximal_matches_the_exact_coupling_table():
     with np.errstate(divide="ignore"):
         log_p, log_q = np.tile(np.log(p), (n, 1)), np.tile(np.log(q), (n, 1))
     i, j = discrete_maximal(log_p, log_q, fixed_draws(uniforms=rng.random((n, 3))))
-    overlap = np.minimum(p, q)
-    alpha = overlap.sum()
-    table = np.diag(overlap) + np.outer(p - overlap, q - overlap) / (1 - alpha)
-    counts = np.zeros((4, 4))
+    assert_follow(maximal_table(p, q), i, j, P_MIN)
+
+
+def assert_follow(table, i, j, p_min):
+    # The pairs (i, j) fall only in cells of the table, with its probabilities.
+    counts = np.zeros(table.shape)
     np.add.at(counts, (i, j), 1)
     support = table > 0
     assert counts[~support].sum() == 0
-    assert stats.chisquare(counts[support], n * table[support]).pvalue > P_MIN
+    assert stats.chisquare(counts[support], len(i) * table[support]).pvalue > p_min
 
 
 def test_discrete_maximal_couples_every_pair_of_rows_of_a_transition_matrix():
@@ -324,18 +333,8 @@ def test_discrete_maximal_couples_every_pair_of_rows_of_a_transition_matrix():
         log_p[np.repeat(a, n)], log_p[np.repeat(b, n)], random_draws(16 * n, 6)
     )
     for pair, (p, q) in enumerate(zip(P[a], P[b], strict=True)):
-        overlap = np.minimum(p, q)
-        alpha = overlap.sum()
-        exact = np.diag(overlap)
-        if alpha < 1:
-            exact += np.outer(p - overlap, q - overlap) / (1 - alpha)
-        np.testing.assert_allclose(exact.sum(axis=1), p, atol=1e-15)
-        np.testing.assert_allclose(exact.sum(axis=0), q, atol=1e-15)
-        counts = np.zeros((4, 4))
-        np.add.at(counts, (i[pair * n : (pair + 1) * n], j[pair * n : (pair + 1) * n]), 1)
-        support = exact > 0
-        assert counts[~support].sum() == 0
-        assert stats.chisquare(counts[support], n * exact[support]).pvalue > P_MIN / 16
+        rows = slice(pair * n, (pair + 1) * n)
+        assert_follow(maximal_table(p, q), i[rows], j[rows], P_MIN / 16)
 
 
 @pytest.mark.parametrize(
