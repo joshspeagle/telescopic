@@ -36,7 +36,7 @@ telescopic/
 │   ├── diagnostics.py        # TV and W1 bounds, tail index, variance shares, warning checks
 │   ├── results.py            # Result, Estimate, Summary
 │   ├── sampler.py            # CoupledSampler, sample
-│   ├── io.py                 # versioned .npz save and load
+│   ├── _io.py                # versioned .npz save and load, behind Result.save and load
 │   ├── plotting.py           # matplotlib helpers (optional dependency)
 │   ├── examples.py           # targets with exact answers
 │   └── testing.py            # fixed_draws, random_draws, check_coupling
@@ -201,7 +201,7 @@ Each milestone is one reviewed unit (`CLAUDE.md`, Milestones). It lands with its
 | M5 | `tuning`, `CoupledSampler`, `sample` | test-plan §2.9 green; the spec §8.3 example runs |
 | M6 | `MALA`, `HMC`, `Gibbs` | test-plan §2.4 (these kernels) green |
 | M7 | `_parallel`, interrupts, progress; budget mode deferred (DECISIONS #22) | test-plan §2.10 green; serial and pool results identical |
-| M8 | `io`, `plotting`, `examples`, `testing.check_coupling` | test-plan §2.11 green |
+| M8 | `_io`, `plotting`, `examples`, `testing.check_coupling` | test-plan §2.11 green |
 | M9 | Slow statistical suite, benchmarks, calibration of the warning thresholds | test-plan §2.12 green; benchmark JSON committed under `benchmarks/results/` |
 | M10 | Docs: theory, user guide, tutorials, API reference, README | `sphinx-build -W` passes with executed tutorials |
 | M11 | Independent audit of the whole package, fixes, checkpoint report to Josh | audit findings fixed or recorded in `notes/reviews/` |

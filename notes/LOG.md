@@ -145,3 +145,35 @@ Append only. One entry per working session or milestone.
   the parent ignores it; a cached BLAS controller missed libraries loaded later; float
   indices were truncated; workers started before the settings were validated; a
   `multiprocessing.Pool` was sized by the CPU count. 342 fast tests in 37 s.
+
+## 2026-10-23: M8
+
+- M8 implemented: `Result.save`/`load` (DECISIONS #26), `telescopic.plotting` (meeting
+  times, TV bound, signed marginals with ±2 standard-error boxes, signed corner plots,
+  coupled paths), `telescopic.examples` (#24) and `check_coupling` (#25). The pump
+  model's quadrature gives E[β] = 2.472, against about 2.47 in the literature, and a
+  direct Gibbs run agrees on all 11 means (largest |z| 1.85). Every built-in kernel
+  passes `check_coupling`; a wrong Y marginal, a recomputed meeting and independent
+  steps are flagged. matplotlib joins the test group. 382 fast tests in 41 s.
+- M8 `/simplify` (`notes/reviews/m8.md`): `check_coupling` now checks what the engine
+  uses: meetings, fresh cached log-densities and gradients, and near misses in units in
+  the last place. It no longer checks faithfulness, which no result depends on
+  (DECISIONS #28). `Result.histogram` takes several coordinates, with errors, and the
+  corner plot uses it; the plot methods take axes (#30). Saving moved to the private
+  `telescopic._io`, with the seed's state (#29). The funnel and pump starts now cover
+  their targets, the pump conditionals run in Python numbers (a coupled step of 64
+  rows: 10.2-10.9 to 6.8-6.9 ms), and the Gaussian example's gradient is
+  row-independent (#27). The example tests compare each log-density with SciPy's
+  density of its description and follow the escalation rule. The long-tail plots draw
+  in 0.1 to 0.7 s instead of 9 to 11 s at max τ − L = 10⁷; the corner plot at d = 10
+  takes 4.4-5.4 s instead of 2.3-2.4 s. Two items deferred to before M10 (PLAN). 398
+  fast tests in 36 s.
+- M8 `/code-review` at high effort (`notes/reviews/m8.md`): ten findings, all fixed.
+  `check_coupling` missed a stale log-density at a point of zero density, warned on two
+  infinite ones, changed a caller's `SeedSequence`, and in one dimension reported
+  p-values 3 times too large. `Result.load("run")` missed the `run.npz` that saving
+  wrote. The plot functions now check `dims` and `axes` before drawing. The corner plot
+  bins each coordinate once with the binning `histogram` uses, and takes 1.6-2.1 s at
+  d = 10 against 4.4-5.4 s after the simplify round. Seven mutants checked. 410 fast
+  tests in 38 s.
+

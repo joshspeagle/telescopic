@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import IO, Any
 
 import numpy as np
 import numpy.typing as npt
@@ -248,39 +249,50 @@ class Result:
         return self.quantile([(1 - mass) / 2, (1 + mass) / 2])
 
     def histogram(
-        self, dim: int, bins: int = 20, range: tuple[float, float] | None = None
-    ) -> tuple[FloatArray, FloatArray, FloatArray]:
-        """Unbiased histogram of one coordinate, with standard errors (spec section 3.4).
+        self, dims: int | Sequence[int], bins: int = 20, range: npt.ArrayLike | None = None
+    ) -> tuple[FloatArray, FloatArray, FloatArray | list[FloatArray]]:
+        """Unbiased histogram of one coordinate or several, with standard errors (spec section 3.4).
 
         The mass of each half-open bin is the average over replicates of its signed mass,
         so a bin can be negative.
 
         Parameters
         ----------
-        dim : int
-            The coordinate.
+        dims : int or sequence of int
+            The coordinate, or the coordinates of a joint histogram.
         bins : int
-            The number of bins.
-        range : (float, float), optional
-            The lower and upper edges; by default the range of the atoms.
+            The number of bins along each coordinate.
+        range : array_like, shape (2,) or (len(dims), 2), optional
+            The lower and upper edges, a pair per coordinate; by default the range of the
+            atoms.
 
         Returns
         -------
-        masses, standard_errors : ndarray, shape (bins,)
-        edges : ndarray, shape (bins + 1,)
+        masses, standard_errors : ndarray, shape (bins,) or (bins,) * len(dims)
+            Entry ``[i, j]`` of a joint histogram is bin ``i`` of the first coordinate and
+            bin ``j`` of the second.
+        edges : ndarray, shape (bins + 1,), or a list of them for a sequence of coordinates
         """
-        if not 0 <= dim < self.ndim:
-            raise ValueError(f"dim must be in [0, {self.ndim}), not {dim}")
+        columns = self._columns(dims)
         if bins < 1:
             raise ValueError(f"bins must be at least 1, not {bins}")
+        expected = (*np.shape(dims), 2)
+        if range is not None and np.shape(range) != expected:
+            raise ValueError(f"range must have shape {expected}, not {np.shape(range)}")
         self._require(2)
-        values = self.measure.atoms[:, dim]
-        edges = np.histogram_bin_edges(values, bins=bins, range=range)
-        if range is None:
-            edges[-1] = np.nextafter(edges[-1], np.inf)  # keep the largest atom inside
-        which = np.searchsorted(edges, values, side="right") - 1
-        masses = self.measure.mass(np.where(which < bins, which, -1), bins)
-        return masses.mean(axis=0), np.asarray(stats.sem(masses, axis=0)), edges
+        limits = [None] * len(columns) if range is None else map(tuple, np.reshape(range, (-1, 2)))
+        cells, edges = [], []
+        for column, limit in zip(columns, limits, strict=True):
+            which, edge = self._bins(column, bins, limit)
+            cells.append(which)
+            edges.append(edge)
+        shape = (bins,) * len(columns)
+        which = np.stack(cells)
+        inside = np.all((which >= 0) & (which < bins), axis=0)
+        cell = np.where(inside, np.ravel_multi_index(which, shape, mode="clip"), -1)
+        masses = self.measure.mass(cell, bins ** len(columns))
+        mean, error = masses.mean(axis=0), np.asarray(stats.sem(masses, axis=0))
+        return mean.reshape(shape), error.reshape(shape), edges if np.ndim(dims) else edges[0]
 
     def tv_bound(self, t: npt.ArrayLike | None = None) -> FloatArray:
         """Estimated upper bound on the total variation distance from the law of X_t to the target.
@@ -383,7 +395,7 @@ class Result:
             "m": self.m,
             "lag": self.lag,
             "thin": self.thin,
-            "kernel": repr(self.kernel),
+            "kernel": str(self.kernel),
             **self.diagnostics(),
             "interrupted": self.interrupted,
             "warnings": [issue.message for issue in diagnostics.issues(self)],
@@ -428,6 +440,113 @@ class Result:
             pilot=self.pilot,
         )
 
+    def save(self, path: str | os.PathLike[str] | IO[bytes]) -> None:
+        """Save as a versioned ``.npz`` file, without pickle (spec R-OUT-1).
+
+        The kernel and the initial distribution are saved as their descriptions,
+        ``str(kernel)`` and ``str(initial)``; the engine's paths are not saved.
+
+        Parameters
+        ----------
+        path : str, path-like or binary file
+            ``.npz`` is appended to a name that lacks it.
+        """
+        # Imported here: telescopic._io imports this module.
+        from telescopic import _io
+
+        _io.save(self, path)
+
+    @classmethod
+    def load(cls, path: str | os.PathLike[str] | IO[bytes]) -> Result:
+        """Load a result saved by :meth:`save`, with descriptions of its kernel and initial distribution.
+
+        Parameters
+        ----------
+        path : str, path-like or binary file
+            ``.npz`` is appended to a name that lacks it.
+
+        Returns
+        -------
+        Result
+        """
+        from telescopic import _io
+
+        return _io.load(path, cls)
+
+    def plot_meeting_times(self, axes: Sequence[Any] | None = None) -> Any:
+        """Plot the meeting times and their survival function (needs matplotlib).
+
+        Parameters
+        ----------
+        axes : sequence of two matplotlib Axes, optional
+            By default, those of a new figure.
+
+        Returns
+        -------
+        list of two matplotlib Axes
+        """
+        # Imported here: matplotlib is optional, and telescopic.plotting imports this module.
+        from telescopic import plotting
+
+        return plotting.meeting_times(self, axes)
+
+    def plot_tv_bound(self, ax: Any = None) -> Any:
+        """Plot the TV bound against t, with k marked (needs matplotlib).
+
+        Parameters
+        ----------
+        ax : matplotlib Axes, optional
+            By default, that of a new figure.
+
+        Returns
+        -------
+        matplotlib Axes
+        """
+        from telescopic import plotting
+
+        return plotting.tv_bound(self, ax)
+
+    def plot_marginals(
+        self,
+        dims: int | Sequence[int] | None = None,
+        bins: int = 20,
+        axes: Sequence[Any] | None = None,
+    ) -> Any:
+        """Plot signed histograms of the marginals with their errors (needs matplotlib).
+
+        Parameters
+        ----------
+        dims : int or sequence of int, optional
+            Coordinates; all by default.
+        bins : int
+        axes : sequence of matplotlib Axes, optional
+            One per coordinate; by default, those of a new figure.
+
+        Returns
+        -------
+        list of matplotlib Axes
+        """
+        from telescopic import plotting
+
+        return plotting.marginals(self, dims, bins, axes)
+
+    def plot_corner(self, dims: int | Sequence[int] | None = None, bins: int = 20) -> Any:
+        """Plot a corner plot of signed histograms (needs matplotlib).
+
+        Parameters
+        ----------
+        dims : int or sequence of int, optional
+            Coordinates; all by default.
+        bins : int
+
+        Returns
+        -------
+        ndarray of matplotlib Axes
+        """
+        from telescopic import plotting
+
+        return plotting.corner(self, dims, bins)
+
     def check(self, strict: bool = False) -> None:
         """Warn about the conditions of spec section 7.4 that apply to this run.
 
@@ -441,6 +560,30 @@ class Result:
             raise RuntimeError("; ".join(messages))
         for message in messages:
             warn(message, ConvergenceWarning)
+
+    def _columns(self, dims: int | Sequence[int]) -> npt.NDArray[np.intp]:
+        # Coordinates given as one integer or a sequence of them, checked.
+        columns = np.atleast_1d(dims)
+        if (
+            columns.ndim != 1
+            or columns.dtype.kind not in "iu"
+            or np.any((columns < 0) | (columns >= self.ndim))
+        ):
+            raise ValueError(
+                f"dims must be an integer in [0, {self.ndim}) or a sequence of them, not {dims}"
+            )
+        return columns.astype(np.intp)
+
+    def _bins(
+        self, column: int, bins: int, limit: tuple[float, float] | None = None
+    ) -> tuple[npt.NDArray[np.intp], FloatArray]:
+        # The bin of each atom along a coordinate, below 0 or from bins outside the edges,
+        # and the edges; by default the last is nudged up to keep the largest atom inside.
+        values = self.measure.atoms[:, column]
+        edges = np.histogram_bin_edges(values, bins, limit)
+        if limit is None:
+            edges[-1] = np.nextafter(edges[-1], np.inf)
+        return np.searchsorted(edges, values, side="right") - 1, edges
 
     def _require(self, n: int) -> None:
         if self.n_replicates < n:

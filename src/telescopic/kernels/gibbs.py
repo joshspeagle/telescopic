@@ -55,11 +55,14 @@ class Gibbs(Kernel):
 
     Notes
     -----
-    Sweeps loop over rows in Python. A step draws each block from the row's generator. A
-    coupled step does the same for the maximal coupling and for identical conditionals,
-    and reads 1 uniform (a block of one coordinate) or the block's size of normals
-    (multivariate normal) per row and block for common random numbers. With
-    ``log_prob=None`` the target has no log-density, and states carry 0.
+    Sweeps loop over rows in Python, and build a conditional per row and block. A frozen
+    SciPy distribution takes 250 to 300 µs to build, which can dominate a step; a small
+    class with the methods used is faster, as in :mod:`telescopic.examples`. A step draws
+    each block from the row's generator. A coupled step does the same for the maximal
+    coupling and for identical conditionals, and reads 1 uniform (a block of one
+    coordinate) or the block's size of normals (multivariate normal) per row and block for
+    common random numbers. With ``log_prob=None`` the target has no log-density, and
+    states carry 0.
     """
 
     def __init__(

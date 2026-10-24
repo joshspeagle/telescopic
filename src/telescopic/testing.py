@@ -3,13 +3,166 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 import numpy as np
 import numpy.typing as npt
 from numpy.random import Generator
+from scipy import stats
 
-from telescopic._random import Draws, Streams
+from telescopic._random import MAIN, Draws, Streams, replicate_generator, root_seed
 from telescopic._types import FloatArray, Seed
+from telescopic.kernels.base import Kernel, State
+from telescopic.target import Target
+
+# Random one-dimensional projections on which check_coupling compares the moved values.
+PROJECTIONS = 5
+
+# Positions apart by at most this many units in the last place are a near miss.
+NEAR_MISS_ULPS = 64
+
+
+@dataclass(frozen=True)
+class CouplingReport:
+    """The checks of :func:`check_coupling`.
+
+    Attributes
+    ----------
+    stay : tuple of two floats
+        For X and for Y, the p-value of Fisher's exact test that the chain stays put as
+        often in a coupled step as in a step of the kernel alone.
+    moves : tuple of two floats
+        For X and for Y, the Bonferroni-corrected p-value of two-sample
+        Kolmogorov-Smirnov tests that compare the moved positions of a coupled step with
+        those of a step alone, along random directions and in the distance moved.
+    met : float
+        The fraction of pairs that met: a coupling that never meets gives no estimate.
+    stale : int
+        Chains whose returned log-density or gradient differs from a fresh evaluation at
+        their position; the engine reuses them (spec section 5.1).
+    near_misses : int
+        Pairs whose positions differ by at most 64 units in the last place in every
+        coordinate: a coupling that recomputes Y where it should copy X's proposal
+        leaves them, and the engine never sees such pairs meet (spec R-KER-3).
+    """
+
+    stay: tuple[float, float]
+    moves: tuple[float, float]
+    met: float
+    stale: int
+    near_misses: int
+
+    def passed(self, alpha: float = 1e-3) -> bool:
+        """Whether every p-value is at least ``alpha`` and pairs met, with no stale state or near miss.
+
+        Parameters
+        ----------
+        alpha : float
+
+        Returns
+        -------
+        bool
+        """
+        p_values = (*self.stay, *self.moves)
+        return min(p_values) >= alpha and self.met > 0 and not (self.stale or self.near_misses)
+
+
+def check_coupling(
+    kernel: Kernel,
+    target: Target,
+    x: npt.ArrayLike,
+    y: npt.ArrayLike,
+    n: int = 10_000,
+    rng: Seed = None,
+) -> CouplingReport:
+    """Check a kernel's coupling as the engine uses it (spec section 9).
+
+    From ``n`` copies of the pair ``(x, y)``, one coupled step is compared with one step
+    of the kernel alone from ``x`` and one from ``y``: how often each chain stays put,
+    and where it moves to. It also counts the pairs that meet, the states whose cached
+    log-density or gradient is stale, and the pairs that nearly meet. Custom kernels
+    should pass it before use.
+
+    Parameters
+    ----------
+    kernel : Kernel
+        A tuned kernel.
+    target : Target
+    x, y : array_like, shape (d,)
+        The starting points, close enough for the coupling to meet them in one step
+        sometimes: for HMC, within about its ``meeting_scale``.
+    n : int
+        Copies of the pair; at least 2. More detect smaller differences.
+    rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
+
+    Returns
+    -------
+    CouplingReport
+
+    Notes
+    -----
+    Costs one coupled step and two steps of ``n`` chains, and an evaluation of the target
+    at each of their ``4n`` new positions.
+    """
+    x, y = np.asarray(x, dtype=np.float64), np.asarray(y, dtype=np.float64)
+    if x.ndim != 1 or x.shape != y.shape:
+        raise ValueError(f"x and y must be points of one shape (d,), not {x.shape} and {y.shape}")
+    if n < 2:
+        raise ValueError(f"n must be at least 2, not {n}")
+    # Generators derived from the root seed: spawning would change a caller's SeedSequence.
+    root = root_seed(rng)
+    generators = [replicate_generator(root, MAIN, i) for i in range(4)]
+    starts = kernel.init_state(target, np.stack([x, y]))
+    start_x, start_y = (starts.take(np.full(n, row)) for row in (0, 1))
+    new_x, new_y = kernel.coupled_step(target, start_x, start_y, random_draws(n, generators[0]))
+    alone = [
+        kernel.step(target, start, random_draws(n, generator))[0]
+        for start, generator in ((start_x, generators[1]), (start_y, generators[2]))
+    ]
+    # In one dimension every projection gives the same test.
+    directions = generators[3].standard_normal((PROJECTIONS if len(x) > 1 else 1, len(x)))
+    stay, moves = [], []
+    for point, coupled, single in ((x, new_x.x, alone[0].x), (y, new_y.x, alone[1].x)):
+        stayed = [np.all(chain == point, axis=1) for chain in (coupled, single)]
+        table = [[int(s.sum()), int(n - s.sum())] for s in stayed]
+        stay.append(float(stats.fisher_exact(table).pvalue))
+        moved = [chain[~s] for chain, s in zip((coupled, single), stayed, strict=True)]
+        moves.append(_compare_moves(point, moved[0], moved[1], directions))
+    gap = np.abs(new_x.x - new_y.x)
+    ulp = np.spacing(np.maximum(np.abs(new_x.x), np.abs(new_y.x)))
+    near = np.any(gap > 0, axis=1) & np.all(gap <= NEAR_MISS_ULPS * ulp, axis=1)
+    return CouplingReport(
+        (stay[0], stay[1]),
+        (moves[0], moves[1]),
+        float(np.mean(np.all(gap == 0, axis=1))),
+        sum(_stale(kernel, target, state) for state in (new_x, new_y, *alone)),
+        int(near.sum()),
+    )
+
+
+def _compare_moves(
+    point: FloatArray, coupled: FloatArray, single: FloatArray, directions: FloatArray
+) -> float:
+    # Kolmogorov-Smirnov tests along each direction and of the distance moved,
+    # Bonferroni-corrected; with fewer than two moves on a side there is nothing to test.
+    if min(len(coupled), len(single)) < 2:
+        return 1.0
+    samples = [(coupled @ direction, single @ direction) for direction in directions] + [
+        (np.linalg.norm(coupled - point, axis=1), np.linalg.norm(single - point, axis=1))
+    ]
+    smallest = min(float(stats.ks_2samp(a, b).pvalue) for a, b in samples)
+    return min(1.0, len(samples) * smallest)
+
+
+def _stale(kernel: Kernel, target: Target, state: State) -> int:
+    # Chains whose cache disagrees with a fresh evaluation beyond rounding: a vectorised
+    # target can change the last bits between batches (spec section 6.1).
+    fresh = kernel.init_state(target, state.x)
+    close = np.isclose(state.log_prob, fresh.log_prob, rtol=1e-9, atol=0)
+    if state.grad is not None and fresh.grad is not None:
+        error = np.linalg.norm(state.grad - fresh.grad, axis=1)
+        close &= error <= 1e-9 * np.linalg.norm(fresh.grad, axis=1)
+    return int(np.sum(~close))
 
 
 def fixed_draws(

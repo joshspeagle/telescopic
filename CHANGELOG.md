@@ -48,3 +48,9 @@ All notable changes to this project are documented here. The format follows
   sampler's next run completes; the second stops at once. `progress=` shows a tqdm bar
   or lines on stderr. The `parallel` extra installs cloudpickle, which ships functions
   defined in notebooks to the workers.
+- `Result.save` and `Result.load` (a versioned `.npz` file, without pickle); joint
+  signed histograms of several coordinates (`Result.histogram`); plots of meeting times,
+  the TV bound, signed marginals and corner plots (`telescopic.plotting`, with
+  matplotlib, and the `Result.plot_*` methods, on new or given axes); example targets
+  with exact moments (`telescopic.examples`); and `telescopic.testing.check_coupling`,
+  which checks a custom kernel's coupling, its meetings and its cached evaluations.

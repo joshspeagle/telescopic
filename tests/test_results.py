@@ -78,25 +78,31 @@ def test_without_bias_corrections_quantiles_are_those_of_the_pooled_draws():
         np.testing.assert_array_equal(result.quantile(levels)[:, dim], expected)
 
 
-def test_histogram_bins_average_each_replicates_signed_mass_in_half_open_bins():
-    masses, errors, edges = RESULT.histogram(0, bins=7, range=(-2.0, 3.0))
+@pytest.mark.parametrize(
+    ("dims", "limits"), [(0, (-2.0, 3.0)), ([1, 0], [(-3.0, 2.0), (-2.0, 3.0)])]
+)
+def test_histogram_bins_average_each_replicates_signed_mass_in_half_open_bins(dims, limits):
+    masses, errors, edges = RESULT.histogram(dims, bins=7, range=limits)
+    if np.ndim(dims) == 0:
+        dims, edges, limits = [dims], [edges], [limits]
+    for edge, limit in zip(edges, limits, strict=True):
+        assert (edge[0], edge[-1]) == limit
     atoms, weights, owner = (
-        RESULT.measure.atoms[:, 0],
+        RESULT.measure.atoms[:, dims],
         RESULT.measure.weights,
         RESULT.measure.replicate,
     )
+    cells = itertools.product(*(itertools.pairwise(edge) for edge in edges))
+    inside = [
+        np.all([(atoms[:, i] >= a) & (atoms[:, i] < b) for i, (a, b) in enumerate(cell)], axis=0)
+        for cell in cells
+    ]
     per_replicate = np.array(
-        [
-            [
-                weights[(owner == r) & (atoms >= a) & (atoms < b)].sum()
-                for a, b in itertools.pairwise(edges)
-            ]
-            for r in range(RESULT.n_replicates)
-        ]
-    )
+        [[weights[(owner == r) & cell].sum() for cell in inside] for r in range(40)]
+    ).reshape(40, *masses.shape)
     np.testing.assert_allclose(masses, per_replicate.mean(axis=0), atol=1e-12)
     np.testing.assert_allclose(errors, per_replicate.std(axis=0, ddof=1) / np.sqrt(40), atol=1e-12)
-    total, _, _ = RESULT.histogram(0, bins=7)
+    total, _, _ = RESULT.histogram(dims, bins=7)
     assert abs(total.sum() - 1) < 1e-12
 
 
@@ -168,8 +174,10 @@ def test_results_from_equal_array_seeds_merge():
 @pytest.mark.parametrize(
     ("call", "message"),
     [
-        (lambda r: r.histogram(5), "dim must be in"),
+        (lambda r: r.histogram(5), "dims must be an integer"),
+        (lambda r: r.histogram([0, 1.0]), "dims must be an integer"),
         (lambda r: r.histogram(0, bins=0), "bins must be at least 1"),
+        (lambda r: r.histogram([0, 1], range=(0.0, 1.0)), r"range must have shape \(2, 2\)"),
         (lambda r: r.tv_bound([-1]), "t must be non-negative"),
         (lambda r: r.w1_bound([-1]), "t must be non-negative"),
     ],

@@ -1,7 +1,7 @@
 # Plan
 
-**Current position:** Phase 4, milestones M0 to M7 implemented and reviewed; M8 (IO,
-plotting, examples, `check_coupling`) is next.
+**Current position:** Phase 4, milestones M0 to M8 implemented and reviewed; M9 (the
+slow statistical suite, benchmarks and warning calibration) is next.
 
 ## Phases
 
@@ -28,7 +28,17 @@ plotting, examples, `check_coupling`) is next.
 | M5 | Tuning, sampler, `sample` | yes | done, fixed (with M4) | done, fixed | `notes/reviews/m4-m5.md` |
 | M6 | MALA, HMC, Gibbs | yes | done, fixed | done, fixed | `notes/reviews/m6.md` |
 | M7 | Parallel execution, interrupts, progress (budgets deferred) | yes | done, fixed | done, fixed | `notes/reviews/m7.md` |
-| M8 | IO, plotting, examples, `check_coupling` | no | | | |
+| M8 | IO, plotting, examples, `check_coupling` | yes | done, fixed | done, fixed | `notes/reviews/m8.md` |
 | M9 | Slow statistical suite, benchmarks, warning calibration | no | | | |
 | M10 | Documentation and tutorials | no | | | |
 | M11 | Independent audit, checkpoint report | no | | | |
+
+## Deferred to before M10
+
+From the M8 altitude review (`notes/reviews/m8.md`), to settle before the tutorials use
+these interfaces:
+
+- `Replicates` records k, m, the lag, thin, `max_iter` and the root seed, so that
+  `Result(replicates)`, `plotting.paths(replicates)` and `merge` need no settings.
+- `engine.run` takes `rng` (spec §8.2), with the main namespace by default, so that
+  users never import `telescopic._random`.
