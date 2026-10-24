@@ -1,0 +1,15 @@
+d = 20, seed 0: k 600 tuned, 436 exact covariance, ratio 1.38; tuning and pilot 0.5 s
+d = 20, seed 1: k 627 tuned, 472 exact covariance, ratio 1.33; tuning and pilot 0.6 s
+d = 20, seed 2: k 551 tuned, 447 exact covariance, ratio 1.23; tuning and pilot 0.6 s
+d = 50, seed 0: k 14238 tuned, 1259 exact covariance, ratio 11.31; tuning and pilot 7.1 s
+d = 50, seed 1: k 17954 tuned, 1205 exact covariance, ratio 14.90; tuning and pilot 10.6 s
+d = 50, seed 2: k 21143 tuned, 1249 exact covariance, ratio 16.93; tuning and pilot 10.3 s
+Traceback (most recent call last):
+  File "/home/user/telescopic/notes/experiments/m9_tuning_dimension.py", line 33, in <module>
+    tuned = choose_k(sampler.meeting_times(100))
+  File "/home/user/telescopic/src/telescopic/tuning.py", line 275, in choose_k
+    raise ValueError(
+    ...<3 lines>...
+    )
+ValueError: more than 1.0% of the pilot pairs never met within their cap, so k cannot be chosen: try a wider initial distribution or a better-tuned kernel, or give k, lag and m explicitly
+exit 1

@@ -11,3 +11,26 @@ Each item has the default that work proceeds on until Josh answers.
   `_processes` or `size` (such as dask's executors) are sized by the CPUs this process may
   use, so a cluster's extra workers can sit idle. Default: keep the guess. Alternative: an
   argument for it, as dynesty's `queue_size`.
+- [ ] **HMC's automatic step on targets that are not log-concave.** Dual averaging toward
+  acceptance 0.8 suits ordinary HMC, but its coupled chains then rarely meet on the
+  banana from U[-5, 5]^2: 88 of 100 pilot pairs were unmet after 10^5 iterations, so
+  `sample(kernel="hmc")` cannot choose k there. A target acceptance of 0.95, or a meeting
+  scale of half the step, left 59 to 94 of 100 unmet at 20,000; steps near 0.02 couple
+  (mean meeting time 160), and on the Gaussian every variant meets within a median of 32
+  (`notes/experiments/m9_hmc_meeting.out`). Choosing the step from pilot meeting times, as
+  Heng & Jacob (2019) advise, would be a new tuning procedure (DECISIONS #1). Default:
+  keep the defaults, which couple on log-concave targets, and document that other targets
+  need an explicit step; the error of `choose_k` already says to give a better-tuned
+  kernel. The automatic MALA fails the same way on the banana: more than 1% of its pilot
+  pairs were unmet at 10^5 (`benchmarks/results/acb12f9.json`).
+
+- [ ] **Starts far from the target.** From a π0 a hundred times wider than the posterior,
+  or far from it, the recipe k = q_0.99 leaves about one replicate in a hundred averaged
+  while its chain is still on its way, and the estimates of variances become heavy-tailed:
+  on the README's line fit from N(0, 10I), 11 of 20 runs warned and some estimated a
+  negative variance (`notes/experiments/m9_initial_width.out`; Sherlock reports the same in
+  his discussion of JOA20). Two remedies are new constructions (DECISIONS #1): a π0 built
+  from the tuning pilot's mean and covariance, widened, which loses the protection of a
+  wide π0 against missed modes; or k at a higher quantile or a multiple of it, which costs
+  more. Default: keep the recipe, recommend a π0 a few to ten times wider than the target
+  (spec §4.2, DECISIONS #35), and rely on the variance warning.

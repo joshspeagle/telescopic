@@ -10,6 +10,13 @@ not as the chains grow, and the pairs run in parallel without communication.
 The package is in development. The design documents below describe what it will do.
 
 ```{toctree}
+:maxdepth: 2
+:caption: Background
+
+theory
+```
+
+```{toctree}
 :maxdepth: 1
 :caption: Development
 

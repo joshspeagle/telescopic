@@ -267,7 +267,7 @@ Rules:
 - A draw with the wrong shape or non-finite entries raises `ValueError`.
 - A draw with $\log\pi = -\infty$ emits an `InputWarning`; the chains leave it as §4.1 describes.
 
-The documentation recommends a $\pi_0$ that is overdispersed relative to $\pi$ and covers all its modes (JOA20 §2.3; AJ24).
+The documentation recommends a $\pi_0$ that is overdispersed relative to $\pi$ and covers all its modes (JOA20 §2.3; AJ24), but not by orders of magnitude. A replicate whose chain $X$ is still far away at $k$ is averaged without correction, and only rarer replicates whose chain $Y$ is late balance it, so the estimates of second moments become heavy-tailed. On the README's line fit, Gaussians 2 and 10 times wider than the posterior never raised the variance warning in 20 runs; 100 times wider, 6 runs raised it, and from $\mathcal N(0, 10I)$, 70 posterior standard deviations away, 11 runs did, with standard deviations from 4.2 times the truth to a negative variance (`notes/experiments/m9_initial_width.out`). For a unimodal posterior, an optimiser's fit with its inverse Hessian scaled by 100 is a practical start (DECISIONS #35).
 
 ### 4.3 Parameter names
 
@@ -349,7 +349,7 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 - `"maximal"`: rejection maximal coupling with independent residuals, for comparison and teaching. Its meeting times grow exponentially with $d$ (JOA20 §4.2), and the documentation says so.
 
 **Tuning (R-TUNE-1):**
-- **Pilot:** 4 adaptive Metropolis chains from $\pi_0$, each running $\max(2000, 200d)$ steps. Each chain adapts its own global scale by Robbins–Monro steps of size $(t+1)^{-0.6}$ toward acceptance 0.234 (Andrieu & Thoms 2008). The chains share one proposal covariance: the running mean and covariance, with step $1/(t+1)$, of all their states, started from the variances of 100 draws from $\pi_0$ (Haario et al. 2001; pooled as in Craiu, Rosenthal & Yang 2009; DECISIONS #7).
+- **Pilot:** 4 adaptive Metropolis chains from $\pi_0$, each running $\max(2000, 200d, 10d^2)$ steps; beyond 20 dimensions they refactor the covariance and keep their states every $\lceil d/20\rceil$ steps (DECISIONS #34). Each chain adapts its own global scale by Robbins–Monro steps of size $(t+1)^{-0.6}$ toward acceptance 0.234 (Andrieu & Thoms 2008). The chains share one proposal covariance: the running mean and covariance, with step $1/(t+1)$, of all their states, started from the variances of 100 draws from $\pi_0$ (Haario et al. 2001; pooled as in Craiu, Rosenthal & Yang 2009; DECISIONS #7).
 - **Covariance:** pooled over the second halves of the chains, plus a ridge of $10^{-10}$ times the mean variance.
 - **Scale:** $2.38/\sqrt d$, `RandomWalk`'s default (DECISIONS #7).
 - **Report:** the pilot acceptance rates and $\hat R$ per coordinate. A `ConvergenceWarning` when the chains disagree: $\hat R > \sqrt 2$ in some coordinate, where the chain means spread more widely than the chains themselves, a sign of several modes (DECISIONS #6).
@@ -548,10 +548,15 @@ Classes: `TelescopicWarning`, with subclasses `ConvergenceWarning` and `InputWar
 `check()` warns on these conditions, and so does each `run` (§8.1). They are heuristics; the thresholds are set so that clean Gaussian runs at the defaults rarely trigger them, and M9 measures and documents each false-alarm rate (D-16):
 1. any censored replicate;
 2. a fraction of replicates with $\tau - L > k$ above 0.25 ("k may be too small"). The recipe itself gives 0.02 to 0.13 (§3.6), so a lower threshold fires on clean runs;
-3. one replicate contributing more than 25% of the sample variance of any reported estimate, with $R \ge 100$ (heavy tails or rare excursions). At $R = 20$ to 30 that share is typical of Gaussian data;
+3. one replicate contributing more than half of the sample variance of the estimate of a coordinate's mean or second moment, with $R \ge 100$ (heavy tails or rare excursions). A quarter, the first draft's threshold, is typical of Gaussian data at $R = 20$ to 30 and was exceeded in 87 of 200 clean runs on the banana at $R = 100$, whose intervals covered as often as the others (DECISIONS #36);
 4. a Hill estimate of the tail index of $\tau - L + 1$ below 2 (finite variance in doubt), from the $\max(10, \lfloor R/10\rfloor)$ largest values, with $R \ge 500$. Applied to $\tau$ itself with $L = k$, the shift by $L$ removes almost all its power;
 5. pilot chains that disagree (§5.3);
 6. a slow pair (§6.3).
+
+Rates measured at M9 with `sample()`'s defaults (`notes/experiments/m9_warnings.out`, `m9_variance_warning.out`):
+- `examples.gaussian(10)`: no warning in 50 runs at $R = 500$; at $R = 100$, the variance warning in at most 2 of 100 runs and no other.
+- The banana from $U[-5, 5]^2$: at $R = 100$, the variance warning in 19 of 200 runs, where the 95% intervals of $E[x_0^2]$ covered at 0.84 against 0.96 elsewhere; at $R = 500$, the variance warning in at most 6 of 50 runs and the tail warning in 14.
+- JOA20's bimodal target from $\mathcal N(10, 1)$ at $R = 1000$: 33 of 50 intervals of $P(x > 3)$ missed the truth, none with a warning; the 17 runs whose replicates found the other mode raised the variance warning and covered.
 
 The documentation explains each, with the failure cases of JOA20 §5.1, and says that a run that never left one mode cannot be detected from its own output at moderate $R$ (design review D-R9).
 
@@ -610,19 +615,30 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
 
 ```python
 import numpy as np
+from scipy import optimize
+
 import telescopic
+
+rng = np.random.default_rng(0)
+x = np.sort(10 * rng.random(50))
+yerr = 0.1 + 0.5 * rng.random(50)
+y = -0.9 * x + 4.3 + yerr * rng.normal(size=50)
 
 def log_prob(theta, x, y, yerr):
     slope, intercept = theta
     return -0.5 * np.sum(((y - slope * x - intercept) / yerr) ** 2)
 
-init = telescopic.initial.Normal(mean=[0.0, 0.0], cov=np.diag([10.0, 10.0]))
+# Start the chains from a Gaussian ten times wider than the best fit's errors.
+fit = optimize.minimize(lambda theta: -log_prob(theta, x, y, yerr), [0.0, 0.0])
+init = telescopic.initial.Normal(mean=fit.x, cov=100 * fit.hess_inv)
 result = telescopic.sample(log_prob, init, args=(x, y, yerr), names=["slope", "intercept"],
                            rng=42)
 print(result.summary())                      # unbiased means, standard errors, intervals
 result.estimate(lambda t: t[:, 0] * t[:, 1])  # any function, after the run
 result.plot_tv_bound()                       # with the plot extra: distance from stationarity
 ```
+
+The first draft started from $\mathcal N(0, 10I)$, which made most runs warn (§4.2; DECISIONS #35).
 
 ---
 
@@ -651,11 +667,11 @@ These targets are measured by `benchmarks/` and are not gating.
 
 | Operation | Target |
 |---|---|
-| Lockstep coupled RWMH, vectorised Gaussian target, $d = 10$, 256 lanes, main-run settings ($k = L = 141$, $m = 1410$) | ≤ 2 µs per pair-step (research note measurement: 0.37 µs at 1000 lanes without per-replicate streams). Met at M3: 1.2 to 1.5 µs. Meeting-time pilots ($L = 1$, $m = 0$) take 4.2 µs: each replicate's set-up, about 80 µs, adds 1.8 µs per pair-step at a mean $\tau$ of 46 (M3 review) |
-| Same, point-by-point log-density, 1 lane | ≤ 40 µs per pair-step of overhead beyond the log-density. Missed at M3: 93 µs in the main run and 150 µs in the pilot. A coupled RWMH step on one row takes 112 µs, of which its two log-density calls through `Target` take 15 µs; the target needs a scalar path for one lane, which v0.1 does not have |
-| Per-replicate random streams in lockstep | ≤ 0.5 µs per lane-step for the draws of a coupled RWMH step at 256 lanes, $d = 10$ (one shared generator: 0.15 µs), and ≤ 50 µs per replicate to set up its streams |
-| Process pool, log-density ≥ 1 ms | ≥ 3.5× speed-up on 4 workers |
-| Automatic pipeline overhead (both pilots) | ≤ 15% of the main run at the default $R = 100$ for $d \ge 10$. At $d = 2$ the fixed tuning pilot makes it about 30% (design review D-R13); it falls as $1/R$ |
+| Lockstep coupled RWMH, vectorised Gaussian target, $d = 10$, 256 lanes, main-run settings ($k = L = 141$, $m = 1410$) | ≤ 2 µs per pair-step (research note measurement: 0.37 µs at 1000 lanes without per-replicate streams). Met at M3: 1.2 to 1.5 µs. Meeting-time pilots ($L = 1$, $m = 0$) take 4.2 µs: each replicate's set-up, about 80 µs, adds 1.8 µs per pair-step at a mean $\tau$ of 46 (M3 review). At M9 (`benchmarks/results/acb12f9.json`): 1.27 µs, and 3.81 µs in the pilot |
+| Same, point-by-point log-density, 1 lane | ≤ 40 µs per pair-step of overhead beyond the log-density. Missed at M3: 93 µs in the main run and 150 µs in the pilot. A coupled RWMH step on one row takes 112 µs, of which its two log-density calls through `Target` take 15 µs; the target needs a scalar path for one lane, which v0.1 does not have. At M9: 90.7 µs in the main run and 124.6 µs in the pilot |
+| Per-replicate random streams in lockstep | ≤ 0.5 µs per lane-step for the draws of a coupled RWMH step at 256 lanes, $d = 10$ (one shared generator: 0.15 µs), and ≤ 50 µs per replicate to set up its streams. Met at M9: 0.28 µs and 41 µs |
+| Process pool, log-density ≥ 1 ms | ≥ 3.5× speed-up on 4 workers. Missed at M9: 1.98× for 256 replicates that take 6.3 s in this process, on a 4-CPU machine, with the start of the workers included |
+| Automatic pipeline overhead (both pilots) | ≤ 15% of the main run at the default $R = 100$ for $d \ge 10$. At $d = 2$ the fixed tuning pilot makes it about 30% (design review D-R13); it falls as $1/R$. Missed at M9: 31%, 37% and 39% at $d = 10$, 50 and 100, where the tuning pilot of $10d^2$ steps dominates beyond $d = 20$ (DECISIONS #34) |
 
 ---
 
@@ -731,7 +747,7 @@ These were decided without Josh's input so that work could proceed. Each is easy
 | D-13 | No meeting cap by default in the main run. With a cap, censored pairs are excluded and reported as biasing the result. The meeting-time pilot is capped (D-23) | the theory needs every pair to meet; silent truncation is the R package's hazard | a default cap with silent `inf` (unbiasedmcmc) |
 | D-14 | Unbiased covariances by the U-statistic; quantiles by an isotonic projection of the pooled signed CDF | exact where possible (§3.4); isotonic regression is the $L^2$ projection onto monotone curves. A running maximum is another monotonisation; both are consistent and biased at finite $R$, and gave the same quantiles in the design review's test | plug-in covariance (biased); a running maximum; the crossing rule (non-unique) |
 | D-15 | Literature notation for `k`, `m`, `lag` in the API | users read JOA20 and AJ24 alongside the docs; "auto" covers newcomers | `burn_in`, `n_iter` |
-| D-16 | Warning thresholds from §7.4, documented as heuristics: warning 2 at 0.25, warning 3 only for $R \ge 100$, warning 4 on $\tau - L + 1$ for $R \ge 500$ | no published calibration exists (`diagnostics_practice.md` §4). The first draft's thresholds fired on clean Gaussian runs at the defaults (warning 2 with probability 0.25 at $d = 10$ and 0.49 at $d = 30$; warning 3 with probability 0.73 at $R = 30$ for 10 estimates; design review D-R6) | no warnings; strict errors; binomial tests at a stated level |
+| D-16 | Warning thresholds from §7.4, documented as heuristics: warning 2 at 0.25, warning 3 above one half (DECISIONS #36) and only for $R \ge 100$, warning 4 on $\tau - L + 1$ for $R \ge 500$ | no published calibration exists (`diagnostics_practice.md` §4). The first draft's thresholds fired on clean Gaussian runs at the defaults (warning 2 with probability 0.25 at $d = 10$ and 0.49 at $d = 30$; warning 3 with probability 0.73 at $R = 30$ for 10 estimates; design review D-R6) | no warnings; strict errors; binomial tests at a stated level |
 | D-17 | Docs with Sphinx, MyST-NB and furo | furo is the lead's most recent choice (GSPICE); MyST-NB executes the tutorials | pydata-sphinx-theme (pastry) |
 | D-18 | Python ≥ 3.11, NumPy ≥ 1.26, SciPy ≥ 1.12 | the floors of Josh's other packages; SciPy 1.12 adds `isotonic_regression` | SPEC 0 floors (3.12, NumPy 2.0) |
 | D-19 | Implement from the papers, never from the GPL R code. The R package is a reference for numbers only | the MIT licence; `software_landscape.md` licence analysis | port the R code under GPL |

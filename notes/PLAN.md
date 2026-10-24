@@ -1,8 +1,10 @@
 # Plan
 
-**Current position:** Phase 4, milestones M0 to M8 implemented and reviewed, with the
-two interface changes deferred from M8 (DECISIONS #31, #32). M9 (the slow statistical
-suite, benchmarks and warning calibration) is next.
+**Current position:** Phase 4, milestones M0 to M9 implemented and reviewed, with the
+two interface changes deferred from M8 (DECISIONS #31, #32). M10 (documentation and
+tutorials) is next; the theory page, the README and drafts of Getting started and the
+pitfalls page exist. Open for M11: the pool and pipeline benchmarks (`notes/reviews/m9.md`),
+`sample()`'s fixed 64 lanes, and the questions in `QUESTIONS.md`.
 
 ## Phases
 
@@ -30,7 +32,7 @@ suite, benchmarks and warning calibration) is next.
 | M6 | MALA, HMC, Gibbs | yes | done, fixed | done, fixed | `notes/reviews/m6.md` |
 | M7 | Parallel execution, interrupts, progress (budgets deferred) | yes | done, fixed | done, fixed | `notes/reviews/m7.md` |
 | M8 | IO, plotting, examples, `check_coupling` | yes | done, fixed | done, fixed | `notes/reviews/m8.md` |
-| M9 | Slow statistical suite, benchmarks, warning calibration | no | | | |
+| M9 | Slow statistical suite, benchmarks, warning calibration | yes | done, fixed | done, fixed | `notes/reviews/m9.md` |
 | M10 | Documentation and tutorials | no | | | |
 | M11 | Independent audit, checkpoint report | no | | | |
 

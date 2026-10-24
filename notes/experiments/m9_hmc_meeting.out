@@ -1,0 +1,9 @@
+banana, acceptance 0.8: step 0.2195 x 5, meeting scale 0.001: 97 of 100 unmet at 20,000; met q50/q99 [  450. 13243.]; 22.0 s
+banana, acceptance 0.8: step 0.2195 x 5, meeting scale 0.1098: 59 of 100 unmet at 20,000; met q50/q99 [ 3848. 16084.]; 17.9 s
+gaussian, acceptance 0.8: step 0.8003 x 2, meeting scale 0.001: 0 of 100 unmet at 20,000; met q50/q99 [27. 83.]; 0.0 s
+gaussian, acceptance 0.8: step 0.8003 x 2, meeting scale 0.4001: 0 of 100 unmet at 20,000; met q50/q99 [ 30. 144.]; 0.1 s
+banana, acceptance 0.95: step 0.1483 x 7, meeting scale 0.001: 94 of 100 unmet at 20,000; met q50/q99 [ 187. 8754.]; 28.0 s
+banana, acceptance 0.95: step 0.1483 x 7, meeting scale 0.07416: 67 of 100 unmet at 20,000; met q50/q99 [ 1273. 16618.]; 23.5 s
+gaussian, acceptance 0.95: step 0.4228 x 3, meeting scale 0.001: 0 of 100 unmet at 20,000; met q50/q99 [ 32. 138.]; 0.2 s
+gaussian, acceptance 0.95: step 0.4228 x 3, meeting scale 0.2114: 0 of 100 unmet at 20,000; met q50/q99 [ 28. 110.]; 0.2 s
+exit 0

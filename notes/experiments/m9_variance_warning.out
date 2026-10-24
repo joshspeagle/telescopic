@@ -1,0 +1,5 @@
+all 200 runs: coverage of E[x0], E[x1], E[x0^2], E[x1^2] [0.95  0.98  0.95  0.935]
+largest variance share: median 0.224, 90% 0.473
+share above 0.25: 87 runs, coverage [0.943 0.977 0.931 0.954]; below: coverage [0.956 0.982 0.965 0.92 ]
+share above 0.5: 19 runs, coverage [0.947 0.947 0.842 0.947]; below: coverage [0.95  0.983 0.961 0.934]
+exit 0

@@ -177,7 +177,7 @@ Kernel-specific tests:
 - **`check` warnings:** each fires on a synthetic result built to trigger it:
   - a censored replicate;
   - more than 25% bias corrections;
-  - one replicate holding more than 25% of the variance at $R \ge 100$;
+  - one replicate holding more than half the variance at $R \ge 100$, and not one holding exactly half;
   - a tail index below 2 at $R \ge 500$;
   - disagreeing pilots.
 
@@ -240,18 +240,19 @@ Kernel-specific tests:
 
 ### 2.12 Slow statistical tier (`-m slow`)
 
-- **Unbiasedness, end to end.** For each kernel family, on targets with exact $\pi(h)$, $R$ is set from a pilot so that the standard error is at most 1/5 of the smallest bias of interest. The assertion is $|z| \le 5$ with escalation. Heavy-tail statistics (kurtosis, maximum variance share) are recorded with each run. The cases are:
+- **Unbiasedness, end to end** (`tests/test_statistics.py`). For each kernel family, on targets with exact moments, the estimates of $\mathbb E[x]$ and $\mathbb E[x^2]$ follow the rule of §1. $R$ is set from a pilot of 1,000 replicates so that the standard error is at most 1/5 of the bias that dropping the correction would leave, in the component where that ratio is largest, and is at least 1,000 (`notes/experiments/m9_unbiasedness.py`, which also records the meeting times and the heavy-tail statistics: kurtosis, maximum variance share). Removing the correction fails every case. The cases:
   - a Gaussian in $d = 1, 5, 20$ from $\pi_0 = \mathcal N(3, I)$ and from a point mass;
-  - the banana with HMC;
+  - random walks with reflection-maximal and maximal couplings, MALA, independence, a mixture of kernels;
+  - HMC on the banana, from a point far along its ridge: from $U[-5, 5]^2$ one pair in 1,000 took 62,493 iterations, at corners where the step is unstable;
   - the pump-failure model with Gibbs;
-  - $L \in \{1, 7\}$;
+  - $L \in \{1, 7\}$, and $L = k$ in 20 dimensions, where a lag of 1 with $k$ below the meeting times gave an estimator of standard deviation 11.6 against 0.82;
   - `thin` $\in \{1, 3\}$;
   - small $k$, so the bias correction matters.
-- **Coverage.** 2,000 intervals of $R = 200$ from near-stationary starts, on the exact AR(1) chain. The coverage of the 95% interval is within 4 standard errors (0.02) of 0.945, the coverage the design review measured for a correct implementation (0.939 to 0.951 by case). Coverage from far starts is recorded, not asserted, to document the heavy-tail caveat.
-- **TV bounds against exact TV.** For an exact AR(1) kernel ($x' = \rho x + \sqrt{1-\rho^2}\,\xi$), coupled by `reflection_maximal`, with $10^4$ meeting times: $\widehat{\text{bound}}(t) \ge \mathrm{TV}(t) - 5\,\mathrm{SE}(t)$ on a grid of $t$. The exact TV between Gaussians comes from quadrature.
-- **Literature reproductions** (loose bands): RWMH reflection-maximal mean $\tau \approx 30$ at $d = 10$ (O'Leary 2021); the HMC logistic regression meeting times of Heng & Jacob, order of magnitude.
-- **Warning calibration (recorded, not asserted).** The false-alarm rate of each warning of §7.4 on clean targets, and its firing rate on JOA20's bimodal case with a narrow $\pi_0$, are measured and written to the documentation. In the design review's simulation of that case, warnings fired mainly in runs whose intervals already covered the truth (2 of 14 misleading runs warned), so the documentation says that such a failure cannot be detected from the output at moderate $R$. What is asserted is what the design can show: a wide $\pi_0$ exposes the second mode through the meeting times or the TV bound.
-- **Linear SBC (should).** On conjugate Normal–Normal and Gamma–Poisson models, $\mathbb E[\hat\pi(\phi) - \phi(\tilde\theta, y)] = 0$ for $\phi \in \{\theta, \theta^2, \mathbb 1(\theta \le c), \log p(y \mid \theta)\}$, at $|z| \le 5$.
+- **Coverage.** 2,000 intervals of $R = 200$ from a stationary start, on the exact AR(1) chain under the recipe ($k = L = 38$, $m = 380$), for $x$ and $x^2$. The reference coverages, 0.9509 and 0.9489 with standard error 0.0022, come from $10^4$ intervals of an implementation written apart from the package (`notes/experiments/m9_coverage_reference.py`); the design review's 0.945 and 0.939 came from 1,000. The rule of §1 applies with the combined standard error. Coverage from near-stationary and far starts is recorded, not asserted, to document the heavy-tail caveat.
+- **TV bounds against exact TV.** For the exact AR(1) chain from $\mathcal N(3, 0.5^2)$, coupled by `reflection_maximal`, with $10^4$ meeting times at $L \in \{1, 10\}$: $\widehat{\text{bound}}(t) \ge \mathrm{TV}(t) - 5\,\mathrm{SE}(t)$ wherever $\mathrm{TV}(t) \ge 0.01$. The exact TV between Gaussians comes from quadrature.
+- **Literature reproductions** (loose bands): RWMH reflection-maximal mean $\tau \approx 30$ at $d = 10$ (O'Leary 2021); the bimodal mixture's mean 20 and 99% quantile 105 with proposal variance 9 (JOA20 §5.1); HMC on the banana, mean $\tau = 158$ with synchronous momenta (Heng & Jacob 2019, §5.2). Their logistic regression needs data that a hermetic test cannot fetch.
+- **Warning calibration (recorded, not asserted).** The false-alarm rate of each warning of §7.4 on clean targets, and its firing rate on JOA20's bimodal case with a narrow $\pi_0$, are measured (`notes/experiments/m9_warnings.py`) and written to the documentation. In the design review's simulation of that case, warnings fired mainly in runs whose intervals already covered the truth (2 of 14 misleading runs warned), so the documentation says that such a failure cannot be detected from the output at moderate $R$. What is asserted is what the design can show: a wide $\pi_0$ exposes the second mode through the meeting times.
+- **Linear SBC.** On conjugate Normal–Normal and Gamma–Poisson models, with one replicate per draw of $(\tilde\theta, y)$, $\mathbb E[\hat\pi(\phi) - \phi(\tilde\theta, y)] = 0$ for $\phi \in \{\theta, \theta^2, \mathbb 1(\theta \le c), \log p(y \mid \theta)\}$, under the rule of §1.
 
 ### 2.13 Docs, examples and packaging
 
@@ -262,7 +263,7 @@ Kernel-specific tests:
 ### 2.14 Benchmarks (non-gating)
 
 `benchmarks/run.py` prints JSON with the commit, machine, thread settings and versions (`CLAUDE.md`, Measurements). It times these cases:
-- lockstep coupled RWMH per pair-step, against lanes and the random-number mode;
+- lockstep coupled RWMH per pair-step, against lanes (one random-number mode exists: per-replicate streams, D-8);
 - point-by-point overhead per step;
 - pool speed-up for a 1 ms log-density;
 - the overhead of the automatic pipeline;
