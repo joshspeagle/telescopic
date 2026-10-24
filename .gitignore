@@ -24,3 +24,6 @@ docs/api/generated/
 .DS_Store
 .idea/
 .vscode/
+
+# The review hub data, built by notes/review/hub/build.py
+notes/review/hub/review-data.json

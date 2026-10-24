@@ -1,0 +1,771 @@
+<title>telescopic teardown</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Spectral:wght@500;600&display=swap">
+<style>
+/* Layout: one reading column (46rem) under a sticky bar of view chips; steps are stacked
+   cards that open in place; code, tables and equations scroll inside their own boxes. */
+:root {
+  --bg: #f2f5f6; --surface: #ffffff; --sunk: #e9eef0; --ink: #16212a; --muted: #55646e; --line: #d4dde1;
+  --x: #0b6874; --x-soft: #d5edef; --y: #a5541a; --y-soft: #f6e3d3;
+  --ok: #2b744a; --warn: #8f5d00; --crit: #b0291f;
+  --display: "Spectral", Georgia, "Times New Roman", serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1216; --surface: #131b21; --sunk: #0f161b; --ink: #e3eaee; --muted: #95a6b0; --line: #24323b;
+    --x: #58c3ce; --x-soft: #0f3036; --y: #e39b5d; --y-soft: #3a2416;
+    --ok: #62bf89; --warn: #e2aa4a; --crit: #ff8174; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1216; --surface: #131b21; --sunk: #0f161b; --ink: #e3eaee; --muted: #95a6b0; --line: #24323b;
+  --x: #58c3ce; --x-soft: #0f3036; --y: #e39b5d; --y-soft: #3a2416;
+  --ok: #62bf89; --warn: #e2aa4a; --crit: #ff8174; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 48px;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 46rem; margin: 0 auto; }
+a { color: var(--x); text-underline-offset: 2px; }
+a:hover { text-decoration-thickness: 2px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: 0; }
+h1 { font-size: 2.05rem; line-height: 1.1; }
+h2 { font-size: 1.45rem; line-height: 1.2; }
+h3 { font-size: 1.12rem; line-height: 1.3; }
+h4 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
+p { margin: 0 0 10px; }
+code, pre, .mono { font-family: var(--mono); font-size: 0.86em; }
+code { background: var(--sunk); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; }
+pre { margin: 0; }
+button, select, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--x); outline-offset: 2px; }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Header */
+header.top { padding-block: 22px 14px; display: grid; gap: 10px; }
+.eyebrow { font-family: var(--mono); font-size: 0.74rem; color: var(--muted); letter-spacing: 0.02em; }
+.lede { color: var(--muted); max-width: 40rem; }
+.chains { width: 100%; height: 54px; display: block; }
+.chains .px { stroke: var(--x); } .chains .py { stroke: var(--y); } .chains .pm { stroke: var(--ink); }
+.chains .tau { fill: var(--ink); } .chains text { fill: var(--muted); font-family: var(--mono); font-size: 10px; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px; font-size: 0.82rem; }
+.stat b { font-variant-numeric: tabular-nums; }
+
+/* Sticky view chips */
+nav.views {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+  margin-left: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); margin-right: calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
+  padding-block: 8px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  border-bottom: 1px solid var(--line);
+}
+.chiprow { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; max-width: 46rem; margin: 0 auto; }
+.chiprow::-webkit-scrollbar { display: none; }
+.vchip { flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 13px; cursor: pointer; font-size: 0.9rem; }
+.vchip[aria-current="page"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.vchip .count { font-variant-numeric: tabular-nums; color: var(--y); font-weight: 600; margin-left: 4px; }
+.vchip[aria-current="page"] .count { color: var(--y-soft); }
+main { padding-top: 16px; display: grid; gap: 16px; }
+
+/* Cards and chips */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; min-width: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 9px; font-size: 0.76rem; border: 1px solid var(--line); background: var(--surface); white-space: nowrap; }
+button.chip { cursor: pointer; }
+button.chip:hover { border-color: var(--x); }
+.chip.on { background: var(--x); border-color: var(--x); color: var(--bg); }
+.lvl { font-family: var(--mono); font-weight: 500; }
+.lvl.L1 { background: var(--sunk); } .lvl.L2 { background: var(--x-soft); } .lvl.L3 { background: var(--x); color: var(--bg); border-color: var(--x); }
+.depth { color: var(--muted); }
+.pill { border-radius: 999px; padding: 1px 8px; font-size: 0.74rem; font-weight: 500; border: 1px solid currentColor; white-space: nowrap; }
+.st-done { color: var(--ok); } .st-discussed { color: var(--x); } .st-reading { color: var(--warn); } .st-not { color: var(--muted); }
+.qbadge { background: var(--y-soft); color: var(--y); border-radius: 999px; padding: 1px 8px; font-size: 0.74rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Level x depth grid */
+.grid-intro { display: grid; gap: 10px; }
+.ldgrid { display: grid; grid-template-columns: 2.4rem repeat(6, minmax(0, 1fr)); gap: 4px; font-size: 0.72rem; }
+.ldgrid .hd { color: var(--muted); text-align: center; align-self: end; padding-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ldgrid .rh { font-family: var(--mono); color: var(--muted); align-self: center; }
+.cell { min-height: 2.3rem; border-radius: 7px; border: 1px solid var(--line); background: var(--sunk); cursor: pointer; display: grid; place-items: center; font-variant-numeric: tabular-nums; font-weight: 600; padding: 2px; }
+.cell[data-n="0"] { cursor: default; color: var(--muted); font-weight: 400; background: transparent; }
+.cell.on { background: var(--x); color: var(--bg); border-color: var(--x); }
+.filterline { font-size: 0.85rem; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.linkbtn { background: none; border: 0; color: var(--x); cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 2px; font-size: inherit; }
+
+/* Phases and steps */
+.phase { display: grid; gap: 10px; }
+.phase-head { display: grid; gap: 2px; padding-top: 6px; }
+.phase-head .pnum { font-family: var(--mono); font-size: 0.74rem; color: var(--x); }
+.phase-head .intent { color: var(--muted); font-size: 0.92rem; }
+details.step { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+details.step[open] { border-color: var(--x); }
+details.step > summary { list-style: none; cursor: pointer; padding: 12px 14px; display: grid; gap: 6px; }
+details.step > summary::-webkit-details-marker { display: none; }
+.srow { display: flex; gap: 10px; align-items: baseline; }
+.sid { font-family: var(--mono); color: var(--x); font-size: 0.85rem; flex: none; }
+.stitle { font-weight: 600; }
+.smeta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.sbody { padding: 0 14px 14px; display: grid; gap: 14px; border-top: 1px solid var(--line); padding-top: 12px; min-width: 0; }
+.prose { min-width: 0; }
+.prose p:last-child { margin-bottom: 0; }
+.prose ul, .prose ol { margin: 0 0 10px; padding-left: 1.2rem; }
+.prose li { margin-bottom: 4px; }
+.reads { display: grid; gap: 10px; }
+.readgroup { display: grid; gap: 6px; }
+.readgroup .lab { font-size: 0.78rem; color: var(--muted); }
+details.sub { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); min-width: 0; }
+details.sub > summary { cursor: pointer; padding: 7px 10px; font-size: 0.86rem; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+details.sub > summary .mono { color: var(--x); }
+details.sub .inner { padding: 0 10px 10px; display: grid; gap: 8px; min-width: 0; }
+.codebox { overflow-x: auto; background: var(--sunk); border-radius: 7px; padding: 10px; font-size: 0.78rem; line-height: 1.45; }
+.codebox pre { white-space: pre; }
+.outbox { overflow-x: auto; background: var(--sunk); border-radius: 7px; padding: 10px; font-size: 0.76rem; line-height: 1.45; max-height: 26rem; }
+.outbox pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.challenge { margin: 0; padding-left: 1.2rem; display: grid; gap: 6px; }
+.challenge li::marker { color: var(--y); font-weight: 600; }
+.challenge .log1 { margin-left: 6px; font-size: 0.78rem; }
+.auditlist { display: grid; gap: 8px; }
+.finding { border-left: 3px solid var(--y); padding: 2px 0 2px 10px; display: grid; gap: 4px; }
+.finding.sev-high { border-color: var(--crit); } .finding.sev-medium { border-color: var(--warn); } .finding.sev-low { border-color: var(--line); }
+
+/* Notes form and queue items */
+.notes { display: grid; gap: 10px; background: var(--y-soft); border-radius: 8px; padding: 12px; }
+.notes .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.notes label, .qform label { font-size: 0.78rem; color: var(--muted); display: grid; gap: 3px; }
+select, input[type="search"], input[type="text"], textarea {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; min-width: 0; max-width: 100%;
+}
+textarea { width: 100%; min-height: 4.5rem; resize: vertical; }
+.qform { display: grid; gap: 8px; }
+.qform .row { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { border: 1px solid var(--x); background: var(--x); color: var(--bg); border-radius: 7px; padding: 6px 14px; cursor: pointer; font-weight: 500; }
+.btn.ghost { background: transparent; color: var(--x); }
+.btn.warn { border-color: var(--crit); background: transparent; color: var(--crit); }
+.btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+.toast { font-size: 0.82rem; color: var(--ok); min-height: 1.2em; }
+.qitem { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 6px; min-width: 0; }
+.qitem .qhead { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 0.8rem; }
+.qitem .qtext { white-space: pre-wrap; overflow-wrap: anywhere; }
+.kind { font-weight: 600; text-transform: lowercase; }
+.k-question { color: var(--x); } .k-concern { color: var(--crit); } .k-change { color: var(--y); } .k-decision { color: var(--ok); } .k-note { color: var(--muted); }
+.answer { border-left: 3px solid var(--x); padding: 4px 0 4px 10px; background: var(--x-soft); border-radius: 0 6px 6px 0; overflow-wrap: anywhere; }
+.answer .who { font-size: 0.74rem; color: var(--muted); }
+.qactions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 0.82rem; }
+.checkpoint { border: 1px dashed var(--y); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 6px; background: var(--surface); }
+.checkpoint .cph { font-family: var(--mono); font-size: 0.74rem; color: var(--y); }
+.empty { color: var(--muted); font-size: 0.9rem; padding: 6px 0; }
+
+/* Spec, decisions, experiments, map */
+.toolbar { display: grid; gap: 8px; }
+.toolbar input[type="search"] { width: 100%; }
+.list { display: grid; gap: 10px; }
+.rowhead { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.rowhead .key { font-family: var(--mono); color: var(--x); }
+.tablecards { display: grid; gap: 6px; margin-bottom: 10px; }
+.trow { border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; display: grid; gap: 4px; background: var(--bg); min-width: 0; }
+.trow .tk { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.trow .tv { overflow-wrap: anywhere; }
+.layers { display: grid; gap: 6px; }
+.layer { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--surface); display: grid; gap: 4px; }
+.layer .lname { font-family: var(--mono); font-size: 0.74rem; color: var(--x); }
+.flow { display: grid; gap: 4px; font-size: 0.88rem; }
+.flow div { display: flex; gap: 8px; }
+.flow .arrow { color: var(--y); flex: none; font-family: var(--mono); }
+mjx-container[display="true"] { overflow-x: auto; overflow-y: hidden; max-width: 100%; padding: 2px 0; }
+.howto { display: grid; gap: 8px; }
+.howto ol { margin: 0; padding-left: 1.2rem; display: grid; gap: 4px; }
+@media (prefers-reduced-motion: no-preference) { details.step[open] .sbody { animation: fade 0.18s ease-out; } }
+@keyframes fade { from { opacity: 0.4; } to { opacity: 1; } }
+@media (min-width: 640px) { body { font-size: 15.5px; } h1 { font-size: 2.4rem; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow" id="eyebrow">telescopic v0.1 draft · loading the review data</div>
+    <h1>telescopic teardown</h1>
+    <p class="lede" id="lede">A guided review of the whole package, from the big picture to the numerics, framed against the spec. Log questions, concerns and decisions on any step; I answer them when you ask me to clear the queue.</p>
+    <svg class="chains" viewBox="0 0 640 54" role="img" aria-label="Two coupled chains that wander apart, then meet at tau and move together">
+      <path class="px" fill="none" stroke-width="2" d="M4 30 L40 18 L76 26 L112 10 L148 20 L184 14 L220 28 L256 22 L292 31 L328 24 L364 29 L400 27"/>
+      <path class="py" fill="none" stroke-width="2" d="M4 44 L40 40 L76 47 L112 38 L148 43 L184 36 L220 41 L256 33 L292 37 L328 30 L364 32 L400 27"/>
+      <path class="pm" fill="none" stroke-width="2.5" d="M400 27 L436 20 L472 25 L508 15 L544 22 L580 18 L636 24"/>
+      <circle class="tau" cx="400" cy="27" r="3.5"/>
+      <text x="394" y="50">τ</text>
+      <text x="6" y="12">X</text><text x="6" y="54">Y</text>
+    </svg>
+    <div class="stats" id="stats"></div>
+  </header>
+</div>
+
+<nav class="views" aria-label="Views">
+  <div class="chiprow" id="viewchips">
+    <button class="vchip" data-view="plan" aria-current="page">Plan</button>
+    <button class="vchip" data-view="queue">Queue<span class="count" id="qcount"></span></button>
+    <button class="vchip" data-view="spec">Spec</button>
+    <button class="vchip" data-view="decisions">Decisions</button>
+    <button class="vchip" data-view="experiments">Experiments</button>
+    <button class="vchip" data-view="map">Map</button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <main id="main"><div class="card empty">Loading the review data…</div></main>
+</div>
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [["$", "$"], ["\\(", "\\)"]], displayMath: [["$$", "$$"], ["\\[", "\\]"]] },
+  svg: { fontCache: "global" },
+  options: { skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code", "select", "option"] },
+  startup: { typeset: false },
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js" async></script>
+<script>
+(() => {
+  "use strict";
+  const STATUSES = ["not started", "reading", "discussed", "done"];
+  const STATUS_CLASS = { "not started": "st-not", reading: "st-reading", discussed: "st-discussed", done: "st-done" };
+  const KINDS = ["question", "concern", "change", "decision", "note"];
+  const WHEN = { now: "next time we talk", checkpoint: "at this phase's checkpoint", later: "when I clear the queue" };
+  const OUTCOMES = ["keep", "change now", "change later", "revisit"];
+  const VIEWS = ["plan", "queue", "spec", "decisions", "experiments", "map"];
+  const DEPTH_SHORT = { statistics: "Stat", algorithms: "Algo", engineering: "Eng", numerics: "Num", api: "API", evidence: "Evid" };
+
+  const S = {
+    data: null, db: null, dbState: "pending", queue: [], progress: {},
+    view: "plan", cell: null, specQuery: "", decQuery: "", decSet: "all", expQuery: "", qFilter: "open",
+    openSteps: new Set(),
+  };
+  const $ = (sel, el = document) => el.querySelector(sel);
+  const main = $("#main");
+
+  // ---------- text rendering ----------
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  function inline(text) {
+    const keep = [];
+    const stash = (html) => `\u0000${keep.push(html) - 1}\u0000`;
+    let s = String(text ?? "");
+    s = s.replace(/\$\$[\s\S]+?\$\$|\$[^$\n]+?\$/g, (m) => stash(esc(m)));
+    s = s.replace(/`([^`]+)`/g, (_, c) => stash(`<code>${esc(c)}</code>`));
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_, t, u) => stash(`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`));
+    s = esc(s);
+    s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    s = s.replace(/(^|[\s(])\*([^*\s][^*]*?)\*(?=[\s).,;:]|$)/g, "$1<em>$2</em>");
+    return s.replace(/\u0000(\d+)\u0000/g, (_, i) => keep[+i]);
+  }
+  function tableCards(lines) {
+    const split = (l) => l.trim().replace(/^\||\|$/g, "").split(/(?<!\\)\|/).map((c) => c.trim().replace(/\\\|/g, "|"));
+    const head = split(lines[0]);
+    const rows = lines.slice(1).filter((l) => !/^\|\s*:?-{2,}/.test(l)).map(split);
+    return `<div class="tablecards">${rows.map((r) => `<div class="trow">${r.map((c, i) => c ? `<div><div class="tk">${inline(head[i] || "")}</div><div class="tv">${inline(c)}</div></div>` : "").join("")}</div>`).join("")}</div>`;
+  }
+  function md(text) {
+    const lines = String(text ?? "").split("\n");
+    const out = [];
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+      if (/^```/.test(line)) {
+        const buf = []; i++;
+        while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]);
+        i++; out.push(`<div class="codebox"><pre>${esc(buf.join("\n"))}</pre></div>`); continue;
+      }
+      if (/^\s*\|/.test(line)) {
+        const buf = [];
+        while (i < lines.length && /^\s*\|/.test(lines[i])) buf.push(lines[i++]);
+        out.push(tableCards(buf)); continue;
+      }
+      if (/^\s*\$\$/.test(line)) {
+        // Display math, on one line or until the line that closes it.
+        const buf = [line]; i++;
+        if ((line.match(/\$\$/g) || []).length < 2) {
+          while (i < lines.length && !/\$\$/.test(lines[i])) buf.push(lines[i++]);
+          if (i < lines.length) buf.push(lines[i++]);
+        }
+        out.push(`<div>${esc(buf.join("\n"))}</div>`); continue;
+      }
+      if (/^#{1,6} /.test(line)) { out.push(`<h4>${inline(line.replace(/^#+ /, ""))}</h4>`); i++; continue; }
+      if (/^\s*[-*] /.test(line) || /^\s*\d+\. /.test(line)) {
+        const ordered = /^\s*\d+\. /.test(line);
+        const items = [];
+        while (i < lines.length && (/^\s*([-*]|\d+\.) /.test(lines[i]) || (/^\s{2,}\S/.test(lines[i]) && items.length))) {
+          if (/^\s*([-*]|\d+\.) /.test(lines[i])) items.push(lines[i].replace(/^\s*([-*]|\d+\.) /, ""));
+          else items[items.length - 1] += " " + lines[i].trim();
+          i++;
+        }
+        out.push(`<${ordered ? "ol" : "ul"}>${items.map((t) => `<li>${inline(t)}</li>`).join("")}</${ordered ? "ol" : "ul"}>`); continue;
+      }
+      if (!line.trim()) { i++; continue; }
+      const buf = [];
+      while (i < lines.length && lines[i].trim() && !/^(```|\s*\||#{1,6} |\s*[-*] |\s*\d+\. |\s*\$\$)/.test(lines[i])) buf.push(lines[i++]);
+      if (buf.length) out.push(`<p>${inline(buf.join(" "))}</p>`); else i++;
+    }
+    return out.join("");
+  }
+  function typeset(el) {
+    const mj = window.MathJax;
+    if (mj && mj.typesetPromise) mj.typesetPromise([el]).catch(() => {});
+  }
+
+  // ---------- data helpers ----------
+  const allSteps = () => S.data.phases.flatMap((p) => p.steps.map((s) => ({ ...s, phase: p.id })));
+  const stepById = (id) => allSteps().find((s) => s.id === id);
+  const decisionById = (id) => typeof id === "number" ? S.data.decisions.find((d) => d.id === id) : S.data.specDecisions.find((d) => d.id === id);
+  const decLabel = (id) => typeof id === "number" ? `#${id}` : id;
+  const stepStatus = (id) => (S.progress[id] && S.progress[id].status) || "not started";
+  const stepLevel = (step) => (S.progress[step.id] && S.progress[step.id].level) || step.level;
+  const qForStep = (id) => S.queue.filter((q) => q.step === id);
+  const openQ = () => S.queue.filter((q) => q.status !== "settled");
+  function stepsCitingDecision(id) { return allSteps().filter((s) => (s.decisions || []).some((d) => d === id)).map((s) => s.id); }
+  function decisionsCitingSection(num) {
+    const pat = new RegExp(`(§|section )${num.replace(".", "\\.")}(?![\\d.])`);
+    return S.data.decisions.filter((d) => pat.test(`${d.decision} ${d.reason}`)).map((d) => d.id);
+  }
+  function stepsForSection(num) { return allSteps().filter((s) => (s.spec || []).includes(num)).map((s) => s.id); }
+  const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" }); } catch { return ""; } };
+
+  // ---------- header ----------
+  function renderStats() {
+    const steps = allSteps();
+    const done = steps.filter((s) => stepStatus(s.id) === "done").length;
+    const open = openQ().length;
+    const answered = S.queue.filter((q) => q.status === "answered").length;
+    const settled = S.queue.filter((q) => q.status === "settled").length;
+    const m = S.data.meta;
+    $("#eyebrow").textContent = `telescopic v0.1 draft · ${m.branch} @ ${m.short} · ${m.src_lines.toLocaleString()} lines of package code`;
+    $("#stats").innerHTML = [
+      `<span class="stat"><b>${done}</b> of <b>${steps.length}</b> steps reviewed</span>`,
+      `<span class="stat"><b>${open}</b> in the queue${answered ? `, <b>${answered}</b> answered` : ""}</span>`,
+      `<span class="stat"><b>${settled}</b> settled</span>`,
+      S.dbState === "off" ? `<span class="stat">Logging unavailable in this view</span>` : "",
+    ].join("");
+    $("#qcount").textContent = open ? ` ${open}` : "";
+  }
+
+  // ---------- plan ----------
+  function levelDepthGrid() {
+    const depths = Object.keys(S.data.depths);
+    const steps = allSteps();
+    let html = `<div class="ldgrid" role="grid" aria-label="Steps by level and depth"><div></div>${depths.map((d) => `<div class="hd" title="${esc(S.data.depths[d])}">${DEPTH_SHORT[d] || d}</div>`).join("")}`;
+    for (const lvl of ["L1", "L2", "L3"]) {
+      html += `<div class="rh">${lvl}</div>`;
+      for (const d of depths) {
+        const n = steps.filter((s) => stepLevel(s) === lvl && (s.depth || []).includes(d)).length;
+        const on = S.cell && S.cell[0] === lvl && S.cell[1] === d;
+        html += `<button class="cell${on ? " on" : ""}" data-cell="${lvl}|${d}" data-n="${n}" aria-label="${lvl} ${esc(S.data.depths[d])}: ${n} steps"${n ? "" : " disabled"}>${n || "·"}</button>`;
+      }
+    }
+    return html + `</div>`;
+  }
+  function matchesCell(step) { return !S.cell || (stepLevel(step) === S.cell[0] && (step.depth || []).includes(S.cell[1])); }
+
+  function renderPlan() {
+    const d = S.data;
+    let html = `<section class="card grid-intro">
+      <div class="howto"><h3>How this works</h3><ol>
+        <li>Pick an entry point: work down the phases, or tap a cell to see the steps at one level and depth.</li>
+        <li>Open a step. Read what it points to: spec sections, code excerpts, decisions, experiments.</li>
+        <li>Log anything: a question, a concern, a change you want, a decision. Say when you want it handled.</li>
+        <li>Mark the step's status as you go. At a phase's checkpoint, or whenever you say "clear the queue" in our session, I answer each open item here and record what we settle in <code>notes/review/</code>.</li>
+      </ol></div>
+      <div><h4>Steps by level (rows) and depth (columns)</h4>${levelDepthGrid()}</div>
+      <div class="filterline">${S.cell ? `Showing ${esc(S.cell[0])} · ${esc(d.depths[S.cell[1]])} <button class="linkbtn" data-clearcell>Show every step</button>` : `Levels: ${Object.entries(d.levels).map(([k, v]) => `<span><span class="chip lvl ${k}">${k}</span> ${esc(v)}</span>`).join(" ")}`}</div>
+    </section>`;
+    for (const p of d.phases) {
+      const steps = p.steps.filter(matchesCell);
+      if (!steps.length) continue;
+      const done = p.steps.filter((s) => stepStatus(s.id) === "done").length;
+      html += `<section class="phase" aria-labelledby="ph${p.id}"><div class="phase-head"><span class="pnum">Phase ${p.id} · ${done}/${p.steps.length} reviewed</span><h2 id="ph${p.id}">${esc(p.title)}</h2><span class="intent">${esc(p.intent)}</span></div>`;
+      html += steps.map(stepCard).join("");
+      html += checkpointCard(p);
+      html += `</section>`;
+    }
+    main.innerHTML = html;
+    for (const id of S.openSteps) { const el = document.getElementById(`step-${id}`); if (el) { el.open = true; fillStep(el); } }
+  }
+  function stepCard(s) {
+    const st = stepStatus(s.id);
+    const nq = qForStep(s.id).filter((q) => q.status !== "settled").length;
+    const lvl = stepLevel(s);
+    return `<details class="step" id="step-${esc(s.id)}" data-step="${esc(s.id)}"><summary>
+      <div class="srow"><span class="sid">${esc(s.id)}</span><span class="stitle">${esc(s.title)}</span></div>
+      <div class="smeta"><span class="chip lvl ${lvl}">${lvl}</span>${(s.depth || []).map((dp) => `<span class="chip depth">${esc(S.data.depths[dp])}</span>`).join("")}<span class="pill ${STATUS_CLASS[st]}">${esc(st)}</span>${nq ? `<span class="qbadge">${nq} queued</span>` : ""}</div>
+    </summary><div class="sbody"></div></details>`;
+  }
+  function checkpointCard(p) {
+    const items = S.queue.filter((q) => q.when === "checkpoint" && q.status !== "settled" && p.steps.some((s) => s.id === q.step));
+    return `<div class="checkpoint"><span class="cph">Checkpoint · end of phase ${p.id}</span>
+      <div>${items.length ? `<b class="num">${items.length}</b> item${items.length > 1 ? "s" : ""} wait for this checkpoint. When you reach it, ask me to clear the phase ${p.id} queue.` : "Nothing is waiting for this checkpoint."}</div>
+      ${items.length ? `<button class="linkbtn" data-goqueue="${p.id}">See them in the queue</button>` : ""}</div>`;
+  }
+  function readGroup(label, items) { return items ? `<div class="readgroup"><span class="lab">${label}</span>${items}</div>` : ""; }
+  function fillStep(el) {
+    const s = stepById(el.dataset.step);
+    const body = $(".sbody", el);
+    const spec = (s.spec || []).map((n) => {
+      const sec = S.data.spec.find((x) => x.num === n);
+      return `<button class="chip" data-gospec="${esc(n)}">§${esc(n)}${sec ? ` ${esc(sec.title.replace(/\s*\(.*\)$/, ""))}` : ""}</button>`;
+    }).join("");
+    const theory = (s.theory || []).map((t) => {
+      const sec = S.data.theory.find((x) => x.title === t);
+      return sec ? `<details class="sub"><summary><span>Theory: ${esc(t)}</span></summary><div class="inner prose">${md(sec.text)}</div></details>` : "";
+    }).join("");
+    const code = (s.code || []).map((c) => `<details class="sub"><summary><span class="mono">${esc(c.name || c.path.split("/").pop())}</span><span class="muted">${esc(c.path)}:${c.line}</span></summary><div class="inner"><div class="codebox"><pre>${esc(c.source)}${c.truncated ? "\n…" : ""}</pre></div><a href="${esc(c.url)}" target="_blank" rel="noopener">Open lines ${c.line} to ${c.end} on GitHub</a></div></details>`).join("");
+    const links = (arr) => arr && arr.length ? `<div class="chips">${arr.map((x) => `<a class="chip" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.path)}</a>`).join("")}</div>` : "";
+    const decs = (s.decisions || []).map((id) => {
+      const dd = decisionById(id);
+      if (!dd) return "";
+      return `<details class="sub"><summary><span class="mono">${esc(decLabel(id))}</span><span>${esc(dd.topic || dd.decision.slice(0, 70))}</span></summary><div class="inner prose">${md(dd.decision)}<h4>Why</h4>${md(dd.reason)}${dd.alternatives ? `<h4>Alternatives</h4>${md(dd.alternatives)}` : ""}${dd.outcome ? `<p class="muted">Outcome: ${inline(dd.outcome)}</p>` : ""}</div></details>`;
+    }).join("");
+    const exps = (s.experiments || []).map((n) => `<button class="chip" data-goexp="${esc(n)}">${esc(n)}</button>`).join("");
+    const reviews = (s.reviews || []).map((n) => { const r = S.data.reviews.find((x) => x.name === n); return r ? `<a class="chip" href="${esc(r.url)}" target="_blank" rel="noopener">${esc(n)}</a>` : ""; }).join("");
+    const audit = (S.data.audit || []).filter((f) => (f.steps || []).includes(s.id));
+    const auditHtml = audit.length ? `<div><h4>Second audit</h4><div class="auditlist">${audit.map((f) => `<div class="finding sev-${esc(f.severity || "low")}"><div class="rowhead"><span class="key">${esc(f.id)}</span><b>${esc(f.title)}</b><span class="pill">${esc(f.status)}</span></div><div class="prose">${md(f.summary)}</div>${f.resolution ? `<div class="muted prose">${md(f.resolution)}</div>` : ""}</div>`).join("")}</div></div>` : "";
+    const st = stepStatus(s.id);
+    const lvl = stepLevel(s);
+    const disabled = S.dbState !== "on" ? " disabled" : "";
+    body.innerHTML = `
+      <div class="prose">${md(s.summary)}</div>
+      <div class="reads"><h4>Read</h4>
+        ${readGroup("Spec", spec ? `<div class="chips">${spec}</div>` : "")}
+        ${readGroup("Theory page", theory)}
+        ${readGroup("Code", code)}
+        ${readGroup("Tests", links(s.tests))}
+        ${readGroup("Docs and notes", links(s.docs))}
+        ${readGroup("Decisions", decs)}
+        ${readGroup("Experiments", exps ? `<div class="chips">${exps}</div>` : "")}
+        ${readGroup("Review records", reviews ? `<div class="chips">${reviews}</div>` : "")}
+      </div>
+      <div><h4>Worth challenging</h4><ol class="challenge">${(s.challenge || []).map((c, i) => `<li>${inline(c)} <button class="linkbtn log1" data-prefill="${esc(s.id)}|${i}"${disabled}>Log this</button></li>`).join("")}</ol></div>
+      ${auditHtml}
+      <div class="notes"><h4>Your review of ${esc(s.id)}</h4>
+        <div class="controls">
+          <label for="st-${esc(s.id)}">Status <select id="st-${esc(s.id)}" data-setstatus="${esc(s.id)}"${disabled}>${STATUSES.map((x) => `<option${x === st ? " selected" : ""}>${x}</option>`).join("")}</select></label>
+          <label for="lv-${esc(s.id)}">Level <select id="lv-${esc(s.id)}" data-setlevel="${esc(s.id)}"${disabled}>${["L1", "L2", "L3"].map((x) => `<option${x === lvl ? " selected" : ""}>${x}</option>`).join("")}</select></label>
+        </div>
+        <div class="qlist" data-qlist="${esc(s.id)}">${qItems(qForStep(s.id), false)}</div>
+        ${qForm(s.id)}
+      </div>`;
+    typeset(body);
+  }
+  function qForm(stepId) {
+    const dis = S.dbState !== "on" ? " disabled" : "";
+    const id = stepId.replace(/[^\w-]/g, "_");
+    return `<form class="qform" data-qform="${esc(stepId)}">
+      <div class="row">
+        <label for="k-${id}">Kind <select id="k-${id}" name="kind"${dis}>${KINDS.map((k) => `<option>${k}</option>`).join("")}</select></label>
+        <label for="w-${id}">Handle it <select id="w-${id}" name="when"${dis}>${Object.entries(WHEN).map(([k, v]) => `<option value="${k}"${k === "checkpoint" ? " selected" : ""}>${v}</option>`).join("")}</select></label>
+      </div>
+      <label for="t-${id}">Your note<textarea id="t-${id}" name="text" placeholder="What do you want to ask, change or decide?"${dis}></textarea></label>
+      <div class="row"><button class="btn" type="submit"${dis}>Add to the queue</button><span class="toast" aria-live="polite"></span></div>
+      ${S.dbState === "off" ? `<span class="muted">The shared log is unavailable in this view, so notes cannot be saved here.</span>` : ""}
+    </form>`;
+  }
+  function qItems(items, showStep) {
+    if (!items.length) return showStep ? `<div class="empty">Nothing here.</div>` : "";
+    return items.map((q) => {
+      const st = stepById(q.step);
+      const dis = S.dbState !== "on" ? " disabled" : "";
+      return `<article class="qitem" data-q="${esc(q._id)}">
+        <div class="qhead"><span class="kind k-${esc(q.kind)}">${esc(q.kind)}</span>${showStep && st ? `<button class="chip" data-gostep="${esc(q.step)}">${esc(q.step)} ${esc(st.title)}</button>` : ""}<span class="pill ${q.status === "settled" ? "st-done" : q.status === "answered" ? "st-discussed" : "st-reading"}">${esc(q.status)}${q.outcome ? `: ${esc(q.outcome)}` : ""}</span><span class="muted">${esc(WHEN[q.when] || "")}${q.createdAt ? ` · ${fmtDate(q.createdAt)}` : ""}</span></div>
+        <div class="qtext">${esc(q.text)}</div>
+        ${q.response ? `<div class="answer"><div class="who">Claude${q.respondedAt ? ` · ${fmtDate(q.respondedAt)}` : ""}${q.proposed ? ` · proposes: ${esc(q.proposed)}` : ""}</div><div class="prose">${md(q.response)}</div></div>` : ""}
+        <div class="qactions">
+          ${q.status !== "settled" ? `<label for="o-${esc(q._id)}" class="muted">Settle as</label><select id="o-${esc(q._id)}" data-outcome="${esc(q._id)}"${dis}><option value="">choose…</option>${OUTCOMES.map((o) => `<option${o === q.proposed ? " selected" : ""}>${o}</option>`).join("")}</select><button class="btn ghost" data-settle="${esc(q._id)}"${dis}>Settle</button>` : `<button class="btn ghost" data-reopen="${esc(q._id)}"${dis}>Reopen</button>`}
+          <button class="btn warn" data-del="${esc(q._id)}"${dis}>Delete</button>
+          <span class="toast" aria-live="polite"></span>
+        </div>
+      </article>`;
+    }).join("");
+  }
+
+  // ---------- queue view ----------
+  function renderQueue() {
+    const counts = { open: S.queue.filter((q) => q.status === "open").length, answered: S.queue.filter((q) => q.status === "answered").length, settled: S.queue.filter((q) => q.status === "settled").length, all: S.queue.length };
+    const order = allSteps().map((s) => s.id);
+    let items = S.queue.filter((q) => S.qFilter === "all" || q.status === S.qFilter);
+    if (S.qPhase) items = items.filter((q) => { const st = stepById(q.step); return st && st.phase === S.qPhase; });
+    items.sort((a, b) => order.indexOf(a.step) - order.indexOf(b.step) || String(a.createdAt).localeCompare(String(b.createdAt)));
+    main.innerHTML = `<section class="card toolbar"><h2>The queue</h2>
+      <p class="muted">Everything you have logged, step by step. Open items wait for me; answered ones have my reply and a proposed outcome for you to settle. Say "clear the queue" in our session (or "clear the phase 3 queue") and I work through the open items.</p>
+      <div class="chips" role="group" aria-label="Filter by status">${["open", "answered", "settled", "all"].map((f) => `<button class="chip${S.qFilter === f ? " on" : ""}" data-qfilter="${f}">${f} <span class="num">${counts[f]}</span></button>`).join("")}</div>
+      <div class="chips" role="group" aria-label="Filter by phase"><button class="chip${!S.qPhase ? " on" : ""}" data-qphase="0">every phase</button>${S.data.phases.map((p) => `<button class="chip${S.qPhase === p.id ? " on" : ""}" data-qphase="${p.id}">phase ${p.id}</button>`).join("")}</div>
+    </section>
+    <section class="list">${S.dbState === "pending" ? `<div class="empty">Connecting to the shared log…</div>` : S.dbState === "off" ? `<div class="card empty">The shared log is unavailable in this view.</div>` : qItems(items, true) || `<div class="empty">Nothing here yet. Open a step in the Plan and add a note.</div>`}</section>`;
+    typeset(main);
+  }
+
+  // ---------- spec view ----------
+  function renderSpec() {
+    const q = S.specQuery.toLowerCase();
+    const secs = S.data.spec.filter((s) => !q || `${s.num} ${s.title} ${s.text} ${s.requirements.join(" ")}`.toLowerCase().includes(q));
+    main.innerHTML = `<section class="card toolbar"><h2>Against the spec</h2>
+      <p class="muted">Each section of <code>docs/design/spec.md</code> with its requirement IDs, the review steps that cover it, and the decisions that changed or refined it after it was written.</p>
+      <label for="specq" class="muted">Search the spec</label><input type="search" id="specq" value="${esc(S.specQuery)}" placeholder="a word, a section number or a requirement ID">
+    </section><section class="list">${secs.map((s) => {
+      const steps = stepsForSection(s.num);
+      const decs = /^\d/.test(s.num) ? decisionsCitingSection(s.num) : [];
+      return `<article class="card" id="spec-${esc(s.num)}"><div class="rowhead"><span class="key">§${esc(s.num)}</span><h3>${esc(s.title)}</h3></div>
+        ${s.requirements.length ? `<div class="chips">${s.requirements.map((r) => `<span class="chip mono">${esc(r)}</span>`).join("")}</div>` : ""}
+        ${steps.length ? `<div class="readgroup"><span class="lab">Review steps</span><div class="chips">${steps.map((id) => `<button class="chip" data-gostep="${esc(id)}">${esc(id)} ${esc(stepById(id).title)}</button>`).join("")}</div></div>` : ""}
+        ${decs.length ? `<div class="readgroup"><span class="lab">Decisions that cite it</span><div class="chips">${decs.map((id) => `<button class="chip" data-godec="${id}">#${id} ${esc(decisionById(id).topic)}</button>`).join("")}</div></div>` : ""}
+        ${s.text ? `<details class="sub"><summary>Read the section</summary><div class="inner prose" data-lazy="spec:${esc(s.num)}"></div></details>` : ""}
+      </article>`;
+    }).join("") || `<div class="empty">No section matches.</div>`}</section>`;
+  }
+
+  // ---------- decisions view ----------
+  function renderDecisions() {
+    const q = S.decQuery.toLowerCase();
+    const rows = [];
+    if (S.decSet !== "spec") rows.push(...S.data.decisions.map((d) => ({ ...d, key: `#${d.id}`, ref: d.id })));
+    if (S.decSet !== "notes") rows.push(...S.data.specDecisions.map((d) => ({ ...d, key: d.id, ref: d.id, topic: "", outcome: "spec §13" })));
+    const shown = rows.filter((d) => !q || `${d.key} ${d.topic} ${d.decision} ${d.reason} ${d.alternatives} ${d.outcome}`.toLowerCase().includes(q));
+    main.innerHTML = `<section class="card toolbar"><h2>Decisions</h2>
+      <p class="muted">Every choice another developer could have made differently: 27 taken while writing the spec (D-1 to D-27) and ${S.data.decisions.length} recorded since in <code>notes/DECISIONS.md</code>, each with its reason and alternatives.</p>
+      <div class="chips" role="group" aria-label="Which decisions">${[["all", "all"], ["notes", "DECISIONS.md"], ["spec", "spec D-1 to D-27"]].map(([k, v]) => `<button class="chip${S.decSet === k ? " on" : ""}" data-decset="${k}">${v}</button>`).join("")}</div>
+      <label for="decq" class="muted">Search</label><input type="search" id="decq" value="${esc(S.decQuery)}" placeholder="a topic, a word, an outcome such as changed">
+    </section><section class="list">${shown.map((d) => {
+      const steps = stepsCitingDecision(d.ref);
+      const exps = S.data.experiments.filter((e) => e.decisions.includes(d.ref)).map((e) => e.name);
+      return `<article class="card" id="dec-${esc(String(d.ref))}"><div class="rowhead"><span class="key">${esc(d.key)}</span>${d.topic ? `<h3>${esc(d.topic)}</h3>` : ""}<span class="pill ${/changed/.test(d.outcome) ? "st-reading" : "st-not"}">${esc(d.outcome)}</span></div>
+        <div class="prose">${md(d.decision)}</div>
+        <details class="sub"><summary>Why, and the alternatives</summary><div class="inner prose"><h4>Why</h4>${md(d.reason)}${d.alternatives ? `<h4>Alternatives</h4>${md(d.alternatives)}` : ""}</div></details>
+        ${steps.length || exps.length ? `<div class="chips">${steps.map((id) => `<button class="chip" data-gostep="${esc(id)}">step ${esc(id)}</button>`).join("")}${exps.map((n) => `<button class="chip" data-goexp="${esc(n)}">${esc(n)}</button>`).join("")}</div>` : ""}
+      </article>`;
+    }).join("") || `<div class="empty">No decision matches.</div>`}</section>`;
+    typeset(main);
+  }
+
+  // ---------- experiments view ----------
+  function renderExperiments() {
+    const q = S.expQuery.toLowerCase();
+    const exps = S.data.experiments.filter((e) => !q || `${e.name} ${e.doc}`.toLowerCase().includes(q));
+    main.innerHTML = `<section class="card toolbar"><h2>Experiments</h2>
+      <p class="muted">The measurements behind the decisions: each script in <code>notes/experiments/</code>, its setup, its recorded output, and the decisions and steps that rely on it.</p>
+      <label for="expq" class="muted">Search</label><input type="search" id="expq" value="${esc(S.expQuery)}" placeholder="a name or a word of the setup">
+    </section><section class="list">${exps.map((e) => `<article class="card" id="exp-${esc(e.name)}">
+        <div class="rowhead"><span class="key">${esc(e.name)}</span><a href="${esc(e.url)}" target="_blank" rel="noopener">script</a></div>
+        <div class="chips">${e.steps.map((id) => `<button class="chip" data-gostep="${esc(id)}">step ${esc(id)}</button>`).join("")}${e.decisions.map((id) => `<button class="chip" data-godec="${id}">#${id}</button>`).join("")}</div>
+        <details class="sub"><summary>Setup</summary><div class="inner"><div class="outbox"><pre>${esc(e.doc || "No docstring.")}</pre></div></div></details>
+        ${e.outputs.map((o) => `<details class="sub"><summary>Output: <span class="mono">${esc(o.name)}</span></summary><div class="inner"><div class="outbox"><pre>${esc(o.text)}${o.truncated ? "\n…" : ""}</pre></div><a href="${esc(o.url)}" target="_blank" rel="noopener">Full output on GitHub</a></div></details>`).join("") || `<span class="muted">No recorded output.</span>`}
+      </article>`).join("") || `<div class="empty">No experiment matches.</div>`}</section>`;
+  }
+
+  // ---------- map view ----------
+  function renderMap() {
+    const d = S.data;
+    const mods = d.modules;
+    main.innerHTML = `<section class="card"><h2>The map</h2>
+      <p class="muted">The package in three layers, and how one call to <code>sample()</code> travels through it.</p>
+      <div class="layers">
+        <div class="layer"><span class="lname">Layer A · entry points</span><span><code>telescopic.sample</code>, <code>CoupledSampler</code></span></div>
+        <div class="layer"><span class="lname">Layer B · machinery</span><span><code>tuning</code> (pilots, k), <code>engine</code> (lanes, meetings, atoms), <code>_parallel</code> (pools), <code>results</code> and <code>diagnostics</code></span></div>
+        <div class="layer"><span class="lname">Layer C · building blocks</span><span><code>kernels</code>, <code>couplings</code>, <code>estimators</code>, <code>measure</code>, <code>_random</code> (streams), <code>Target</code>, <code>initial</code></span></div>
+      </div>
+      <h4 style="margin-top:14px">One call to sample()</h4>
+      <div class="flow">
+        <div><span class="arrow">1 →</span><span>Wrap the log-density in a <code>Target</code>; draw a first point to fix the dimension.</span></div>
+        <div><span class="arrow">2 →</span><span>Tune the kernel on four pooled adaptive Metropolis chains, then freeze it.</span></div>
+        <div><span class="arrow">3 →</span><span>Run 100 lag-1 pilot pairs; k is the 99% quantile of τ − 1, lag k, m = 10k.</span></div>
+        <div><span class="arrow">4 →</span><span>Run R replicates in lockstep lanes (in process or on a pool): pairs move until they meet, each leaving weighted atoms.</span></div>
+        <div><span class="arrow">5 →</span><span>Wrap the replicates in a <code>Result</code>: estimates, error bars, bounds, warnings.</span></div>
+      </div>
+    </section>
+    <section class="list"><h3>Modules</h3>${mods.map((m) => `<article class="card"><div class="rowhead"><a class="key" href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.path.replace("src/telescopic/", ""))}</a><span class="muted num">${m.lines} lines</span></div>
+      ${m.doc ? `<div>${inline(m.doc)}</div>` : ""}
+      ${m.public.length ? `<div class="muted" style="font-size:.85rem">Public: ${m.public.map((p) => `<code>${esc(p)}</code>`).join(" ")}</div>` : ""}
+      ${m.requirements.length || m.test ? `<div class="chips">${m.requirements.map((r) => `<span class="chip mono">${esc(r)}</span>`).join("")}${m.test ? `<span class="chip">${esc(m.test)}</span>` : ""}</div>` : ""}
+    </article>`).join("")}</section>
+    <section class="card"><h3>Review records</h3><div class="chips" style="margin-top:8px">${d.reviews.map((r) => `<a class="chip" href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)}</a>`).join("")}</div>
+      <p class="muted" style="margin-top:10px">Built from commit <a href="${esc(d.meta.repo)}/tree/${esc(d.meta.sha)}" target="_blank" rel="noopener">${esc(d.meta.short)}</a> of ${esc(d.meta.branch)} (${esc(d.meta.date)}): ${d.meta.src_lines.toLocaleString()} lines of package code, ${d.meta.test_functions} test functions.</p></section>`;
+  }
+
+  // ---------- routing ----------
+  function render() {
+    for (const b of document.querySelectorAll(".vchip")) b.setAttribute("aria-current", b.dataset.view === S.view ? "page" : "false");
+    renderStats();
+    ({ plan: renderPlan, queue: renderQueue, spec: renderSpec, decisions: renderDecisions, experiments: renderExperiments, map: renderMap })[S.view]();
+  }
+  function go(view, then) {
+    S.view = view;
+    try { history.replaceState(null, "", `#${view}`); } catch {}
+    render();
+    window.scrollTo({ top: 0 });
+    if (then) requestAnimationFrame(then);
+  }
+  function openStep(id) {
+    S.cell = null;
+    S.openSteps.add(id);
+    go("plan", () => { const el = document.getElementById(`step-${id}`); if (el) el.scrollIntoView({ block: "start" }); });
+  }
+  function rerenderKeepingScroll() {
+    const y = window.scrollY;
+    if (S.view === "plan") {
+      // Refresh open steps' notes and the step summaries without closing anything.
+      for (const el of document.querySelectorAll("details.step")) {
+        const id = el.dataset.step;
+        const st = stepStatus(id), nq = qForStep(id).filter((q) => q.status !== "settled").length;
+        const meta = $(".smeta", el);
+        const s = stepById(id), lvl = stepLevel(s);
+        meta.innerHTML = `<span class="chip lvl ${lvl}">${lvl}</span>${(s.depth || []).map((dp) => `<span class="chip depth">${esc(S.data.depths[dp])}</span>`).join("")}<span class="pill ${STATUS_CLASS[st]}">${esc(st)}</span>${nq ? `<span class="qbadge">${nq} queued</span>` : ""}`;
+        const list = el.querySelector(`[data-qlist]`);
+        if (list) { list.innerHTML = qItems(qForStep(id), false); typeset(list); }
+      }
+      for (const cp of document.querySelectorAll(".checkpoint")) {
+        const pid = +cp.parentElement.getAttribute("aria-labelledby").slice(2);
+        const p = S.data.phases.find((x) => x.id === pid);
+        cp.outerHTML = checkpointCard(p);
+      }
+      renderStats();
+    } else if (S.view === "queue") { renderStats(); renderQueue(); window.scrollTo({ top: y }); }
+    else renderStats();
+  }
+
+  // ---------- writes ----------
+  const nowIso = () => new Date().toISOString();
+  async function write(fn, toastEl) {
+    try { await fn(); if (toastEl) { toastEl.textContent = "Saved"; setTimeout(() => (toastEl.textContent = ""), 1800); } }
+    catch (e) {
+      const code = e && e.code;
+      if (toastEl) toastEl.textContent = code === "invalid_argument" ? "This view cannot write to the log." : code === "quota_exceeded" ? "The log is full: delete settled items first." : "Not saved; try again in a moment.";
+      if (code === "invalid_argument") { S.dbState = "readonly"; }
+    }
+  }
+  async function setProgress(id, patch, toastEl) {
+    const cur = S.progress[id] || {};
+    const next = { status: cur.status || "not started", level: cur.level || stepById(id).level, ...patch, updatedAt: nowIso() };
+    S.progress[id] = next;
+    await write(() => S.db.doc(`progress/${id}`).set(next), toastEl);
+  }
+
+  // ---------- events ----------
+  document.addEventListener("click", (ev) => {
+    const t = ev.target.closest("button, [data-cell]");
+    if (!t) return;
+    const ds = t.dataset;
+    if (ds.view) { go(ds.view); return; }
+    if (ds.cell) { const [l, d] = ds.cell.split("|"); S.cell = S.cell && S.cell[0] === l && S.cell[1] === d ? null : [l, d]; renderPlan(); return; }
+    if ("clearcell" in ds) { S.cell = null; renderPlan(); return; }
+    if (ds.gostep) { openStep(ds.gostep); return; }
+    if (ds.gospec) { S.specQuery = ""; go("spec", () => { const el = document.getElementById(`spec-${ds.gospec}`); if (el) { el.scrollIntoView({ block: "start" }); const det = el.querySelector("details"); if (det) { det.open = true; fillLazy(det); } } }); return; }
+    if (ds.godec) { S.decQuery = ""; S.decSet = "all"; go("decisions", () => { const el = document.getElementById(`dec-${ds.godec}`); if (el) el.scrollIntoView({ block: "start" }); }); return; }
+    if (ds.goexp) { S.expQuery = ""; go("experiments", () => { const el = document.getElementById(`exp-${ds.goexp}`); if (el) el.scrollIntoView({ block: "start" }); }); return; }
+    if (ds.goqueue) { S.qFilter = "open"; S.qPhase = +ds.goqueue; go("queue"); return; }
+    if (ds.qfilter) { S.qFilter = ds.qfilter; renderQueue(); return; }
+    if (ds.qphase !== undefined) { S.qPhase = +ds.qphase || null; renderQueue(); return; }
+    if (ds.decset) { S.decSet = ds.decset; renderDecisions(); return; }
+    if (ds.prefill) {
+      const [id, i] = ds.prefill.split("|");
+      const form = document.querySelector(`form[data-qform="${CSS.escape(id)}"]`);
+      if (form) { form.elements.kind.value = "question"; form.elements.text.value = stepById(id).challenge[+i]; form.elements.text.focus(); }
+      return;
+    }
+    const toastEl = t.parentElement && t.parentElement.querySelector(".toast");
+    if (ds.settle) {
+      const sel = document.getElementById(`o-${ds.settle}`);
+      if (!sel || !sel.value) { if (toastEl) toastEl.textContent = "Choose an outcome first."; return; }
+      write(() => S.db.doc(`queue/${ds.settle}`).update({ status: "settled", outcome: sel.value, settledAt: nowIso(), updatedAt: nowIso() }), toastEl);
+      return;
+    }
+    if (ds.reopen) { write(() => S.db.doc(`queue/${ds.reopen}`).update({ status: "open", outcome: "", updatedAt: nowIso() }), toastEl); return; }
+    if (ds.del) {
+      if (t.dataset.armed) { write(() => S.db.doc(`queue/${ds.del}`).delete(), toastEl); return; }
+      t.dataset.armed = "1"; t.textContent = "Tap again to delete";
+      setTimeout(() => { if (t.isConnected) { delete t.dataset.armed; t.textContent = "Delete"; } }, 3000);
+    }
+  });
+  document.addEventListener("toggle", (ev) => {
+    const el = ev.target;
+    if (!(el instanceof HTMLDetailsElement)) return;
+    if (el.classList.contains("step")) {
+      if (el.open) { S.openSteps.add(el.dataset.step); if (!$(".sbody", el).childElementCount) fillStep(el); }
+      else S.openSteps.delete(el.dataset.step);
+    } else if (el.open) fillLazy(el);
+  }, true);
+  function fillLazy(det) {
+    const box = det.querySelector("[data-lazy]");
+    if (!box || box.childElementCount) return;
+    const [kind, key] = box.dataset.lazy.split(":");
+    if (kind === "spec") { const s = S.data.spec.find((x) => x.num === key); box.innerHTML = md(s.text); typeset(box); }
+  }
+  document.addEventListener("change", (ev) => {
+    const t = ev.target;
+    const toastEl = t.closest(".notes") && t.closest(".notes").querySelector("form .toast");
+    if (t.dataset.setstatus) setProgress(t.dataset.setstatus, { status: t.value }, toastEl);
+    if (t.dataset.setlevel) setProgress(t.dataset.setlevel, { level: t.value }, toastEl);
+  });
+  document.addEventListener("input", (ev) => {
+    const t = ev.target;
+    const debounce = (key, fn) => { clearTimeout(S[key]); S[key] = setTimeout(fn, 180); };
+    if (t.id === "specq") debounce("_sq", () => { S.specQuery = t.value; renderSpec(); const el = $("#specq"); el.focus(); el.setSelectionRange(el.value.length, el.value.length); });
+    if (t.id === "decq") debounce("_dq", () => { S.decQuery = t.value; renderDecisions(); const el = $("#decq"); el.focus(); el.setSelectionRange(el.value.length, el.value.length); });
+    if (t.id === "expq") debounce("_eq", () => { S.expQuery = t.value; renderExperiments(); const el = $("#expq"); el.focus(); el.setSelectionRange(el.value.length, el.value.length); });
+  });
+  document.addEventListener("submit", (ev) => {
+    const form = ev.target.closest("form[data-qform]");
+    if (!form) return;
+    ev.preventDefault();
+    const text = form.elements.text.value.trim();
+    const toastEl = form.querySelector(".toast");
+    if (!text) { toastEl.textContent = "Write a note first."; return; }
+    if (S.dbState !== "on") { toastEl.textContent = "The shared log is unavailable here."; return; }
+    const item = { step: form.dataset.qform, kind: form.elements.kind.value, when: form.elements.when.value, text, status: "open", outcome: "", response: "", createdAt: nowIso(), updatedAt: nowIso() };
+    write(async () => { await S.db.collection("queue").add(item); form.elements.text.value = ""; }, toastEl);
+  });
+  window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (VIEWS.includes(v) && v !== S.view) go(v); });
+
+  // ---------- start ----------
+  async function startDb() {
+    let db = null;
+    try { db = window.claude && window.claude.use ? await window.claude.use("db") : null; } catch { db = null; }
+    if (!db) { S.dbState = "off"; rerenderAll(); return; }
+    S.db = db; S.dbState = "on";
+    db.collection("queue").onSnapshot((snap) => {
+      S.queue = snap.docs.map((d) => ({ _id: d.id, ...d.data() }));
+      rerenderKeepingScroll();
+    }, () => { S.dbState = "off"; rerenderAll(); });
+    db.collection("progress").onSnapshot((snap) => {
+      const next = {};
+      for (const d of snap.docs) next[d.id] = d.data();
+      S.progress = next;
+      rerenderKeepingScroll();
+    }, () => {});
+    rerenderAll();
+  }
+  function rerenderAll() { if (!S.data) return; const open = [...document.querySelectorAll("details.step[open]")].map((e) => e.dataset.step); open.forEach((id) => S.openSteps.add(id)); render(); }
+  async function start() {
+    try {
+      const res = await fetch("review-data.json");
+      if (!res.ok) throw new Error(String(res.status));
+      S.data = await res.json();
+    } catch (e) {
+      main.innerHTML = `<div class="card">The review data did not load. Reload the page; if it persists, ask me to republish it.</div>`;
+      return;
+    }
+    const h = location.hash.slice(1);
+    if (VIEWS.includes(h)) S.view = h;
+    render();
+    startDb();
+    // MathJax loads asynchronously; typeset what is on screen once it is ready.
+    let tries = 0;
+    const whenMath = () => {
+      const mj = window.MathJax;
+      if (mj && mj.startup && mj.startup.promise) mj.startup.promise.then(() => typeset(main));
+      else if (tries++ < 60) setTimeout(whenMath, 250);
+    };
+    whenMath();
+  }
+  start();
+})();
+</script>
