@@ -98,10 +98,9 @@ versions; generator algorithms, SciPy's samplers and BLAS builds can change betw
 versions and machines. A vectorised log-density can differ in the last bits between batch
 layouts, so there the agreement is statistical. So can functions of your own that call
 multithreaded BLAS or LAPACK, such as a SciPy multivariate normal of 200 dimensions as
-the initial distribution: workers run one BLAS thread, and this process its default.
-Limiting this process to one thread, with `threadpoolctl.threadpool_limits(1)`, makes
-them agree again. The first run above, on two workers, and
-the same run in this process:
+the initial distribution, since this process keeps its BLAS threads. Limiting it to one
+thread, with `threadpoolctl.threadpool_limits(1)`, makes them agree again. The first run
+above, on two workers, and the same run in this process:
 
 ```{code-cell} python
 here = telescopic.sample(gaussian.log_prob, gaussian.initial, rng=3)
