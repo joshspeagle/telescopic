@@ -1,3 +1,4 @@
+import dataclasses
 import functools
 import itertools
 from typing import Any, NamedTuple
@@ -35,6 +36,9 @@ BANANA, PUMPS, MIXTURE = examples.banana(), examples.pumps(), examples.mixture()
 # of 0.002 needs 500 leapfrog steps, and the automatic step does not couple (QUESTIONS,
 # "The automatic steps of HMC and MALA").
 RIDGE = Normal([3.0, 9.0], 0.01 * np.eye(2))
+# N(0, 1) whose gradient is NaN beyond 1, where the target has mass 0.16. Kernels that
+# rejected proposals there stayed below 1 from -1 (DECISIONS #67).
+BROKEN_GRADIENT = dataclasses.replace(G1, grad=lambda x: np.where(x > 1, np.nan, G1.grad(x)))
 
 
 def far(d):
@@ -78,6 +82,12 @@ CASES = {
     ),
     "mixture-d5": Case(
         G5, Mixture([RandomWalk(G5.cov), MALA(1.0, cov=G5.cov)], [0.5, 0.5]), far(5), k=2, m=20
+    ),
+    "mala-nan-gradient": Case(
+        BROKEN_GRADIENT, MALA(1.0, cov=G1.cov), Empirical([[-1.0]]), k=5, m=50, lag=5
+    ),
+    "hmc-nan-gradient": Case(
+        BROKEN_GRADIENT, HMC(0.5, 4, cov=G1.cov), Empirical([[-1.0]]), k=5, m=50, lag=5
     ),
 }
 

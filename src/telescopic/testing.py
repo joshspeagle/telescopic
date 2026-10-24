@@ -12,7 +12,7 @@ from scipy import stats
 
 from telescopic._random import Draws, Streams, root_seed
 from telescopic._types import FloatArray, Seed, integer, real
-from telescopic.kernels.base import Kernel, State
+from telescopic.kernels.base import Kernel, State, evaluate
 from telescopic.target import Target
 
 # Random one-dimensional projections on which check_coupling compares the moved values.
@@ -175,7 +175,7 @@ def _compare(
 def _stale(kernel: Kernel, target: Target, state: State) -> int:
     # Chains whose cache disagrees with a fresh evaluation beyond rounding: a vectorised
     # target can change the last bits between batches (spec section 6.1).
-    fresh = kernel.init_state(target, state.x)
+    fresh = evaluate(target, state.x, state.grad is not None)
     close = np.isclose(state.log_prob, fresh.log_prob, rtol=1e-9, atol=0)
     if state.grad is not None and fresh.grad is not None:
         error = np.linalg.norm(state.grad - fresh.grad, axis=1)

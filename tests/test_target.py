@@ -75,11 +75,21 @@ def test_the_gradient_is_evaluated_only_where_the_log_density_is_finite():
     assert target.n_grad == 1
 
 
-@pytest.mark.parametrize("bad", [np.nan, np.inf])
-def test_a_non_finite_gradient_where_the_log_density_is_finite_raises_with_the_point(bad):
-    target = Target(gaussian, grad=lambda x: np.where(x > 0, bad, -x), vectorize=True)
-    with pytest.raises(ValueError, match=r"at x = \[1.0\], where log_prob is finite"):
-        target.log_prob_and_grad(np.array([[-1.0], [1.0]]))
+@pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
+def test_a_non_finite_gradient_where_the_log_density_is_finite_is_zero_and_counted(bad):
+    gradients = np.array([[1.0], [bad]])
+    target = Target(gaussian, grad=lambda x: gradients, vectorize=True)
+    values, given = target.log_prob_and_grad(np.array([[-1.0], [1.0]]))
+    np.testing.assert_array_equal(values, [-0.5, -0.5])
+    np.testing.assert_array_equal(given, [[1.0], [0.0]])
+    assert (target.n_grad, target.n_grad_zeroed) == (2, 1)
+    assert gradients[1, 0] != 0  # the function's own array is left alone
+
+
+def test_a_non_finite_gradient_at_a_start_raises_with_the_point():
+    target = Target(gaussian, grad=lambda x: np.where(x > 0, np.nan, -x), vectorize=True)
+    with pytest.raises(ValueError, match=r"at x = \[1.0\], where log_prob is finite: chains"):
+        target.log_prob_and_grad(np.array([[-1.0], [1.0]]), start=True)
 
 
 @pytest.mark.parametrize("vectorize", [False, True])

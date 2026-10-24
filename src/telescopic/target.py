@@ -36,7 +36,8 @@ class Target:
     -----
     The functions receive read-only arrays: a function that modifies its input raises
     instead of corrupting the chains. The counters ``n_log_prob`` and ``n_grad`` count
-    evaluations point by point.
+    evaluations point by point, and ``n_grad_zeroed`` the gradients taken as 0 because
+    they were not finite where the log-density is.
     """
 
     def __init__(
@@ -63,6 +64,7 @@ class Target:
         self.vectorize = bool(vectorize)
         self.n_log_prob = 0
         self.n_grad = 0
+        self.n_grad_zeroed = 0
 
     @property
     def has_grad(self) -> bool:
@@ -86,12 +88,15 @@ class Target:
             raise ValueError(f"log_prob returned {values[row]} at x = {x[row].tolist()}")
         return values
 
-    def log_prob_and_grad(self, x: FloatArray) -> tuple[FloatArray, FloatArray]:
+    def log_prob_and_grad(
+        self, x: FloatArray, *, start: bool = False
+    ) -> tuple[FloatArray, FloatArray]:
         """Log-densities, shape ``(n,)``, and gradients, shape ``(n, d)``, at the rows of ``x``.
 
         The gradient is evaluated only where the log-density is finite, and is 0 where it
-        is ``-inf``. A non-finite gradient where the log-density is finite raises
-        ``ValueError`` with the point (spec R-INPUT-1).
+        is ``-inf``. Where it is finite, a gradient that is not finite is taken as 0 too,
+        and counted in ``n_grad_zeroed``; at the states that chains ``start`` from, it
+        raises ``ValueError`` with the point (spec R-INPUT-1).
         """
         if self._grad is None:
             raise ValueError("this target has no gradient; pass grad= to use this kernel")
@@ -105,12 +110,22 @@ class Target:
             if inside.any():
                 gradients[inside] = self._call(self._grad, x[inside], (x.shape[1],))
             self.n_grad += int(inside.sum())
-        if not np.isfinite(gradients).all():
-            row = int(np.argmax(~np.isfinite(gradients).all(axis=1)))
-            raise ValueError(
-                f"grad returned {gradients[row].tolist()} at x = {x[row].tolist()}, where "
-                "log_prob is finite"
-            )
+        finite = np.isfinite(gradients)
+        if not finite.all():
+            bad = ~finite.all(axis=1)
+            if start:
+                # A MALA chain that starts there cannot leave: its moves back need the
+                # reverse proposal, which carries the full drift, to return (DECISIONS #67).
+                row = int(np.argmax(bad))
+                raise ValueError(
+                    f"grad returned {gradients[row].tolist()} at x = {x[row].tolist()}, "
+                    "where log_prob is finite: chains cannot start there; compute grad in "
+                    "log space, as with scipy.special.logsumexp, or start them elsewhere"
+                )
+            # A copy: a vectorised grad may return its own array.
+            gradients = gradients.copy()
+            gradients[bad] = 0.0
+            self.n_grad_zeroed += int(bad.sum())
         return values, gradients
 
     def _call(

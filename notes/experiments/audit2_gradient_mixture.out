@@ -1,0 +1,35 @@
+At 2fc10f6, rejection:
+MALA, seed 0: z of E[x] +1.11, of E[x^2] -1.18; 4 gradient rows not finite, largest log pi there -3189; warned: False
+MALA, seed 1: z of E[x] +0.43, of E[x^2] +0.40; 2 gradient rows not finite, largest log pi there -2623; warned: False
+MALA, seed 2: z of E[x] +1.10, of E[x^2] +0.13; 7 gradient rows not finite, largest log pi there -886.2; warned: False
+MALA, seed 3: z of E[x] -0.32, of E[x^2] -0.22; 4 gradient rows not finite, largest log pi there -5.418e+04; warned: False
+MALA, seed 4: z of E[x] +0.03, of E[x^2] +1.64; 4 gradient rows not finite, largest log pi there -1660; warned: False
+HMC, seed 0: z of E[x] -0.48, of E[x^2] -1.84; 3 gradient rows not finite, largest log pi there -1383; warned: False
+HMC, seed 1: z of E[x] +0.32, of E[x^2] +0.61; 1 gradient rows not finite, largest log pi there -1152; warned: False
+HMC, seed 2: z of E[x] +0.10, of E[x^2] +0.20; 1 gradient rows not finite, largest log pi there -1.136e+04; warned: False
+HMC, seed 3: z of E[x] -1.00, of E[x^2] -0.79; 4 gradient rows not finite, largest log pi there -792.6; warned: False
+HMC, seed 4: z of E[x] +0.93, of E[x^2] +0.97; 2 gradient rows not finite, largest log pi there -7464; warned: False
+
+At 979817d, DECISIONS #59 (raise):
+MALA, seed 0: raised ValueError: grad returned [nan] at x = [-193.84828511140586], where log_prob is fi
+MALA, seed 1: raised ValueError: grad returned [nan] at x = [-73.9097923152327], where log_prob is fini
+MALA, seed 2: raised ValueError: grad returned [nan] at x = [-726.8221453977941], where log_prob is fin
+MALA, seed 3: raised ValueError: grad returned [nan] at x = [395.53349570445766], where log_prob is fin
+MALA, seed 4: raised ValueError: grad returned [nan] at x = [1023.0017231636461], where log_prob is fin
+HMC, seed 0: raised ValueError: grad returned [nan] at x = [-54.06255077268231], where log_prob is fin
+HMC, seed 1: raised ValueError: grad returned [nan] at x = [-49.47404242007786], where log_prob is fin
+HMC, seed 2: raised ValueError: grad returned [nan] at x = [-152.1888123262664], where log_prob is fin
+HMC, seed 3: raised ValueError: grad returned [nan] at x = [64.66867060914167], where log_prob is fini
+HMC, seed 4: raised ValueError: grad returned [nan] at x = [125.40191048100343], where log_prob is fin
+
+With DECISIONS #67 (zero drift):
+MALA, seed 0: z of E[x] -0.72, of E[x^2] -0.92; 4 gradient rows not finite, largest log pi there -3189; warned: False
+MALA, seed 1: z of E[x] -0.22, of E[x^2] -0.38; 2 gradient rows not finite, largest log pi there -2623; warned: False
+MALA, seed 2: z of E[x] +0.31, of E[x^2] +0.55; 7 gradient rows not finite, largest log pi there -886.2; warned: False
+MALA, seed 3: z of E[x] +0.94, of E[x^2] -1.59; 4 gradient rows not finite, largest log pi there -5.418e+04; warned: False
+MALA, seed 4: z of E[x] +0.43, of E[x^2] +1.23; 4 gradient rows not finite, largest log pi there -1660; warned: False
+HMC, seed 0: z of E[x] -0.56, of E[x^2] +0.33; 3 gradient rows not finite, largest log pi there -1383; warned: False
+HMC, seed 1: z of E[x] -1.39, of E[x^2] +1.59; 1 gradient rows not finite, largest log pi there -1152; warned: False
+HMC, seed 2: z of E[x] +0.27, of E[x^2] +0.33; 1 gradient rows not finite, largest log pi there -1.136e+04; warned: False
+HMC, seed 3: z of E[x] -0.17, of E[x^2] -1.43; 4 gradient rows not finite, largest log pi there -792.6; warned: False
+HMC, seed 4: z of E[x] +0.36, of E[x^2] +0.21; 2 gradient rows not finite, largest log pi there -7464; warned: False

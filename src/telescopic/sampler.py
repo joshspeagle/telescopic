@@ -303,12 +303,14 @@ class CoupledSampler:
         )
         kind = "replicate" if main else "pilot pair"
         slow = _SlowPairs(settings.lag, settings.m, kind)
+        zeroed = _ZeroedGradients(self.target, kind)
         bar = Progress(len(indices), f"{kind}s") if progress else None
 
         def monitor(status: engine.Status) -> bool:
             if bar is not None:
                 bar.update(status.finished)
             slow(status)
+            zeroed()
             return interrupt is not None and interrupt.stopping
 
         try:
@@ -317,6 +319,7 @@ class CoupledSampler:
             if bar is not None:
                 bar.close()
         slow.after(replicates)
+        zeroed.after(replicates)
         if len(replicates.zero_density):
             warn(
                 f"{len(replicates.zero_density)} {kind}s start where the target density "
@@ -475,6 +478,37 @@ class _SlowPairs:
                 f"{self.kind} {replicate} has not met after {self.threshold} iterations; "
                 "the meeting times may be heavy-tailed",
                 ConvergenceWarning,
+            )
+
+
+class _ZeroedGradients:
+    # Warns once about gradients taken as 0 where the log-density is finite (spec
+    # R-INPUT-1): as soon as this process's target counts one, or from the replicates
+    # after a run on a pool, whose workers hold their own targets. kind names the pairs.
+    def __init__(self, target: Target, kind: str) -> None:
+        self.target, self.kind = target, kind
+        self.before = target.n_grad_zeroed, target.n_grad
+        self.warned = False
+
+    def __call__(self) -> None:
+        zeroed = self.target.n_grad_zeroed - self.before[0]
+        if zeroed:
+            self._warn(zeroed, self.target.n_grad - self.before[1])
+
+    def after(self, replicates: engine.Replicates) -> None:
+        if replicates.n_grad_zeroed:
+            self._warn(replicates.n_grad_zeroed, replicates.n_grad)
+
+    def _warn(self, zeroed: int, evaluated: int) -> None:
+        if not self.warned:
+            self.warned = True
+            warn(
+                "gradients that were not finite where the log-density is were taken as 0 "
+                f"in {zeroed} of {evaluated} evaluations of the {self.kind}s: MALA and HMC "
+                "stay exact but lose their drift there, which slows the chains and can keep "
+                "HMC pairs from meeting; compute grad in log space, as with "
+                "scipy.special.logsumexp, or check it",
+                InputWarning,
             )
 
 

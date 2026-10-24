@@ -3,7 +3,12 @@ random walk: E[x] = +0.0007 +- 0.0052 (z = +0.1), P(x > 1) = 0.1602 +- 0.0017
 MALA: E[x] = -0.2877 +- 0.0032 (z = -90.6), P(x > 1) = 0.0000 +- 0.0000
 HMC: E[x] = -0.2859 +- 0.0023 (z = -122.2), P(x > 1) = 0.0000 +- 0.0000
 
-With DECISIONS #59:
+At 979817d, with DECISIONS #59:
 random walk: E[x] = +0.0007 +- 0.0052 (z = +0.1), P(x > 1) = 0.1602 +- 0.0017
 MALA: raised ValueError: grad returned [nan] at x = [1.312778822886954], where log_prob is finite
 HMC: raised ValueError: grad returned [nan] at x = [1.0783717787973028], where log_prob is finite
+
+With DECISIONS #67:
+random walk: E[x] = +0.0007 +- 0.0052 (z = +0.1), P(x > 1) = 0.1602 +- 0.0017
+MALA: E[x] = -0.0006 +- 0.0056 (z = -0.1), P(x > 1) = 0.1574 +- 0.0020; warned, 45538 gradients of the replicates taken as 0
+HMC: E[x] = +0.0041 +- 0.0034 (z = +1.2), P(x > 1) = 0.1600 +- 0.0016; warned, 204535 gradients of the replicates taken as 0

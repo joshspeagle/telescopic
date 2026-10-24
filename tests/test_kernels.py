@@ -520,21 +520,6 @@ def test_hmc_rejects_invalid_parameters(kwargs, message):
         HMC(cov=np.eye(2), **kwargs)
 
 
-def test_kernels_raise_at_a_proposal_with_a_non_finite_gradient():
-    # Gradient kernels rejected such proposals, and so sampled the target restricted to
-    # where the gradient is finite: on N(0, 1) with a NaN gradient beyond x = 1, MALA's
-    # mean was -0.29. A random walk whose states carry gradients is HMC's meeting step.
-    target = Target(gaussian_log_prob, grad=lambda x: np.where(x > 1, np.nan, -x), vectorize=True)
-    start = State(np.zeros((500, 1)), np.zeros(500), np.zeros((500, 1)))
-    other = State(np.full((500, 1), 0.5), np.full(500, -0.125), np.full((500, 1), -0.5))
-    eye = np.eye(1)
-    for kernel in (RandomWalk(eye, scale=3.0), MALA(2.0, cov=eye), HMC(0.5, 4, cov=eye)):
-        with pytest.raises(ValueError, match="grad returned"):
-            kernel.step(target, start, random_draws(500, 33))
-        with pytest.raises(ValueError, match="grad returned"):
-            kernel.coupled_step(target, start, other, random_draws(500, 34))
-
-
 def test_gradient_kernels_enter_the_support_from_a_start_outside_it():
     # A half-normal whose gradient is NaN outside the support: a start there gets a zero
     # gradient, so its proposal has no drift, and a proposal inside the support is

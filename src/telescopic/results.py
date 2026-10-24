@@ -98,6 +98,9 @@ class Result:
     n_log_prob, n_grad : int
         Evaluations of the log-density and its gradient by the replicates, without those
         of tuning and of the meeting-time pilot.
+    n_grad_zeroed : int
+        Gradients of the replicates taken as 0 because they were not finite where the
+        log-density is (spec R-INPUT-1).
     wall_time : float
         Seconds spent running the replicates, without tuning and the pilot.
     interrupted : bool
@@ -139,6 +142,7 @@ class Result:
         self.seed, self.kernel, self.initial = replicates.seed, kernel, initial
         self._replicates = replicates
         self.n_log_prob, self.n_grad = replicates.n_log_prob, replicates.n_grad
+        self.n_grad_zeroed = replicates.n_grad_zeroed
         self.wall_time = replicates.seconds
         self.tuning, self.pilot = tuning, pilot
         # The engine runs only requested indices, so missing ones make index shorter.

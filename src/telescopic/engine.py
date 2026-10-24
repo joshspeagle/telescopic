@@ -30,6 +30,9 @@ from telescopic.target import Target
 # Replicates advanced together by default (DECISIONS #52).
 LANES = 256
 
+# The target's counters, which a run's replicates hold under the same names.
+COUNTS = ("n_log_prob", "n_grad", "n_grad_zeroed")
+
 
 class Settings(NamedTuple):
     r"""The settings of a run (spec section 3.2).
@@ -87,6 +90,9 @@ class Replicates:
         that an interrupted run never started (spec section 6.5).
     n_log_prob, n_grad : int
         Evaluations of the log-density and its gradient (spec R-EST-7).
+    n_grad_zeroed : int
+        Gradients taken as 0 because they were not finite where the log-density is
+        (spec R-INPUT-1).
     seconds : float
         Wall time of the run.
     paths : dict of int to (ndarray, ndarray)
@@ -108,6 +114,7 @@ class Replicates:
     requested: IntArray
     n_log_prob: int = 0
     n_grad: int = 0
+    n_grad_zeroed: int = 0
     seconds: float = 0.0
     paths: dict[int, tuple[FloatArray, FloatArray]] = field(default_factory=dict)
 
@@ -234,7 +241,7 @@ def run(
     seed, initial = root_seed(rng), as_initial(initial)
     queue = iter(requested.tolist())
     first = next(queue)
-    evaluations, start = (target.n_log_prob, target.n_grad), time.perf_counter()
+    start = time.perf_counter()
     head = _Start(first, initial, seed, None)
     ndim = len(head.x0)
     starts = itertools.chain([head], (_Start(i, initial, seed, ndim) for i in queue))
@@ -247,13 +254,7 @@ def run(
         stopping = (monitor is not None and monitor(batch.status())) or stopping
         if not stopping:
             batch.fill(free, starts)
-    return batch.result(
-        seed,
-        np.sort(requested),
-        target.n_log_prob - evaluations[0],
-        target.n_grad - evaluations[1],
-        start,
-    )
+    return batch.result(seed, np.sort(requested), start)
 
 
 def check_settings(settings: Settings) -> Settings:
@@ -337,9 +338,7 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
         settings=first.settings,
         **columns,
         requested=np.unique(np.concatenate([part.requested for part in parts])),
-        n_log_prob=sum(part.n_log_prob for part in parts),
-        n_grad=sum(part.n_grad for part in parts),
-        seconds=sum(part.seconds for part in parts),
+        **{name: sum(getattr(part, name) for part in parts) for name in (*COUNTS, "seconds")},
         paths={index: path for part in parts for index, path in part.paths.items()},
     )
 
@@ -388,6 +387,7 @@ class _Batch:
         self.zero_density: list[int] = []
         self.paths: dict[int, tuple[list[FloatArray], list[FloatArray]]] = {}
         self.n_finished = 0
+        self.counts = {name: getattr(target, name) for name in COUNTS}  # before any step
 
     @property
     def active(self) -> BoolArray:
@@ -463,9 +463,7 @@ class _Batch:
         lane = int(np.argmax(np.where(unmet, self.t, -1)))
         return Status(self.n_finished, int(self.replicate[lane]), int(self.t[lane]))
 
-    def result(
-        self, seed: SeedSequence, requested: IntArray, n_log_prob: int, n_grad: int, start: float
-    ) -> Replicates:
+    def result(self, seed: SeedSequence, requested: IntArray, start: float) -> Replicates:
         # The seconds since start include this join, a large part of a run with many atoms.
         index, tau = self.finished.join()
         owner, atoms, weights = self.atoms.join(keep=index[tau >= 0])
@@ -483,8 +481,7 @@ class _Batch:
             distance=distance,
             zero_density=np.sort(np.array(self.zero_density, dtype=np.int64)),
             requested=requested,
-            n_log_prob=n_log_prob,
-            n_grad=n_grad,
+            **{name: getattr(self.target, name) - n for name, n in self.counts.items()},
             seconds=time.perf_counter() - start,
             paths={i: (np.array(x), np.array(y)) for i, (x, y) in self.paths.items()},
         )

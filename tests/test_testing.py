@@ -90,6 +90,14 @@ def test_check_coupling_flags_a_coupling_that_reads_another_rows_state():
     assert not report.passed()
 
 
+def test_check_coupling_follows_chains_to_points_where_the_gradient_is_zeroed():
+    # Its check of the caches evaluated the chains' new states as starts, which raise.
+    target = Target(gaussian_log_prob, grad=lambda x: np.where(x > 1, np.nan, -x), vectorize=True)
+    report = check_coupling(MALA(1.0, cov=np.eye(1)), target, [0.8], [0.9], n=2_000, rng=3)
+    assert report.stale == 0
+    assert target.n_grad_zeroed > 0
+
+
 def test_check_coupling_flags_a_coupling_that_recomputes_y_where_the_chains_meet():
     report = check_coupling(Recomputing(COV), TARGET, [0.1, 0.2], [0.2, 0.1], n=2_000, rng=4)
     assert report.near_misses > 0

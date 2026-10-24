@@ -9,7 +9,7 @@ from typing import IO, Any
 import numpy as np
 from numpy.random import SeedSequence
 
-from telescopic.engine import Replicates, Settings
+from telescopic.engine import COUNTS, Replicates, Settings
 from telescopic.results import Result
 from telescopic.tuning import TuningReport
 
@@ -47,11 +47,7 @@ def save(result: Result, path: str | os.PathLike[str] | IO[bytes]) -> None:
         "names": result.names,
         "kernel": None if result.kernel is None else str(result.kernel),
         "initial": None if result.initial is None else str(result.initial),
-        "counts": {
-            "n_log_prob": replicates.n_log_prob,
-            "n_grad": replicates.n_grad,
-            "seconds": replicates.seconds,
-        },
+        "counts": {name: getattr(replicates, name) for name in (*COUNTS, "seconds")},
         "tuning": None
         if tuning is None
         else {"n_steps": tuning.n_steps, "max_weight_ratio": tuning.max_weight_ratio},

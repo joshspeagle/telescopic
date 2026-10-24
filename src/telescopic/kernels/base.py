@@ -160,6 +160,9 @@ class Kernel(ABC):
     def init_state(self, target: Target, x: FloatArray) -> State:
         """Evaluate the target at the rows of ``x``, with gradients if the kernel needs them.
 
+        A gradient that is not finite where the log-density is raises ``ValueError``
+        here, as chains cannot start there; elsewhere it is taken as 0 (spec R-INPUT-1).
+
         Parameters
         ----------
         target : Target
@@ -172,7 +175,7 @@ class Kernel(ABC):
         """
         self.check_ndim(x.shape[1])
         self.check_target(target)
-        return evaluate(target, x, self.needs_grad)
+        return evaluate(target, x, self.needs_grad, start=True)
 
     @abstractmethod
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
@@ -267,7 +270,7 @@ class GradientKernel(Kernel):
         return kernel, pilot.report()
 
 
-def evaluate(target: Target, x: FloatArray, need_grad: bool) -> State:
+def evaluate(target: Target, x: FloatArray, need_grad: bool, *, start: bool = False) -> State:
     """The state at the rows of ``x``: log-densities, and gradients if needed.
 
     Where the log-density is ``-inf`` the target gives a gradient of 0, so a gradient
@@ -279,6 +282,9 @@ def evaluate(target: Target, x: FloatArray, need_grad: bool) -> State:
     target : Target
     x : ndarray, shape (n, d)
     need_grad : bool
+    start : bool
+        Whether chains start at ``x``, where a gradient that is not finite raises
+        (:meth:`telescopic.Target.log_prob_and_grad`).
 
     Returns
     -------
@@ -286,7 +292,7 @@ def evaluate(target: Target, x: FloatArray, need_grad: bool) -> State:
     """
     if not need_grad:
         return State(x, target.log_prob(x))
-    return State(x, *target.log_prob_and_grad(x))
+    return State(x, *target.log_prob_and_grad(x, start=start))
 
 
 def evaluate_proposal(target: Target, x: FloatArray, live: BoolArray | None = None) -> State:
