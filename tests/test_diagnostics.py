@@ -201,11 +201,40 @@ def test_variance_share_refuses_invalid_values(values, message):
 
 @pytest.mark.parametrize(
     ("meeting_times", "lag", "t", "message"),
-    [([], 1, [0], "non-empty"), ([3, 4], 0, [0], "lag must be"), ([3, 4], 1, [2.9], "integers")],
+    [
+        ([], 1, [0], "non-empty"),
+        ([3, 4], 0, [0], "lag must be"),
+        ([3, 4], 1, [2.9], "integers"),
+        # Truncated to 2, silently.
+        ([2.9, 3.0], 1, [1], "integers"),
+        # A cast warning, then an IndexError.
+        ([3, 4], 1, [np.inf], "integers"),
+    ],
 )
 def test_the_tv_bound_refuses_invalid_arguments(meeting_times, lag, t, message):
     with pytest.raises(ValueError, match=message):
         tv_bound(meeting_times, lag, t)
+
+
+def test_the_tv_bound_is_zero_long_after_every_meeting():
+    # t = 1e20 overflowed the cast to int64 and raised IndexError.
+    np.testing.assert_array_equal(tv_bound([3, 4], 1, [10, 1e20]), [0.0, 0.0])
+
+
+@pytest.mark.parametrize(
+    ("times", "distances", "message"),
+    [
+        ([-1, 2], [0.5, 0.5], "non-negative integers"),
+        ([1.5, 2.5], [1.0, 1.0], "non-negative integers"),
+        ([1, 2, 3], [0.5, 0.5], "one shape"),
+        ([[1, 2]], [[1.0, 1.0]], "one shape"),
+        ([1, 2], [np.nan, 1.0], "finite and non-negative"),
+        ([1, 2], [-5.0, 1.0], "finite and non-negative"),
+    ],
+)
+def test_the_w1_bound_refuses_invalid_distances(times, distances, message):
+    with pytest.raises(ValueError, match=message):
+        w1_bound(times, distances, 2, 1, [0])
 
 
 def test_the_tv_bound_at_k_of_the_diagnostics_is_the_bounds():

@@ -162,8 +162,7 @@ class Result:
         -------
         Estimate
         """
-        if not 0 < real("level", level) < 1:
-            raise ValueError(f"level must be in (0, 1), not {level}")
+        level = real("level", level, 0, 1)
         self._require(2)
         values = self.measure.per_replicate(h)
         value, error = values.mean(axis=0), np.asarray(stats.sem(values, axis=0))
@@ -237,8 +236,7 @@ class Result:
         ndarray, shape (2, d)
             Lower and upper ends.
         """
-        if not 0 < real("mass", mass) < 1:
-            raise ValueError(f"mass must be in (0, 1), not {mass}")
+        mass = real("mass", mass, 0, 1)
         return self.quantile([(1 - mass) / 2, (1 + mass) / 2])
 
     def histogram(
@@ -575,6 +573,8 @@ class Result:
     def _columns(self, dims: int | Sequence[int]) -> npt.NDArray[np.intp]:
         # Coordinates given as one integer or a sequence of them, checked.
         columns = np.atleast_1d(dims)
+        if columns.size == 0:
+            raise ValueError("dims must name at least one coordinate")
         if columns.ndim != 1 or columns.dtype.kind not in "iu":
             raise TypeError(f"dims must be an integer or a sequence of integers, not {dims!r}")
         if np.any((columns < 0) | (columns >= self.ndim)):

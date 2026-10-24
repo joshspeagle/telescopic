@@ -72,10 +72,9 @@ def gaussian(d: int = 10, rho: float = 0.9) -> Example:
     Example
     """
     d = integer("d", d, minimum=1)
-    if not -1 < real("rho", rho) < 1:
-        raise ValueError(f"rho must be in (-1, 1), not {rho}")
+    rho = real("rho", rho, -1, 1)
     steps = np.arange(d)
-    cov = float(rho) ** np.abs(steps[:, None] - steps[None, :])
+    cov = rho ** np.abs(steps[:, None] - steps[None, :])
     precision = np.linalg.inv(cov)
     return Example(
         "gaussian",

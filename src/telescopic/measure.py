@@ -10,7 +10,7 @@ import numpy as np
 import numpy.typing as npt
 from scipy.sparse import csr_array
 
-from telescopic._types import FloatArray, IntArray, read_only
+from telescopic._types import FloatArray, IntArray, integer, read_only
 
 
 @dataclass(frozen=True, eq=False)
@@ -83,6 +83,12 @@ class SignedMeasure:
         -------
         ndarray, shape (R, n_cells)
         """
+        n_cells = integer("n_cells", n_cells, minimum=1)
+        if np.shape(cell) != self.weights.shape or not np.all((cell >= -1) & (cell < n_cells)):
+            raise ValueError(
+                f"cell must give each of the {len(self.weights)} atoms a cell from 0 to "
+                f"n_cells - 1 = {n_cells - 1}, or -1"
+            )
         inside = cell >= 0
         masses: FloatArray = np.bincount(
             self.replicate[inside] * n_cells + cell[inside],

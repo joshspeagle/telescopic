@@ -67,8 +67,7 @@ class CouplingReport:
         -------
         bool
         """
-        if not 0 < real("alpha", alpha) < 1:
-            raise ValueError(f"alpha must be in (0, 1), not {alpha}")
+        alpha = real("alpha", alpha, 0, 1)
         p_values = (*self.stay, *self.moves)
         return (
             bool(np.min(p_values) >= alpha)

@@ -248,13 +248,16 @@ def dual_averaging(
     pilot : PilotRun
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
     target_acceptance : float
+        In (0, 1).
     step_size : float
-        The first step size :math:`\epsilon_0`.
+        The first step size :math:`\epsilon_0`, positive and finite.
 
     Returns
     -------
     float
     """
+    target_acceptance = real("target_acceptance", target_acceptance, 0, 1)
+    step_size = real("step_size", step_size, 0, np.inf)
     root = root_seed(rng)
     streams = Streams(N_CHAINS)
     for chain in range(N_CHAINS):
@@ -295,7 +298,8 @@ def choose_k(meeting_times: npt.ArrayLike, quantile: float = 0.99) -> int:
     if tau.ndim != 1 or len(tau) == 0:
         raise ValueError("meeting_times must be a non-empty one-dimensional array")
     largest = 1 - 1 / len(tau)
-    if not 0 < real("quantile", quantile) <= largest:
+    quantile = real("quantile", quantile)
+    if not 0 < quantile <= largest:
         raise ValueError(
             f"quantile must be in (0, 1 - 1/R0] = (0, {largest:g}] for {len(tau)} pilot "
             f"pairs, not {quantile}; run more pilot pairs for a higher quantile"

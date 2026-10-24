@@ -46,7 +46,10 @@ def correction_coefficients(t: npt.ArrayLike, k: int, m: int, lag: int, thin: in
     """
     k, m, thin = averaging(k, m, thin)
     lag = integer("lag", lag, minimum=1)
-    t = np.asarray(t, dtype=np.int64)
+    times = np.asarray(t)
+    if not np.all(np.isfinite(times) & (times == np.floor(times))):
+        raise ValueError(f"t must be integers, not {times}")
+    t = times.astype(np.int64)
     n_averaged = len(range(k, m + 1, thin))
     g = gcd(thin, lag)
     period = lag // g
@@ -83,9 +86,8 @@ def unbiased_covariance(first: FloatArray, second: FloatArray) -> FloatArray:
     -------
     ndarray, shape (p, p)
     """
+    _check_moments(first, second, 2)
     n = len(first)
-    if n < 2:
-        raise ValueError(f"an unbiased covariance needs at least 2 replicates, not {n}")
     mean = first.mean(axis=0)
     sample = np.atleast_2d(np.cov(first, rowvar=False))
     # Symmetrising the second moments makes the result exactly symmetric.
@@ -110,12 +112,23 @@ def unbiased_variance(first: FloatArray, second: FloatArray) -> FloatArray:
     -------
     ndarray, shape (p,)
     """
+    _check_moments(first, second, 1)
     n = len(first)
-    if n < 2:
-        raise ValueError(f"an unbiased variance needs at least 2 replicates, not {n}")
     mean = first.mean(axis=0)
     variance: FloatArray = second - mean**2 + first.var(axis=0, ddof=1) / n
     return variance
+
+
+def _check_moments(first: FloatArray, second: FloatArray, axes: int) -> None:
+    # first of shape (R, p) with R >= 2, and second of shape (p,) * axes.
+    expected = (np.shape(first)[-1],) * axes
+    if np.ndim(first) != 2 or np.shape(second) != expected:
+        raise ValueError(
+            f"first must have shape (R, p) and second {'(p, p)' if axes == 2 else '(p,)'}, "
+            f"not {np.shape(first)} and {np.shape(second)}"
+        )
+    if len(first) < 2:
+        raise ValueError(f"an unbiased estimate needs at least 2 replicates, not {len(first)}")
 
 
 def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike) -> FloatArray:
@@ -144,6 +157,18 @@ def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike)
     q = np.asarray(q, dtype=np.float64)
     if not np.all((q >= 0) & (q <= 1)):
         raise ValueError(f"q must be in [0, 1], not {q}")
+    if np.ndim(values) != 1 or np.shape(weights) != np.shape(values):
+        raise ValueError(
+            f"values and weights must have one shape (N,), not {np.shape(values)} and "
+            f"{np.shape(weights)}"
+        )
+    # The sum of N weights is 1 up to rounding of order N epsilon times their size.
+    tolerance = 1e-9 * max(1.0, float(np.abs(weights).sum()))
+    if not abs(float(np.sum(weights)) - 1.0) <= tolerance:
+        raise ValueError(
+            f"weights must sum to 1, not {np.sum(weights)}: divide the pooled weights of R "
+            "replicates by R"
+        )
     unique, inverse = np.unique(values, return_inverse=True)
     mass = np.bincount(inverse.ravel(), weights=weights)
     cdf = np.clip(isotonic_regression(np.cumsum(mass)).x, 0.0, 1.0)

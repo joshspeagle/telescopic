@@ -124,6 +124,10 @@ def test_paths_need_the_paths_of_the_engine():
     assert len(ax.lines) == 6
     with pytest.raises(ValueError, match="keep_paths=True"):
         plotting.paths(RESULT._replicates)
+    with pytest.raises(ValueError, match="n must be at least 1"):
+        plotting.paths(replicates, n=0)
+    with pytest.raises(ValueError, match=r"dims must be two coordinates in \[0, 2\)"):
+        plotting.paths(replicates, dims=(0, 2))
 
 
 def test_paths_in_one_dimension_shift_y_by_the_lag():

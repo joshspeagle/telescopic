@@ -99,9 +99,7 @@ def maximal(
     n_draws : ndarray of int, shape (n,)
         Draws from ``p`` and ``q`` used by each row.
     """
-    if not 0.0 < real("eta", eta) <= 1.0:
-        raise ValueError(f"eta must be in (0, 1], not {eta}")
-    log_eta = math.log(eta)
+    log_eta = math.log(real("eta", eta, 0, 1, closed=True))
     xs, ys, n_draws = [], [], np.ones(len(p), np.intp)
     for row, (p_row, q_row) in enumerate(zip(p, q, strict=True)):
         generator = draws.generator(row)

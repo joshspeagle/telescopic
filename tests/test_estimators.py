@@ -106,6 +106,34 @@ def test_the_estimator_weights_refuse_invalid_settings(settings, error, message)
         correction_coefficients([5, 6, 7], *settings)
 
 
+def test_the_estimator_weights_refuse_times_that_are_not_integers():
+    # 6.5 was truncated to 6.
+    with pytest.raises(ValueError, match="t must be integers"):
+        correction_coefficients([5, 6.5], 0, 5, 1, 1)
+
+
+@pytest.mark.parametrize(
+    ("first", "second", "message"),
+    [
+        # A second of shape (2,) was broadcast to every row of the (2, 2) result.
+        (np.zeros((3, 2)), np.zeros(2), "second"),
+        (np.zeros(3), np.zeros((1, 1)), "first must have shape"),
+        (np.zeros((1, 2)), np.zeros((2, 2)), "at least 2 replicates"),
+    ],
+)
+def test_the_unbiased_covariance_refuses_moments_of_the_wrong_shape(first, second, message):
+    with pytest.raises(ValueError, match=message):
+        unbiased_covariance(first, second)
+
+
+def test_weighted_quantiles_refuse_weights_that_do_not_sum_to_one():
+    # Pooled weights of R replicates sum to R; the quantiles were silently wrong.
+    with pytest.raises(ValueError, match="weights must sum to 1"):
+        weighted_quantile(np.arange(4.0), np.ones(4), 0.5)
+    with pytest.raises(ValueError, match="one shape"):
+        weighted_quantile(np.arange(4.0), np.full(3, 1 / 3), 0.5)
+
+
 def test_the_quantile_at_one_is_the_largest_atom_when_the_weights_sum_below_one():
     # Ten weights of 0.1 sum to 0.9999999999999999.
     assert weighted_quantile(np.arange(10.0), np.full(10, 0.1), 1.0) == 9.0
