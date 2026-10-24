@@ -42,16 +42,15 @@ Monitor = Callable[[engine.Status], bool]
 
 
 class Interrupt:
-    # Ctrl-C while catching. Once armed, as a run's replicates start, the first sets
-    # stopping and the second raises at once; before, Ctrl-C raises, as by default.
+    # Ctrl-C while catching: the first sets stopping, the second raises at once.
     def __init__(self) -> None:
-        self.armed = self.stopping = False
+        self.stopping = False
 
     def catching(self) -> AbstractContextManager[None]:
         return _sigint(self._handle)
 
     def _handle(self, signum: int, frame: Any) -> None:
-        if self.stopping or not self.armed:
+        if self.stopping:
             raise KeyboardInterrupt
         self.stopping = True
         print(

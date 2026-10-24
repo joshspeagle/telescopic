@@ -164,11 +164,12 @@ result.interrupted  # False
 
 A first Ctrl-C after the replicates, while the result is built, lets the run finish too.
 A second Ctrl-C raises `KeyboardInterrupt` at once, without a result, and stops the
-workers that telescopic started. Ctrl-C during the tuning or the meeting-time pilot raises
-`KeyboardInterrupt`, since they have no result to return early. telescopic handles Ctrl-C
-only in the main thread; a run in another thread leaves it alone, and so does a process
-that ignores Ctrl-C, such as a worker of your own pool, or whose Ctrl-C handler was not
-set by Python, such as R's through reticulate.
+workers that telescopic started. The tuning and the meeting-time pilot have no result to
+return early, so Ctrl-C there does what your handler does, by default raise
+`KeyboardInterrupt`. telescopic handles Ctrl-C only in the main thread; a run in another
+thread leaves it alone, and so does a process that ignores Ctrl-C, such as a worker of
+your own pool, or whose Ctrl-C handler was not set by Python, such as R's through
+reticulate.
 
 On a pool, telescopic's workers start no new replicate after the first Ctrl-C, and a chunk
 that starts afterwards runs nothing, unless it is the first, so that the result holds at
