@@ -247,7 +247,7 @@ class Result:
         The mass of each half-open bin is the average over replicates of its signed mass,
         so a bin can be negative. It is unbiased for a ``range`` fixed before the run; the
         default range, from the atoms, biases the two outer bins by a term of order
-        :math:`1/R`. Memory: :math:`R \times` ``bins ** len(dims)`` floats.
+        :math:`1/R`. Memory: a few floats per atom, and per bin.
 
         Parameters
         ----------
@@ -282,8 +282,13 @@ class Result:
         which = np.stack(cells)
         inside = np.all((which >= 0) & (which < bins), axis=0)
         cell = np.where(inside, np.ravel_multi_index(which, shape, mode="clip"), -1)
-        masses = self.measure.mass(cell, bins ** len(columns))
-        mean, error = masses.mean(axis=0), np.asarray(stats.sem(masses, axis=0))
+        n_cells, n = bins ** len(columns), self.n_replicates
+        masses = self.measure.mass(cell, n_cells).tocoo()
+        mean = np.bincount(masses.col, masses.data, n_cells) / n
+        # The squared deviations of the stored masses, and of the other replicates' zeros.
+        squares = np.bincount(masses.col, (masses.data - mean[masses.col]) ** 2, n_cells)
+        squares += (n - np.bincount(masses.col, minlength=n_cells)) * mean**2
+        error = np.sqrt(squares / (n - 1) / n)
         return mean.reshape(shape), error.reshape(shape), edges if np.ndim(dims) else edges[0]
 
     def tv_bound(self, t: npt.ArrayLike | None = None) -> FloatArray:
@@ -369,7 +374,8 @@ class Result:
             # The second moments about the atoms' mean, which the variances use: about 0,
             # far from it, they would vary with the means and hide their own spread.
             centred, first = self._centred()
-            second = self.measure.per_replicate(lambda _: np.square(centred))
+            # Squared in place: the centred atoms are not read again.
+            second = self.measure.per_replicate(lambda _: np.square(centred, out=centred))
             shares = diagnostics.variance_share(np.concatenate([first, second], axis=1))
             worst = int(np.argmax(shares))
             moment = "mean" if worst < self.ndim else "variance"

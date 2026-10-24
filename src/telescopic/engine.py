@@ -432,15 +432,17 @@ class _Batch:
             self.y.put(coupled, new_y)
         self.t += 1  # idle lanes' clocks are never read
         compared = (active & unmet & (self.t >= self.lag)).nonzero()[0]
-        met = np.all(self.x.x[compared] == self.y.x[compared], axis=1)
-        self.tau[compared[met]] = self.t[compared[met]]
+        if len(compared):
+            met = np.all(self.x.x[compared] == self.y.x[compared], axis=1)
+            self.tau[compared[met]] = self.t[compared[met]]
+            compared = compared[~met]
         stepped = active.nonzero()[0]
         if self.keep_paths:
             for lane in stepped.tolist():
                 self.paths[int(self.replicate[lane])][0].append(self.x.x[lane].copy())
             for lane in coupled.tolist():
                 self.paths[int(self.replicate[lane])][1].append(self.y.x[lane].copy())
-        self._record(stepped, compared[~met])
+        self._record(stepped, compared)
 
     def finish(self) -> IntArray:
         # Frees the lanes of the pairs that met and reached m, and of censored pairs.
@@ -534,6 +536,7 @@ class _Chunks:
     def join(self, keep: IntArray | None = None) -> list[npt.NDArray[Any]]:
         # The rows whose owners are in keep (all by default), gathered once.
         columns = _concatenate(self.blocks + self.chunks)
+        self.blocks, self.chunks = [], []  # so that the join holds two copies, not three
         order = np.argsort(columns[0], kind="stable")
         if keep is not None:
             order = order[np.isin(columns[0][order], keep)]

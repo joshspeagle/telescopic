@@ -99,7 +99,8 @@ def maximal(
     n_draws : ndarray of int, shape (n,)
         Draws from ``p`` and ``q`` used by each row.
     """
-    log_eta = math.log(real("eta", eta, 0, 1, closed=True))
+    # NumPy's log, whose last bit can differ from math.log's.
+    log_eta = float(np.log(real("eta", eta, 0, 1, closed=True)))
     xs, ys, n_draws = [], [], np.ones(len(p), np.intp)
     for row, (p_row, q_row) in enumerate(zip(p, q, strict=True)):
         generator = draws.generator(row)
@@ -167,8 +168,8 @@ def discrete_maximal(
 
 
 def _log_uniform(generator: np.random.Generator) -> float:
-    with np.errstate(divide="ignore"):
-        return float(np.log(generator.random()))
+    u = generator.random()
+    return float(np.log(u)) if u > 0 else -np.inf
 
 
 def _log_density(distribution: Any, value: Any) -> float:

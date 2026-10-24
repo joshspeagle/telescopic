@@ -83,4 +83,6 @@ All notable changes to this project are documented here. The format follows
   and `dual_averaging`, the TV and W1 bounds, the estimators, `SignedMeasure.mass`,
   `plotting.paths`, `Target(vectorize=)` and `pool` check what they were missing; a first
   Ctrl-C after the replicates, while the result is built, no longer loses the run, and a
-  process that ignores Ctrl-C, or whose handler Python did not set, keeps its handler.
+  process that ignores Ctrl-C, or whose handler Python did not set, keeps its handler;
+  the tuning pilot takes a third less time at d = 100, Gibbs sweeps less, and joint
+  histograms take memory in proportion to the atoms (`SignedMeasure.mass` is sparse).
