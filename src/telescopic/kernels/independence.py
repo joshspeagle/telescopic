@@ -81,7 +81,7 @@ class Independence(Kernel):
     ----------
     proposal : MultivariateT, optional
         Any object with ``sample(draws)`` and ``log_density(x)``. ``None`` leaves the
-        kernel untuned: :meth:`tune` fits a Student-:math:`t_5` located at the mean of
+        kernel untuned: :meth:`~telescopic.kernels.Kernel.tune` fits a Student-:math:`t_5` located at the mean of
         adaptive Metropolis pilot chains, with their covariance as its scale matrix (spec
         section 5.6, D-25). Its report gives the largest weight :math:`\pi/q` of the
         pilot's draws relative to their median.

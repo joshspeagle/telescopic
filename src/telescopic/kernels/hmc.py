@@ -47,14 +47,14 @@ class HMC(Mixture):
     Parameters
     ----------
     step_size : float, optional
-        :math:`\epsilon`. ``None`` leaves it to :meth:`tune`: dual averaging of the
+        :math:`\epsilon`. ``None`` leaves it to :meth:`~telescopic.kernels.Kernel.tune`: dual averaging of the
         trajectories alone toward an acceptance rate of 0.8, from
         :math:`\epsilon_0 = d^{-1/4}` (spec section 5.5; Beskos et al. 2013).
     n_steps : int, optional
         Leapfrog steps per trajectory; :math:`\lceil 1/\epsilon\rceil` by default, a
         trajectory of length about 1 in whitened coordinates, and at most 1,000.
     cov : array_like, shape (d, d), optional
-        :math:`\Sigma`; ``None`` leaves it to :meth:`tune`, which takes the covariance of
+        :math:`\Sigma`; ``None`` leaves it to :meth:`~telescopic.kernels.Kernel.tune`, which takes the covariance of
         adaptive Metropolis pilot chains.
     meeting_weight : float
         :math:`\gamma`, in (0, 1).
@@ -103,7 +103,7 @@ class HMC(Mixture):
 
     @property
     def _leapfrog(self) -> _Leapfrog:
-        # Read from the components, which tuning replaces in a copy (Mixture._tuned).
+        # Read from the components, which tuning replaces in a copy (Mixture.tune).
         return cast(_Leapfrog, self.kernels[0])
 
     def __repr__(self) -> str:

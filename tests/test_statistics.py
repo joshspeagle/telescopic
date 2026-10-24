@@ -33,7 +33,7 @@ BANANA, PUMPS, MIXTURE = examples.banana(), examples.pumps(), examples.mixture()
 # Far along the banana's ridge, x_1 = x_0^2, three standard deviations from E[x_0]. From
 # U[-5, 5]^2, gradients near 6,000 make HMC's step of 0.02 unstable, Heng & Jacob's step
 # of 0.002 needs 500 leapfrog steps, and the automatic step does not couple (QUESTIONS,
-# "HMC's automatic step").
+# "The automatic steps of HMC and MALA").
 RIDGE = Normal([3.0, 9.0], 0.01 * np.eye(2))
 
 

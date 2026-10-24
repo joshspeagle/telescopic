@@ -21,6 +21,8 @@ uv pip install -e . --group dev
 .venv/bin/python -m pytest -m ""           # all tests, including the slow statistical tier
 .venv/bin/python -m pytest --cov=telescopic
 .venv/bin/ruff check . && .venv/bin/ruff format --check . && .venv/bin/mypy
+uv pip install -e . --group docs && .venv/bin/sphinx-build -W --keep-going docs docs/_build/html
+.venv/bin/python benchmarks/run.py         # timings against spec section 10, on an idle machine
 ```
 
 ## Validation philosophy
@@ -40,7 +42,7 @@ uv pip install -e . --group dev
 ## Style
 
 - `ruff check` and `ruff format` (line length 99) and `mypy --strict` on `src/`.
-- Use the notation of `docs/design/spec.md` section 3 in code, docstrings and docs.
+- Use the notation of `docs/theory.md` in code, docstrings and docs.
 - Randomness flows through a `rng` argument (SPEC 7) and, inside the engine, through each
   replicate's own stream. Never use NumPy's global random state.
 - User-facing problems raise `ValueError` or `TypeError` with a message that names the
@@ -49,10 +51,9 @@ uv pip install -e . --group dev
 
 ## Adding a kernel
 
-Kernels follow the contract of `docs/design/spec.md` section 5.1: the coupled step leaves
-each chain's marginal exactly that of the single step, returns a `met` flag that holds
-exactly when the pair's states are bitwise equal, and copies the first chain's state into
-the second on a meeting. Add the oracle, marginal and faithfulness tests of
+A kernel follows the rules of the guide's
+[Writing a kernel](docs/guide/custom-kernels.md#the-rules) page and passes
+`telescopic.testing.check_coupling`. Add the oracle, marginal and faithfulness tests of
 `docs/design/test-plan.md` section 2.4.
 
 ## Pull requests

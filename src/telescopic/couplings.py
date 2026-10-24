@@ -63,7 +63,7 @@ def maximal(
     Draw :math:`X \sim p`; the pair is identical with probability
     :math:`\min(\eta, q(X)/p(X))`. Otherwise draw :math:`Y \sim q` until
     :math:`u > \eta\,p(Y)/q(Y)` (Thorisson's algorithm, Jacob, O'Leary & Atchadé 2020
-    Algorithm 2; with :math:`\eta < 1`, the bounded-variance version of Gerber & Lee,
+    Algorithm 2; with :math:`\eta < 1`, the bounded-variance version of Gerber & Lee 2020,
     Atchadé & Jacob 2024 Algorithm 2; spec R-CPL-2). The meeting probability is
     :math:`\int\min(\eta p, q)`, maximal at :math:`\eta = 1`; the number of draws from
     ``p`` and ``q`` has mean 2 and variance at most :math:`2\eta/(1-\eta)`.

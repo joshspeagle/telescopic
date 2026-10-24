@@ -26,8 +26,8 @@ class Gibbs(Kernel):
     block from a coupling of their two conditionals:
 
     - ``"maximal"``: the rejection maximal coupling, with ``eta``;
-    - ``"crn"``: common random numbers, which contract the chains but do not make them
-      meet on their own: one uniform through ``ppf`` for a block of one coordinate, common
+    - ``"crn"``: common random numbers, which contract the chains but make them equal only
+      by rounding: one uniform through ``ppf`` for a block of one coordinate, common
       standard normals for a multivariate normal conditional (an object with ``mean`` and
       ``cov``, such as ``scipy.stats.multivariate_normal``);
     - ``"two-scale"``: common random numbers for pairs farther apart than ``threshold``

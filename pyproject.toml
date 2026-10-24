@@ -62,6 +62,8 @@ docs = [
     "numpydoc==1.11.0",
     "matplotlib>=3.8",
     "ipykernel",
+    # The quickstart tutorial runs emcee beside telescopic.
+    "emcee==3.1.6",
 ]
 
 [tool.hatch.version]

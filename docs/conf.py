@@ -12,7 +12,6 @@ extensions = [
     "myst_nb",
     "numpydoc",
     "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
 ]
@@ -20,13 +19,29 @@ extensions = [
 myst_enable_extensions = ["amsmath", "colon_fence", "deflist", "dollarmath"]
 myst_heading_anchors = 3
 
-# Tutorials are MyST notebooks executed at build time; a failing cell fails the build.
-nb_execution_mode = "cache"
+# Tutorials are MyST notebooks executed at every build, since a cache keyed on their cells
+# would keep outputs computed by an older package; a failing cell fails the build.
+nb_execution_mode = "force"
 nb_execution_timeout = 300
 nb_execution_raise_on_error = True
 
 numpydoc_show_class_members = False
-autosummary_generate = True
+
+# Every cross-reference must resolve, but for type hints that have no page of their own.
+nitpicky = True
+nitpick_ignore = [
+    ("py:class", name)
+    for name in (
+        "Seed",
+        "matplotlib.axes._axes.Axes",
+        "numpy._typing._array_like.ArrayLike",
+        "numpy._typing._array_like.NDArray",
+        "numpy.float64",
+        "numpy.int64",
+        "telescopic._random.Streams",
+        "telescopic._types.Distribution",
+    )
+]
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),

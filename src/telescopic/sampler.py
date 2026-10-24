@@ -83,6 +83,19 @@ class CoupledSampler:
         installed, lines on stderr otherwise.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
         The root of every random stream (spec section 6.1).
+
+    Attributes
+    ----------
+    kernel : Kernel
+        The kernel, replaced by its tuned copy when tuned.
+    tuning : TuningReport or None
+        The report of the tuning pilot; ``None`` before tuning or with nothing to tune.
+    pilot : ndarray or None
+        The meeting times of every lag-1 pilot pair run so far; ``None`` before the first.
+    seed : numpy.random.SeedSequence
+        The root seed.
+    ndim : int
+        The dimension of the target.
     """
 
     def __init__(
@@ -145,7 +158,7 @@ class CoupledSampler:
         """Meeting times of ``n`` new pilot pairs with lag 1 (spec R-TUNE-2).
 
         Each call runs new pilot replicates, continuing their indices, and adds them to
-        :attr:`pilot`.
+        ``pilot``.
 
         Parameters
         ----------
@@ -383,14 +396,33 @@ def sample(
     progress: bool = False,
     rng: Seed = None,
 ) -> Result:
-    """Unbiased estimates of expectations under a target, in one call (spec R-API-1).
+    r"""Unbiased estimates of expectations under a target, in one call (spec R-API-1).
 
-    ``sample(log_prob, init, n)`` is ``CoupledSampler(log_prob, init, ...).run(n, ...)``;
-    see :class:`CoupledSampler` for the parameters.
+    ``sample(log_prob, init, n, ...)`` is ``CoupledSampler(log_prob, init, ...).run(n,
+    ...)``: it tunes the kernel's unset parameters, chooses ``k`` from 100 lag-1 pilot
+    pairs when it is ``"auto"``, and runs ``n_replicates`` replicates of coupled chains.
+
+    Parameters
+    ----------
+    log_prob : callable or None
+        :math:`\log\pi` up to a constant, ``log_prob(x, *args, **kwargs)``, for ``x`` of
+        shape ``(d,)``, or ``(n, d)`` with ``vectorize=True``; ``None`` for a Gibbs kernel.
+    init
+        The initial distribution :math:`\pi_0`: an object with ``rvs(random_state=rng)``,
+        a callable ``init(rng)`` or an array of points of shape ``(n, d)``.
+    n_replicates : int
+        The number :math:`R` of replicates.
+    args, kwargs, grad, vectorize, kernel, names, pool, progress, rng
+        As for :class:`CoupledSampler`.
+    k, m, lag, thin, max_iter
+        As for :meth:`CoupledSampler.run`: ``"auto"`` chooses ``k`` from the pilot, then
+        ``lag = max(1, k)`` and ``m = 10 k``; ``thin`` averages every ``thin``-th state;
+        ``max_iter`` censors pairs still unmet at that time.
 
     Returns
     -------
     Result
+        Its estimates are unbiased; it warns about the conditions of spec section 7.4.
     """
     sampler = CoupledSampler(
         log_prob,

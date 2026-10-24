@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import os
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -59,8 +60,8 @@ class Estimate:
 class Result:
     r"""The output of a run of coupled chains (spec R-OUT-1).
 
-    Censored pairs appear in :attr:`meeting_times` as ``inf`` and are excluded from the
-    estimates, from :attr:`n_replicates` and from :attr:`measure`.
+    Censored pairs appear in ``meeting_times`` as ``inf`` and are excluded from the
+    estimates, from ``n_replicates`` and from ``measure``.
 
     Parameters
     ----------
@@ -333,47 +334,66 @@ class Result:
         Returns
         -------
         dict
-            ``meeting_time`` quantiles (50, 90, 99) and maximum, ``censored``,
-            ``late_fraction``, the fraction of pairs with :math:`\\tau - L > k`, censored
-            ones included (the leading term of the TV bound at :math:`k`, spec section
-            3.6), with ``late_fraction_upper``, its one-sided 95% Clopper-Pearson upper
-            bound, which stays informative when the fraction is 0; ``tv_bound_at_k``;
-            ``mean_cost``, ``seconds_per_replicate`` and ``inefficiency`` (mean cost over
-            :math:`m - k + 1`; spec R-TUNE-4).
+            ``meeting_time`` quantiles (50, 90, 99) and maximum; ``tail_index``, Hill's
+            estimate of the tail index of :math:`\\tau - L + 1` from its
+            :math:`\\lfloor R/10 \\rfloor` largest values, ``nan`` below 500 replicates;
+            ``censored``; ``late_fraction``, the fraction of pairs with
+            :math:`\\tau - L > k`, censored ones included (the leading term of the TV
+            bound at :math:`k`, spec section 3.6), with ``late_fraction_upper``, its
+            one-sided 95% Clopper-Pearson upper bound, which stays informative when the
+            fraction is 0; ``tv_bound_at_k``; ``variance_share``, the largest share of one
+            replicate in the sample variance of the estimate of a coordinate's mean or
+            second moment, and ``variance_share_of``, that estimate, ``nan`` and ``None``
+            below 2 replicates; ``mean_cost``, ``seconds_per_replicate`` and
+            ``relative_cost``, the mean cost over :math:`m - k + 1` (spec R-TUNE-4).
         """
+        return dict(self._diagnostics)
+
+    @functools.cached_property
+    def _diagnostics(self) -> dict[str, Any]:
+        # Computed once: each run's warnings, the summary and check all read it.
         met = self.meeting_times[np.isfinite(self.meeting_times)]
         quantiles = np.quantile(met, [0.5, 0.9, 0.99]) if len(met) else np.full(3, np.nan)
+        tail_index = np.nan
+        if self.n_replicates >= 500:
+            tail_index = diagnostics.hill(met - self.lag + 1, self.n_replicates // 10)
         n_late = int(np.sum(self.meeting_times - self.lag > self.k))
         n_total = len(self.meeting_times)
         upper = stats.binomtest(n_late, n_total, alternative="less").proportion_ci(0.95).high
+        share, share_of = np.nan, None
+        if self.n_replicates >= 2:
+            moments = [self.measure.per_replicate(h) for h in (lambda x: x, np.square)]
+            shares = diagnostics.variance_share(np.concatenate(moments, axis=1))
+            worst = int(np.argmax(shares))
+            moment = "mean" if worst < self.ndim else "second moment"
+            share = float(shares[worst])
+            share_of = f"the {moment} of {self.names[worst % self.ndim]}"
         mean_cost = float(self.costs.mean())
         return {
             "meeting_time_50": float(quantiles[0]),
             "meeting_time_90": float(quantiles[1]),
             "meeting_time_99": float(quantiles[2]),
             "meeting_time_max": float(np.max(met)) if len(met) else np.nan,
+            "tail_index": tail_index,
             "censored": self.n_censored,
             "late_fraction": n_late / n_total,
             "late_fraction_upper": float(upper),
             "tv_bound_at_k": float(self.tv_bound([self.k])[0]),
+            "variance_share": share,
+            "variance_share_of": share_of,
             "mean_cost": mean_cost,
             "seconds_per_replicate": self.wall_time / len(self.index),
-            "inefficiency": mean_cost / (self.m - self.k + 1),
+            "relative_cost": mean_cost / (self.m - self.k + 1),
         }
 
-    def summary(self, level: float = 0.95) -> Summary:
+    def summary(self) -> Summary:
         """Estimates per parameter and the diagnostics of the run (spec R-OUT-3).
-
-        Parameters
-        ----------
-        level : float
-            Confidence level of the reported intervals of the means.
 
         Returns
         -------
         Summary
         """
-        mean = self.estimate(lambda x: x, level)
+        mean = self.mean()
         quantiles = self.quantile([0.16, 0.5, 0.84])
         table = {
             "mean": mean.value,
@@ -617,6 +637,8 @@ class Summary:
             for i, name in enumerate(self.names)
         ]
         footer = self.footer
+        # The tail index needs 500 replicates.
+        tail = "" if np.isnan(footer["tail_index"]) else f"; tail index {footer['tail_index']:.3g}"
         lines = [
             (
                 f"R = {footer['n_replicates']}, k = {footer['k']}, m = {footer['m']}, "
@@ -625,14 +647,18 @@ class Summary:
             (
                 f"meeting times: median {footer['meeting_time_50']:.4g}, 90% "
                 f"{footer['meeting_time_90']:.4g}, 99% {footer['meeting_time_99']:.4g}, max "
-                f"{footer['meeting_time_max']:.4g}; censored {footer['censored']}"
+                f"{footer['meeting_time_max']:.4g}{tail}; censored {footer['censored']}"
             ),
             (
                 f"cost per replicate: {footer['mean_cost']:.4g} kernel applications, "
-                f"{footer['seconds_per_replicate']:.3g} s; inefficiency "
-                f"{footer['inefficiency']:.3g}; pairs meeting after k + lag "
+                f"{footer['seconds_per_replicate']:.3g} s; relative cost "
+                f"{footer['relative_cost']:.3g}; pairs meeting after k + lag "
                 f"{footer['late_fraction']:.1%} (at most {footer['late_fraction_upper']:.1%} "
                 "at 95%)"
+            ),
+            (
+                "largest share of one replicate in the variance of an estimate: "
+                f"{footer['variance_share']:.0%}, for {footer['variance_share_of']}"
             ),
         ]
         if footer["interrupted"]:

@@ -86,7 +86,7 @@ Ordinary MCMC starts a chain from $\pi_0$, discards a burn-in by eye or heuristi
 - Budget mode with the Glynn–Heidelberger per-lane estimator (§3.7).
 - Checkpoint and resume to a file.
 - 1-Wasserstein bounds (§3.6).
-- Rank-normalised $\hat R$ and effective sample size across the replicates' X-chains; these are the atoms from $k$ to $m$. Also a relative inefficiency against an autocorrelation-based MCMC baseline.
+- Rank-normalised $\hat R$ and effective sample size across the replicates' X-chains; these are the atoms from $k$ to $m$ (deferred beyond v0.1, DECISIONS #38). Also a relative inefficiency against an autocorrelation-based MCMC baseline.
 - Export of the replicates' X-chains to ArviZ.
 - Couplings:
   - two-scale GCRN and GCRefl couplings for RWMH with gradients (Papp & Sherlock 2025);
@@ -197,7 +197,7 @@ Let $a_r = \hat\pi_r(h) \in \mathbb R^p$ for replicates $r = 1, \dots, R$. Write
   3. Project the cumulative sum onto non-decreasing sequences by isotonic regression with unit weights (`scipy.optimize.isotonic_regression`), then clip to $[0, 1]$.
   4. The $\beta$-quantile is the smallest atom whose projected cumulative weight is at least $\beta$ (the left-continuous inverse).
 
-  This is consistent as $R \to \infty$ but not unbiased (JOA20 Prop. 3.2). Credible intervals use these quantiles. Their uncertainty comes from a bootstrap over whole replicates, labelled heuristic.
+  This is consistent as $R \to \infty$ but not unbiased (JOA20 Prop. 3.2). Credible intervals use these quantiles. v0.1 reports no uncertainty for them; a bootstrap over whole replicates, labelled heuristic, is deferred (DECISIONS #38).
 
 ### 3.5 Tuning rules (R-TUNE)
 
@@ -212,7 +212,7 @@ Let $a_r = \hat\pi_r(h) \in \mathbb R^p$ for replicates $r = 1, \dots, R$. Write
   - **Partial `"auto"` (D-21):** a value given explicitly is kept. A missing `lag` or `m` is derived from `k` ($L = \max(1, k)$, $m = 10k$) without a pilot, and the pilot runs only when `k` is `"auto"`.
   - **Evidence:** E01 (Appendix A) used a 2000-replicate pilot; the design review measured the 100-replicate pilot.
 - **R-TUNE-3:** pilots draw from their own random-stream namespaces (§6.1). Their replicates never enter estimates; they are reported.
-- **R-TUNE-4:** the result records every tuned value, the pilot meeting times, and the measured inefficiency: the mean cost per replicate divided by $m - k + 1$. (JOA20 §3.1 approximates it by $1 + (k + \mathbb E[\tau - L])/(m - k)$; with $\bar\tau$ in place of $\mathbb E[\tau - L]$ the approximation is too high by $L/(m-k)$ when $L > 1$.)
+- **R-TUNE-4:** the result records every tuned value, the pilot meeting times, and the measured relative cost: the mean cost per replicate divided by $m - k + 1$ (DECISIONS #41). (JOA20 §3.1 approximates it by $1 + (k + \mathbb E[\tau - L])/(m - k)$; with $\bar\tau$ in place of $\mathbb E[\tau - L]$ the approximation is too high by $L/(m-k)$ when $L > 1$.)
 
 ### 3.6 Coupling bounds (R-DIAG-1)
 
@@ -294,7 +294,7 @@ tune(target, initial, rng=None, *, pilot=None) -> (kernel, report)   # (self, No
 - **Randomness:** `draws` supplies random numbers row by row from each replicate's stream (§6.1). Its `normal(d)`, `uniform()`, `log_uniform()` and `generator(i)` give `(n, d)` normals, `(n,)` uniforms and their logarithms, and row `i`'s `numpy.random.Generator`.
 - **Tuning:** `tune` returns a tuned copy. `pilot` passes adaptive Metropolis chains already run, so a `Mixture` tunes its components on one pilot (DECISIONS #5).
 - **R-KER-2:** each marginal of `coupled_step` has exactly the law of `step`.
-- **R-KER-3:** the engine declares a meeting when the returned positions of a pair are bitwise equal (R-EST-2). A coupling that makes the two proposals identical gives $Y$ a copy of $X$'s proposal and its cached log-density, never a recomputation, so that equality is exact.
+- **R-KER-3:** the engine declares a meeting when the returned positions of a pair are equal under `==` (R-EST-2). A coupling that makes the two proposals identical gives $Y$ a copy of $X$'s proposal and its cached log-density, never a recomputation, so that equality is exact.
 - **R-KER-4:** the built-in couplings keep equal states equal. The engine does not rely on this: it never applies `coupled_step` to an equal pair.
 - **R-KER-5:** each kernel documents the random numbers it consumes per step.
 - **R-KER-6:** a row's arithmetic does not depend on the other rows of the batch. Kernels compute row-wise linear algebra with `np.einsum` (without `optimize`) or elementwise operations, never with BLAS-backed `@` or `solve` on a batch: those give a row different bits in a batch of one than in a larger batch (design review D-R4). R-EXEC-2 depends on this.
@@ -408,7 +408,7 @@ The documentation says that settings optimal for HMC alone can fail to contract 
   - `"maximal"`: rejection maximal coupling (§5.2), with the $\eta$ option;
   - `"crn"`: common random numbers, which contract but do not meet on their own (an `eta` other than 1 raises: DECISIONS #16): a common uniform through `ppf` for blocks of one coordinate, and common standard normals for multivariate normal conditionals (objects with `mean` and `cov`, such as `scipy.stats.multivariate_normal`);
   - `"two-scale"`: CRN while $\lVert x - y\rVert >$ `threshold`, maximal otherwise (Biswas et al. 2022). The switch depends only on the pair at the start of each sweep, and both branches couple the same conditional, so it is valid (AJ24 §4.2). `threshold` is required.
-- **Identical conditionals:** when the coordinates outside block `b` are bitwise equal in the two chains, their conditionals are identical, and both chains receive the same draw. This identity coupling is a valid state-dependent choice; it also keeps equal states equal when $\eta < 1$, which the rejection coupling alone would split with probability $1 - \eta$ (design review D-R2).
+- **Identical conditionals:** when the coordinates outside block `b` are equal in the two chains, their conditionals are identical, and both chains receive the same draw. This identity coupling is a valid state-dependent choice; it also keeps equal states equal when $\eta < 1$, which the rejection coupling alone would split with probability $1 - \eta$ (design review D-R2).
 - **Meeting:** the engine's exact comparison after each sweep (R-EST-2). Blocks updated by CRN can become equal without a coupling event.
 - **Log-density:** a Gibbs kernel needs none (`needs_log_prob` is false), nor does a mixture of Gibbs kernels. With `log_prob=None`, states carry log-density 0, the `InputWarning` check of §4.2 is skipped, and there is nothing to tune.
 
@@ -453,7 +453,7 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
   - it is reported by a `ConvergenceWarning` stating that the estimates are biased.
 - Censored pairs are never dropped silently, and never averaged as if they had met.
 - **Slow-pair warning:** when a pair passes $t = \max(10^4, 10\max(L, m))$, the sampler emits one `ConvergenceWarning` naming the replicate: in this process from the engine's progress reports, as it happens; on a pool, whose workers' reports do not reach the parent, from the meeting times when the run ends. With the recipe of R-TUNE-2 and $m \ge 1000$ this is 100 times the pilot's $\hat q_\beta$; it needs no pilot, and in the meeting-time pilot ($L = 1$, $m = 0$) it is $10^4$.
-- **Meeting-time pilot:** it is capped at `pilot_max_iter` (default $10^5$). Capped pairs are censored and sort above every finite meeting time; if $\hat q_\beta$ falls on a censored pair, the pilot raises `ValueError` with advice (a wider $\pi_0$, a better kernel, or explicit `k`, `lag` and `m`). So `sample()` cannot run forever on a target where the coupling never meets (D-23).
+- **Meeting-time pilot:** it is capped at the `max_iter` of `CoupledSampler.meeting_times`, $10^5$ by default, the cap that `run` and `sample` use (DECISIONS #38). Capped pairs are censored and sort above every finite meeting time; if $\hat q_\beta$ falls on a censored pair, the pilot raises `ValueError` with advice (a wider $\pi_0$, a better kernel, or explicit `k`, `lag` and `m`). So `sample()` cannot run forever on a target where the coupling never meets (D-23).
 
 ### 6.4 Parallel execution (R-EXEC-5)
 
@@ -467,7 +467,7 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
   - a task in the main thread of another process pins BLAS to one thread and ignores Ctrl-C, in user pools too. Tasks in the parent process, as on a thread pool, or in other threads leave those settings alone: they belong to the process, and concurrent tasks would restore each other's;
   - pools that telescopic creates start their workers with the spawn method, which behaves alike on every platform; forking a process whose BLAS runs threads can deadlock. Their workers ignore Ctrl-C between tasks too, and on POSIX from their start, since they are made while the parent ignores it. On Windows, `ProcessPoolExecutor` takes at most 61 workers, and a larger `pool` raises at once;
   - the workers of an integer pool live for one call of `run` or `meeting_times`: they start before tuning, so that their start overlaps it, and serve the pilot and the run.
-- **Picklability:** telescopic ships the target, the initial distribution and the kernel (which can hold user functions, such as Gibbs conditionals) to the workers it creates with `cloudpickle` when it is installed (the `parallel` extra), so functions defined in a notebook work under the spawn and forkserver start methods (D-27). Otherwise they must be picklable, and the error says how to fix it. The documentation covers the `if __name__ == "__main__"` guard.
+- **Picklability:** telescopic ships the target, the initial distribution and the kernel (which can hold user functions, such as Gibbs conditionals) to the workers of every pool with `cloudpickle` when it is installed (the `parallel` extra), so functions defined in a notebook work under the spawn and forkserver start methods (D-27). Otherwise they must be picklable, and the error says how to fix it. The documentation covers the `if __name__ == "__main__"` guard.
 - **Counters:** each task returns its own numbers of log-density and gradient evaluations, since the `Target` counters of a worker process are not the parent's.
 
 ### 6.5 Interruption (R-EXEC-6)
@@ -482,7 +482,7 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 
 - **Atoms:** storage needs about $R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})\,(8d + 16)$ bytes for positions, weights and replicate indices, plus 24 bytes per stored distance. The engine stores each iteration's rows as small arrays and merges every 256 of them into one block, so at $d = 10$ a row holds 94 to 103 bytes against 92 of payload at 1 to 256 lanes (M3 review).
 - **Join:** at the end of a run, sorting the atoms by replicate holds about three times their size for a moment (3.1 times at $d = 10$).
-- **Estimate first:** the sampler estimates this before the main run and warns above 1 GB, suggesting `thin`.
+- **Estimate first:** the sampler estimates this before each run and warns above 1 GB, suggesting `thin`.
 - **Streaming:** a streaming mode with a fixed `h` and constant memory is on the roadmap.
 
 ---
@@ -493,7 +493,7 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 
 Fields:
 - `k`, `m`, `lag`, `thin`, `n_replicates`, `ndim`, `names`;
-- `kernel` (the frozen kernel; `save` stores its description, and `load` restores the description, not the object) and `initial` (a description of $\pi_0$);
+- `kernel` (the frozen kernel; `save` stores its description, and `load` restores the description, not the object) and `initial` (the initial distribution; `save` stores its description, and `load` restores the description);
 - `seed` (root entropy and spawn key);
 - `meeting_times` (censored as `inf`) and `costs` (kernel applications) for every replicate, censored ones included;
 - `n_log_prob`, `n_grad` and `wall_time` for the run;
@@ -507,7 +507,7 @@ Methods:
   - `mean()`, `cov()`, `var()`, `std()` follow §3.4.
 - **Quantiles and histograms:** `quantile(q)`, `interval(mass=0.68)` (the central interval holding that mass of $\pi$; `level` is reserved for confidence levels) and `histogram(dims, bins=20, range=None)`, of one coordinate or a joint histogram of several, with standard errors (DECISIONS #30).
 - **Diagnostics:** `tv_bound(t=None)`, `w1_bound(t=None)` (should), and `diagnostics()` (a dict).
-- **Reporting:** `summary(level=0.95)` returns a `Summary` table. `check(strict=False)` emits the warnings of §7.4, or raises if strict.
+- **Reporting:** `summary()` returns a `Summary` table (DECISIONS #40). `check(strict=False)` emits the warnings of §7.4, or raises if strict.
 - **Plots:** `plot_meeting_times(axes=None)`, `plot_tv_bound(ax=None)`, `plot_marginals(dims=None, bins=20, axes=None)` and `plot_corner(dims=None, bins=20)` (signed 2-D histograms); the first three draw on given axes (DECISIONS #30).
 - **Persistence and merging:**
   - `save(path)` and `Result.load(path)` use a versioned `.npz` schema, with no pickle: arrays, and the settings, names, seed state and descriptions as JSON (DECISIONS #26, #29). The engine's paths are not saved;
@@ -532,11 +532,13 @@ Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 - $R$, $k$, $m$, $L$, `thin`;
 - the kernel and its coupling;
 - meeting-time median, 90th and 99th percentiles, maximum, and number censored;
+- the tail index of warning 4 of §7.4, from 500 replicates (DECISIONS #40);
 - mean cost per replicate, in kernel applications and in seconds;
-- the measured inefficiency, mean cost / $(m - k + 1)$ (R-TUNE-4);
+- the relative cost, mean cost / $(m - k + 1)$ (R-TUNE-4);
 - the fraction of replicates with a non-zero bias correction, which estimates the TV bound at $k$ (§3.6);
+- the largest share of warning 3 of §7.4, and the estimate that holds it (DECISIONS #40);
 - for an interrupted run, that its estimates are consistent but not exactly unbiased (§6.5);
-- (should) $\hat R$ across the replicates' X-chains;
+- (should; deferred beyond v0.1, DECISIONS #38) $\hat R$ across the replicates' X-chains;
 - warnings raised.
 
 **Output forms:** `repr` prints the table. It also converts with `to_dict()`, and with `to_pandas()` when pandas is installed.
@@ -549,11 +551,11 @@ Classes: `TelescopicWarning`, with subclasses `ConvergenceWarning` and `InputWar
 1. any censored replicate;
 2. a fraction of replicates with $\tau - L > k$ above 0.25 ("k may be too small"). The recipe itself gives 0.02 to 0.13 (§3.6), so a lower threshold fires on clean runs;
 3. one replicate contributing more than half of the sample variance of the estimate of a coordinate's mean or second moment, with $R \ge 100$ (heavy tails or rare excursions). A quarter, the first draft's threshold, is typical of Gaussian data at $R = 20$ to 30 and was exceeded in 87 of 200 clean runs on the banana at $R = 100$, whose intervals covered as often as the others (DECISIONS #36);
-4. a Hill estimate of the tail index of $\tau - L + 1$ below 2 (finite variance in doubt), from the $\max(10, \lfloor R/10\rfloor)$ largest values, with $R \ge 500$. Applied to $\tau$ itself with $L = k$, the shift by $L$ removes almost all its power;
+4. a Hill estimate of the tail index of $\tau - L + 1$ below 2 (finite variance in doubt), from the $\lfloor R/10\rfloor$ largest values, with $R \ge 500$. Applied to $\tau$ itself with $L = k$, the shift by $L$ removes almost all its power;
 5. pilot chains that disagree (§5.3);
 6. a slow pair (§6.3).
 
-Rates measured at M9 with `sample()`'s defaults (`notes/experiments/m9_warnings.out`, `m9_variance_warning.out`):
+Rates measured at M9, on the first two targets with `sample()`'s defaults and on the third with the settings given (`notes/experiments/m9_warnings.out`, `m9_variance_warning.out`):
 - `examples.gaussian(10)`: no warning in 50 runs at $R = 500$; at $R = 100$, the variance warning in at most 2 of 100 runs and no other.
 - The banana from $U[-5, 5]^2$: at $R = 100$, the variance warning in 19 of 200 runs, where the 95% intervals of $E[x_0^2]$ covered at 0.84 against 0.96 elsewhere; at $R = 500$, the variance warning in at most 6 of 50 runs and the tail warning in 14.
 - JOA20's bimodal target from $\mathcal N(10, 1)$ at $R = 1000$: 33 of 50 intervals of $P(x > 3)$ missed the truth, none with a warning; the 17 runs whose replicates found the other mode raised the variance warning and covered.
@@ -607,7 +609,7 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
 - **Randomness:** every function that draws random numbers takes `rng` (SPEC 7). There is no global state.
 - **Shapes:** batch first. States are `(n, d)`; test functions map `(n, d)` to `(n,)` or `(n, p)`; per-replicate values are `(R, ...)`.
 - **Errors:** `ValueError` or `TypeError` with messages that name the argument and say what was expected. Questionable inputs emit `InputWarning`; reliability problems emit `ConvergenceWarning`.
-- **Progress:** `progress=True` uses tqdm when it is installed, and falls back to periodic lines on stderr.
+- **Progress:** `progress=True` draws tqdm's text bar when tqdm is installed, in notebooks too, and falls back to periodic lines on stderr (DECISIONS #39).
 - **Types and documentation:** public signatures are typed, with NumPy-style docstrings.
 - **Vocabulary:** the documentation says "replicates" and "pairs", never "walkers".
 
@@ -633,7 +635,7 @@ fit = optimize.minimize(lambda theta: -log_prob(theta, x, y, yerr), [0.0, 0.0])
 init = telescopic.initial.Normal(mean=fit.x, cov=100 * fit.hess_inv)
 result = telescopic.sample(log_prob, init, args=(x, y, yerr), names=["slope", "intercept"],
                            rng=42)
-print(result.summary())                      # unbiased means, standard errors, intervals
+print(result.summary())                      # unbiased means, standard errors, quantiles
 result.estimate(lambda t: t[:, 0] * t[:, 1])  # any function, after the run
 result.plot_tv_bound()                       # with the plot extra: distance from stationarity
 ```

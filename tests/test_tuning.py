@@ -125,6 +125,22 @@ def test_tuning_freezes_kernels_with_the_pilots_mean_and_covariance():
     assert mixed.max_weight_ratio == report.max_weight_ratio
 
 
+def test_a_mixture_tunes_a_kernel_that_overrides_tune():
+    # The guide's interface for kernels of one's own: override tune, using the pilot
+    # that a mixture passes.
+    class Scaled(Exact):
+        @property
+        def is_tuned(self):
+            return self.step_size is not None
+
+        def tune(self, target, initial, rng=None, *, pilot=None):
+            return Scaled(float(pilot.cov[0, 0])), None
+
+    pilot = adaptive_metropolis(TARGET, START, 2, n_steps=500)
+    mixture, _ = Mixture([Scaled(None), RandomWalk()], [0.5, 0.5]).tune(TARGET, START, pilot=pilot)
+    assert mixture.kernels[0].step_size == pilot.cov[0, 0]
+
+
 def test_a_tuned_kernel_returns_itself():
     kernel = RandomWalk(np.eye(5))
     assert kernel.tune(TARGET, START) == (kernel, None)

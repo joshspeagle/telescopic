@@ -1,6 +1,8 @@
+import dataclasses
 import io
 import tempfile
 import warnings
+from functools import cached_property
 from pathlib import Path
 
 import numpy as np
@@ -55,21 +57,28 @@ def reloaded(result):
 
 def assert_same(loaded, original, name):
     # Compares seeds by their state, and the fields of the replicates, the measure and the
-    # tuning report one by one.
+    # tuning report one by one; cached properties are not fields.
     if isinstance(original, np.random.SeedSequence):
         assert loaded.state == original.state, name
-    elif hasattr(original, "__dataclass_fields__"):
-        for field, value in vars(original).items():
-            if field != "paths":
-                assert_same(getattr(loaded, field), value, f"{name}.{field}")
+    elif dataclasses.is_dataclass(original):
+        for field in dataclasses.fields(original):
+            if field.name != "paths":
+                value = getattr(original, field.name)
+                assert_same(getattr(loaded, field.name), value, f"{name}.{field.name}")
     else:
         np.testing.assert_array_equal(loaded, original, err_msg=name)
 
 
+def stored(result):
+    # A result's attributes, without the values cached from them.
+    cached = {name for name, member in vars(Result).items() if isinstance(member, cached_property)}
+    return {name: value for name, value in vars(result).items() if name not in cached}
+
+
 def test_save_and_load_round_trip_every_field(result):
     loaded = reloaded(result)
-    assert vars(loaded).keys() == vars(result).keys()
-    for name, value in vars(result).items():
+    assert stored(loaded).keys() == stored(result).keys()
+    for name, value in stored(result).items():
         if name in ("kernel", "initial"):
             assert getattr(loaded, name) == (None if value is None else str(value))
         else:

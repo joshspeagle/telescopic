@@ -1,0 +1,12 @@
+coefficients [-0.5, 1.0, -1.0, 0.5, 0.0, 2.0]: 0.415 of the outcomes are 1
+  MALA(step_size=1.2361839068786415, cov=<6x6>): 19 of 100 pilot pairs unmet at 3,000; met median 10, max 1830; 2.0 s
+  HMC(step_size=0.9176951062684586, n_steps=2, cov=<6x6>, meeting_weight=0.05, meeting_scale=0.001): 0 of 100 pilot pairs unmet at 3,000; met median 32, max 127; 0.6 s
+  MALA(step_size=1.0, cov=<6x6>): 2 of 100 pilot pairs unmet at 3,000; met median 12, max 135; 0.9 s
+  MALA(step_size=0.7, cov=<6x6>): 0 of 100 pilot pairs unmet at 3,000; met median 21, max 48; 0.1 s
+  MALA(step_size=0.5, cov=<6x6>): 0 of 100 pilot pairs unmet at 3,000; met median 42, max 107; 0.1 s
+  automatic MALA, 200 chains of 300 steps: 21 never moved; largest eigenvalue of Sigma H(x0), median 3.5 (range 1.7 to 6.6) at their starts, 2.1 at the others'; 4 / step^2 = 2.6; at the mode 1.2
+  sample(kernel='mala'): ValueError: more than 1.0% of the pilot pairs never met within their cap, so k cannot be chosen: try a wider initial distribution or a better-tuned kernel, or give k, lag and m explicitly; 49.4 s
+coefficients [0.5, 1.0, -0.5, 0.25, 0.0, -1.0]: 0.545 of the outcomes are 1
+  MALA(step_size=1.2673943186411116, cov=<6x6>): 0 of 100 pilot pairs unmet at 3,000; met median 6, max 14; 0.4 s
+  HMC(step_size=0.9342348967064354, n_steps=2, cov=<6x6>, meeting_weight=0.05, meeting_scale=0.001): 0 of 100 pilot pairs unmet at 3,000; met median 29, max 180; 0.7 s
+exit 0

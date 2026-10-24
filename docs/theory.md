@@ -100,10 +100,13 @@ $|S| + 2\max(0, \tau - \min S - L)$ atoms, since atoms with $c_t = 0$ are droppe
 ## Cost
 
 A replicate uses $C = L + 2(\tau - L) + \max(0, m - \tau)$ applications of the kernel,
-counting a coupled step before the meeting as two. Its **inefficiency** is the mean cost
-divided by $m - k + 1$, the cost of the MCMC average alone. Kernels differ in the
-log-density and gradient evaluations per application, so telescopic also counts those,
-and the wall time.
+counting a coupled step before the meeting as two. Its **relative cost** is the mean cost
+divided by $m - k + 1$, the cost of the MCMC average alone. The **inefficiency** of the
+estimator is $\mathbb E[C]\,\mathbb V[H_{k:m}]$ (Glynn & Whitt 1992; JOA20 §3.1): at a
+fixed budget of kernel applications, the variance of the average over replicates is the
+inefficiency divided by the budget, so it is the figure to minimise when comparing kernels
+or settings. Kernels differ in the log-density and gradient evaluations per application,
+so telescopic also counts those, and the wall time.
 
 ## Guarantees and their limits
 
@@ -116,12 +119,12 @@ and the wall time.
   - geometric tails of $\tau$ (JOA20, Prop. 3.1);
   - polynomial tails (Middleton et al. 2020);
   - $\mathbb E_{\pi\otimes\pi}[\tau^\kappa] < \infty$ with $\kappa > 1$,
-    $h \in L^p(\pi)$ with $p > \kappa/(\kappa-1)$, and $d\pi_0/d\pi \le M$ (Douc et al.,
-    Thm. 17). Under these, the variance is finite if $\kappa > 2$ and
+    $h \in L^p(\pi)$ with $p > \kappa/(\kappa-1)$, and $d\pi_0/d\pi \le M$ (Douc et al.
+    2022, Thm. 17). Under these, the variance is finite if $\kappa > 2$ and
     $p > 2\kappa/(\kappa - 2)$.
 - **Error bars:** with $R$ independent replicates and finite variance,
   $\bar H \pm z_{1-\alpha/2}\,\hat\sigma/\sqrt R$ is an asymptotically valid interval as
-  $R \to \infty$. The bounded work per replicate does not change this.
+  $R \to \infty$. That the cost of each replicate is random does not change this.
 - **Fixed $R$:** unbiasedness holds for a number of replicates fixed before any result is
   seen. Choosing $R$ after looking at results, for example extending a run until the
   error bar is small, is optional stopping: the mean stays consistent and the large-$R$
@@ -163,7 +166,7 @@ $\bar a$ and sample covariance $S_a$ (divisor $R - 1$).
   $\beta$-quantile is the smallest atom whose projected cumulative weight is at least
   $\beta$. This is consistent as $R \to \infty$ but not unbiased (JOA20, Prop. 3.2).
 
-## Choosing $k$, $m$ and $L$
+## Choosing k, m and L
 
 The settings change the cost and the variance, never the bias. telescopic follows AJ24:
 from the meeting times of $R_0 = 100$ pilot pairs with $L = 1$,
@@ -175,8 +178,8 @@ from the meeting times of $R_0 = 100$ pilot pairs with $L = 1$,
 
 With $L = k$ most pairs meet within $k + L$ steps, so $\mathrm{BC}_{k:m}$ is usually zero
 and the estimator is an ordinary MCMC average after a burn-in of $k$. A pair that meets
-before $m$ costs $m + \tau - L$, so with $m = 10k$ and $\tau - L \le k$ the
-inefficiency is about $10/9$ to $11/9$. $\beta \le 1 - 1/R_0$ is required, so that
+before $m$ costs $m + \tau - L$, so with $m = 10k$ and $\tau - L \le k$ the relative
+cost is about $10/9$ to $11/9$. $\beta \le 1 - 1/R_0$ is required, so that
 $\hat q_\beta$ is not the sample maximum.
 
 ## Distance to stationarity
@@ -185,6 +188,12 @@ For any $L$ and $t \ge 0$ (BJV19, Thm. 2.5),
 
 $$d_{TV}(\pi_t, \pi) \le \mathbb E\Big[\max\Big(0, \Big\lceil \frac{\tau - L - t}{L}
 \Big\rceil\Big)\Big] = \sum_{j \ge 1} \mathbb P(\tau > t + jL).$$
+
+The argument telescopes the laws: when $\pi_s \to \pi$,
+$\pi_t - \pi = \sum_{j \ge 1} (\pi_{t+(j-1)L} - \pi_{t+jL})$. $Y_{t+(j-1)L}$ has law
+$\pi_{t+(j-1)L}$ and $X_{t+jL}$ has law $\pi_{t+jL}$, so for any set $A$ the $j$-th
+term is at most $\mathbb P(X_{t+jL} \ne Y_{t+(j-1)L}) = \mathbb P(\tau > t + jL)$ in
+absolute value, by the coupling inequality.
 
 telescopic estimates the bound by the average over replicates and reports
 $\min(1, \cdot)$. With $L = k$, its value at $t = k$ is close to
@@ -200,16 +209,4 @@ It depends on the parametrisation of the target, through the Euclidean norm.
 
 ## References
 
-- Atchadé, Y. F. & Jacob, P. E. (2024). Unbiased Markov chain Monte Carlo: what, why,
-  and how. arXiv:2406.06851.
-- Biswas, N., Jacob, P. E. & Vanetti, P. (2019). Estimating convergence of Markov chains
-  with L-lag couplings. NeurIPS.
-- Douc, R., Jacob, P. E., Lee, A. & Vats, D. Solving the Poisson equation using coupled
-  Markov chains. arXiv:2206.05691.
-- Glynn, P. W. & Rhee, C.-H. (2014). Exact estimation for Markov chain equilibrium
-  expectations. J. Appl. Probab. 51A, 377–389.
-- Jacob, P. E., O'Leary, J. & Atchadé, Y. F. (2020). Unbiased Markov chain Monte Carlo
-  methods with couplings. J. R. Stat. Soc. B 82(3), 543–600.
-- Middleton, L., Deligiannidis, G., Doucet, A. & Jacob, P. E. (2020). Unbiased Markov
-  chain Monte Carlo for intractable target distributions. Electron. J. Stat. 14(2),
-  2842–2891.
+The works cited here are listed on [Citing](citing.md#references).

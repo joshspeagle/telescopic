@@ -20,10 +20,10 @@ From a clone of the repository:
 pip install .            # or pip install ".[all]" for every extra
 ```
 
-It needs Python 3.11 or newer, NumPy 1.26 or newer and SciPy 1.12 or newer. The extras
-are `plot` (matplotlib), `progress` (tqdm), `parallel` (cloudpickle, which sends
-functions defined in notebooks to worker processes), `pandas` (summaries as data
-frames) and `all`.
+It needs Python 3.11 or newer, NumPy 1.26 or newer, SciPy 1.12 or newer and
+threadpoolctl 3.1 or newer. The extras are `plot` (matplotlib), `progress` (tqdm),
+`parallel` (cloudpickle, which sends functions defined in notebooks to worker
+processes), `pandas` (summaries as data frames) and `all`.
 
 ## Example
 
@@ -49,7 +49,7 @@ fit = optimize.minimize(lambda theta: -log_prob(theta, x, y, yerr), [0.0, 0.0])
 init = telescopic.initial.Normal(mean=fit.x, cov=100 * fit.hess_inv)
 result = telescopic.sample(log_prob, init, args=(x, y, yerr), names=["slope", "intercept"],
                            rng=42)
-print(result.summary())                      # unbiased means, standard errors, intervals
+print(result.summary())                      # unbiased means, standard errors, quantiles
 result.estimate(lambda t: t[:, 0] * t[:, 1])  # any function, after the run
 result.plot_tv_bound()                       # with the plot extra: distance from stationarity
 ```
@@ -57,9 +57,10 @@ result.plot_tv_bound()                       # with the plot extra: distance fro
 `sample` tunes a random-walk kernel on pilot chains, chooses the burn-in, the lag and the
 length of each run from the meeting times of pilot pairs, runs 100 replicates, and warns
 when the run shows signs that its error bars are unreliable. The chains should start
-wider than the posterior, but not by orders of magnitude: from a prior a hundred times
-wider, a replicate still on its way at the burn-in can dominate the estimates of
-variances.
+wider than the posterior, but not by orders of magnitude
+([Initial distributions](docs/guide/targets.md#choosing-one)).
+[Getting started](docs/getting-started.md) explains this example, and the
+[tutorials](docs/tutorials/index.md) work through others.
 
 ## What it guarantees
 
@@ -73,12 +74,7 @@ faster, and a run whose initial distribution misses a mode can be confidently wr
 ## Citing
 
 If you use telescopic, please cite the software ([`CITATION.cff`](CITATION.cff)) and the
-methods it implements:
-
-- Glynn, P. W. & Rhee, C.-H. (2014). Exact estimation for Markov chain equilibrium
-  expectations. *Journal of Applied Probability* 51A, 377–389.
-- Jacob, P. E., O'Leary, J. & Atchadé, Y. F. (2020). Unbiased Markov chain Monte Carlo
-  methods with couplings. *Journal of the Royal Statistical Society B* 82(3), 543–600.
+methods it implements, which [Citing](docs/citing.md) lists.
 
 ## Licence
 

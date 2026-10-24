@@ -124,9 +124,10 @@ def mixture() -> Example:
 def funnel(d: int = 10) -> Example:
     r"""Neal's funnel: :math:`v \sim \mathcal N(0, 9)` and :math:`x_i \mid v \sim \mathcal N(0, e^v)`.
 
-    The point is :math:`(v, x_1, \dots, x_{d-1})`. The mean is 0, and the coordinates
-    are uncorrelated with variances 9 and :math:`E[e^v] = e^{9/2}`. Its default initial
-    distribution is :math:`\mathcal N(0, \Sigma)`, with that covariance.
+    The funnel of Neal (2003). The point is :math:`(v, x_1, \dots, x_{d-1})`. The mean is
+    0, and the coordinates are uncorrelated with variances 9 and :math:`E[e^v] = e^{9/2}`.
+    Its default initial distribution is :math:`\mathcal N(0, \Sigma)`, with that
+    covariance.
 
     Parameters
     ----------

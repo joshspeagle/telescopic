@@ -62,8 +62,8 @@ class Uniform:
 class Empirical:
     """The uniform distribution over a set of points, such as the last state of an ensemble.
 
-    Any initial distribution keeps the estimators unbiased, so starting from the walkers
-    of an earlier emcee run loses nothing.
+    Any initial distribution keeps the estimators unbiased, so starting from the final
+    ensemble of an emcee run loses nothing.
 
     Parameters
     ----------
