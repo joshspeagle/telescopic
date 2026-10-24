@@ -163,7 +163,6 @@ def corner(result: Result, dims: int | Sequence[int] | None = None, bins: int = 
 
 def paths(
     replicates: Replicates,
-    lag: int,
     dims: Sequence[int] = (0, 1),
     n: int = 3,
     ax: Axes | None = None,
@@ -178,8 +177,6 @@ def paths(
     Parameters
     ----------
     replicates : telescopic.engine.Replicates
-    lag : int
-        The lag of the run.
     dims : two ints
         The plane, for more than one dimension.
     n : int
@@ -198,7 +195,8 @@ def paths(
         x, y = replicates.paths[index]
         if x.shape[1] == 1:
             line = ax.plot(np.arange(len(x)), x[:, 0])[0]
-            ax.plot(lag + np.arange(len(y)), y[:, 0], linestyle="--", color=line.get_color())
+            shifted = replicates.settings.lag + np.arange(len(y))
+            ax.plot(shifted, y[:, 0], linestyle="--", color=line.get_color())
         else:
             line = ax.plot(x[:, dims[0]], x[:, dims[1]])[0]
             ax.plot(y[:, dims[0]], y[:, dims[1]], linestyle="--", color=line.get_color())

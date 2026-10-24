@@ -1,8 +1,7 @@
 import numpy as np
 import pytest
 
-from references import gaussian_log_prob
-from telescopic._random import MAIN, root_seed
+from references import assert_same_replicates, gaussian_log_prob
 from telescopic.engine import Status, merge, run
 from telescopic.estimators import averaging_times, correction_coefficients
 from telescopic.initial import Empirical, Normal
@@ -15,14 +14,12 @@ FAR = Normal(mean=[3.0, -1.0], cov=[1.0, 1.0])
 
 
 def simulate(kernel=None, initial=FAR, n=20, indices=None, **options):
-    settings = {"k": 2, "m": 10, "lag": 1, "lanes": 8} | options
+    settings = {"k": 2, "m": 10, "lag": 1, "lanes": 8, "rng": 1} | options
     return run(
         TARGET,
         RandomWalk(np.eye(2), scale=1.0) if kernel is None else kernel,
         initial,
         range(n) if indices is None else indices,
-        root=root_seed(1),
-        namespace=MAIN,
         **settings,
     )
 
@@ -79,9 +76,7 @@ def test_a_replicates_output_does_not_depend_on_the_lanes(coupling):
     runs = [simulate(kernel, n=30, k=3, m=8, lag=2, lanes=lanes) for lanes in (1, 7, 64)]
     np.testing.assert_array_equal(runs[0].index, np.arange(30))
     for other in runs[1:]:
-        for name, value in vars(other).items():
-            if name != "seconds":
-                np.testing.assert_array_equal(value, getattr(runs[0], name))
+        assert_same_replicates(other, runs[0])
 
 
 class Tagged(RandomWalk):
@@ -159,8 +154,7 @@ def test_the_run_records_its_evaluations_and_the_starts_outside_the_support():
         RandomWalk(np.eye(1)),
         Empirical([[-1.0], [1.0]]),
         range(10),
-        root=root_seed(2),
-        namespace=MAIN,
+        rng=2,
         k=0,
         m=2,
         lag=1,
@@ -175,7 +169,32 @@ def test_a_kernel_of_another_dimension_than_the_points_raises():
         simulate(RandomWalk(np.eye(1)))
 
 
-def test_merging_refuses_parts_that_share_replicates():
+def test_merging_refuses_no_parts_and_parts_that_share_replicates():
+    with pytest.raises(ValueError, match="at least one"):
+        merge([])
     part = simulate(n=3)
     with pytest.raises(ValueError, match="share replicate indices"):
         merge([part, part])
+
+
+@pytest.mark.parametrize(
+    ("options", "message"),
+    [
+        ({"rng": 2}, "different seeds"),
+        ({"lag": 2}, "different settings"),
+        ({"store": False}, "different settings"),
+        (
+            {"kernel": RandomWalk(np.eye(1)), "initial": Normal([3.0], [[1.0]])},
+            "dimensions 2 and 1",
+        ),
+    ],
+    ids=["seed", "settings", "store", "dimension"],
+)
+def test_merging_refuses_parts_of_another_run(options, message):
+    with pytest.raises(ValueError, match=message):
+        merge([simulate(n=3), simulate(indices=[3, 4], **options)])
+
+
+def test_the_recorded_seed_reproduces_a_run_from_a_generator():
+    first = simulate(n=4, rng=np.random.default_rng(1))
+    assert_same_replicates(simulate(n=4, rng=first.seed), first)

@@ -177,3 +177,23 @@ Append only. One entry per working session or milestone.
   d = 10 against 4.4-5.4 s after the simplify round. Seven mutants checked. 410 fast
   tests in 38 s.
 
+## 2026-10-23: run settings in the replicates
+
+- Done before M9, which would otherwise write its slow tests and benchmarks against an
+  engine interface about to change. `Replicates` record their run's root seed and
+  settings, `engine.run` takes `rng`, and `Result(replicates, ...)` reads them, so a
+  result can no longer be given another lag than its run's (DECISIONS #31). `merge`
+  checks the seed, the settings and the dimension. 413 fast tests in 37 s.
+- `/simplify` of the change (`notes/reviews/run-settings.md`): `engine.run` loses its
+  `namespace`; the meeting-time pilot runs under its own seed, so a recorded seed
+  identifies its streams and a cross-namespace merge fails. The settings are one
+  immutable `engine.Settings`, the seed is `seed` everywhere, `root_seed` copies a given
+  `SeedSequence`, `Replicates.stopped` replaces two copies of a rule, and `Result`
+  refuses replicates stored without measures (DECISIONS #32). Five mutants checked.
+  417 fast tests in 39 s.
+- `/code-review` at high effort: eight findings, seven fixed. `merge` joined stored and
+  unstored runs, halving a mean, and `Result` missed an all-censored unstored run; `store`
+  is now one of the `Settings`, recorded and compared. The sampler's settings read its
+  replicates, censored pairs again need a cap, and `merge([])` names its argument. 419
+  fast tests in 38 s.
+

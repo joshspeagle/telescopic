@@ -9,7 +9,6 @@ from typing import IO, Any
 
 import numpy as np
 import numpy.typing as npt
-from numpy.random import SeedSequence
 from scipy import stats
 
 from telescopic import diagnostics, engine
@@ -66,17 +65,11 @@ class Result:
     Parameters
     ----------
     replicates : telescopic.engine.Replicates
-        The engine's output.
-    k, m, lag, thin : int
-        The configuration of the run (spec section 3.2).
+        The engine's output, with the settings and the root seed of its run.
     names : sequence of str, optional
         Parameter names; ``x0``, ``x1``, ... by default.
-    max_iter : int, optional
-        The cap of the run; required when a pair was censored.
     kernel, initial : optional
         The frozen kernel and the initial distribution, for the record.
-    seed : numpy.random.SeedSequence, optional
-        The root seed, whose ``entropy`` and ``spawn_key`` reproduce the run.
     tuning : TuningReport, optional
         The report of the tuning pilot.
     pilot : ndarray, shape (R0,), optional
@@ -84,6 +77,12 @@ class Result:
 
     Attributes
     ----------
+    k, m, lag, thin : int
+        The settings of the run (spec section 3.2).
+    max_iter : int or None
+        The cap of the run.
+    seed : numpy.random.SeedSequence
+        The root seed, whose ``entropy`` and ``spawn_key`` reproduce the run.
     index : ndarray of int, shape (R_total,)
         Replicate indices, censored ones included.
     meeting_times : ndarray of float, shape (R_total,)
@@ -107,23 +106,21 @@ class Result:
         self,
         replicates: Replicates,
         *,
-        k: int,
-        m: int,
-        lag: int,
-        thin: int = 1,
         names: Sequence[str] | None = None,
-        max_iter: int | None = None,
         kernel: Any = None,
         initial: Any = None,
-        seed: SeedSequence | None = None,
         tuning: TuningReport | None = None,
         pilot: FloatArray | None = None,
     ) -> None:
         met = np.isfinite(replicates.meeting_time)
         self.n_replicates = int(met.sum())
         self.n_censored = len(met) - self.n_replicates
-        if self.n_censored and max_iter is None:
-            raise ValueError("a result with censored pairs needs the max_iter of the run")
+        if not replicates.settings.store:
+            raise ValueError(
+                "the replicates hold no signed measures: run the engine with store=True"
+            )
+        if self.n_censored and replicates.settings.max_iter is None:
+            raise ValueError("replicates with censored pairs need the max_iter of their run")
         self.ndim = replicates.atoms.shape[1]
         self.names = [f"x{i}" for i in range(self.ndim)] if names is None else list(names)
         if len(self.names) != self.ndim:
@@ -137,20 +134,17 @@ class Result:
             np.searchsorted(replicates.index[met], replicates.owner),
             self.n_replicates,
         )
-        self.k, self.m, self.lag, self.thin, self.max_iter = k, m, lag, thin, max_iter
-        self.kernel, self.initial, self.seed = kernel, initial, seed
+        self.k, self.m, self.lag, self.thin, self.max_iter, _ = replicates.settings
+        self.seed, self.kernel, self.initial = replicates.seed, kernel, initial
         self._replicates = replicates
         self.n_log_prob, self.n_grad = replicates.n_log_prob, replicates.n_grad
         self.wall_time = replicates.seconds
         self.tuning, self.pilot = tuning, pilot
         # The engine runs only requested indices, so missing ones make index shorter.
         self.interrupted = len(replicates.index) < len(replicates.requested)
-        # The time each pair stopped: its meeting time, or the cap for a censored pair,
-        # which makes the bounds of section 3.6 lower bounds of their estimates.
-        stopped = (
-            self.meeting_times if max_iter is None else np.minimum(self.meeting_times, max_iter)
-        )
-        self._stopped = stopped.astype(np.int64)
+        # The cap for a censored pair makes the bounds of section 3.6 lower bounds of
+        # their estimates.
+        self._stopped = replicates.stopped.astype(np.int64)
 
     def estimate(self, h: Callable[[FloatArray], npt.ArrayLike], level: float = 0.95) -> Estimate:
         r"""Estimate :math:`\pi(h)` with a confidence interval (spec section 3.3).
@@ -403,7 +397,9 @@ class Result:
         return Summary(self.names, table, footer)
 
     def merge(self, other: Result) -> Result:
-        """Join with a run of the same configuration and disjoint replicates (spec R-OUT-1).
+        """Join with a run of the same seed and configuration and disjoint replicates.
+
+        Spec R-OUT-1; :func:`telescopic.engine.merge` checks the runs.
 
         Parameters
         ----------
@@ -415,27 +411,11 @@ class Result:
             The union of the replicates and of the requested indices; interrupted if a
             requested replicate ran in neither.
         """
-        if _seed_key(self.seed) != _seed_key(other.seed):
-            raise ValueError(
-                "cannot merge runs with different seeds: their indices differ in meaning"
-            )
-        for name in ("k", "m", "lag", "thin", "max_iter", "ndim"):
-            if getattr(self, name) != getattr(other, name):
-                raise ValueError(
-                    f"cannot merge runs with different {name}: {getattr(self, name)} and "
-                    f"{getattr(other, name)}"
-                )
-        return Result(
+        return type(self)(
             engine.merge([self._replicates, other._replicates]),
-            k=self.k,
-            m=self.m,
-            lag=self.lag,
-            thin=self.thin,
             names=self.names,
-            max_iter=self.max_iter,
             kernel=self.kernel,
             initial=self.initial,
-            seed=self.seed,
             tuning=self.tuning,
             pilot=self.pilot,
         )
@@ -662,10 +642,3 @@ class Summary:
             )
         lines += [f"warning: {message}" for message in footer["warnings"]]
         return "\n".join([header, *rows, "", *lines])
-
-
-def _seed_key(seed: SeedSequence | None) -> tuple[Any, ...] | None:
-    # Entropy may be an int, a sequence or an array; lists compare by value.
-    if seed is None:
-        return None
-    return np.atleast_1d(seed.entropy).tolist(), seed.spawn_key, seed.pool_size

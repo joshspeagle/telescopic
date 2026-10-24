@@ -5,7 +5,6 @@ import numpy as np
 import pytest
 from scipy import stats
 
-from telescopic._random import MAIN, root_seed
 from telescopic.engine import run
 from telescopic.estimators import unbiased_covariance
 from telescopic.initial import Normal
@@ -24,15 +23,14 @@ def gaussian_run(indices, seed=1, **settings):
         RandomWalk(np.eye(2)),
         Normal([2.0, -1.0], [1.0, 1.0]),
         indices,
-        root=root_seed(seed),
-        namespace=MAIN,
+        rng=seed,
         **settings,
     )
 
 
 def gaussian_result(n=40, **options):
     settings = SETTINGS | options
-    return Result(gaussian_run(range(n), **settings), names=["a", "b"], **settings)
+    return Result(gaussian_run(range(n), **settings), names=["a", "b"])
 
 
 RESULT = gaussian_result()
@@ -135,38 +133,58 @@ def test_the_summary_converts_to_pandas():
 
 def test_a_result_missing_requested_replicates_is_interrupted_until_they_run():
     # Replicates 0 to 39 ran of 0 to 59 requested; a run of 40 to 59 completes them.
-    interrupted = Result(replace(RESULT._replicates, requested=np.arange(60)), **SETTINGS)
+    interrupted = Result(replace(RESULT._replicates, requested=np.arange(60)))
     assert interrupted.interrupted
     assert "not exactly unbiased" in repr(interrupted.summary())
-    rest = Result(gaussian_run(range(40, 60), **SETTINGS), **SETTINGS)
+    rest = Result(gaussian_run(range(40, 60), **SETTINGS))
     assert not interrupted.merge(rest).interrupted
 
 
 def test_names_must_match_the_dimension():
     with pytest.raises(ValueError, match="names must have 2 entries"):
-        Result(RESULT._replicates, names=["a"], **SETTINGS)
+        Result(RESULT._replicates, names=["a"])
 
 
 def test_merging_two_runs_equals_one_run_over_both_sets_of_replicates():
     def part(indices, seed=4):
-        return Result(gaussian_run(indices, seed, **SETTINGS), seed=root_seed(seed), **SETTINGS)
+        return Result(gaussian_run(indices, seed, **SETTINGS))
 
     merged, whole = part(range(5)).merge(part(range(5, 12))), part(range(12))
     np.testing.assert_array_equal(merged.meeting_times, whole.meeting_times)
     np.testing.assert_array_equal(merged.measure.atoms, whole.measure.atoms)
     np.testing.assert_array_equal(merged.measure.replicate, whole.measure.replicate)
-    with pytest.raises(ValueError, match="different lag"):
-        part(range(3)).merge(
-            Result(part(range(3, 5))._replicates, k=2, m=12, lag=1, seed=root_seed(4))
-        )
-    with pytest.raises(ValueError, match="different seeds"):
-        part(range(3)).merge(part(range(3, 5), seed=5))
+
+
+def test_a_result_needs_the_signed_measures_of_its_replicates():
+    # Every pair censored, so no missing atom shows that none were stored.
+    replicates = run(
+        TARGET,
+        RandomWalk(np.eye(2), scale=1e-6),
+        Normal([2.0, -1.0], [1.0, 1.0]),
+        range(3),
+        k=0,
+        m=0,
+        lag=1,
+        max_iter=5,
+        rng=1,
+        store=False,
+    )
+    assert np.all(np.isinf(replicates.meeting_time))
+    with pytest.raises(ValueError, match="store=True"):
+        Result(replicates)
+
+
+def test_censored_pairs_need_the_cap_of_their_run():
+    tau = RESULT._replicates.meeting_time.copy()
+    tau[0] = np.inf
+    with pytest.raises(ValueError, match="max_iter of their run"):
+        Result(replace(RESULT._replicates, meeting_time=tau))
 
 
 def test_results_from_equal_array_seeds_merge():
     def part(indices):
         seed = np.random.SeedSequence(np.array([1, 2, 3, 4]))
-        return Result(gaussian_run(indices, seed, **SETTINGS), seed=seed, **SETTINGS)
+        return Result(gaussian_run(indices, seed, **SETTINGS))
 
     assert part(range(3)).merge(part(range(3, 5))).n_replicates == 5
 
