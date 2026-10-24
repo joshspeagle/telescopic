@@ -392,6 +392,8 @@ def test_a_worker_that_cannot_load_the_job_says_why():
         ("four", TypeError, "pool must be None, a number of processes"),
         (object(), TypeError, "pool must be None, a number of processes"),
         (0, ValueError, "pool must be at least 1, not 0"),
+        # It failed after tuning, with an error that did not name pool.
+        (ThreadPoolExecutor, TypeError, "not the class ThreadPoolExecutor"),
     ],
 )
 def test_invalid_pools_raise(pool, error, message):

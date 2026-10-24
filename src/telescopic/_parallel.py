@@ -22,7 +22,7 @@ from typing import Any
 import numpy as np
 
 from telescopic import engine
-from telescopic._types import IntArray
+from telescopic._types import IntArray, integer
 
 # Imported by name: threadpoolctl and cloudpickle ship no type information.
 threadpoolctl = importlib.import_module("threadpoolctl")
@@ -103,21 +103,13 @@ class Workers:
 
 
 def check_pool(pool: Any) -> None:
-    if isinstance(pool, bool) or not (
-        pool is None
-        or isinstance(pool, int | np.integer)
-        or hasattr(pool, "submit")
-        or hasattr(pool, "map")
-    ):
-        raise TypeError(
-            "pool must be None, a number of processes, an executor with submit, or an "
-            f"object with map, not {type(pool).__name__}"
-        )
-    if isinstance(pool, int | np.integer):
-        if pool < 1:
-            raise ValueError(f"pool must be at least 1, not {pool}")
-        if pool > MAX_PROCESSES:
-            raise ValueError(f"pool must be from 1 to {MAX_PROCESSES} processes, not {pool}")
+    if isinstance(pool, type):
+        raise TypeError(f"pool must be an executor or a pool, not the class {pool.__name__}")
+    if pool is None or hasattr(pool, "submit") or hasattr(pool, "map"):
+        return
+    expected = "None, a number of processes, an executor with submit, or an object with map"
+    if integer("pool", pool, expected, minimum=1) > MAX_PROCESSES:
+        raise ValueError(f"pool must be from 1 to {MAX_PROCESSES} processes, not {pool}")
 
 
 @contextmanager

@@ -113,7 +113,7 @@ class Independence(Kernel):
     @property
     def ndim(self) -> int | None:
         mean = getattr(self.proposal, "mean", None)
-        return None if mean is None else len(mean)
+        return None if mean is None else int(np.size(mean))
 
     def _tuned(
         self, target: Target, initial: Any, pilot: PilotRun, rng: Seed

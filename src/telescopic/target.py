@@ -54,11 +54,13 @@ class Target:
             raise ValueError("grad needs log_prob; log_prob=None is for Gibbs kernels")
         if grad is not None and not callable(grad):
             raise TypeError(f"grad must be callable or None, not {type(grad).__name__}")
+        if not isinstance(vectorize, bool | np.bool_):
+            raise TypeError(f"vectorize must be True or False, not {vectorize!r}")
         self._log_prob = log_prob
         self._grad = grad
         self.args = tuple(args)
         self.kwargs = dict(kwargs or {})
-        self.vectorize = vectorize
+        self.vectorize = bool(vectorize)
         self.n_log_prob = 0
         self.n_grad = 0
 

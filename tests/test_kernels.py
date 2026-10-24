@@ -297,8 +297,8 @@ def test_an_untuned_random_walk_refuses_to_step():
         ({"cov": [[1.0, 2.0], [2.0, 1.0]]}, "positive definite"),
         ({"cov": [[1.0, 0.5], [0.0, 1.0]]}, "symmetric"),
         ({"cov": np.ones((2, 3))}, "square"),
-        ({"cov": np.eye(2), "scale": 0.0}, "scale must be positive and finite"),
-        ({"cov": np.eye(2), "scale": np.inf}, "scale must be positive and finite"),
+        ({"cov": np.eye(2), "scale": 0.0}, r"scale must be in \(0, inf\)"),
+        ({"cov": np.eye(2), "scale": np.inf}, r"scale must be in \(0, inf\)"),
         ({"cov": np.eye(2), "coupling": "independent"}, "coupling must be"),
     ],
 )
@@ -339,6 +339,13 @@ def test_independence_takes_any_proposal_with_sample_and_log_density():
     # The weights pi / q are constant, so the proposal is accepted.
     new, _ = kernel.step(TARGET, state([0.1, 0.2]), fixed_draws([[0.3, -0.4]], [[0.5]]))
     np.testing.assert_array_equal(new.x[0], [0.3, -0.4])
+
+
+def test_independence_reads_a_scalar_mean_as_one_dimension():
+    # len() of a float raised TypeError.
+    proposal = StandardNormal()
+    proposal.mean = 0.0
+    assert Independence(proposal).ndim == 1
 
 
 def test_independence_refuses_a_proposal_without_sample_and_log_density():
@@ -504,8 +511,8 @@ def test_the_hmc_meeting_step_meets_with_the_reflection_probability():
     [
         ({"n_steps": 0}, "n_steps must be at least 1"),
         ({"meeting_weight": 0.0}, "meeting_weight must be in"),
-        ({"meeting_scale": -1.0}, "meeting_scale must be positive and finite"),
-        ({"meeting_scale": np.inf}, "meeting_scale must be positive and finite"),
+        ({"meeting_scale": -1.0}, r"meeting_scale must be in \(0, inf\)"),
+        ({"meeting_scale": np.inf}, r"meeting_scale must be in \(0, inf\)"),
     ],
 )
 def test_hmc_rejects_invalid_parameters(kwargs, message):
@@ -555,7 +562,7 @@ def test_gradient_kernels_refuse_step_sizes_that_are_not_positive_and_finite(ste
         lambda: MALA(0.5, cov=np.eye(1)).with_step_size(step_size),
     )
     for make in makers:
-        with pytest.raises(ValueError, match="step_size must be positive and finite"):
+        with pytest.raises(ValueError, match=r"step_size must be in \(0, inf\)"):
             make()
 
 

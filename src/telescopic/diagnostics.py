@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 import numpy as np
 import numpy.typing as npt
@@ -42,10 +42,10 @@ def tv_bound(meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike) -> FloatA
     function :math:`\hat S(u) = R^{-1}\#\{\tau > u\}`, in :math:`O(R + \max\tau)`.
     """
     tau = np.asarray(meeting_times, dtype=np.float64)
-    if tau.ndim != 1 or len(tau) == 0 or not np.all(np.isfinite(tau) & (tau >= 0)):
+    if tau.ndim != 1 or len(tau) == 0 or not _counts(tau):
         raise ValueError(
-            "meeting_times must be a non-empty one-dimensional array, finite and "
-            "non-negative: give a censored pair as its cap"
+            "meeting_times must be a non-empty one-dimensional array of non-negative "
+            "integers: give a censored pair as its cap"
         )
     survival = 1.0 - np.cumsum(np.bincount(tau.astype(np.int64))) / len(tau)
     bound: FloatArray = np.minimum(1.0, _lagged_tail(survival, lag, t))
@@ -82,9 +82,17 @@ def w1_bound(
     ndarray, shape of ``t``
     """
     n_replicates = integer("n_replicates", n_replicates, minimum=1)
-    total = np.bincount(
-        np.asarray(distance_time, dtype=np.int64), weights=np.asarray(distance, dtype=np.float64)
-    )
+    times, distances = np.asarray(distance_time), np.asarray(distance, dtype=np.float64)
+    if times.ndim != 1 or times.shape != distances.shape:
+        raise ValueError(
+            f"distance_time and distance must have one shape (M,), not {times.shape} and "
+            f"{distances.shape}"
+        )
+    if not _counts(times):
+        raise ValueError("distance_time must be non-negative integers")
+    if not np.all(np.isfinite(distances) & (distances >= 0)):
+        raise ValueError("distance must be finite and non-negative")
+    total = np.bincount(times.astype(np.int64), weights=distances)
     bound: FloatArray = _lagged_tail(total, lag, t) / n_replicates
     return bound
 
@@ -94,15 +102,21 @@ def _lagged_tail(values: FloatArray, lag: int, t: npt.ArrayLike) -> FloatArray:
     # over the times i'L + r with i' >= i; the padding adds a last row of zeros.
     lag = integer("lag", lag, minimum=1)
     times = np.asarray(t)
-    if not np.all(times == np.floor(times)) or np.any(times < 0):
+    if not _counts(times):
         raise ValueError(f"t must be non-negative integers, not {times}")
-    t = times.astype(np.int64)
+    # Past the end every sum is 0, so a larger t needs no larger integer.
+    t = np.minimum(times, len(values)).astype(np.int64)
     rows = -(-len(values) // lag) + 1
     padded = np.zeros(rows * lag)
     padded[: len(values)] = values
     tail = np.cumsum(padded.reshape(rows, lag)[::-1], axis=0)[::-1]
     sums: FloatArray = tail[np.minimum(t // lag + 1, rows - 1), t % lag]
     return sums
+
+
+def _counts(values: npt.NDArray[Any]) -> bool:
+    # Whether every value is a non-negative integer, as a float or an integer.
+    return bool(np.all(np.isfinite(values) & (values >= 0) & (values == np.floor(values))))
 
 
 def hill(values: npt.ArrayLike, n_tail: int) -> float:

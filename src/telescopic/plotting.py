@@ -7,6 +7,7 @@ from typing import Any
 
 import numpy as np
 
+from telescopic._types import integer
 from telescopic.engine import Replicates
 from telescopic.results import Result
 
@@ -197,6 +198,10 @@ def paths(
     """
     if not replicates.paths:
         raise ValueError("the replicates hold no paths: run the engine with keep_paths=True")
+    n = integer("n", n, minimum=1)
+    d = next(iter(replicates.paths.values()))[0].shape[1]
+    if d > 1 and not (len(dims) == 2 and all(0 <= integer("dims", c) < d for c in dims)):
+        raise ValueError(f"dims must be two coordinates in [0, {d}), not {dims}")
     ax = plt.subplots(figsize=(5, 4))[1] if ax is None else ax
     for index in sorted(replicates.paths)[:n]:
         x, y = replicates.paths[index]

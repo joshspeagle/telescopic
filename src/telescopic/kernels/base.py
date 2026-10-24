@@ -214,7 +214,7 @@ class GradientKernel(Kernel):
     target_acceptance: float
 
     def __init__(self, step_size: float | None, cov: npt.ArrayLike | None) -> None:
-        self.step_size = None if step_size is None else _checked_step_size(step_size)
+        self.step_size = None if step_size is None else real("step_size", step_size, 0, np.inf)
         self.cov: FloatArray | None = None
         self._chol: FloatArray | None = None
         if cov is not None:
@@ -245,7 +245,7 @@ class GradientKernel(Kernel):
         GradientKernel
         """
         kernel = copy.copy(self)
-        kernel.step_size = _checked_step_size(step_size)
+        kernel.step_size = real("step_size", step_size, 0, np.inf)
         return kernel
 
     def _with_cov(self, cov: FloatArray) -> GradientKernel:
@@ -265,13 +265,6 @@ class GradientKernel(Kernel):
             )
             kernel = kernel.with_step_size(step_size)
         return kernel, pilot.report()
-
-
-def _checked_step_size(step_size: float) -> float:
-    step_size = real("step_size", step_size)
-    if not 0 < step_size < np.inf:
-        raise ValueError(f"step_size must be positive and finite, not {step_size}")
-    return step_size
 
 
 def evaluate(target: Target, x: FloatArray, need_grad: bool) -> State:

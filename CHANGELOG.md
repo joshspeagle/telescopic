@@ -79,4 +79,6 @@ All notable changes to this project are documented here. The format follows
   takes SciPy's Dirichlet laws; `check_coupling` swaps half the pairs, so that it catches a
   coupling that reads another row's state, and fails a NaN p-value; `check()` and the
   summary report a slow pair when every pair is censored; `hill` and `variance_share`
-  check their values.
+  check their values; every bounded number argument raises "must be in (low, high)",
+  and `dual_averaging`, the TV and W1 bounds, the estimators, `SignedMeasure.mass`,
+  `plotting.paths`, `Target(vectorize=)` and `pool` check what they were missing.

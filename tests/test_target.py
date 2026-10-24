@@ -92,6 +92,12 @@ def test_a_function_that_returns_none_is_named(vectorize):
         Target(log_prob, vectorize=vectorize).log_prob(np.zeros((2, 1)))
 
 
+def test_vectorize_must_be_a_bool():
+    # "no" is true, so the functions were called on batches.
+    with pytest.raises(TypeError, match="vectorize must be True or False"):
+        Target(gaussian, vectorize="no")
+
+
 def test_a_target_without_gradient_refuses_gradient_requests():
     with pytest.raises(ValueError, match="no gradient"):
         Target(gaussian).log_prob_and_grad(np.zeros((1, 2)))

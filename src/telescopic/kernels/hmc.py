@@ -76,12 +76,8 @@ class HMC(Mixture):
         meeting_weight: float = 0.05,
         meeting_scale: float = 1e-3,
     ) -> None:
-        meeting_weight = real("meeting_weight", meeting_weight)
-        meeting_scale = real("meeting_scale", meeting_scale)
-        if not 0 < meeting_weight < 1:
-            raise ValueError(f"meeting_weight must be in (0, 1), not {meeting_weight}")
-        if not 0 < meeting_scale < np.inf:
-            raise ValueError(f"meeting_scale must be positive and finite, not {meeting_scale}")
+        meeting_weight = real("meeting_weight", meeting_weight, 0, 1)
+        meeting_scale = real("meeting_scale", meeting_scale, 0, np.inf)
         leapfrog = _Leapfrog(step_size, n_steps, cov)
         walk = RandomWalk(leapfrog.cov, scale=meeting_scale)
         super().__init__([leapfrog, walk], [1 - meeting_weight, meeting_weight])

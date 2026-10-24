@@ -240,6 +240,7 @@ def test_results_from_equal_array_seeds_merge():
     [
         (lambda r: r.histogram(5), ValueError, r"dims must be in \[0, 2\)"),
         (lambda r: r.histogram([0, 1.0]), TypeError, "dims must be an integer"),
+        (lambda r: r.histogram([]), ValueError, "dims must name at least one coordinate"),
         (lambda r: r.histogram(0, bins=0), ValueError, "bins must be at least 1"),
         (lambda r: r.histogram([0, 1], range=(0.0, 1.0)), ValueError, r"range must have shape"),
         (lambda r: r.tv_bound([-1]), ValueError, "t must be non-negative"),

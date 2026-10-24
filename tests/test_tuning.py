@@ -1,4 +1,5 @@
 import itertools
+from fractions import Fraction
 
 import numpy as np
 import pytest
@@ -222,6 +223,21 @@ def test_dual_averaging_matches_hoffman_and_gelman():
     np.testing.assert_allclose(step_size, expected, rtol=1e-12)
 
 
+@pytest.mark.parametrize(
+    ("target_acceptance", "step_size", "error", "message"),
+    [
+        # 1.5 gave a step size of 3e-124.
+        (1.5, 0.9, ValueError, r"target_acceptance must be in \(0, 1\)"),
+        ("0.5", 0.9, TypeError, "target_acceptance must be a real number"),
+        (0.574, np.nan, ValueError, r"step_size must be in \(0, inf\)"),
+    ],
+)
+def test_dual_averaging_refuses_invalid_arguments(target_acceptance, step_size, error, message):
+    pilot = PilotRun(np.zeros((4, 1, 5)), np.zeros((4, 1)), np.ones(4), 1)
+    with pytest.raises(error, match=message):
+        dual_averaging(Exact, TARGET, pilot, 7, target_acceptance, step_size)
+
+
 @pytest.mark.parametrize(("kernel", "goal"), [(MALA(), 0.574), (HMC(), 0.8)])
 def test_dual_averaging_reaches_the_target_acceptance(kernel, goal):
     # The bound is dual averaging's spread over seeds, up to 0.034 above the goal for
@@ -245,6 +261,11 @@ def test_choose_k_takes_the_inverted_cdf_quantile_of_tau_minus_one(lowest):
 def test_choose_k_takes_the_inverted_cdf_quantile_of_any_pilot_size():
     # Of 150, the 149th smallest tau - 1; interpolation and the lower neighbour give 147.
     assert choose_k(np.arange(1.0, 151.0)) == 148
+
+
+def test_choose_k_takes_a_quantile_of_any_real_type():
+    # A Fraction passed the check and failed in np.quantile.
+    assert choose_k(np.arange(1.0, 101.0), quantile=Fraction(1, 2)) == 49
 
 
 def test_choose_k_refuses_no_meeting_times():
