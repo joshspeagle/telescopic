@@ -3,6 +3,8 @@
 ## Running
 
 ```{eval-rst}
+.. py:module:: telescopic
+
 .. autofunction:: telescopic.sample
 
 .. autoclass:: telescopic.CoupledSampler

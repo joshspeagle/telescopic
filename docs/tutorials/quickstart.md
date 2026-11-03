@@ -67,7 +67,7 @@ exact_std = np.sqrt(np.diag(np.linalg.inv(precision)))
 
 ## telescopic
 
-The run of Getting started, from a Gaussian ten times wider than an optimiser's error
+We run the line fit from Getting started, starting from a Gaussian ten times wider than an optimizer's error
 bars ([Initial distributions](../guide/targets.md#choosing-one)), with the log-density
 evaluated in batches:
 
@@ -92,7 +92,7 @@ counts.
 
 ## emcee
 
-As in emcee's tutorial, 32 walkers start within about $10^{-4}$ of the optimiser's fit.
+As in emcee's tutorial, 32 walkers start within about $10^{-4}$ of the optimizer's fit.
 They take as many steps as telescopic's evaluations allow. emcee copies NumPy's global
 random state when it makes its sampler, so seeding that state fixes the run:
 

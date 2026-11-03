@@ -24,13 +24,12 @@ Rhee (2014) and Jacob, O'Leary & Atchadé (2020).
 
 ## Commands
 
-- Set up: `uv venv --python 3.13 .venv && uv pip install -e . --group dev`.
-- Fast tests: `.venv/bin/python -m pytest`. It skips `slow` tests and must finish in
+- Local environment: use the shared `~/.venvs/default` environment (`~/.venvs/default/bin/python`) and `~/.local/bin/` tools (`ruff`, `mypy`, `pytest`); never create a `.venv` inside Dropbox.
+- Fast tests: `PYTHONPATH=src ~/.venvs/default/bin/pytest`. It skips `slow` tests and must finish in
   under 2 minutes.
-- All tests: `.venv/bin/python -m pytest -m ""`.
-- Lint, format and types: `.venv/bin/ruff check . && .venv/bin/ruff format --check . && .venv/bin/mypy`.
-- Docs: `uv pip install -e . --group docs`, then
-  `.venv/bin/sphinx-build -W --keep-going docs docs/_build/html`.
+- All tests: `PYTHONPATH=src ~/.venvs/default/bin/pytest -m ""`.
+- Lint, format and types: `~/.local/bin/ruff check . && ~/.local/bin/ruff format --check . && ~/.local/bin/mypy --python-executable ~/.venvs/default/bin/python`.
+- Docs: `PYTHONPATH=src ~/.venvs/default/bin/sphinx-build -W --keep-going docs docs/_build/html`.
 
 ## Plan
 
@@ -146,11 +145,12 @@ pull request (DECISIONS #2, #58).
 
 ## Agents
 
+- Follow the `github-flow` skill before modifying tracked files (`>10` lines): open an issue, branch `<issue>-<slug>` from `main`, keep one logical change per commit with a `Co-Authored-By:` trailer, and append the active agent's attribution footer to all `gh` issue/PR bodies and comments.
 - Delegate through self-contained briefs. Subagents never commit. Read every line a
   subagent writes before committing it.
 - Parallel subagents that write files get separate files or separate worktrees.
 
 ## Writing
 
-- Spartan: the fewest words that stay exact. Literal over metaphor. No em dashes.
+- Follow the Synergistic Prose Register (`co-writer` skill): pair concrete statistical intuition with exact technical terminology, use complete sentences before code blocks and equations, and use American English spelling in user-facing documentation and docstrings. Literal over metaphor. No em dashes.
 - Session replies lead with the answer, then the reason, then the next step.

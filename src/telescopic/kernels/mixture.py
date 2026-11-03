@@ -30,7 +30,7 @@ class Mixture(Kernel):
         :meth:`~telescopic.kernels.Kernel.tune` tunes the untuned ones on one set of pilot chains; its report gives
         the largest weight ratio of any independence component.
     weights : array_like
-        Non-negative weights, normalised internally.
+        Non-negative weights, normalized internally.
     """
 
     def __init__(self, kernels: Sequence[Kernel], weights: npt.ArrayLike) -> None:

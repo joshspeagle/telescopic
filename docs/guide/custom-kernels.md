@@ -100,7 +100,7 @@ works on a batch, and on rows where the two draws coincide it returns a copy.
   uniform per row. It is maximal: the draws coincide with probability
   $2\Phi(-\lVert C^{-1}(\mu_x - \mu_y)\rVert/2)$.
 - {func}`telescopic.couplings.maximal` is the rejection maximal coupling of two
-  distributions per row, objects with `rvs(random_state=...)` and a normalised `logpdf`
+  distributions per row, objects with `rvs(random_state=...)` and a normalized `logpdf`
   or `logpmf`. Its number of draws is random, so it draws from each row's generator.
 - {func}`telescopic.couplings.discrete_maximal` couples two distributions on
   $\{0, \dots, K-1\}$, given as log-probabilities of shape `(n, K)`, with 3 uniforms per

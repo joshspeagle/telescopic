@@ -48,7 +48,7 @@ class MultivariateT:
         return self.mean + matvec(self._chol, z)
 
     def log_density(self, x: FloatArray) -> FloatArray:
-        """Normalised log-density at the rows of ``x``, shape ``(n,)``."""
+        """Normalized log-density at the rows of ``x``, shape ``(n,)``."""
         d = len(self.mean)
         z = matvec(self._inverse, x - self.mean)
         squared = (z**2).sum(axis=1)

@@ -11,7 +11,7 @@ from telescopic._types import FloatArray
 
 def matvec(matrix: FloatArray, vectors: FloatArray) -> FloatArray:
     # matrix @ v for each row v of vectors. Unlike a BLAS product, einsum without
-    # optimisation gives a row the same bits whatever the other rows of the batch.
+    # optimization gives a row the same bits whatever the other rows of the batch.
     product: FloatArray = np.einsum("kj,ij->ik", matrix, vectors)
     return product
 

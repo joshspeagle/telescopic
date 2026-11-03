@@ -173,7 +173,7 @@ def _compare(
 
 
 def _stale(target: Target, state: State) -> int:
-    # Chains whose cache disagrees with a fresh evaluation beyond rounding: a vectorised
+    # Chains whose cache disagrees with a fresh evaluation beyond rounding: a vectorized
     # target can change the last bits between batches (spec section 6.1).
     fresh = evaluate(target, state.x, state.grad is not None)
     close = np.isclose(state.log_prob, fresh.log_prob, rtol=1e-9, atol=0)

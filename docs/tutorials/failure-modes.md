@@ -315,7 +315,7 @@ assert ratios[-1] > 10 * ratios[-2]
 ```
 
 One replicate causes it, as [Initial distributions](../guide/targets.md#choosing-one)
-explains for starts this far. A Gaussian centred on an optimiser's fit, with its inverse
+explains for starts this far. A Gaussian centered on an optimizer's fit, with its inverse
 Hessian scaled by 100, is ten times wider than the posterior:
 
 ```{code-cell} python

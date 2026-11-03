@@ -14,7 +14,7 @@ a first draft.
 
 ## Installation
 
-From a clone of the repository:
+Install telescopic from a clone of the repository:
 
 ```bash
 pip install .            # or pip install ".[all]" for every extra
@@ -27,7 +27,7 @@ processes), `pandas` (summaries as data frames) and `all`.
 
 ## Example
 
-A straight line fitted to data with Gaussian errors:
+The script below fits a straight line to data with Gaussian errors:
 
 ```python
 import numpy as np
@@ -76,6 +76,6 @@ faster, and a run whose initial distribution misses a mode can be confidently wr
 If you use telescopic, please cite the software ([`CITATION.cff`](CITATION.cff)) and the
 methods it implements, which [Citing](docs/citing.md) lists.
 
-## Licence
+## License
 
 MIT.

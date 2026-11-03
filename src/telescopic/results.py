@@ -318,7 +318,7 @@ class Result:
     def w1_bound(self, t: npt.ArrayLike | None = None) -> FloatArray:
         """Estimated upper bound on the 1-Wasserstein distance from the law of X_t to the target.
 
-        Spec section 3.6. It depends on the parametrisation of the target. A censored
+        Spec section 3.6. It depends on the parameterization of the target. A censored
         pair's distances stop at its cap, so with censored pairs it is a lower bound of the
         estimate without a cap.
 

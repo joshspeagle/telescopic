@@ -316,7 +316,7 @@ result.plot_marginals();
 ```
 
 {meth}`telescopic.Result.plot_corner` draws the marginals on its diagonal and the signed
-joint density of each pair of coordinates below it, on a diverging colour map centred on
+joint density of each pair of coordinates below it, on a diverging color map centered on
 0:
 
 ```{code-cell} python

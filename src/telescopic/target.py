@@ -14,7 +14,7 @@ class Target:
     r"""A log-density :math:`\log\pi` known up to a constant, with an optional gradient.
 
     Kernels call :meth:`log_prob` and :meth:`log_prob_and_grad` on batches of points of
-    shape ``(n, d)``, whether or not the user's functions are vectorised.
+    shape ``(n, d)``, whether or not the user's functions are vectorized.
 
     Parameters
     ----------
@@ -122,7 +122,7 @@ class Target:
                     "where log_prob is finite: chains cannot start there; compute grad in "
                     "log space, as with scipy.special.logsumexp, or start them elsewhere"
                 )
-            # A copy: a vectorised grad may return its own array.
+            # A copy: a vectorized grad may return its own array.
             gradients = gradients.copy()
             gradients[bad] = 0.0
             self.n_grad_zeroed += int(bad.sum())

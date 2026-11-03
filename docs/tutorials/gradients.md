@@ -123,7 +123,7 @@ def grad(beta, X, y):
     return (y - special.expit(beta @ X.T)) @ X - beta / 25
 ```
 
-The pairs start from a Gaussian ten times wider than an optimiser's error bars
+The pairs start from a Gaussian ten times wider than an optimizer's error bars
 ([Initial distributions](../guide/targets.md#choosing-one)):
 
 ```{code-cell} python

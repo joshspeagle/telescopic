@@ -248,7 +248,7 @@ proposal needs tails at least as heavy as the target's.
 {class}`telescopic.kernels.Gibbs` updates blocks of coordinates in turn, each drawn from
 its full conditional. `conditional(x, b)` receives a read-only point `x` of shape `(d,)`
 and a block number `b`, and returns the distribution of block `b` given the other
-coordinates of `x`: an object with `rvs(random_state=...)` and a normalised `logpdf`, or
+coordinates of `x`: an object with `rvs(random_state=...)` and a normalized `logpdf`, or
 `logpmf`, such as a frozen SciPy distribution. `blocks` lists index arrays that
 partition the coordinates `0, ..., d - 1`. The coupled step couples each block's two
 conditionals:

@@ -24,7 +24,7 @@ class Distribution(Protocol):
     """A distribution that draws with ``rvs(random_state=generator)``, as frozen SciPy ones do.
 
     Initial distributions need only ``rvs``. The couplings of :mod:`telescopic.couplings`
-    also need a normalised ``logpdf``, or ``logpmf`` for a discrete distribution.
+    also need a normalized ``logpdf``, or ``logpmf`` for a discrete distribution.
     """
 
     def rvs(self, *, random_state: np.random.Generator) -> Any: ...

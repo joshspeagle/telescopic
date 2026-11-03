@@ -1,6 +1,6 @@
 # Theory
 
-This page derives the estimators that telescopic computes and states what they guarantee.
+telescopic estimates target expectations from pairs of coupled Markov chains using telescoping sums.
 The code and its docstrings use this notation. The methods are those of Glynn & Rhee
 (2014) and Jacob, O'Leary & Atchadé (2020, JOA20), with the lag of Biswas, Jacob &
 Vanetti (2019, BJV19) and the tuning rules of Atchadé & Jacob (2024, AJ24).
@@ -104,7 +104,7 @@ counting a coupled step before the meeting as two. Its **relative cost** is the 
 divided by $m - k + 1$, the cost of the MCMC average alone. The **inefficiency** of the
 estimator is $\mathbb E[C]\,\mathbb V[H_{k:m}]$ (Glynn & Whitt 1992; JOA20 §3.1): at a
 fixed budget of kernel applications, the variance of the average over replicates is the
-inefficiency divided by the budget, so it is the figure to minimise when comparing kernels
+inefficiency divided by the budget, so it is the figure to minimize when comparing kernels
 or settings. Kernels differ in the log-density and gradient evaluations per application,
 so telescopic also counts those, and the wall time.
 
@@ -206,7 +206,7 @@ The same argument bounds the 1-Wasserstein distance:
 $$d_{W_1}(\pi_t, \pi) \le \mathbb E\Big[\sum_{j=1}^{\lceil (\tau - L - t)/L\rceil}
 \lVert X_{t+jL} - Y_{t+(j-1)L} \rVert\Big].$$
 
-It depends on the parametrisation of the target, through the Euclidean norm.
+It depends on the parameterization of the target, through the Euclidean norm.
 
 ## References
 

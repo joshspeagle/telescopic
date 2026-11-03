@@ -62,7 +62,7 @@ result.plot_tv_bound();
 {meth}`telescopic.Result.w1_bound` estimates the bound on the 1-Wasserstein distance in
 the same way, from the distances $\lVert X_t - Y_{t-L} \rVert$ that the engine records
 before each pair meets. A censored pair's distances stop at its cap, so with censored
-pairs it too is a lower bound. It depends on the parametrisation of the target through
+pairs it too is a lower bound. It depends on the parameterization of the target through
 the Euclidean norm: in other units or coordinates the bound changes.
 
 ```{code-cell} python
@@ -193,7 +193,7 @@ initial distribution. In the meeting-time pilot, whose own cap is on
 
 ## A run that warns
 
-The banana from its wide default start, with `k`, `lag` and `m` set by hand:
+Running the banana target from its wide default start with `k`, `lag` and `m` set by hand triggers two warnings:
 
 ```{code-cell} python
 banana = examples.banana()
@@ -218,7 +218,7 @@ The warnings say that `k` may be too small: more than a quarter of the pairs met
 
 ## Measured rates
 
-Repeated runs measured how often each warning fires. All used vectorised
+Repeated runs measured how often each warning fires. All used vectorized
 log-densities, and the first two targets `sample()`'s default settings:
 
 - {func}`telescopic.examples.gaussian` in 10 dimensions, from $\mathcal N(0, 4I)$: no
