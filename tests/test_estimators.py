@@ -60,9 +60,11 @@ def test_the_covariance_is_the_mean_second_moment_minus_the_u_statistic():
     rng = np.random.default_rng(1)
     first, b = rng.standard_normal((7, 3)), rng.standard_normal((3, 3))
     second = b + b.T  # second moments are symmetric
-    u_statistic = sum(
-        np.outer(first[r], first[s]) for r in range(7) for s in range(7) if r != s
-    ) / (7 * 6)
+    u_statistic = np.zeros((3, 3))
+    for r in range(7):
+        for s in range(7):
+            if r != s:
+                u_statistic += np.outer(first[r], first[s]) / (7 * 6)
     np.testing.assert_allclose(
         unbiased_covariance(first, second), second - u_statistic, atol=1e-14
     )

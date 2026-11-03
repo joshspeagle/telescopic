@@ -105,12 +105,12 @@ def _lagged_tail(values: FloatArray, lag: int, t: npt.ArrayLike) -> FloatArray:
     if not integral(times, 0):
         raise ValueError(f"t must be non-negative integers, not {times}")
     # Past the end every sum is 0, so a larger t needs no larger integer.
-    t = np.minimum(times, len(values)).astype(np.int64)
+    clamped = np.minimum(times, len(values)).astype(np.int64)
     rows = -(-len(values) // lag) + 1
     padded = np.zeros(rows * lag)
     padded[: len(values)] = values
     tail = np.cumsum(padded.reshape(rows, lag)[::-1], axis=0)[::-1]
-    sums: FloatArray = tail[np.minimum(t // lag + 1, rows - 1), t % lag]
+    sums: FloatArray = tail[np.minimum(clamped // lag + 1, rows - 1), clamped % lag]
     return sums
 
 
@@ -148,8 +148,8 @@ def hill(values: npt.ArrayLike, n_tail: int) -> float:
         raise ValueError(
             f"n_tail must be at least 1 and below the number of values, {len(x)}, not {n_tail}"
         )
-    if not x[0] > 0:
-        raise ValueError(f"values must be positive, not as small as {x[0]}")
+    if not (x[0] > 0 and x[-1] < np.inf):
+        raise ValueError(f"values must be positive and finite, not in [{x[0]}, {x[-1]}]")
     if x[1] == x[-n_tail - 1] == x[0]:
         return np.nan
     mean_log = float(np.mean(np.log(x[-n_tail:] / x[-n_tail - 1])))

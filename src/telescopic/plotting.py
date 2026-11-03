@@ -111,6 +111,8 @@ def marginals(
     -------
     list of Axes
     """
+    result._require(2)
+    bins = integer("bins", bins, minimum=1)
     columns = range(result.ndim) if dims is None else coordinates(dims, result.ndim)
     n = len(columns)
     if axes is None:
@@ -145,6 +147,8 @@ def corner(result: Result, dims: int | Sequence[int] | None = None, bins: int = 
     -------
     ndarray of Axes, shape (len(dims), len(dims))
     """
+    result._require(2)
+    bins = integer("bins", bins, minimum=1)
     columns = range(result.ndim) if dims is None else coordinates(dims, result.ndim)
     n = len(columns)
     grid = plt.subplots(n, n, figsize=(2.5 * n, 2.5 * n), squeeze=False)[1]

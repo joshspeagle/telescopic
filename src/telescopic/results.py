@@ -53,7 +53,7 @@ class Estimate:
                 np.ravel(self.value), np.ravel(self.standard_error), strict=True
             )
         ]
-        body = pairs[0] if self.value.ndim == 0 else "[" + ", ".join(pairs) + "]"
+        body = pairs[0] if self.value.ndim == 0 else f"[{', '.join(pairs)}]"
         return f"Estimate({body}, R={len(self.replicates)})"
 
 
@@ -454,10 +454,10 @@ class Result:
         return type(self)(
             engine.merge([self._replicates, other._replicates]),
             names=self.names,
-            kernel=self.kernel,
-            initial=self.initial,
-            tuning=self.tuning,
-            pilot=self.pilot,
+            kernel=self.kernel if self.kernel is not None else other.kernel,
+            initial=self.initial if self.initial is not None else other.initial,
+            tuning=self.tuning if self.tuning is not None else other.tuning,
+            pilot=self.pilot if self.pilot is not None else other.pilot,
         )
 
     def save(self, path: str | os.PathLike[str] | IO[bytes]) -> None:

@@ -12,7 +12,7 @@ import numpy.typing as npt
 
 from telescopic._linalg import matvec
 from telescopic._random import TUNING, Streams, replicate_generator, root_seed
-from telescopic._types import FloatArray, Seed, integer, real
+from telescopic._types import FloatArray, Seed, integer, integral, real
 from telescopic.initial import as_initial, draw
 from telescopic.target import Target
 
@@ -98,7 +98,8 @@ class PilotRun:
         n = self.samples.shape[1]
         within = self.samples.var(axis=1, ddof=1).mean(axis=0)
         between = n * self.samples.mean(axis=1).var(axis=0, ddof=1)
-        rhat: FloatArray = np.sqrt(((n - 1) / n * within + between / n) / within)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            rhat: FloatArray = np.sqrt(((n - 1) / n * within + between / n) / within)
         return rhat
 
     def report(self, max_weight_ratio: float | None = None) -> TuningReport:
@@ -162,7 +163,9 @@ def adaptive_metropolis(
     initial = as_initial(initial)
     generators = [replicate_generator(root, TUNING, i) for i in range(N_CHAINS)]
     # 25 draws per chain from its own generator, all of the first draw's dimension.
-    sources = [generator for generator in generators for _ in range(25)]
+    sources: list[Any] = []
+    for generator in generators:
+        sources.extend([generator] * 25)
     first = draw(initial, sources[0])
     rest = [draw(initial, generator, len(first)) for generator in sources[1:]]
     points = np.reshape([first, *rest], (N_CHAINS, 25, len(first)))
@@ -303,6 +306,9 @@ def choose_k(meeting_times: npt.ArrayLike, quantile: float = 0.99) -> int:
     tau = np.asarray(meeting_times, dtype=np.float64)
     if tau.ndim != 1 or len(tau) == 0:
         raise ValueError("meeting_times must be a non-empty one-dimensional array")
+    finite = tau[tau < np.inf]
+    if np.isnan(tau).any() or not integral(finite, 1):
+        raise ValueError("meeting_times must be positive integers or inf")
     largest = 1 - 1 / len(tau)
     quantile = real("quantile", quantile)
     if not 0 < quantile <= largest:

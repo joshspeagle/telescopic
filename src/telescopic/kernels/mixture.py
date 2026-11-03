@@ -44,7 +44,9 @@ class Mixture(Kernel):
         if len({kernel.ndim for kernel in self.kernels} - {None}) > 1:
             raise ValueError("the kernels work in different dimensions")
         self.weights = weights / weights.sum()
+        self._last = int(np.nonzero(self.weights)[0][-1])
         self._cumulative = np.cumsum(self.weights)
+        self._cumulative[self._last :] = 1.0
 
     @property
     def needs_grad(self) -> bool:
@@ -108,7 +110,7 @@ class Mixture(Kernel):
 
     def _choose(self, draws: Draws) -> IndexArray:
         index: IndexArray = np.searchsorted(self._cumulative, draws.uniform(), side="right")
-        return np.minimum(index, len(self.kernels) - 1)
+        return np.minimum(index, self._last)
 
     def __repr__(self) -> str:
         return f"Mixture({self.kernels!r}, weights={self.weights.tolist()})"

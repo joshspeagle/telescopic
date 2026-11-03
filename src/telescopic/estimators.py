@@ -164,6 +164,8 @@ def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike)
             f"values and weights must have one shape (N,), not {np.shape(values)} and "
             f"{np.shape(weights)}"
         )
+    if not (np.all(np.isfinite(values)) and np.all(np.isfinite(weights))):
+        raise ValueError("values and weights must be finite")
     # The sum of N weights is 1 up to rounding of order N epsilon times their size.
     tolerance = 1e-9 * max(1.0, float(np.abs(weights).sum()))
     if not abs(float(np.sum(weights)) - 1.0) <= tolerance:
