@@ -63,7 +63,10 @@ def test_namespaces_and_indices_give_different_streams():
     # Main replicates, tuning chains, and the replicates of the meeting-time pilot.
     root = root_seed(1)
     seeds = [(root, MAIN), (root, TUNING), (namespace_seed(root, PILOT), MAIN)]
-    draws = {replicate_generator(seed, ns, i).random() for seed, ns in seeds for i in (0, 1)}
+    draws = set()
+    for seed, ns in seeds:
+        for i in (0, 1):
+            draws.add(replicate_generator(seed, ns, i).random())
     assert len(draws) == 6
 
 

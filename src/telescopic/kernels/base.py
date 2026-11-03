@@ -405,5 +405,7 @@ def select(accepted: BoolArray, proposal: State, current: State) -> State:
     return State(
         np.where(accepted[:, None], proposal.x, current.x),
         np.where(accepted, proposal.log_prob, current.log_prob),
-        None if current.grad is None else np.where(accepted[:, None], proposal.grad, current.grad),
+        None
+        if current.grad is None or proposal.grad is None
+        else np.where(accepted[:, None], proposal.grad, current.grad),
     )

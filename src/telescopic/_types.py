@@ -84,11 +84,13 @@ def coordinates(dims: int | Sequence[int], ndim: int) -> npt.NDArray[np.intp]:
     return columns.astype(np.intp)
 
 
-def vector(name: str, values: npt.ArrayLike) -> FloatArray:
+def vector(name: str, values: npt.ArrayLike, ndim: int | None = None) -> FloatArray:
     # A finite vector of shape (d,), d >= 1, or a scalar as shape (1,).
     array = np.array(values, dtype=np.float64, ndmin=1)
     if array.ndim != 1 or len(array) == 0:
         raise ValueError(f"{name} must have shape (d,) with d >= 1, not {array.shape}")
+    if ndim is not None and len(array) != ndim:
+        raise ValueError(f"{name} must have shape ({ndim},), not {array.shape}")
     if not np.all(np.isfinite(array)):
         raise ValueError(f"{name} must be finite, not {array.tolist()}")
     return array

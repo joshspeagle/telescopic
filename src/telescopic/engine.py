@@ -333,19 +333,22 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
         order = np.argsort(np.concatenate([getattr(part, key) for part in parts]), kind="stable")
         for name in names:
             columns[name] = np.concatenate([getattr(part, name) for part in parts])[order]
+    paths: dict[int, tuple[FloatArray, FloatArray]] = {}
+    for part in parts:
+        paths.update(part.paths)
     return Replicates(
         seed=first.seed,
         settings=first.settings,
         **columns,
         requested=np.unique(np.concatenate([part.requested for part in parts])),
         **{name: sum(getattr(part, name) for part in parts) for name in (*COUNTS, "seconds")},
-        paths={index: path for part in parts for index, path in part.paths.items()},
+        paths=paths,
     )
 
 
 def _seed_key(seed: SeedSequence) -> tuple[Any, ...]:
     # Entropy may be an int, a sequence or an array; lists compare by value.
-    return np.atleast_1d(seed.entropy).tolist(), seed.spawn_key, seed.pool_size
+    return np.atleast_1d(np.asarray(seed.entropy)).tolist(), seed.spawn_key, seed.pool_size
 
 
 class _Start:
@@ -399,9 +402,7 @@ class _Batch:
         if not starting:
             return
         lanes = free[: len(starting)]
-        states = self.kernel.init_state(
-            self.target, np.array([p for s in starting for p in (s.x0, s.y0)])
-        )
+        states = self.kernel.init_state(self.target, np.vstack([(s.x0, s.y0) for s in starting]))
         self.x.put(lanes, states.take(slice(0, None, 2)))
         self.y.put(lanes, states.take(slice(1, None, 2)))
         outside = np.isneginf(states.log_prob).reshape(-1, 2).any(axis=1)

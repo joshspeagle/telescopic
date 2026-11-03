@@ -11,7 +11,7 @@ import numpy.typing as npt
 
 from telescopic._linalg import square_root
 from telescopic._random import Draws
-from telescopic._types import FloatArray, read_only, real
+from telescopic._types import FloatArray, read_only, real, vector
 from telescopic.couplings import maximal
 from telescopic.kernels.base import Kernel, State, evaluate, evaluate_pair
 from telescopic.target import Target
@@ -222,7 +222,8 @@ def _common(p: list[Any], q: list[Any], draws: Draws, size: int) -> tuple[Any, .
     return tuple(
         np.array(
             [
-                np.atleast_1d(c.mean) + square_root("a conditional's cov", c.cov, size) @ row
+                vector("a conditional's mean", c.mean, size)
+                + square_root("a conditional's cov", c.cov, size) @ row
                 for c, row in zip(side, z, strict=True)
             ]
         )

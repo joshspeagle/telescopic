@@ -10,7 +10,7 @@ import numpy as np
 import numpy.typing as npt
 from scipy.sparse import csr_array
 
-from telescopic._types import FloatArray, IntArray, integer, read_only
+from telescopic._types import FloatArray, IntArray, integer, integral, read_only
 
 
 @dataclass(frozen=True, eq=False)
@@ -86,11 +86,13 @@ class SignedMeasure:
             ``R * n_cells``.
         """
         n_cells = integer("n_cells", n_cells, minimum=1)
-        if np.shape(cell) != self.weights.shape or not np.all((cell >= -1) & (cell < n_cells)):
+        cell = np.asarray(cell)
+        if cell.shape != self.weights.shape or not integral(cell, -1) or np.any(cell >= n_cells):
             raise ValueError(
                 f"cell must give each of the {len(self.weights)} atoms a cell from 0 to "
                 f"n_cells - 1 = {n_cells - 1}, or -1"
             )
+        cell = cell.astype(np.int64, copy=False)
         # Built as CSR directly: each row holds at most one entry, already in order.
         inside = cell >= 0
         indptr = np.concatenate([[0], np.cumsum(inside)])

@@ -229,7 +229,8 @@ def random_draws(n_rows: int, rng: Seed = None) -> Draws:
     Draws
     """
     n_rows = integer("n_rows", n_rows, minimum=1)
-    return _Shared(n_rows, np.random.default_rng(rng)).view(np.arange(n_rows))
+    generator = rng if isinstance(rng, Generator) else np.random.default_rng(root_seed(rng))
+    return _Shared(n_rows, generator).view(np.arange(n_rows))
 
 
 class _Replay(Streams):
