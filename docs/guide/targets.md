@@ -44,7 +44,7 @@ that writes to its input raises instead of corrupting the chains.
 {class}`telescopic.CoupledSampler` build one from their arguments; it is needed directly
 only with the building blocks, such as kernels, the engine and
 {func}`telescopic.testing.check_coupling`. Its `log_prob` takes a batch of shape
-`(n, d)`, whether or not the function is vectorised, and counts the evaluations:
+`(n, d)`, whether or not the function is vectorized, and counts the evaluations:
 
 ```{code-cell} python
 points = np.array([[0.0, 0.0], [1.0, 0.0], [2.0, 1.0]])
@@ -126,7 +126,7 @@ A parameter with a bound, such as a scale $\sigma > 0$, can be sampled through a
 unconstrained transform, such as $s = \log\sigma$. The log-density of $s$ adds the
 logarithm of the Jacobian $d\sigma/ds = \sigma$, which is $s$. The chains then never
 reach a boundary, and every point of the initial distribution lies inside the support.
-The model above, with flat priors on the location and the scale:
+We sample the model above with flat priors on the location and the scale:
 
 ```{code-cell} python
 def log_prob_log_scale(theta, y):
@@ -171,7 +171,7 @@ the initial distribution $\pi_0$, with its own random stream. `init` can be:
 
 The dimension `d` comes from a draw. Draws are converted to shape `(d,)`: SciPy returns
 a scalar for a normal in one dimension, and shape `(1, d)` for a Dirichlet. A draw of
-another shape, or with a non-finite coordinate, raises `ValueError`. Each form, on the Gaussian above:
+another shape, or with a non-finite coordinate, raises `ValueError`. We can run each form on the Gaussian above:
 
 ```{code-cell} python
 points = stats.multivariate_normal(mean, np.diag(sd**2)).rvs(size=50, random_state=1)
@@ -222,7 +222,7 @@ and the cost, and decides whether the chains find every mode.
   variances, which can come out negative
   ([When unbiased is not enough](../tutorials/failure-modes.md#a-start-far-wider-than-the-target)).
   A start a few to ten times wider than the target avoids this.
-- **For a target with one mode,** a Gaussian centred on an optimiser's fit, with its
+- **For a target with one mode,** a Gaussian centered on an optimizer's fit, with its
   inverse Hessian scaled by 100, is ten times wider than the fit's error bars
   ([Getting started](../getting-started.md#a-first-run)).
 - **Inside the support.** A replicate that starts where the target density is zero emits

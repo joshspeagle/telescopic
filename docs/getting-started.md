@@ -8,8 +8,8 @@ kernelspec:
 
 ## Installation
 
-telescopic needs Python 3.11 or newer, NumPy, SciPy and threadpoolctl. From a clone of
-the repository:
+telescopic needs Python 3.11 or newer, NumPy, SciPy and threadpoolctl. Install telescopic
+and its optional dependencies from a clone of the repository:
 
 ```bash
 pip install ".[all]"
@@ -39,7 +39,7 @@ shows a pair meeting, and [Theory](theory.md) derives the estimator.
 
 ## A first run
 
-A straight line fitted to 50 points with Gaussian errors. The log-density takes one
+The example below fits a straight line to 50 data points with Gaussian errors. The log-density takes one
 point, the slope and the intercept, and returns its logarithm up to a constant, as in
 emcee:
 
@@ -63,7 +63,7 @@ def log_prob(theta, x, y, yerr):
 The initial distribution should be wider than the posterior and cover all its modes,
 but not wider by orders of magnitude
 ([Initial distributions](guide/targets.md#choosing-one)). A Gaussian ten times wider
-than an optimiser's error bars suits a posterior with one mode:
+than an optimizer's error bars suits a posterior with one mode:
 
 ```{code-cell} python
 fit = optimize.minimize(lambda theta: -log_prob(theta, x, y, yerr), [0.0, 0.0])
@@ -91,7 +91,7 @@ The default of 100 replicates is too few for one of the checks behind the warnin
 ## Any function, after the run
 
 Each replicate is a signed measure, so any expectation can be estimated without running
-again. The posterior mean of the product of slope and intercept:
+again. For example, to estimate the posterior mean of the product of the slope and intercept:
 
 ```{code-cell} python
 result.estimate(lambda t: t[:, 0] * t[:, 1])

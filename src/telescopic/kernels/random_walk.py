@@ -131,7 +131,7 @@ class RandomWalk(Kernel):
 
 class _Gaussian:
     # A Gaussian proposal for the rejection coupling; both members of a pair share chol,
-    # so the normalising constants cancel and are left out.
+    # so the normalizing constants cancel and are left out.
     def __init__(self, mean: FloatArray, chol: FloatArray, inverse: FloatArray) -> None:
         self.mean, self.chol, self.inverse = mean, chol, inverse
 

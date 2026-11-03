@@ -46,7 +46,7 @@ class Gibbs(Kernel):
     conditional : callable
         ``conditional(x, b)`` returns the full conditional of block ``b`` given the other
         coordinates of ``x``, a read-only point of shape ``(d,)``: a frozen distribution
-        with ``rvs(random_state=...)`` and a normalised ``logpdf`` or ``logpmf``, such as
+        with ``rvs(random_state=...)`` and a normalized ``logpdf`` or ``logpmf``, such as
         ``scipy.stats.norm(mean, sd)``. One value of ``logpdf`` per coordinate, as with
         array parameters, is summed: the joint log-density of independent coordinates.
     blocks : sequence of array_like of int

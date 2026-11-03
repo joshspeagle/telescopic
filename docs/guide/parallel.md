@@ -95,12 +95,12 @@ index, so its output does not depend on where it runs. With a log-density evalua
 by point (`vectorize=False`, the default), the replicates are bitwise identical in any
 pool, with any number of workers and chunks, on one machine with the same NumPy and SciPy
 versions; generator algorithms, SciPy's samplers and BLAS builds can change between
-versions and machines. A vectorised log-density can differ in the last bits between batch
+versions and machines. A vectorized log-density can differ in the last bits between batch
 layouts, so there the agreement is statistical. So can functions of your own that call
 multithreaded BLAS or LAPACK, such as a SciPy multivariate normal of 200 dimensions as
 the initial distribution, since this process keeps its BLAS threads. Limiting it to one
-thread, with `threadpoolctl.threadpool_limits(1)`, makes them agree again. The first run
-above, on two workers, and the same run in this process:
+thread, with `threadpoolctl.threadpool_limits(1)`, makes them agree again. We compare the first run
+above, on two workers, with the same run in this process:
 
 ```{code-cell} python
 here = telescopic.sample(gaussian.log_prob, gaussian.initial, rng=3)

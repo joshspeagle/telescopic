@@ -16,7 +16,7 @@ If you use telescopic, please cite the software, whose citation is in the reposi
 
 ## References
 
-The works cited in this documentation and in the docstrings of the API reference:
+The list below collects the works cited in this documentation and in the docstrings of the API reference:
 
 - Andrieu, C. & Thoms, J. (2008). A tutorial on adaptive MCMC. Stat. Comput. 18(4),
   343–373.

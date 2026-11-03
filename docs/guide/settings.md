@@ -139,13 +139,13 @@ pilot's pairs evaluate it about twice per step, and `result.n_log_prob` counts o
 run's evaluations. Tuning and the pilot can be skipped:
 
 - **Tuning** runs only for a kernel with parameters left unset. A kernel whose
-  parameters are given skips it, such as a `RandomWalk` with an optimiser's inverse
+  parameters are given skips it, such as a `RandomWalk` with an optimizer's inverse
   Hessian as `cov`.
 - **The meeting-time pilot** runs only when `k` is `"auto"`. Give `k`, for example that
   of an earlier run on the same target, and `lag` and `m` follow from it.
 
 A pool runs the pilot and the replicates on several processes, but tuning runs in this
-process ([Parallel runs](parallel.md)). With both skipped:
+process ([Parallel runs](parallel.md)). Passing a configured kernel and a fixed `k` skips both:
 
 ```{code-cell} python
 calls = 0
@@ -196,7 +196,7 @@ cost and the seconds per replicate.
 
 The inefficiency of an estimate is the mean cost times the variance of one replicate's
 estimate, $\mathbb E[C]\,\mathbb V[H]$ ([Theory](../theory.md#cost)): the figure to
-minimise when comparing kernels or settings at equal work. For the slope of the run
+minimize when comparing kernels or settings at equal work. We can compute the inefficiency for the slope of the run
 above, with the cost in kernel applications and in evaluations of the log-density:
 
 ```{code-cell} python

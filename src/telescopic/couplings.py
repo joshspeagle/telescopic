@@ -88,7 +88,7 @@ def maximal(
     Parameters
     ----------
     p, q : list of distributions, length n
-        Objects with ``rvs(random_state=...)`` and a normalised ``logpdf`` (or ``logpmf``),
+        Objects with ``rvs(random_state=...)`` and a normalized ``logpdf`` (or ``logpmf``),
         such as frozen SciPy distributions. All draws have the same shape. Values of
         ``logpdf`` for the coordinates of a draw are summed, as the joint log-density of
         independent coordinates; NaN raises ``ValueError``.
@@ -133,7 +133,7 @@ def discrete_maximal(
     r"""Maximal coupling of two distributions on :math:`\{0, \dots, K-1\}`, row by row.
 
     With probability :math:`\alpha = \sum_k \min(p_k, q_k)` both indices are drawn from
-    :math:`\min(p, q)/\alpha`; otherwise they are drawn independently from the normalised
+    :math:`\min(p, q)/\alpha`; otherwise they are drawn independently from the normalized
     residuals :math:`p - \min(p, q)` and :math:`q - \min(p, q)`, whose supports are
     disjoint (Jacob, O'Leary & Atchadé 2020, section 5.4; spec R-CPL-3). So
     :math:`P(i = j) = \alpha = 1 - \mathrm{TV}(p, q)`.
@@ -141,7 +141,7 @@ def discrete_maximal(
     Parameters
     ----------
     log_p, log_q : ndarray, shape (n, K)
-        Log-probabilities, normalised or not; each row needs a finite maximum and no NaN.
+        Log-probabilities, normalized or not; each row needs a finite maximum and no NaN.
     draws : Draws
         Random numbers for the ``n`` rows; each row uses 3 uniforms.
 
@@ -196,7 +196,7 @@ def _log_density(distribution: Any, value: Any) -> float:
 
 
 def _categorical(weights: FloatArray, u: FloatArray) -> IndexArray:
-    # Inverse-CDF draw from unnormalised non-negative weights: the first index whose
+    # Inverse-CDF draw from unnormalized non-negative weights: the first index whose
     # cumulative weight exceeds u times the total, so zero-weight categories are never
     # drawn. The clip only matters for rounding at u -> 1 and for an all-zero row (a
     # residual that is never used).

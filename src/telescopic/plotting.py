@@ -132,7 +132,7 @@ def marginals(
 def corner(result: Result, dims: int | Sequence[int] | None = None, bins: int = 20) -> Any:
     """A corner plot of signed histograms: marginals on the diagonal, pairs below it.
 
-    The pairs are coloured by signed density with a diverging map centred on 0
+    The pairs are colored by signed density with a diverging map centered on 0
     (spec section 7.5). Telescopic never passes signed weights to ``corner`` or ArviZ,
     whose weighted quantiles assume non-negative weights.
 

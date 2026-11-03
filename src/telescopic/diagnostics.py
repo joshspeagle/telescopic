@@ -65,7 +65,7 @@ def w1_bound(
               \lVert X_{t+jL} - Y_{t+(j-1)L}\rVert\Big]
 
     (Biswas, Jacob & Vanetti 2019), estimated by the average over replicates. It depends
-    on the parametrisation of the target.
+    on the parameterization of the target.
 
     Parameters
     ----------
