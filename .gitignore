@@ -20,8 +20,12 @@ docs/_build/
 docs/jupyter_execute/
 docs/api/generated/
 
-# Worktrees of agents working in parallel
-.claude/worktrees/
+# Local state of agents: everything under .claude/ but the shared rules, and the
+# working folders of tasks shared between agents
+.claude/*
+!.claude/rules/
+.agents/swarm/
+.agents/handoff.md
 
 # Editors and OS
 .DS_Store

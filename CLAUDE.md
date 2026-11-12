@@ -10,6 +10,8 @@ Rhee (2014) and Jacob, O'Leary & Atchadé (2020).
   open items of `notes/QUESTIONS.md`.
 - The requirement is `docs/design/spec.md`. Tests follow `docs/design/test-plan.md`, and
   the order of work follows `docs/design/implementation-plan.md`.
+- A change to the package or to the documentation follows `.claude/rules/docs-upkeep.md`.
+  Work shared between several agents follows `.agents/briefs/README.md`.
 
 ## Layout
 
@@ -19,17 +21,23 @@ Rhee (2014) and Jacob, O'Leary & Atchadé (2020).
 | `tests/` | the pytest suite; `slow` marks statistical tests |
 | `docs/` | the Sphinx site in MyST Markdown; `docs/tutorials/` are executed notebooks; `docs/design/` holds the spec and the plans |
 | `benchmarks/` | timing and efficiency scripts, run by hand |
+| `scripts/` | `verify.sh`, the gate that runs what CI runs |
 | `notes/` | plan, log, decisions, questions, experiments and review reports; not part of the site |
 | `research_notes/`, `reports/` | the landscape census behind the design |
+| `.claude/rules/` | rules scoped to paths, mirrored in `.agents/rules/` for other agent platforms |
+| `.agents/briefs/` | the briefs of each agent role and the formats of their outputs |
 
 ## Commands
 
-- Local environment: use the shared `~/.venvs/default` environment (`~/.venvs/default/bin/python`) and `~/.local/bin/` tools (`ruff`, `mypy`, `pytest`); never create a `.venv` inside Dropbox.
-- Fast tests: `PYTHONPATH=src ~/.venvs/default/bin/pytest`. It skips `slow` tests and must finish in
-  under 2 minutes.
-- All tests: `PYTHONPATH=src ~/.venvs/default/bin/pytest -m ""`.
-- Lint, format and types: `~/.local/bin/ruff check . && ~/.local/bin/ruff format --check . && ~/.local/bin/mypy --python-executable ~/.venvs/default/bin/python`.
-- Docs: `PYTHONPATH=src ~/.venvs/default/bin/sphinx-build -W --keep-going docs docs/_build/html`.
+- The gate: `scripts/verify.sh` runs the lint, the format check, the type check and the
+  fast tests on the checkout's sources, as CI's lint and test jobs do on the installed
+  package. `--cov` adds CI's coverage floor, `--docs` the strict documentation build
+  and `--slow` the slow tests. It needs the `dev` dependency group (`docs` too for
+  `--docs`): `pip install -e . --group dev --group docs`, with pip 25.1 or newer. Set
+  `PYTHON` to the interpreter that has them when that is not the first `python`; where
+  that environment lives is each machine's own setting.
+- One test file: `PYTHONPATH=src pytest tests/test_engine.py`. The fast tests skip those
+  marked `slow` and must finish in under 2 minutes.
 
 ## Plan
 
@@ -48,42 +56,64 @@ Rhee (2014) and Jacob, O'Leary & Atchadé (2020).
 - A question only Josh can answer goes to `notes/QUESTIONS.md` with a recommended
   default, and work continues on the default.
 
-## Milestones
+## Changes
 
-Each milestone of the implementation plan is one reviewed unit, landed on `main` as a
-pull request (DECISIONS #2, #58).
+Each change is one reviewed unit: an issue, a branch and a pull request (DECISIONS #58,
+#68). A milestone of the implementation plan is such a unit, with its report in
+`notes/reviews/`.
 
-1. Implement it with its tests, docstrings and CHANGELOG line, in commits that each make
-   one logical change.
-2. Run the commands until they pass.
-3. Adversarial review, only for a significant departure from the spec. One independent
-   subagent tries to refute it; it gets the diff, the decision and the spec, not the
-   session's reasoning. A refuted decision is changed, or the objection is answered in
+1. Open or choose the issue. It states the scope, the reason and the acceptance
+   criteria. Branch `<issue>-<slug>` from `main`, and open a draft pull request that
+   closes the issue after the first commit.
+2. Implement it with its tests, docstrings and CHANGELOG line, in commits that each make
+   one logical change. Record each decision in the pull request and in
+   `notes/DECISIONS.md`.
+3. Run the gate until it passes, then the `slow` tests of the changed modules. Fix a
+   failing test at its cause: never by loosening a tolerance, skipping the test or
+   changing its seed.
+4. Adversarial review, only for a significant departure from the spec. One independent
+   agent tries to refute it; it gets the diff, the decision and the spec, not the
+   author's reasoning. A refuted decision is changed, or the objection is answered in
    the record. A departure that changes a statistical result gets three reviewers and
    stands only if two uphold it.
-4. Run `/simplify`, then `/code-review`, on the milestone's diff, at the effort the table
-   sets. A change to numerics or the public API takes the next size. Fix each valid
-   finding, and answer the rest in the milestone's report in `notes/reviews/`.
+5. A simplification pass, then a code review, on the pull request's diff, by agents that
+   did not write it, at the size the table sets. A change to numerics or the public API
+   takes the next size. The simplification pass looks for reuse, simpler forms,
+   efficiency and the right level of abstraction; the code review looks through the
+   correctness and compliance lenses of `.agents/briefs/review.md`. On Claude Code
+   these are `/simplify` and `/code-review`, which take the level named in the table;
+   without subagents, make each a separate pass that starts from the diff alone.
+   Fix each valid finding, answer the rest in the pull request or the milestone's
+   report, and run step 3 again after the fixes.
 
-   | Lines added plus removed | `/simplify` | `/code-review` |
+   | Lines added plus removed | Simplification | Code review |
    |---|---|---|
-   | under 100 | one reviewer for all angles | `low` |
-   | 100 to 500 | two reviewers | `medium` |
-   | over 500 | four reviewers, one per angle | `high` |
+   | under 100 | one reviewer for all four | one reviewer (`low`) |
+   | 100 to 500 | two reviewers | three reviewers (`medium`) |
+   | over 500 | four reviewers, one for each | five reviewers (`high`) |
 
-5. Run the commands and the `slow` tests of the changed modules.
-6. Commit the fixes, push, add a log entry and update `notes/PLAN.md`.
+6. Update the documentation that the change touches (`.claude/rules/docs-upkeep.md`).
+7. Push, and watch CI on the pull request without waiting on it; fix a failing job at
+   its cause. Mark the pull request ready when the gate and CI pass. Josh merges it,
+   with a merge commit, and CI on `main` is checked after the merge.
+8. Add a log entry, and update `notes/PLAN.md` when a milestone or an epic moves.
+
+A fix of at most 10 lines to prose, a comment or configuration that changes no behavior
+needs no issue.
 
 ## Git
 
-- Each change starts from an issue and lands through a pull request: branch
-  `<issue>-<slug>` from `main`, open a draft pull request that closes the issue after the
-  first commit, and merge it with a merge commit once CI passes. A tracking issue lists
-  the issues of each phase or epic (DECISIONS #58, #68).
 - A commit passes every test that passed before it. Subject in the imperative, at most
   72 characters; a body only for why.
+- Keep git's own author and committer. A commit that an agent helped to write ends with
+  a `Co-Authored-By:` trailer that names the agent.
 - Push only after the commands pass. Never force-push, and never rebase or amend a pushed
   commit.
+- Every tracked file, issue, pull request and comment is written for a public reader: no
+  machine-specific paths, hostnames, local URLs or names of private tools.
+- Text that an agent posts to GitHub ends with a horizontal rule and a line that names
+  the agent, `_Generated by [<agent>](<the agent's public page>)_`, so that it is never
+  read as Josh's own words or approval.
 
 ## Code
 
@@ -146,12 +176,28 @@ pull request (DECISIONS #2, #58).
 
 ## Agents
 
-- Follow the `github-flow` skill before modifying tracked files (`>10` lines): open an issue, branch `<issue>-<slug>` from `main`, keep one logical change per commit with a `Co-Authored-By:` trailer, and append the active agent's attribution footer to all `gh` issue/PR bodies and comments.
-- Delegate through self-contained briefs. Subagents never commit. Read every line a
-  subagent writes before committing it.
-- Parallel subagents that write files get separate files or separate worktrees.
+A lead agent may brief other agents for one task each. `.agents/briefs/README.md` says
+how: the roles, the brief and output format of each, where a task's working files go,
+and the path of a review and of a research direction.
+
+- Brief an agent with the goal, the files, the rules and the output format, and nothing
+  of the lead agent's own conclusions.
+- Briefed agents never commit or push, and post to GitHub only a text the lead agent has
+  read, verbatim. Read every line an agent writes before committing it.
+- A finding becomes an issue only after an agent that did not produce it has tried to
+  refute or reproduce it from the code alone.
+- Agents that write tracked files get separate files, or separate worktrees under
+  `.claude/worktrees/`.
+- The default model tier does reviewing, research and implementation, and the fast tier
+  surveys and checks that a search settles. The strongest tier is for derivations,
+  adversarial review of statistical claims and synthesis across findings; name each
+  such use in the task's tracking issue (DECISIONS #70).
+- The record is GitHub and `notes/`: a tracking issue for each phase with its epics and
+  sub-issues, `notes/PLAN.md`, `notes/LOG.md`. What lives only in a session is lost.
 
 ## Writing
 
-- Follow the Synergistic Prose Register (`co-writer` skill): pair concrete statistical intuition with exact technical terminology, use complete sentences before code blocks and equations, and use American English spelling in user-facing documentation and docstrings. Literal over metaphor. No em dashes.
+- Pair concrete statistical intuition with exact technical terminology, write complete
+  sentences before code blocks and equations, and use American English spelling in
+  user-facing documentation and docstrings. Literal over metaphor. No em dashes.
 - Session replies lead with the answer, then the reason, then the next step.
