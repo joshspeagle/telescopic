@@ -20,6 +20,9 @@ docs/_build/
 docs/jupyter_execute/
 docs/api/generated/
 
+# Worktrees of agents working in parallel
+.claude/worktrees/
+
 # Editors and OS
 .DS_Store
 .idea/
