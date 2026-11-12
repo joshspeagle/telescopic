@@ -85,6 +85,7 @@ their own, of which 8 were confirmed and 3 refuted.
 | #82 | Sixteen decisions for Josh, each with the existing text, the evidence, the options and a default |
 | #83 | The performance profile: lazy imports halve the import time; row-wise products dominate from about 50 dimensions |
 | #88 | Tests: 18 tests to add for behavior that 20 surviving mutants leave unchecked, the first being variance and quantiles of a run with censored pairs, and that a replicate draws its two starts from its own stream; each draft test was run against the code and against its mutant |
+| #102 | Found by an experiment of the research track and reproduced: with a tuned `Independence` component, a run on a two-mode target meets within about 100 steps and estimates a mode weight of 0.7 as 1.0002 ± 0.0003 or 0.0002 ± 0.0003, with no warning that names the cause |
 | #84 | The statistical audit: the unbiasedness guarantee omits the source paper's convergence assumption, with a counterexample that returns 1 for a truth of 0.5 without a warning; and the record of what the audit verified |
 
 ### Refuted, already decided, or dropped

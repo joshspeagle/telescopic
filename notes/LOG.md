@@ -366,6 +366,9 @@ Append only. One entry per working session or milestone.
   median factor of 2.2 to 18 and is stopped; coupled tempering with a shared reference
   draw is stopped, its probe having accepted swaps with the inverse of the Metropolis
   ratio.
+- The third experiment found, and a rerun confirmed, that the package's tuned
+  `Independence` component in a mixture returns a mode weight of 0 or 1 for a truth of
+  0.7 on a two-mode target, with fast meeting and small standard errors (#102).
 - Agent instructions: pull request #78 proposes a portable `CLAUDE.md`, a gate script,
   a documentation upkeep rule, the briefs of each agent role and issue templates
   (DECISIONS #71, proposed).
