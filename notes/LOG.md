@@ -318,3 +318,28 @@ Append only. One entry per working session or milestone.
   4377bab, 607 fast tests in 41 s and 20 slow in 125 s pass, and the strict docs build in
   2 min 15 s.
 - The review hub (`notes/review/`) shows the audit's findings on its steps.
+
+## 2026-11-12: the tune-up begins
+
+- Josh asked for a tune-up along three axes: a full review for simplifications,
+  speed-ups, bugs and refactors, recorded as issues; documentation with its own visual
+  identity, to the standard of his other packages; and research past the published
+  methods, toward hard, high-dimensional targets. Tracking issue #65, with the epics #66,
+  #67 and #68.
+- His rulings: a branch and a draft pull request per issue (DECISIONS #68); experiments
+  on new constructions without a gate, and his approval before one enters the public API
+  (#69); the model tiers of the agents (#70).
+- Baseline at 4da2a81: 612 fast tests pass in 36 s on 4 cores; lint, the format check and
+  the strict type check pass.
+- The review: sixteen independent reviewers, five for correctness and three for quality
+  by group of modules, a statistical audit of the estimators and couplings against the
+  papers, a measured performance profile, a test-suite audit with mutants, three
+  architecture reviews (kernels and backends, execution, the public API), the
+  infrastructure, and compliance with the specification. Each finding is validated by a
+  second agent before it becomes an issue.
+- The documentation: a study of the sites of FlexMESA, dynesty, binference, brutus, GSPICE
+  and dorothy, and an audit of this one.
+- The research: four literature sweeps (couplings for gradient-based samplers; estimators
+  and efficiency; multimodal and hierarchical targets; other finite-time frameworks and
+  the software) and three independent rounds of idea generation.
+

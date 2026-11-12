@@ -35,8 +35,9 @@ Rhee (2014) and Jacob, O'Leary & Atchadé (2020).
 
 - The lead is Josh Speagle (`joshspeagle`). Priorities: correctness, then API quality,
   then performance. Never trade the first for the others.
-- v0.1 implements published methods. A new construction stays an experiment in
-  `notes/experiments/` until Josh has seen its evidence (DECISIONS #1).
+- The package starts from published methods and goes past them. A new construction is
+  developed as an experiment in `notes/experiments/`, with its evidence, and enters the
+  public API only after Josh has seen that evidence (DECISIONS #1, #69).
 - A decision is a choice that another competent developer could make differently and
   that affects behaviour, the public API, a number, a tolerance, a dependency or the
   process. Record it with its reason and alternatives: in the spec's decision table
@@ -75,10 +76,10 @@ pull request (DECISIONS #2, #58).
 
 ## Git
 
-- Work on `claude/coupled-mcmc-package-btpupz`. It reaches `main` through pull requests,
-  one per milestone or group of issues, each closing its issue, each branch a commit of
-  the development branch whose CI passed, merged with a merge commit; a tracking issue
-  lists them by phase (DECISIONS #58).
+- Each change starts from an issue and lands through a pull request: branch
+  `<issue>-<slug>` from `main`, open a draft pull request that closes the issue after the
+  first commit, and merge it with a merge commit once CI passes. A tracking issue lists
+  the issues of each phase or epic (DECISIONS #58, #68).
 - A commit passes every test that passed before it. Subject in the imperative, at most
   72 characters; a body only for why.
 - Push only after the commands pass. Never force-push, and never rebase or amend a pushed
