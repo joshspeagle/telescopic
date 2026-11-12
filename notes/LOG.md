@@ -343,3 +343,30 @@ Append only. One entry per working session or milestone.
   and efficiency; multimodal and hierarchical targets; other finite-time frameworks and
   the software) and three independent rounds of idea generation.
 
+## 2026-11-12: the tune-up's review, documentation study and research portfolio
+
+- The review (#66): 149 findings from sixteen reviewers, each validated by an agent that
+  had not produced it. 70 were confirmed as stated and 67 with corrections, 8 were
+  already decided and 4 refuted; 20 are important, none critical. No finding shows a
+  biased estimator or a coupling that changes a chain's law. Filed as #71 to #77, #79 to
+  #84 and #88, with sixteen decisions for Josh in #82. Report: `notes/reviews/tuneup.md`.
+- The worst defects: a vectorized log-density that returns a 0-d value for one point
+  stops every run; a NaN from an `Independence` proposal's density is rejected silently
+  and can stall a run; a function that reuses its output buffer corrupts tuning; and the
+  documented guarantee of unbiasedness omits the convergence assumption of Jacob,
+  O'Leary & Atchadé (2020), with a counterexample that returns 1 for a truth of 0.5.
+- The documentation (#67): of 31 statements checked against the code none was wrong;
+  the findings are about reach and form (#85, #86), with a proposed structure by kind of
+  page (#87). A design board with five logo concepts and three style sheets awaits
+  Josh's choice.
+- The research track (#68): four literature sweeps, three rounds of idea generation,
+  three experiments and a referee. Tuning the HMC step for contraction, with an
+  acceptance target of 0.99 and a step jitter that both chains share, took unmet pairs on
+  the banana from 475 of 500 to 0 of 500; lag-first tuning raised inefficiency by a
+  median factor of 2.2 to 18 and is stopped; coupled tempering with a shared reference
+  draw is stopped, its probe having accepted swaps with the inverse of the Metropolis
+  ratio.
+- Agent instructions: pull request #78 proposes a portable `CLAUDE.md`, a gate script,
+  a documentation upkeep rule, the briefs of each agent role and issue templates
+  (DECISIONS #71, proposed).
+

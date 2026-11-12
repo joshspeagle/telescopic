@@ -2,8 +2,11 @@
 
 **Current position:** Phase 10, the tune-up (tracking issue #65). Three epics run in
 parallel: a whole-package review whose validated findings become issues (#66), the
-documentation and visual identity (#67), and the research track (#68). Nothing found by
-the review is fixed until Josh has ruled on it. The first draft (milestones M0 to M11)
+documentation and visual identity (#67), and the research track (#68). The review is
+filed (`notes/reviews/tuneup.md`; #82 lists the decisions that are Josh's), the
+documentation audit and structure are filed and the identity awaits his choice, and the
+research portfolio is filed with its first experiments. Nothing found by the review is
+fixed until Josh has ruled on it. The first draft (milestones M0 to M11)
 and the second audit's fixes are on `main`; phase 7 of the first tracking issue (#1, #8),
 Josh's review on the hub (`notes/review/`), and his answers to `notes/QUESTIONS.md` remain
 open, and the defaults stand meanwhile.
