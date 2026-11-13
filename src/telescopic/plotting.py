@@ -44,11 +44,10 @@ def meeting_times(result: Result, axes: Sequence[Axes] | None = None) -> list[Ax
     shifted = result.meeting_times - result.lag
     histogram.hist(shifted[np.isfinite(shifted)], bins="auto")
     histogram.set(xlabel=r"$\tau - L$", ylabel="pairs")
-    # Censored pairs sit above every time, so the curve, which steps at the times the
-    # pairs stopped, ends at the cap at the fraction censored.
-    met = np.sort(shifted[np.isfinite(shifted)])
+    # Censored pairs, at inf, sort above every time, so the curve, which steps at the
+    # times the pairs stopped, ends at the cap at the fraction censored.
     t = np.union1d(0, result._stopped - result.lag)
-    fraction = 1 - np.searchsorted(met, t, side="right") / len(shifted)
+    fraction = 1 - np.searchsorted(np.sort(shifted), t, side="right") / len(shifted)
     survival.step(t, fraction, where="post")
     survival.set(xlabel="$t$", ylabel=r"$P(\tau - L > t)$")
     # A log scale needs a positive value: none when every pair met at t = L.

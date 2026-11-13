@@ -668,13 +668,8 @@ class Summary:
         tail = "" if np.isnan(footer["tail_index"]) else f"; tail index {footer['tail_index']:.3g}"
         # A quantile that falls on a censored pair is inf: beyond the cap.
         times = [
-            f"> {footer['max_iter']}" if footer[key] == np.inf else f"{footer[key]:.4g}"
-            for key in (
-                "meeting_time_50",
-                "meeting_time_90",
-                "meeting_time_99",
-                "meeting_time_max",
-            )
+            f"> {footer['max_iter']}" if value == np.inf else f"{value:.4g}"
+            for value in (footer[f"meeting_time_{q}"] for q in ("50", "90", "99", "max"))
         ]
         lines = [
             (
