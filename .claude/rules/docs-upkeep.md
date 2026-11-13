@@ -18,12 +18,12 @@ the same pull request. The documentation states only what the code does now.
 | Module of `src/telescopic/` | Guide and getting started | Tutorials | Theory and reference |
 |---|---|---|---|
 | `__init__.py` (the public namespace) | `getting-started.md` | | `api.md` |
-| `sampler.py`, `tuning.py` | `getting-started.md`, `guide/settings.md` | `tutorials/quickstart.md`, `tutorials/choosing-settings.md` | `theory.md`, `api.md` (Running, Building blocks) |
+| `sampler.py`, `tuning.py` | `getting-started.md`, `guide/settings.md` | `tutorials/beside-emcee.md`, `tutorials/choosing-settings.md` | `theory.md`, `api.md` (Running, Building blocks) |
 | `kernels/`, `couplings.py` | `guide/kernels.md`, `guide/custom-kernels.md` | `tutorials/gradients.md`, `tutorials/gibbs.md`, `tutorials/how-it-works.md` | `theory.md`, `api.md` (Kernels and couplings) |
-| `target.py`, `initial.py` | `getting-started.md`, `guide/targets.md` | `tutorials/quickstart.md` | `api.md` (Targets and initial distributions) |
+| `target.py`, `initial.py` | `getting-started.md`, `guide/targets.md` | `tutorials/beside-emcee.md` | `api.md` (Targets and initial distributions) |
 | `engine.py`, `_parallel.py`, `_random.py` | `guide/parallel.md`, `guide/settings.md` | `tutorials/how-it-works.md` | `api.md` (Building blocks) |
 | `_progress.py` | `getting-started.md`, `guide/parallel.md` | | |
-| `estimators.py`, `measure.py`, `results.py` | `guide/results.md` | `tutorials/how-it-works.md`, `tutorials/quickstart.md` | `theory.md`, `api.md` (Results, Building blocks) |
+| `estimators.py`, `measure.py`, `results.py` | `guide/results.md` | `tutorials/how-it-works.md`, `tutorials/beside-emcee.md` | `theory.md`, `api.md` (Results, Building blocks) |
 | `_io.py` (saving and loading) | `guide/results.md` | | `api.md` (Results) |
 | `diagnostics.py`, `warnings.py` | `guide/diagnostics.md` | `tutorials/failure-modes.md`, `tutorials/choosing-settings.md` | `theory.md`, `api.md` (Diagnostics, plots and checks; Warnings) |
 | `plotting.py` | `guide/results.md`, `guide/diagnostics.md` | `tutorials/how-it-works.md` | `api.md` (Diagnostics, plots and checks) |

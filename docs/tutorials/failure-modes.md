@@ -356,9 +356,9 @@ modes it is given: a mode that no optimization found stays as invisible as befor
 
 ## A start far wider than the target
 
-The line fit of [Getting started](../getting-started.md), with the log-density of the
-[quickstart](quickstart.md), which takes one point or a batch, and its exact Gaussian
-posterior, computed as there:
+The line fit of [Getting started](../getting-started.md), with the log-density of
+[telescopic beside emcee](beside-emcee.md), which takes one point or a batch, and its
+exact Gaussian posterior, computed as there:
 
 ```{code-cell} python
 rng = np.random.default_rng(0)

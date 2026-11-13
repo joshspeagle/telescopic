@@ -70,7 +70,7 @@ docs = [
     "numpydoc==1.11.0",
     "matplotlib>=3.8",
     "ipykernel",
-    # The quickstart tutorial runs emcee beside telescopic.
+    # The tutorial telescopic beside emcee runs both.
     "emcee==3.1.6",
     # docs/_scripts/brand.py reads the wordmark's outlines from the served woff2 font.
     "fonttools==4.68.0",

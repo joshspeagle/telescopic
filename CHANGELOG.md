@@ -74,6 +74,8 @@ All notable changes to this project are documented here. The format follows
   landing page with a coupled pair drawn by telescopic itself, and navigation by section
   (Start, Tutorials, How-to guides, Theory, Reference, Project). Every plot of the
   executed pages shares one style. The design records are no longer built into the site.
+- Each tutorial has one title in the sidebar, on its page and in the pager, and the
+  comparison with emcee moved to `tutorials/beside-emcee`.
 - Fixes from an audit of the whole package: a number argument of the wrong type raises
   `TypeError`, and one out of bounds `ValueError`, naming the argument; `names` must be
   distinct strings, one per coordinate; `Kernel.check_ndim` checks a kernel's dimension;

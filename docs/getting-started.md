@@ -125,7 +125,7 @@ result.plot_tv_bound();
 telescopic does not make chains mix faster. Where one chain mixes slowly, as between
 distant modes, pairs meet late and replicates cost more. Its gain is error bars that do
 not depend on judging convergence, from replicates that run in parallel without
-communication. [telescopic beside emcee](tutorials/quickstart.md) runs both on this
+communication. [telescopic beside emcee](tutorials/beside-emcee.md) runs both on this
 line fit.
 
 ## A slow log-density
