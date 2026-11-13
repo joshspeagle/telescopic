@@ -1,6 +1,6 @@
 # Validation and benchmarks for coupled MCMC and unbiased estimators
 
-This note builds on Q3 of the sibling note `/home/user/pastry/research_notes/Population inference software landscape/api_ux_validation.md` and does not repeat it. That section already covers generic SBC (Talts; Modrák), Geweke's joint-distribution test, Grosse & Duvenaud, the basics of Gandy & Scott and MCUnit, emcee and dynesty CI tolerances, pytest-randomly, pytest-rerunfailures, Hypothesis basics, ArviZ `array_stats`, and the stale posteriordb and inference-gym clients.
+This note builds on Q3 of `api_ux_validation.md`, a sibling note in the pastry project's research notes (*Population inference software landscape*, not in this repository), and does not repeat that section. That section already covers generic SBC (Talts; Modrák), Geweke's joint-distribution test, Grosse & Duvenaud, the basics of Gandy & Scott and MCUnit, emcee and dynesty CI tolerances, pytest-randomly, pytest-rerunfailures, Hypothesis basics, ArviZ `array_stats`, and the stale posteriordb and inference-gym clients.
 
 This note adds what is specific to couplings and unbiased estimators:
 - **Literature numbers** were extracted from the papers' full text (pdftotext on arXiv PDFs).

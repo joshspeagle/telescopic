@@ -2,6 +2,7 @@ import itertools
 import re
 import runpy
 import tempfile
+from importlib import resources
 from pathlib import Path
 
 import numpy as np
@@ -315,6 +316,11 @@ def test_citation_version_matches_package_version():
     match = re.search(r"^version:\s*[\"']?([^\"'\s]+)", text, re.MULTILINE)
     assert match, "CITATION.cff has no version line"
     assert match.group(1) == __version__
+
+
+def test_the_package_is_marked_as_typed():
+    # PEP 561: without the marker, a user's type checker treats telescopic as untyped.
+    assert (resources.files("telescopic") / "py.typed").is_file()
 
 
 def test_chains_cannot_start_where_the_gradient_is_not_finite():
