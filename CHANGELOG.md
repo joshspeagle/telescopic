@@ -177,3 +177,11 @@ All notable changes to this project are documented here. The format follows
   about disagreeing tuning chains also fires where an R-hat is NaN, which hid a
   disagreement in another coordinate: it names those coordinates, which the pilot never
   moved in, and reports the largest finite R-hat.
+- The warning that the tuning chains disagree says that the chains may also not have
+  converged, and the documentation of `TuningReport.rhat`, `tuning_disagreement` and
+  `CoupledSampler.tune` says that chains that agree do not show that the target has one
+  mode.
+- The documentation states that an automatically tuned `Independence` proposal covers
+  only the modes its tuning chains reached, so a run on well-separated modes can be
+  confidently wrong without a warning; the failure-modes tutorial shows such a run and
+  two checks that help.

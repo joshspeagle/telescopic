@@ -183,15 +183,17 @@ geometric meeting times, and at the kernel ([Kernels](kernels.md)).
 (`result.tuning.rhat`) exceeds $\sqrt 2$ in some coordinate, so their means spread more
 widely than the chains themselves, or is NaN in some coordinate, where all four chains
 sat at one value; the warning names those coordinates. **Meaning:** an $\hat R$ above
-$\sqrt 2$ says the target may have several modes, which make the meeting times
-heavy-tailed, and pairs that never leave one mode miss the others. A NaN says the pilot
-never moved in that coordinate, so the tuned kernel's variance there is about
-$10^{-10}$ and its chains barely move in it either; this happens where float64 cannot
-resolve the target's scale at the coordinate's values, such as a scale of $10^3$ at
-$2^{70}$, where floats are $2^{18}$ apart. **Remedy:** for several modes, an initial
-distribution that covers every mode ([Initial distributions](targets.md#choosing-one));
-for a NaN, a target written in coordinates centered near 0, or the kernel's parameters
-given instead of tuned ([Kernels](kernels.md)).
+$\sqrt 2$ says the chains sit in different modes of the target, or have not converged.
+Several modes make the meeting times heavy-tailed, and pairs that never leave one mode
+miss the others. A NaN says the pilot never moved in that coordinate, so the tuned
+kernel's variance there is about $10^{-10}$ and its chains barely move in it either;
+this happens where float64 cannot resolve the target's scale at the coordinate's values,
+such as a scale of $10^3$ at $2^{70}$, where floats are $2^{18}$ apart. **Remedy:** for
+several modes, an initial distribution that covers every mode
+([Initial distributions](targets.md#choosing-one)); for a NaN, a target written in
+coordinates centered near 0, or the kernel's parameters given instead of tuned
+([Kernels](kernels.md)). Chains that agree can still all sit in one mode, and the
+warning is then silent ([Tuning](kernels.md#tuning)).
 
 ### Slow pairs (`slow`)
 
@@ -243,14 +245,26 @@ log-densities, and the first two targets `sample()`'s default settings:
   of $P(x > 3)$ missed the truth in 33 of 50 runs, none of which warned. The 17 runs whose
   replicates found the other mode raised the variance warning, and their intervals
   covered the truth.
+- The mixture $0.7\,\mathcal N(-6e_1, I) + 0.3\,\mathcal N(6e_1, I)$ in 10 and 32
+  dimensions, from $\mathcal N(0, 100I)$, with
+  `kernel=Mixture([RandomWalk(), Independence()], [0.8, 0.2])` tuned automatically and
+  $R = 400$: the estimate of $P(x_0 < 0)$ lay more than 5 standard errors from 0.7 in 14
+  of 20 runs in 10 dimensions and 18 of 20 in 32. Over these runs and others on the same
+  target, with modes 24 apart or other seeds, the tuning warning fired on none of the 191
+  runs whose estimate was wrong, only on runs whose estimate was right.
 
 ## A run that never left one mode
 
-The last case shows the limit of every diagnostic here: a run whose pairs all met in one
-mode cannot be detected from its own output, since nothing in its meeting times or
+The last two cases show the limit of every diagnostic here: a run whose pairs all met in
+one mode cannot be detected from its own output, since nothing in its meeting times or
 estimates shows the mode that no replicate visited. The remedy is an initial
-distribution that covers every mode ([Initial distributions](targets.md#choosing-one)).
-[When unbiased is not enough](../tutorials/failure-modes.md) works through such runs.
+distribution that covers every mode ([Initial distributions](targets.md#choosing-one)),
+and a kernel that reaches every mode from it, which an automatically tuned
+{class}`~telescopic.kernels.Independence` proposal may not
+([Independence](kernels.md#independence)).
+[When unbiased is not enough](../tutorials/failure-modes.md) works through such runs and
+shows two checks that help, and a case where runs with different seeds all agree on a
+wrong estimate.
 
 ## Warning classes
 

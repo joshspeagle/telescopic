@@ -1,0 +1,44 @@
+bimodal d=10 s=6 init var=25       |  1000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong T | rhat  1.082 | stat    18.8 | fires 1 | 61s run skipped
+bimodal d=10 s=6 init var=25       |  1001 | k     -1 tau      inf thin -1 |      nan     nan z       nan wrong E | rhat  1.098 | stat    16.4 | fires 1 | 42s more than 1.0% of the pilot pairs never met within their cap
+bimodal d=10 s=6 init var=25       |  1002 | k    127 tau      466 thin  1 |   0.6995  0.0057 z     -0.09 wrong 0 | rhat  2.228 | stat    -1.0 | fires 0 | 3s 
+bimodal d=10 s=6 init var=25       |  1003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong T | rhat  1.038 | stat    21.3 | fires 1 | 61s run skipped
+bimodal d=10 s=6 init var=25       |  1004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong T | rhat  1.063 | stat    18.5 | fires 1 | 61s run skipped
+bimodal d=10 s=6 init var=25       |  1005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong T | rhat  1.056 | stat    21.1 | fires 1 | 61s run skipped
+bimodal d=10 s=6 init var=25       |  1006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong T | rhat  1.026 | stat    16.5 | fires 1 | 61s run skipped
+bimodal d=10 s=6 init var=25       |  1007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong T | rhat  1.053 | stat    21.2 | fires 1 | 60s run skipped
+bimodal d=10 s=6 init var=25       |  1008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong T | rhat  1.045 | stat    16.8 | fires 1 | 61s run skipped
+bimodal d=10 s=6 init var=25       |  1009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong T | rhat  1.027 | stat    17.6 | fires 1 | 61s run skipped
+bimodal d=10 s=6 init var=400      |  1000 | k     23 tau       78 thin  1 |  -0.0003  0.0005 z  -1384.01 wrong 1 | rhat  1.082 | stat    -0.5 | fires 0 | 1s 
+bimodal d=10 s=6 init var=400      |  1001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong T | rhat  1.073 | stat    12.1 | fires 1 | 61s run skipped
+bimodal d=10 s=6 init var=400      |  1002 | k    122 tau      351 thin  1 |   0.7059  0.0056 z      1.07 wrong 0 | rhat  5.989 | stat    -5.0 | fires 0 | 3s 
+bimodal d=10 s=6 init var=400      |  1003 | k     23 tau       97 thin  1 |   0.0002  0.0002 z  -4159.00 wrong 1 | rhat  1.045 | stat    18.8 | fires 1 | 1s 
+bimodal d=10 s=6 init var=400      |  1004 | k     54 tau      268 thin  1 |   0.6941  0.0092 z     -0.64 wrong 0 | rhat  6.497 | stat    -2.3 | fires 0 | 2s 
+bimodal d=10 s=6 init var=400      |  1005 | k     22 tau       91 thin  1 |   0.0001  0.0001 z  -7523.12 wrong 1 | rhat  1.092 | stat    13.5 | fires 1 | 1s 
+bimodal d=10 s=6 init var=400      |  1006 | k     22 tau       89 thin  1 |   0.9992  0.0009 z    349.58 wrong 1 | rhat  1.081 | stat    15.1 | fires 1 | 1s 
+bimodal d=10 s=6 init var=400      |  1007 | k     27 tau       89 thin  1 |   0.0000  0.0000 z       inf wrong 1 | rhat  1.058 | stat    14.2 | fires 1 | 1s 
+bimodal d=10 s=6 init var=400      |  1008 | k     67 tau      389 thin  1 |   0.6974  0.0087 z     -0.29 wrong 0 | rhat  6.116 | stat    -1.3 | fires 0 | 2s 
+bimodal d=10 s=6 init var=400      |  1009 | k     92 tau      459 thin  1 |   0.7008  0.0077 z      0.10 wrong 0 | rhat  6.110 | stat    -4.9 | fires 0 | 2s 
+bimodal d=10 s=6 init var=1600     |  1000 | k     27 tau       98 thin  1 |   0.0003  0.0003 z  -2193.06 wrong 1 | rhat  1.072 | stat   -47.3 | fires 0 | 1s 
+bimodal d=10 s=6 init var=1600     |  1001 | k     60 tau      309 thin  1 |   0.6999  0.0074 z     -0.01 wrong 0 | rhat  7.503 | stat  -734.9 | fires 0 | 2s 
+bimodal d=10 s=6 init var=1600     |  1002 | k     20 tau      102 thin  1 |   1.0002  0.0003 z    882.78 wrong 1 | rhat  1.060 | stat  -599.1 | fires 0 | 1s 
+bimodal d=10 s=6 init var=1600     |  1003 | k    140 tau      410 thin  1 |   0.7082  0.0046 z      1.76 wrong 0 | rhat  7.258 | stat  -422.1 | fires 0 | 3s 
+bimodal d=10 s=6 init var=1600     |  1004 | k     91 tau      380 thin  1 |   0.7076  0.0069 z      1.11 wrong 0 | rhat  6.531 | stat  -106.5 | fires 0 | 2s 
+bimodal d=10 s=6 init var=1600     |  1005 | k     33 tau      108 thin  1 |   0.0000  0.0000 z       inf wrong 1 | rhat  1.062 | stat   -54.0 | fires 0 | 1s 
+bimodal d=10 s=6 init var=1600     |  1006 | k     95 tau      331 thin  1 |   0.6920  0.0053 z     -1.50 wrong 0 | rhat  7.337 | stat   -48.5 | fires 0 | 2s 
+bimodal d=10 s=6 init var=1600     |  1007 | k     33 tau      112 thin  1 |   0.0000  0.0000 z       inf wrong 1 | rhat  1.039 | stat   -59.3 | fires 0 | 1s 
+bimodal d=10 s=6 init var=1600     |  1008 | k     27 tau      100 thin  1 |   0.9999  0.0001 z   3659.00 wrong 1 | rhat  1.086 | stat  -427.4 | fires 0 | 1s 
+bimodal d=10 s=6 init var=1600     |  1009 | k     19 tau       90 thin  1 |   0.0001  0.0003 z  -2000.63 wrong 1 | rhat  1.103 | stat  -316.8 | fires 0 | 1s 
+bimodal d=10 s=6 init var=10000    |  1000 | k     47 tau      440 thin  1 |   0.6817  0.0176 z     -1.04 wrong 0 | rhat  7.057 | stat -7733.5 | fires 0 | 2s 
+bimodal d=10 s=6 init var=10000    |  1001 | k    167 tau      550 thin  1 |   0.6970  0.0060 z     -0.51 wrong 0 | rhat  6.585 | stat -16201.0 | fires 0 | 4s 
+bimodal d=10 s=6 init var=10000    |  1002 | k     71 tau      475 thin  1 |   0.6906  0.0079 z     -1.19 wrong 0 | rhat  6.946 | stat -15019.2 | fires 0 | 2s 
+bimodal d=10 s=6 init var=10000    |  1003 | k     84 tau      451 thin  1 |   0.7029  0.0069 z      0.41 wrong 0 | rhat  7.357 | stat -11259.3 | fires 0 | 2s 
+bimodal d=10 s=6 init var=10000    |  1004 | k     88 tau      538 thin  1 |   0.6957  0.0095 z     -0.45 wrong 0 | rhat  6.631 | stat -5912.6 | fires 0 | 3s 
+bimodal d=10 s=6 init var=10000    |  1005 | k    126 tau      566 thin  1 |   0.6961  0.0067 z     -0.58 wrong 0 | rhat  6.282 | stat -7640.3 | fires 0 | 3s 
+bimodal d=10 s=6 init var=10000    |  1006 | k    130 tau      618 thin  1 |   0.6803  0.0061 z     -3.21 wrong 0 | rhat  6.292 | stat -3690.4 | fires 0 | 3s 
+bimodal d=10 s=6 init var=10000    |  1007 | k     25 tau       84 thin  1 |  -0.0000  0.0000 z -21094.33 wrong 1 | rhat  1.073 | stat -6435.9 | fires 0 | 1s 
+bimodal d=10 s=6 init var=10000    |  1008 | k    126 tau      502 thin  1 |   0.7010  0.0047 z      0.21 wrong 0 | rhat  6.916 | stat -5616.1 | fires 0 | 3s 
+bimodal d=10 s=6 init var=10000    |  1009 | k     77 tau      397 thin  1 |   0.7061  0.0077 z      0.80 wrong 0 | rhat  6.388 | stat -11530.6 | fires 0 | 2s 
+SUMMARY bimodal d=10 s=6 init var=25: runs 10, wrong 0, right 1, raised/timed out/rule-only 9; fires on wrong 0/0; fires on right 0/1; fires overall 9/10; R-hat warns 1; stat>10 9; stat min/med/max -1.0/18.0/21.3
+SUMMARY bimodal d=10 s=6 init var=400: runs 10, wrong 5, right 4, raised/timed out/rule-only 1; fires on wrong 4/5; fires on right 0/4; fires overall 5/10; R-hat warns 4; stat>10 5; stat min/med/max -5.0/5.8/18.8
+SUMMARY bimodal d=10 s=6 init var=1600: runs 10, wrong 6, right 4, raised/timed out/rule-only 0; fires on wrong 0/6; fires on right 0/4; fires overall 0/10; R-hat warns 4; stat>10 0; stat min/med/max -734.9/-211.6/-47.3
+SUMMARY bimodal d=10 s=6 init var=10000: runs 10, wrong 1, right 9, raised/timed out/rule-only 0; fires on wrong 0/1; fires on right 0/9; fires overall 0/10; R-hat warns 9; stat>10 0; stat min/med/max -16201.0/-7686.9/-3690.4

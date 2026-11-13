@@ -284,9 +284,10 @@ def tuning_disagreement(tuning: TuningReport | None) -> str | None:
     r"""The warning about tuning chains that disagree (spec section 5.3), or ``None``.
 
     The chains disagree when, in some coordinate, their means spread more widely than the
-    chains themselves: :math:`\hat R > \sqrt 2`, a sign of several modes. The warning
-    also names the coordinates whose :math:`\hat R` is NaN, where all four chains sat at
-    one value, so the pilot never moved in them.
+    chains themselves: :math:`\hat R > \sqrt 2`, a sign of several modes or of chains
+    that have not converged. Chains that agree do not show that the target has one mode.
+    The warning also names the coordinates whose :math:`\hat R` is NaN, where all four
+    chains sat at one value, so the pilot never moved in them.
 
     Parameters
     ----------
@@ -304,10 +305,10 @@ def tuning_disagreement(tuning: TuningReport | None) -> str | None:
     parts = []
     if largest > np.sqrt(2):
         parts.append(
-            f"the tuning chains disagree (R-hat up to {largest:.2f}): the target "
-            "may have several modes, which make meeting times heavy-tailed, and pairs that "
-            "never leave one mode miss the others; use an initial distribution that covers "
-            "every mode"
+            f"the tuning chains disagree (R-hat up to {largest:.2f}): the target may have "
+            "several modes, or the chains may not have converged; several modes make "
+            "meeting times heavy-tailed, and pairs that never leave one mode miss the "
+            "others; use an initial distribution that covers every mode"
         )
     if nan.any():
         parts.append(

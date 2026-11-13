@@ -74,3 +74,11 @@ Each item has the default that work proceeds on until Josh answers.
   (`notes/experiments/audit2_zero_drift_costs.out`; DECISIONS #67). Default: this rule.
   Alternatives: raise wherever a chain meets one after tuning, which fails runs that zero
   drift completes exactly; zero drift without the warning.
+
+- [ ] **A warning that the tuned independence proposal misses a mode.** Josh ruled on
+  issue #102 that a run should warn when the proposal that `Independence` fits to the
+  tuning chains misses part of the target. No rule tested holds up (DECISIONS #117).
+  Default: no check in default tuning, and the limitation documented, with runs from
+  several seeds and an explicit proposal as what helps; a check that does not depend on
+  the start's width stays research. Alternatives: build the probe rule of row 117 in as
+  confirmed, or as an opt-in check.

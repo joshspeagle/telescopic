@@ -69,8 +69,8 @@ initial distribution from which the chain converges, provided the coupling keeps
 chain's law, the chains stay together once they meet, and the meeting time has enough
 moments. With finite variance, the error bars are valid as the number of replicates
 grows. Coupling does not make the chains mix faster, and a run whose initial
-distribution misses a mode can be confidently wrong. The [theory page](docs/theory.md)
-states the conditions and the limits.
+distribution or tuned kernel misses a mode can be confidently wrong. The
+[theory page](docs/theory.md) states the conditions and the limits.
 
 ## Citing
 

@@ -34,3 +34,6 @@ docs/api/generated/
 
 # The review hub data, built by notes/review/hub/build.py
 notes/review/hub/review-data.json
+
+# The rows that the experiments' run scripts write
+notes/experiments/_rows/

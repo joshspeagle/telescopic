@@ -1,0 +1,75 @@
+tag main: 660 runs; criterion detection set: 62 wrong runs of 80; all detection cells: 116 wrong of 200; false-alarm set: 440 right runs of 440
+false-alarm cells with a wrong estimate (excluded from the false-alarm set): none
+
+per cell: runs wrong, |z| median, pilot ends on q-side +1 (right mode) count, existing R-hat warning fires, median pilot evals, median run evals, median k, max meeting time
+  bimodal d=2 s=6                wrong  0/20 (raised 0), |z| median       0.7, q right  0, R-hat warn  0, pilot    8004, run    173020, k    40, thinned 2, tau max  93997
+  bimodal d=2 s=12               wrong  0/20 (raised 5), |z| median       0.8, q right  6, R-hat warn 15, pilot    8004, run    380508, k    71, thinned 0, tau max    inf
+  bimodal d=10 s=6               wrong 14/20 (raised 0), |z| median    2498.6, q right  9, R-hat warn  5, pilot    8004, run    115182, k    26, thinned 0, tau max 330763
+  bimodal d=10 s=12              wrong 12/20 (raised 0), |z| median     983.1, q right  7, R-hat warn  8, pilot    8004, run    127178, k    28, thinned 0, tau max   1493
+  bimodal d=32 s=6               wrong 18/20 (raised 0), |z| median 26987799629965816.0, q right  7, R-hat warn  2, pilot   40964, run    282292, k    56, thinned 1, tau max   3289
+  bimodal d=32 s=12              wrong 18/20 (raised 0), |z| median 169865457096460320.0, q right  7, R-hat warn  2, pilot   40964, run    275887, k    54, thinned 2, tau max  15046
+  unequal .95/.05 d=10 s=6       wrong 15/20 (raised 0), |z| median     510.8, q right  8, R-hat warn  4, pilot    8004, run    112998, k    25, thinned 0, tau max  33086
+  narrow sd2=.3 d=10 s=6         wrong 20/20 (raised 0), |z| median    3749.1, q right  0, R-hat warn  0, pilot    8004, run    109129, k    24, thinned 0, tau max    122
+  init N(0,4I) d=10 s=6          wrong  0/20 (raised 11), |z| median       0.3, q right  4, R-hat warn  8, pilot    8004, run   2484693, k    -1, thinned 0, tau max    inf
+  init on left mode d=10 s=6     wrong 19/20 (raised 0), |z| median 26987799629965256.0, q right  0, R-hat warn  0, pilot    8004, run    179922, k    41, thinned 0, tau max 218548
+  ex gaussian default            wrong  0/20 (raised 0), |z| median       1.4, q right 10, R-hat warn  0, pilot    8004, run    108900, k    24, thinned 0, tau max    115
+  ex gaussian tight              wrong  0/20 (raised 0), |z| median       1.3, q right  6, R-hat warn  0, pilot    8004, run    129064, k    29, thinned 0, tau max    120
+  ex banana default              wrong  0/20 (raised 0), |z| median       0.8, q right 20, R-hat warn  0, pilot    8004, run   1241696, k   306, thinned 0, tau max   1941
+  ex banana tight                wrong  0/20 (raised 0), |z| median       1.0, q right 20, R-hat warn  0, pilot    8004, run    141296, k    32, thinned 0, tau max    420
+  ex mixture default             wrong  0/20 (raised 0), |z| median       0.8, q right 12, R-hat warn  0, pilot    8004, run     82144, k    18, thinned 0, tau max     56
+  ex mixture tight               wrong  0/20 (raised 0), |z| median       0.7, q right 13, R-hat warn  0, pilot    8004, run     59684, k    12, thinned 0, tau max     62
+  ex pumps default               wrong  0/20 (raised 0), |z| median       1.7, q right 20, R-hat warn 17, pilot    8804, run   6924863, k  1601, thinned 12, tau max 157085
+  ex pumps tight                 wrong  0/20 (raised 0), |z| median       1.8, q right 20, R-hat warn  0, pilot    8804, run    235867, k    54, thinned 0, tau max    453
+  gauss d=2 cond=1 wide          wrong  0/20 (raised 0), |z| median       0.8, q right  7, R-hat warn  0, pilot    8004, run     79355, k    17, thinned 0, tau max     49
+  gauss d=2 cond=1 tight         wrong  0/20 (raised 0), |z| median       1.1, q right  7, R-hat warn  0, pilot    8004, run     45714, k     9, thinned 0, tau max     31
+  gauss d=2 cond=100 wide        wrong  0/20 (raised 0), |z| median       1.1, q right  9, R-hat warn  0, pilot    8004, run     78962, k    17, thinned 0, tau max     52
+  gauss d=2 cond=100 tight       wrong  0/20 (raised 0), |z| median       1.1, q right 10, R-hat warn  0, pilot    8004, run     47712, k    10, thinned 0, tau max     37
+  gauss d=10 cond=1 wide         wrong  0/20 (raised 0), |z| median       2.0, q right 10, R-hat warn  0, pilot    8004, run    101226, k    22, thinned 0, tau max    128
+  gauss d=10 cond=1 tight        wrong  0/20 (raised 0), |z| median       1.8, q right  7, R-hat warn  0, pilot    8004, run    106836, k    24, thinned 0, tau max    124
+  gauss d=10 cond=100 wide       wrong  0/20 (raised 0), |z| median       1.8, q right 10, R-hat warn  0, pilot    8004, run    111167, k    24, thinned 0, tau max    131
+  gauss d=10 cond=100 tight      wrong  0/20 (raised 0), |z| median       1.5, q right  6, R-hat warn  0, pilot    8004, run    106627, k    24, thinned 0, tau max    112
+  gauss d=50 cond=1 wide         wrong  0/20 (raised 0), |z| median       2.4, q right 13, R-hat warn  0, pilot  100004, run    421180, k    74, thinned 2, tau max   1276
+  gauss d=50 cond=1 tight        wrong  0/20 (raised 0), |z| median       2.4, q right 12, R-hat warn  0, pilot  100004, run    317492, k    50, thinned 1, tau max   1280
+  gauss d=50 cond=100 wide       wrong  0/20 (raised 0), |z| median       2.3, q right 11, R-hat warn  0, pilot  100004, run    317648, k    49, thinned 2, tau max    967
+  gauss d=50 cond=100 tight      wrong  0/20 (raised 0), |z| median       2.3, q right 12, R-hat warn  0, pilot  100004, run    340904, k    54, thinned 2, tau max   2422
+  student4 d=10 wide             wrong  0/20 (raised 0), |z| median       1.8, q right  6, R-hat warn  0, pilot    8004, run    480566, k   115, thinned 0, tau max    622
+  student4 d=10 tight            wrong  0/20 (raised 0), |z| median       1.7, q right  5, R-hat warn  0, pilot    8004, run    811654, k   194, thinned 2, tau max   5368
+  extra funnel default           wrong 10/20 (raised 0), |z| median       4.9, q right 20, R-hat warn  8, pilot    8004, run   5749962, k  1321, thinned 14, tau max 303858
+
+FIXED SETTING R1 end m=8 n=n_steps/8 c=12.0: detection 62/62 [0.94, 1.00], false alarms 0/440 [0.00, 0.01], cost at most 0.250 of the pilot
+
+setting R1 end, m=8, n=n_steps/8, c=12.0: per cell
+  cell | runs wrong | fires on wrong | fires on right | probe chains on q's other side at n (mean) | cost/pilot cost/run
+  bimodal d=2 s=6                |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  2.85 | 0.250 0.0116
+  bimodal d=2 s=12               |  0/20 | n=0                | 0/15 [0.00, 0.22]  |  3.80 | 0.250 0.0053
+  bimodal d=10 s=6               | 14/20 | 14/14 [0.77, 1.00] | 1/6 [0.00, 0.64]   |  3.50 | 0.250 0.0174
+  bimodal d=10 s=12              | 12/20 | 12/12 [0.74, 1.00] | 0/8 [0.00, 0.37]   |  3.75 | 0.250 0.0158
+  bimodal d=32 s=6               | 18/20 | 18/18 [0.81, 1.00] | 0/2 [0.00, 0.84]   |  3.70 | 0.250 0.0363
+  bimodal d=32 s=12              | 18/20 | 18/18 [0.81, 1.00] | 0/2 [0.00, 0.84]   |  4.05 | 0.250 0.0372
+  unequal .95/.05 d=10 s=6       | 15/20 | 14/15 [0.68, 1.00] | 1/5 [0.01, 0.72]   |  3.35 | 0.250 0.0177
+  narrow sd2=.3 d=10 s=6         | 20/20 | 0/20 [0.00, 0.17]  | n=0                |  0.00 | 0.250 0.0183
+  init N(0,4I) d=10 s=6          |  0/20 | n=0                | 0/9 [0.00, 0.34]   |  3.80 | 0.250 0.0008
+  init on left mode d=10 s=6     | 19/20 | 0/19 [0.00, 0.18]  | 0/1 [0.00, 0.97]   |  0.00 | 0.250 0.0111
+  ex gaussian default            |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.65 | 0.250 0.0184
+  ex gaussian tight              |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.90 | 0.250 0.0155
+  ex banana default              |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  1.75 | 0.250 0.0016
+  ex banana tight                |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  0.45 | 0.250 0.0142
+  ex mixture default             |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.25 | 0.250 0.0243
+  ex mixture tight               |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.95 | 0.250 0.0335
+  ex pumps default               |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  0.00 | 0.250 0.0003
+  ex pumps tight                 |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  0.00 | 0.250 0.0093
+  gauss d=2 cond=1 wide          |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.95 | 0.250 0.0252
+  gauss d=2 cond=1 tight         |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.20 | 0.250 0.0438
+  gauss d=2 cond=100 wide        |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.30 | 0.250 0.0253
+  gauss d=2 cond=100 tight       |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.45 | 0.250 0.0420
+  gauss d=10 cond=1 wide         |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.05 | 0.250 0.0198
+  gauss d=10 cond=1 tight        |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.25 | 0.250 0.0187
+  gauss d=10 cond=100 wide       |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.30 | 0.250 0.0180
+  gauss d=10 cond=100 tight      |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.55 | 0.250 0.0188
+  gauss d=50 cond=1 wide         |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.95 | 0.250 0.0598
+  gauss d=50 cond=1 tight        |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.35 | 0.250 0.0792
+  gauss d=50 cond=100 wide       |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.85 | 0.250 0.0787
+  gauss d=50 cond=100 tight      |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.85 | 0.250 0.0734
+  student4 d=10 wide             |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.05 | 0.250 0.0042
+  student4 d=10 tight            |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.15 | 0.250 0.0025
+  extra funnel default           | 10/20 | 0/10 [0.00, 0.31]  | 0/10 [0.00, 0.31]  |  0.00 | 0.250 0.0003
