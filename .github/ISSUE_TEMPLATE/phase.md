@@ -20,4 +20,4 @@ about: A tracking issue for work that spans several pull requests
 - [ ] Every sub-issue closed or deferred with a recorded decision
 - [ ] The gate passes on `main`, with the slow tests of the changed modules
 - [ ] Documentation updated for every user-visible change
-- [ ] Report in `notes/reviews/`, log entry, and `notes/PLAN.md` updated
+- [ ] Report posted as a comment on its epic, and this issue's State table and log current

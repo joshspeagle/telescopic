@@ -8,6 +8,9 @@ of that issue (#8) is Josh's review on the hub (`notes/review/`). Work waits on 
 answers to `notes/QUESTIONS.md`, whose defaults stand meanwhile; the items deferred
 beyond v0.1 are listed in `notes/reviews/m11.md`.
 
+This file records the first draft and is closed. Work after phase 9 is tracked on GitHub,
+from the tracking issue #65 (DECISIONS #96).
+
 ## Phases
 
 | Phase | Content | Output | Status |

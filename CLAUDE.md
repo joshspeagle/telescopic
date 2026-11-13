@@ -6,8 +6,10 @@ Rhee (2014) and Jacob, O'Leary & Atchadé (2020).
 
 ## Start here
 
-- Read `notes/PLAN.md` (current position), the last entries of `notes/LOG.md` and the
-  open items of `notes/QUESTIONS.md`.
+- Read the open tracking issue on GitHub (#65, the tune-up): its State table is the
+  current position, and its log comments say what each session did. Then read the open
+  items of `notes/QUESTIONS.md`. `notes/PLAN.md` and `notes/LOG.md` record the first
+  draft, through phase 9, and are closed.
 - The requirement is `docs/design/spec.md`. Tests follow `docs/design/test-plan.md`, and
   the order of work follows `docs/design/implementation-plan.md`.
 - A change to the package or to the documentation follows `.claude/rules/docs-upkeep.md`.
@@ -22,7 +24,7 @@ Rhee (2014) and Jacob, O'Leary & Atchadé (2020).
 | `docs/` | the Sphinx site in MyST Markdown; `docs/tutorials/` are executed notebooks; `docs/design/` holds the spec and the plans |
 | `benchmarks/` | timing and efficiency scripts, run by hand |
 | `scripts/` | `verify.sh`, the gate that runs what CI runs |
-| `notes/` | plan, log, decisions, questions, experiments and review reports; not part of the site |
+| `notes/` | decisions, questions and experiments, and the plan, log and review reports of the first draft; not part of the site |
 | `research_notes/`, `reports/` | the landscape census behind the design |
 | `.claude/rules/` | rules scoped to paths, mirrored in `.agents/rules/` for other agent platforms |
 | `.agents/briefs/` | the briefs of each agent role and the formats of their outputs |
@@ -59,8 +61,8 @@ Rhee (2014) and Jacob, O'Leary & Atchadé (2020).
 ## Changes
 
 Each change is one reviewed unit: an issue, a branch and a pull request (DECISIONS #58,
-#68). A milestone of the implementation plan is such a unit, with its report in
-`notes/reviews/`.
+#68). A milestone of the implementation plan is such a unit. A change's record is its
+issue and its pull request, whose description holds its checks, decisions and reviews.
 
 1. Open or choose the issue. It states the scope, the reason and the acceptance
    criteria. Branch `<issue>-<slug>` from `main`, and open a draft pull request that
@@ -83,8 +85,8 @@ Each change is one reviewed unit: an issue, a branch and a pull request (DECISIO
    correctness and compliance lenses of `.agents/briefs/review.md`. On Claude Code
    these are `/simplify` and `/code-review`, which take the level named in the table;
    without subagents, make each a separate pass that starts from the diff alone.
-   Fix each valid finding, answer the rest in the pull request or the milestone's
-   report, and run step 3 again after the fixes.
+   Fix each valid finding, answer the rest in the pull request, and run step 3 again
+   after the fixes.
 
    | Lines added plus removed | Simplification | Code review |
    |---|---|---|
@@ -96,7 +98,8 @@ Each change is one reviewed unit: an issue, a branch and a pull request (DECISIO
 7. Push, and watch CI on the pull request without waiting on it; fix a failing job at
    its cause. Mark the pull request ready when the gate and CI pass. Josh merges it,
    with a merge commit, and CI on `main` is checked after the merge.
-8. Add a log entry, and update `notes/PLAN.md` when a milestone or an epic moves.
+8. Add a log comment to the tracking issue for the session, and update the State table
+   of its body when an epic moves.
 
 A fix of at most 10 lines to prose, a comment or configuration that changes no behavior
 needs no issue.
@@ -192,8 +195,11 @@ and the path of a review and of a research direction.
   surveys and checks that a search settles. The strongest tier is for derivations,
   adversarial review of statistical claims and synthesis across findings; name each
   such use in the task's tracking issue (DECISIONS #70).
-- The record is GitHub and `notes/`: a tracking issue for each phase with its epics and
-  sub-issues, `notes/PLAN.md`, `notes/LOG.md`. What lives only in a session is lost.
+- The record is GitHub and `notes/`. On GitHub: a tracking issue for each phase, with
+  the current position in its body and a log comment for each session, its epics and
+  sub-issues, each ruling as a comment on its issue, and each change's pull request. In
+  `notes/`: `DECISIONS.md`, `QUESTIONS.md` and `experiments/`. What lives only in a
+  session is lost.
 
 ## Writing
 

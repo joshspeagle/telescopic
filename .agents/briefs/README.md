@@ -64,10 +64,10 @@ resolve a relative path to their own copy.
 The state folder is working space and is lost with the machine. What must outlive the
 session goes where `CLAUDE.md` says the record is: the task's tracking issue (the
 request, each ruling with its date, which agents ran and what each returned in a line,
-and what is next, kept current in its body or a pinned comment), the issues filed from
-the drafts, and `notes/` (`PLAN.md`, `LOG.md`, `DECISIONS.md`, a report in
-`notes/reviews/`, experiments in `notes/experiments/`). A session that takes over a task
-starts from the tracking issue, not from a state folder.
+and what is next, kept current in its body and its log comments), the issues filed
+from the drafts, with the task's report as a comment on its epic, and `notes/`
+(`DECISIONS.md`, `QUESTIONS.md`, experiments in `notes/experiments/`). A session that
+takes over a task starts from the tracking issue, not from a state folder.
 
 ## The path of a review
 
@@ -88,8 +88,8 @@ starts from the tracking issue, not from a state folder.
 6. **Rule.** Josh decides which items to act on. Nothing is fixed before that.
 7. **Fix.** Each accepted item, or group of items, is a change under `CLAUDE.md`: an
    issue, a branch, a regression test that fails without the fix, the gate, a review.
-8. **Record.** A report in `notes/reviews/` lists what was reviewed, the counts by
-   verdict, and what was refuted or dropped and why.
+8. **Record.** A report, posted as a comment on the review's epic, lists what was
+   reviewed, the counts by verdict, and what was refuted or dropped and why.
 
 ## The path of a research direction
 
