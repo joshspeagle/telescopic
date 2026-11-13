@@ -39,13 +39,16 @@ def gaussian_result(n=40, **options):
 RESULT = gaussian_result()
 
 
-@pytest.mark.parametrize("n", [2, 40])
-def test_an_estimate_averages_the_replicates_with_a_student_t_interval(n):
-    result = RESULT if n == 40 else gaussian_result(n)
+@pytest.mark.parametrize(
+    "result",
+    [gaussian_result(2), gaussian_result(30, k=3, m=3, lag=1, max_iter=4)],
+    ids=["two replicates", "some censored"],
+)
+def test_an_estimate_averages_the_replicates_with_a_student_t_interval(result):
     estimate = result.estimate(lambda x: x**2, level=0.9)
     values = result.measure.per_replicate(lambda x: x**2)
-    error = values.std(axis=0, ddof=1) / np.sqrt(n)
-    half_width = stats.t.ppf(0.95, n - 1) * error
+    error = values.std(axis=0, ddof=1) / np.sqrt(len(values))
+    half_width = stats.t.ppf(0.95, len(values) - 1) * error
     np.testing.assert_array_equal(estimate.value, values.mean(axis=0))
     np.testing.assert_allclose(estimate.standard_error, error, rtol=1e-12)
     np.testing.assert_allclose(estimate.interval[0], estimate.value - half_width, rtol=1e-12)
