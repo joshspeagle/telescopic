@@ -125,4 +125,6 @@ All notable changes to this project are documented here. The format follows
   `Result.credible_interval`, with no alias, and `Estimate.interval` is an array of
   shape `(2,)` or `(2, p)`, lower ends first, instead of a tuple of two arrays;
   `Result.quantile` and `Result.credible_interval` take a function `h`, as `estimate`
-  does, for the quantiles of a derived quantity.
+  does, for the quantiles of a derived quantity; a `Result` prints as one line of its
+  settings, such as `Result(R=100, d=2, k=63, m=630, lag=63, censored=0,
+  interrupted=False)`.

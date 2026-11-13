@@ -24,8 +24,11 @@ gaussian = examples.gaussian(2)  # N(0, [[1, 0.9], [0.9, 1]]), started from N(0,
 result = telescopic.sample(
     gaussian.log_prob, gaussian.initial, 1000, vectorize=True, rng=11
 )
-result.n_replicates, result.k, result.m, result.lag
+result
 ```
+
+A result prints as one line of its settings: $R$, the dimension $d$, `k`, `m`, `lag`,
+the number of censored pairs and whether the run was interrupted.
 
 ```{code-cell} python
 :tags: [remove-cell]

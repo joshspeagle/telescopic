@@ -156,6 +156,13 @@ class Result:
         self._stopped = replicates.stopped.astype(np.int64)
         self._earliest_meeting = self._stopped + ~met
 
+    def __repr__(self) -> str:
+        # Stored fields only: an echo in a notebook must not compute the diagnostics.
+        return (
+            f"Result(R={self.n_replicates}, d={self.ndim}, k={self.k}, m={self.m}, "
+            f"lag={self.lag}, censored={self.n_censored}, interrupted={self.interrupted})"
+        )
+
     def estimate(self, h: Callable[[FloatArray], npt.ArrayLike], level: float = 0.95) -> Estimate:
         r"""Estimate :math:`\pi(h)` with a confidence interval (spec section 3.3).
 

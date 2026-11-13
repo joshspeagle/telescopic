@@ -507,7 +507,7 @@ Methods:
   - `mean()`, `cov()`, `var()`, `std()` follow §3.4.
 - **Quantiles and histograms:** `quantile(q, h=None)`, `credible_interval(mass=0.68, h=None)` (the central credible interval holding that mass of $\pi$, an array of shape `(2, d)`; with `h`, as in `estimate`, the quantiles are those of `h` at the atoms, of shape `q.shape` or `q.shape + (p,)`, DECISIONS #101; `level` is reserved for confidence levels, and the name keeps it apart from the confidence interval of an `Estimate`, DECISIONS #100) and `histogram(dims, bins=20, range=None)`, of one coordinate or a joint histogram of several, with standard errors (DECISIONS #30).
 - **Diagnostics:** `tv_bound(t=None)`, `w1_bound(t=None)` (should), and `diagnostics()` (a dict).
-- **Reporting:** `summary()` returns a `Summary` table (DECISIONS #40). `check(strict=False)` emits the warnings of §7.4, or raises if strict.
+- **Reporting:** `summary()` returns a `Summary` table (DECISIONS #40). The repr is one line of stored fields, `Result(R=100, d=2, k=63, m=630, lag=63, censored=0, interrupted=False)`, and computes no diagnostics (DECISIONS #102). `check(strict=False)` emits the warnings of §7.4, or raises if strict.
 - **Plots:** `plot_meeting_times(axes=None)`, `plot_tv_bound(ax=None)`, `plot_marginals(dims=None, bins=20, axes=None)` and `plot_corner(dims=None, bins=20)` (signed 2-D histograms); the first three draw on given axes (DECISIONS #30).
 - **Persistence and merging:**
   - `save(path)` and `Result.load(path)` use a versioned `.npz` schema, with no pickle: arrays, and the settings, names, seed state and descriptions as JSON (DECISIONS #26, #29). The engine's paths are not saved;

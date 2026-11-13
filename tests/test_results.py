@@ -57,6 +57,16 @@ def test_an_estimate_averages_the_replicates_with_a_student_t_interval(result):
     np.testing.assert_allclose(estimate.interval[1], estimate.value + half_width, rtol=1e-12)
 
 
+def test_result_repr_names_its_settings_without_computing_diagnostics():
+    result = gaussian_result(30, k=3, m=3, lag=1, max_iter=4)
+    expected = (
+        f"Result(R={result.n_replicates}, d=2, k=3, m=3, lag=1, "
+        f"censored={result.n_censored}, interrupted=False)"
+    )
+    assert repr(result) == expected
+    assert "_diagnostics" not in vars(result)
+
+
 def test_an_estimate_from_one_replicate_raises_instead_of_an_undefined_interval():
     with pytest.raises(ValueError, match="at least 2 replicates that met, not 1"):
         gaussian_result(1).estimate(lambda x: x)
