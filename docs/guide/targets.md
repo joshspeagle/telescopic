@@ -13,7 +13,8 @@ which each pair of chains starts.
 
 `log_prob(x, *args, **kwargs)` takes one point `x` of shape `(d,)` and returns its
 log-density, up to an additive constant, as a float. The arguments `args` and `kwargs`
-of {func}`telescopic.sample` are passed on to it. With `vectorize=True` it takes a batch
+of {func}`telescopic.sample` are passed on to it: `args` is a tuple or a list, such as
+`(data,)`, since an array would be unpacked into its rows. With `vectorize=True` it takes a batch
 of shape `(n, d)` and returns shape `(n,)`, so that a step of many chains costs one call
 instead of one per point. An output whose shape differs from the expected one only by
 axes of length 1, such as the shape `()` that SciPy's `multivariate_normal.logpdf`

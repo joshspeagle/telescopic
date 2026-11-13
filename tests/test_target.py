@@ -110,6 +110,13 @@ def test_vectorize_must_be_a_bool():
         Target(gaussian, vectorize="no")
 
 
+@pytest.mark.parametrize("args", [np.zeros(2), "ab", 5])
+def test_target_refuses_args_that_are_not_a_tuple(args):
+    # An array's rows, or a string's letters, became extra positional arguments.
+    with pytest.raises(TypeError, match="args must be a tuple of extra arguments"):
+        Target(gaussian, args=args)
+
+
 def test_a_target_without_gradient_refuses_gradient_requests():
     with pytest.raises(ValueError, match="no gradient"):
         Target(gaussian).log_prob_and_grad(np.zeros((1, 2)))

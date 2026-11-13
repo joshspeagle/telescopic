@@ -13,7 +13,7 @@ from telescopic import diagnostics, engine
 from telescopic._parallel import Interrupt, check_pool, execute, opened
 from telescopic._progress import Progress
 from telescopic._random import MAIN, PILOT, namespace_seed, replicate_generator, root_seed
-from telescopic._types import FloatArray, IntArray, Seed, integer, parameter_names
+from telescopic._types import FloatArray, IntArray, Seed, flag, integer, parameter_names
 from telescopic.initial import as_initial, draw
 from telescopic.kernels import HMC, MALA, Independence, Kernel, RandomWalk
 from telescopic.results import Result
@@ -59,8 +59,10 @@ class CoupledSampler:
         points of shape ``(n, d)``. Every :math:`\pi_0` from which the chain converges
         keeps the estimates unbiased (Guarantees and their limits, in :doc:`/theory`);
         one wider than the target and covering all its modes keeps them reliable.
-    args, kwargs
-        Extra arguments of ``log_prob`` and ``grad``.
+    args : tuple or list
+        Extra positional arguments of ``log_prob`` and ``grad``, such as ``(data,)``.
+    kwargs : mapping, optional
+        Extra keyword arguments of ``log_prob`` and ``grad``.
     grad : callable, optional
         :math:`\nabla\log\pi` with the signature of ``log_prob``. Only the kernels that
         need it, MALA and HMC, evaluate it; ``"auto"`` is random-walk Metropolis.
@@ -116,7 +118,7 @@ class CoupledSampler:
         progress: bool = False,
         rng: Seed = None,
     ) -> None:
-        self.pool, self.progress = check_pool(pool), progress
+        self.pool, self.progress = check_pool(pool), flag("progress", progress)
         self.target = Target(log_prob, grad, args=args, kwargs=kwargs, vectorize=vectorize)
         self.initial = as_initial(init)
         if isinstance(kernel, str) and kernel in KERNELS:
@@ -240,7 +242,7 @@ class CoupledSampler:
         """
         n_replicates = integer("n_replicates", n_replicates, minimum=1)
         given = self._check(k, m, lag, thin, max_iter)
-        show = self.progress if progress is None else progress
+        show = self.progress if progress is None else flag("progress", progress)
         interrupt = Interrupt()
         with ExitStack() as catching:
             # Worker processes start before tuning, which runs here meanwhile, and serve

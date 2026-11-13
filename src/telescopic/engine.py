@@ -20,6 +20,7 @@ from telescopic._types import (
     IntArray,
     Seed,
     averaging,
+    flag,
     integer,
     real_array,
 )
@@ -226,7 +227,8 @@ def run(
     (8d + 16)` bytes, and the :math:`\tau - L` distances of each replicate 24 bytes each
     (spec R-EXEC-7).
     """
-    settings = check_settings(Settings(k, m, lag, thin, max_iter, store))
+    settings = check_settings(Settings(k, m, lag, thin, max_iter, flag("store", store)))
+    keep_paths = flag("keep_paths", keep_paths)
     lanes = integer("lanes", lanes, minimum=1)
     requested = real_array("indices", indices, "distinct integers >= 0", dtype=None)
     if (

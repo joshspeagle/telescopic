@@ -1,12 +1,33 @@
 import numpy as np
 import pytest
 
-from telescopic import diagnostics, engine, estimators, initial, testing, tuning
+from references import synthetic
+from telescopic import (
+    CoupledSampler,
+    diagnostics,
+    engine,
+    estimators,
+    initial,
+    sample,
+    testing,
+    tuning,
+)
 from telescopic.kernels import MALA, Mixture, MultivariateT, RandomWalk
 from telescopic.target import Target
 
 KERNEL = RandomWalk(np.eye(1))
-TARGET = Target(lambda x: -0.5 * float(x @ x))
+
+
+def log_prob(x):
+    return -0.5 * float(x @ x)
+
+
+TARGET = Target(log_prob)
+INIT = initial.Normal(0.0, 1.0)
+
+
+def run_engine(**options):
+    return engine.run(TARGET, KERNEL, INIT, [0], k=0, m=0, lag=1, **options)
 
 
 @pytest.mark.parametrize(
@@ -38,7 +59,7 @@ TARGET = Target(lambda x: -0.5 * float(x @ x))
         ("meeting_times", lambda: tuning.choose_k("abc")),
         (
             "indices",
-            lambda: engine.run(TARGET, KERNEL, initial.Normal(0, 1), ["a"], k=0, m=0, lag=1),
+            lambda: engine.run(TARGET, KERNEL, INIT, ["a"], k=0, m=0, lag=1),
         ),
     ],
 )
@@ -59,3 +80,23 @@ def test_as_initial_raises_its_type_error_for_a_ragged_init():
     # np.asarray raised NumPy's "inhomogeneous shape" ValueError first.
     with pytest.raises(TypeError, match="init must have rvs"):
         initial.as_initial([[1, 2], [3]])
+
+
+@pytest.mark.parametrize(
+    ("name", "call"),
+    [
+        ("progress", lambda: CoupledSampler(log_prob, INIT, progress="no")),
+        (
+            "progress",
+            lambda: CoupledSampler(log_prob, INIT, rng=0).run(2, k=1, progress="no"),
+        ),
+        ("progress", lambda: sample(log_prob, INIT, 2, k=1, progress=1)),
+        ("strict", lambda: synthetic([1, 1], [0.0, 1.0]).check(strict="no")),
+        ("store", lambda: run_engine(store="no")),
+        ("keep_paths", lambda: run_engine(keep_paths=1)),
+    ],
+)
+def test_flags_that_are_not_bool_raise_naming_the_flag(name, call):
+    # progress="no" drew a progress bar, strict="no" raised, and store="no" was stored.
+    with pytest.raises(TypeError, match=f"^{name} must be True or False"):
+        call()

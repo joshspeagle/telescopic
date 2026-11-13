@@ -120,4 +120,6 @@ All notable changes to this project are documented here. The format follows
 - Input validation: an array argument that is not real numbers, such as a string,
   `None`, a complex number or a ragged list, raises `TypeError` naming the argument and
   the expected form, where NumPy's message named neither; `as_initial` raises its own
-  `TypeError` for a ragged `init`.
+  `TypeError` for a ragged `init`. A flag that is not `True` or `False` (`vectorize`,
+  `progress`, `strict`, `store`, `keep_paths`), and an `args` that is not a tuple or a
+  list, raise `TypeError` naming the argument.

@@ -48,6 +48,14 @@ def integer(
     return number
 
 
+def flag(name: str, value: Any) -> bool:
+    # True or False, NumPy's bools included. Anything else raises TypeError naming the
+    # argument: a truthy string such as "no" would act as True (DECISIONS #104).
+    if not isinstance(value, bool | np.bool_):
+        raise TypeError(f"{name} must be True or False, not {value!r}")
+    return bool(value)
+
+
 def real(
     name: str, value: Any, low: float = -np.inf, high: float = np.inf, *, closed: bool = False
 ) -> float:

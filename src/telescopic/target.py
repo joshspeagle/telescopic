@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 
-from telescopic._types import FloatArray, log_densities, read_only
+from telescopic._types import FloatArray, flag, log_densities, read_only
 
 
 class Target:
@@ -27,8 +27,11 @@ class Target:
     grad : callable, optional
         :math:`\nabla\log\pi` with the same signature, returning shape ``(d,)`` or
         ``(n, d)``.
-    args, kwargs
-        Extra arguments passed to ``log_prob`` and ``grad``.
+    args : tuple or list
+        Extra positional arguments passed to ``log_prob`` and ``grad``, such as
+        ``(data,)``.
+    kwargs : mapping, optional
+        Extra keyword arguments passed to them.
     vectorize : bool
         Whether ``log_prob`` and ``grad`` accept a batch of points.
 
@@ -58,13 +61,17 @@ class Target:
             raise ValueError("grad needs log_prob; log_prob=None is for Gibbs kernels")
         if grad is not None and not callable(grad):
             raise TypeError(f"grad must be callable or None, not {type(grad).__name__}")
-        if not isinstance(vectorize, bool | np.bool_):
-            raise TypeError(f"vectorize must be True or False, not {vectorize!r}")
+        # A tuple would unpack an array's rows, or a string's letters, as extra arguments.
+        if not isinstance(args, tuple | list):
+            raise TypeError(
+                "args must be a tuple of extra arguments, such as (data,), not "
+                f"{type(args).__name__}"
+            )
         self._log_prob = log_prob
         self._grad = grad
         self.args = tuple(args)
         self.kwargs = dict(kwargs or {})
-        self.vectorize = bool(vectorize)
+        self.vectorize = flag("vectorize", vectorize)
         self.n_log_prob = 0
         self.n_grad = 0
         self.n_grad_zeroed = 0
