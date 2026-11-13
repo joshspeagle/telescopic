@@ -638,6 +638,27 @@ def test_crn_gibbs_couplings_need_a_multivariate_normal_for_a_block_of_several()
         kernel.coupled_step(Target(None), x, y, fixed_draws(uniforms=[[0.5, 0.5]]))
 
 
+def test_crn_gibbs_couplings_use_common_numbers_for_pairs_closer_than_underflow():
+    # The distance between the rows, 1e-170, squares to 0. The maximal coupling would
+    # raise on these conditionals, which have no logpdf.
+    class QuantileOnly:
+        def __init__(self, mean):
+            self.rvs, self.ppf = stats.norm(mean).rvs, stats.norm(mean).ppf
+
+    kernel = Gibbs(lambda x, b: QuantileOnly(0.5 * x[1 - b]), [[0], [1]], coupling="crn")
+    x, y, u = [0.3, 1e-170], [0.3, 0.0], 0.7
+    new_x, new_y = kernel.coupled_step(
+        Target(None),
+        gibbs_state(x),
+        gibbs_state(y),
+        fixed_draws(uniforms=[[u]], generators=[np.random.default_rng(0)]),
+    )
+    # The first coordinates agree after the first block, so the second takes one draw.
+    for start, new in ((x, new_x), (y, new_y)):
+        assert new.x[0, 0] == stats.norm(0.5 * start[1]).ppf(u)
+    np.testing.assert_array_equal(new_x.x, new_y.x)
+
+
 def test_crn_gibbs_couplings_map_a_uniform_of_zero_to_a_finite_point():
     kernel = Gibbs(conditional, [[0], [1]], coupling="crn")
     new_x, new_y = kernel.coupled_step(

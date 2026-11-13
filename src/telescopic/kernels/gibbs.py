@@ -106,7 +106,10 @@ class Gibbs(Kernel):
         self.conditional = conditional
         self.coupling, self.eta, self.threshold = coupling, eta, threshold
         # One rule for the three couplings: common random numbers beyond this distance.
-        self._switch = threshold if threshold is not None else 0.0 if coupling == "crn" else np.inf
+        # -inf for "crn", so that rows whose distance underflows to 0 take them too.
+        self._switch = (
+            threshold if threshold is not None else -np.inf if coupling == "crn" else np.inf
+        )
 
     @property
     def needs_log_prob(self) -> bool:
