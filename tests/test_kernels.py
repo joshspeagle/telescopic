@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-from scipy import integrate, stats
+from scipy import integrate, special, stats
 
 from references import P_MIN, Normal, gaussian_log_prob, metropolis, reflection
 from telescopic.kernels import (
@@ -407,6 +407,81 @@ def test_independence_raises_on_a_nan_proposal_log_density(coupled):
     step = kernel.coupled_step if coupled else kernel.step
     with pytest.raises(ValueError, match=r"proposal log_density returned nan at x = \["):
         step(TARGET, *states, random_draws(20, 0))
+
+
+class UniformProposal:
+    """The uniform on (-1, 1) by the normal CDF, so a normal of 40 lands on 1, outside."""
+
+    def sample(self, draws):
+        return 2 * special.ndtr(draws.normal(1)) - 1
+
+    def log_density(self, x):
+        return np.where(np.abs(x[:, 0]) < 1, np.log(0.5), -np.inf)
+
+
+# N(0, 1) restricted to (-2, 2): beyond 2, the target and the proposal both have density 0.
+TRUNCATED = Target(
+    lambda x: np.where(np.abs(x[:, 0]) < 2, -0.5 * x[:, 0] ** 2, -np.inf), vectorize=True
+)
+OUTSIDE = 5.0
+
+
+@pytest.mark.parametrize("coupled", [False, True])
+def test_an_independence_chain_outside_both_supports_accepts_a_proposal_of_finite_density(
+    coupled,
+):
+    # pi/q is 0 at 5, so the proposal 2 Phi(0.5) - 1 = 0.38 is accepted; a NaN weight
+    # rejected every proposal, with a warning. The second chain starts at 0, where the
+    # ratio is exp(-0.38^2 / 2) = 0.93 > u = 0.5, so the pair meets.
+    kernel = Independence(UniformProposal())
+    start = kernel.init_state(TRUNCATED, np.array([[OUTSIDE], [0.0]]))
+    draws = fixed_draws([[0.5]], [[0.5]])
+    expected = 2 * special.ndtr(0.5) - 1
+    if coupled:
+        new_x, new_y = kernel.coupled_step(TRUNCATED, start.take([0]), start.take([1]), draws)
+        np.testing.assert_array_equal(new_y.x, [[expected]])
+    else:
+        new_x, accepted = kernel.step(TRUNCATED, start.take([0]), draws)
+        np.testing.assert_array_equal(accepted, [1.0])
+    np.testing.assert_array_equal(new_x.x, [[expected]])
+
+
+@pytest.mark.parametrize("coupled", [False, True])
+def test_an_independence_proposal_outside_both_supports_is_rejected(coupled):
+    # A normal of 40 rounds the CDF to 1, so the proposal is 1, where q is 0 in floating
+    # point; the target is 0 beyond 0.5. From inside or from 5 the move is rejected,
+    # without the warning of -inf - -inf.
+    target = Target(lambda x: np.where(np.abs(x[:, 0]) < 0.5, 0.0, -np.inf), vectorize=True)
+    kernel = Independence(UniformProposal())
+    start = kernel.init_state(target, np.array([[0.0], [OUTSIDE]]))
+    draws = fixed_draws([[40.0]] * 2, [[0.5]] * 2)
+    if coupled:
+        new_x, new_y = kernel.coupled_step(target, start, start.take([1, 0]), draws)
+        np.testing.assert_array_equal(new_y.x, [[OUTSIDE], [0.0]])
+    else:
+        new_x, accepted = kernel.step(target, start, draws)
+        np.testing.assert_array_equal(accepted, [0.0, 0.0])
+    np.testing.assert_array_equal(new_x.x, [[0.0], [OUTSIDE]])
+
+
+@pytest.mark.parametrize("other", [0.3, -OUTSIDE])
+def test_independence_keeps_the_one_step_laws_from_outside_both_supports(other):
+    # One chain at 5, where pi and q are both 0; the other inside (-1, 1) or also outside.
+    kernel = Independence(UniformProposal())
+    report = check_coupling(kernel, TRUNCATED, [OUTSIDE], [other], n=20_000, rng=16)
+    assert report.passed(alpha=P_MIN), report
+
+
+def test_independence_chains_outside_both_supports_stay_equal():
+    kernel = Independence(UniformProposal())
+    points = np.array([[OUTSIDE], [-OUTSIDE], [0.0], [0.9]])
+    state_x = kernel.init_state(TRUNCATED, points)
+    state_y = kernel.init_state(TRUNCATED, points.copy())
+    for step in range(20):
+        state_x, state_y = kernel.coupled_step(TRUNCATED, state_x, state_y, random_draws(4, step))
+        np.testing.assert_array_equal(state_x.x, state_y.x)
+        np.testing.assert_array_equal(state_x.log_prob, state_y.log_prob)
+    assert np.all(np.abs(state_x.x) < 1)
 
 
 def test_state_put_raises_when_the_new_states_lack_gradients():

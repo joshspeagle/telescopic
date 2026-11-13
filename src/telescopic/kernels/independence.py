@@ -73,9 +73,12 @@ class Independence(Kernel):
     r"""Independence Metropolis-Hastings (spec R-KER-IMH).
 
     A proposal :math:`x' \sim q` is accepted when
-    :math:`\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]`. The coupled
-    step shares the proposal and :math:`u` between the chains, which is a maximal kernel
-    coupling (O'Leary, Wang & Jacob 2021): a pair meets when both chains accept.
+    :math:`\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]`. The weight
+    :math:`\pi/q` is 0 wherever :math:`\pi` is 0, even where :math:`q` is 0 too, so a chain
+    at zero density accepts any proposal of finite density, as random-walk Metropolis
+    does. The coupled step shares the proposal and :math:`u` between the chains, which is
+    a maximal kernel coupling (O'Leary, Wang & Jacob 2021): a pair meets when both chains
+    accept.
 
     Parameters
     ----------
@@ -159,4 +162,9 @@ def _log_weights(q: MultivariateT, *states: State) -> list[FloatArray]:
     # point a rejection, and so bias the chain without an error.
     x = np.concatenate([state.x for state in states])
     log_q = np.split(log_densities("proposal log_density", q.log_density(x), x), len(states))
-    return [state.log_prob - part for state, part in zip(states, log_q, strict=True)]
+    # Where log pi = -inf the weight is -inf even where log q = -inf too: -inf - -inf
+    # would be NaN, which rejects every proposal, so such a chain would never move.
+    return [
+        state.log_prob - np.where(state.log_prob == -np.inf, 0.0, part)
+        for state, part in zip(states, log_q, strict=True)
+    ]
