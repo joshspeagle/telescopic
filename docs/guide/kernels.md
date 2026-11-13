@@ -258,8 +258,9 @@ conditionals:
   the meeting probability is capped at `eta`, and the number of draws it takes has the
   bounded variance of Atchadé & Jacob (2024, Algorithm 2).
 - `coupling="crn"`: common random numbers, one uniform through `ppf` for a block of one
-  coordinate, or common standard normals for a normal conditional, an object with `mean`
-  and `cov`, a matrix of the block's size that may be singular. An object with `mean` and
+  coordinate, or common standard normals for a normal conditional, an object with `mean`,
+  a vector of the block's size, and `cov`, a matrix of the block's size that may be
+  singular. An object with `mean` and
   `cov` that is not normal would get the wrong law, and one whose `mean` and `cov` are
   methods, as a frozen SciPy `dirichlet`'s are, raises `TypeError`. Common random numbers can bring the chains together,
   but make them equal only by rounding; `"two-scale"` adds the maximal coupling.

@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 from scipy import integrate, stats
@@ -821,6 +823,19 @@ def test_crn_gibbs_couplings_refuse_an_invalid_covariance(cov, message):
     x, y = (gibbs_state([0.0] + [value] * len(cov)) for value in (1.0, -1.0))
     with pytest.raises(ValueError, match=message):
         kernel.coupled_step(Target(None), x, y, random_draws(1, 43))
+
+
+def test_crn_gibbs_couplings_refuse_a_scalar_mean_for_a_block_of_several():
+    # A scalar mean was added to every coordinate of the block.
+    def given(point, block):
+        if block == 0:
+            return Normal(point[1], 1.0)
+        return SimpleNamespace(mean=0.0, cov=np.eye(2))
+
+    kernel = Gibbs(given, [[0], [1, 2]], coupling="crn")
+    x, y = gibbs_state([0.0, 1.0, 1.0]), gibbs_state([0.0, -1.0, -1.0])
+    with pytest.raises(ValueError, match=r"a conditional's mean must have shape \(2,\)"):
+        kernel.coupled_step(Target(None), x, y, random_draws(1, 44))
 
 
 @pytest.mark.parametrize("coupling", ["maximal", "crn"])
