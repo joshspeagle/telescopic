@@ -6,6 +6,10 @@ N(0, I_d) at d = 2 and d = 100, on n = 512 rows (the 256 lanes of a coupled batc
 `log_prob`, `log_prob_and_grad`, and one `MALA.step`. Each round times both versions, in
 alternating order, and the ratio new/old of each round is summarized by its quartiles.
 
+The recorded output measured the code of this branch's commit 3d51b24 before it was
+committed, so it names the commit as `c961089-dirty`. Its ratio for `MALA.step` at d = 2
+is not resolved: the quartiles, 0.72 to 1.74, contain 1.
+
 Run from the repository root: PYTHONPATH=src python notes/experiments/i71_target_copy.py
 """
 

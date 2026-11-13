@@ -99,9 +99,9 @@ assert abs(values["late_fraction"] - values["tv_bound_at_k"]) < 0.01
 ```
 
 - `meeting_time_50`, `meeting_time_90`, `meeting_time_99`, `meeting_time_max` and
-  `censored`: the quantiles of the meeting times of every pair, from the sorted values,
-  where censored pairs sort above every pair that met, and the number of censored pairs.
-  A quantile that falls on a censored pair is `inf`.
+  `censored`: the quantiles of the meeting times of every pair, each an observed meeting
+  time from the sorted values, where censored pairs sort above every pair that met, and
+  the number of censored pairs. A quantile that falls on a censored pair is `inf`.
 - `tail_index`: Hill's estimate of the tail index of $\tau - L + 1$, `nan` below 500
   replicates or behind ties ([`tail`](#heavy-tailed-meeting-times-tail)).
 - `late_fraction` and `late_fraction_upper`: the fraction of pairs that met after

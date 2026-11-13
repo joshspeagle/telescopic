@@ -397,7 +397,7 @@ The documentation says that settings optimal for HMC alone can fail to contract 
 
 ### 5.6 Independence Metropolis–Hastings (R-KER-IMH)
 
-`Independence(proposal=None)`. `proposal` has `sample(draws)`, returning `(n, d)` from the buffered normals, and a batched, normalised `log_density(x)`. A NaN or `+inf` value of `log_density` raises `ValueError` with the point, as the log-density's do (§4.1, DECISIONS #91). `MultivariateT(mean, cov, df=5)` is the built-in.
+`Independence(proposal=None)`. `proposal` has `sample(draws)`, returning `(n, d)` from the buffered normals, and a batched, normalized `log_density(x)`. A NaN or `+inf` value of `log_density` raises `ValueError` with the point, as a NaN or `+inf` value of the target's log-density does (§4.1, DECISIONS #91). `MultivariateT(mean, cov, df=5)` is the built-in.
 - **Acceptance:** accept when $\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]$.
 - **Coupling:** both chains share the proposal $x'$ and $u$, so they meet when both accept. This is already a maximal kernel coupling (O'Leary, Wang & Jacob 2021).
 - **Default proposal:** a multivariate Student-$t$ with 5 degrees of freedom, located at the RWMH pilot's mean, with the pilot's covariance as its scale matrix, so its covariance is $5/3$ of the pilot's (D-25). The tuning report gives the largest importance-weight ratio $\pi/q$ seen in the pilot, relative to the median.
@@ -536,7 +536,7 @@ Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 **Footer:**
 - $R$, $k$, $m$, $L$, `thin`;
 - the kernel and its coupling;
-- meeting-time median, 90th and 99th percentiles, maximum, and number censored. The quantiles cover every pair, censored ones sorted above every finite meeting time, by the inverted empirical CDF as in §6.3; `diagnostics()` gives `inf` for a quantile that falls on a censored pair, and the summary prints it as `> max_iter`, with the cap's value (DECISIONS #93);
+- meeting-time median, 90th and 99th percentiles, maximum, and number censored. The quantiles cover every pair, censored ones sorted above every finite meeting time, by the inverted empirical CDF of §3.5, as in the pilot of §6.3; `diagnostics()` gives `inf` for a quantile that falls on a censored pair, and the summary prints it as `> max_iter`, with the cap's value (DECISIONS #93);
 - the tail index of warning 4 of §7.4, from 500 replicates (DECISIONS #40);
 - mean cost per replicate, in kernel applications and in seconds;
 - the relative cost, mean cost / $(m - k + 1)$ (R-TUNE-4);
