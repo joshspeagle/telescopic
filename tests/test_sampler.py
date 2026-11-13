@@ -256,8 +256,9 @@ def test_tuning_chains_in_separate_modes_warn():
 
 
 def test_a_run_with_censored_pairs_warns():
+    kernel = RandomWalk(np.eye(2), scale=0.1)
     with pytest.warns(ConvergenceWarning) as record:  # censored pairs are also late
-        sample(log_prob, INIT, 20, kernel=RandomWalk(np.eye(2), scale=0.1), k=1, m=2, max_iter=3)
+        sample(log_prob, INIT, 20, kernel=kernel, k=1, m=2, max_iter=3, rng=17)
     assert any("reached max_iter = 3" in str(warning.message) for warning in record)
 
 
