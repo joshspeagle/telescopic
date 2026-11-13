@@ -16,9 +16,10 @@ from telescopic._types import Distribution, FloatArray, integer, real
 from telescopic.initial import Normal, Uniform
 
 
+# Spec section 9.
 @dataclass(frozen=True, eq=False)
 class Example:
-    """A target with exact answers (spec section 9).
+    """A target with exact answers.
 
     Attributes
     ----------

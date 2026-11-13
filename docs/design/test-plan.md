@@ -26,7 +26,7 @@ Most estimator bugs cannot be caught statistically. In the census, an off-by-one
   - The default `pytest` runs the fast tier in under 2 minutes.
   - `pytest -m slow` runs the statistical tier: unbiasedness at scale, coverage, total-variation bounds and calibration of the warnings.
 - **Warnings are errors** (`filterwarnings = error` in `pyproject.toml`). Tests that expect a warning use `pytest.warns`.
-- **Test names** are sentences that state the behaviour. Docstrings cite requirement IDs where they apply.
+- **Test names** are sentences that state the behaviour. Requirement and decision IDs are cited where they apply in test docstrings and in code comments beside the code they trace, never in the package's docstrings, which the API reference renders for users.
 - **A test earns its place** by catching a plausible bug that no other test catches (`CLAUDE.md`).
 
 ## 2. Test inventory

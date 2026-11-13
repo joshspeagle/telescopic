@@ -104,8 +104,9 @@ class _Callable:
         return f"{getattr(self.function, '__name__', 'callable')}(rng)"
 
 
+# Spec R-INPUT-2.
 def as_initial(init: Any) -> Distribution:
-    """Interpret ``init`` as an initial distribution (spec R-INPUT-2).
+    """Interpret ``init`` as an initial distribution.
 
     Parameters
     ----------

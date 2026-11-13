@@ -19,11 +19,12 @@ from telescopic.target import Target
 COUPLINGS = ("maximal", "crn", "two-scale")
 
 
+# Spec R-KER-GIBBS.
 class Gibbs(Kernel):
     r"""A Gibbs sampler that draws blocks of coordinates from their full conditionals.
 
     A step sweeps the blocks in order and draws each from its full conditional given the
-    current values of the other coordinates (spec R-KER-GIBBS). Coupled chains draw each
+    current values of the other coordinates. Coupled chains draw each
     block from a coupling of their two conditionals:
 
     - ``"maximal"``: the rejection maximal coupling, with ``eta``;

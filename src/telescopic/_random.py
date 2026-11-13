@@ -129,12 +129,13 @@ class Streams:
         return generator
 
 
+# Spec section 6.1.
 class Draws:
     """Random numbers for a set of chains: row ``i`` of every request belongs to chain ``i``.
 
     Kernels receive a :class:`Draws` and call it once per random quantity they need per
     step; every request returns one row per chain. In a run, each row reads the streams
-    of its replicate (spec section 6.1). Draws are made by the engine, or by
+    of its replicate. Draws are made by the engine, or by
     :func:`telescopic.testing.fixed_draws` and :func:`telescopic.testing.random_draws`
     in tests.
     """

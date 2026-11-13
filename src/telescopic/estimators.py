@@ -30,13 +30,15 @@ def averaging_times(k: int, m: int, thin: int) -> IntArray:
     return np.arange(k, m + 1, thin, dtype=np.int64)
 
 
+# Spec R-EST-4 and R-EST-5.
 def correction_coefficients(t: npt.ArrayLike, k: int, m: int, lag: int, thin: int) -> FloatArray:
     r"""Coefficients :math:`c_t` of the differences in the thinned estimator :math:`H_S`.
 
     .. math:: c_t = |S|^{-1}\,\#\{l \in S : l \le t - L,\ L \mid (t - l)\}
 
-    with :math:`S` from :func:`averaging_times` (spec R-EST-5). For ``thin`` = 1 it is
-    :math:`v_t/(m-k+1)` with the lag weights :math:`v_t` of spec R-EST-4. The count is
+    with :math:`S` from :func:`averaging_times`. For ``thin`` = 1 it is
+    :math:`v_t/(m-k+1)` with the lag weights :math:`v_t` (The time-averaged estimator, in
+    :doc:`/theory`). The count is
     computed in constant time per :math:`t`:
     :math:`l = k + js` satisfies the congruence :math:`js \equiv t - k \pmod L`, whose
     solutions form one residue class modulo :math:`L/\gcd(s, L)` when
@@ -77,14 +79,15 @@ def correction_coefficients(t: npt.ArrayLike, k: int, m: int, lag: int, thin: in
     return count / n_averaged
 
 
+# Spec R-EST-8.
 def unbiased_covariance(first: FloatArray, second: FloatArray) -> FloatArray:
     r"""Unbiased estimate of :math:`\mathrm{Cov}_\pi(h)` from :math:`R \ge 2` replicates.
 
     .. math:: \widehat{\mathrm{Cov}}_\pi(h) = \bar b - \bar a\bar a^\top + S_a/R
 
     with :math:`a_r = \hat\pi_r(h)`, :math:`\bar b` the mean of
-    :math:`\hat\pi_r(hh^\top)` and :math:`S_a` the sample covariance of the :math:`a_r`
-    (spec R-EST-8). The last two terms are minus the U-statistic
+    :math:`\hat\pi_r(hh^\top)` and :math:`S_a` the sample covariance of the :math:`a_r`.
+    The last two terms are minus the U-statistic
     :math:`\sum_{r \ne s} a_r a_s^\top / (R(R-1))`, which is unbiased for
     :math:`\pi(h)\pi(h)^\top`; the plug-in :math:`\bar a\bar a^\top` is biased by
     :math:`\mathrm{Cov}(\bar a)`.
@@ -110,8 +113,9 @@ def unbiased_covariance(first: FloatArray, second: FloatArray) -> FloatArray:
     return covariance
 
 
+# Spec R-EST-8.
 def unbiased_variance(first: FloatArray, second: FloatArray) -> FloatArray:
-    r"""Unbiased estimates of the variances of :math:`h` (spec R-EST-8).
+    r"""Unbiased estimates of the variances of :math:`h`.
 
     The diagonal of :func:`unbiased_covariance`, without the off-diagonal cost:
     :math:`\bar b_j - \bar a_j^2 + S_{a,jj}/R`.
@@ -151,8 +155,9 @@ def _check_moments(
     return first, second
 
 
+# Spec section 3.4.
 def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike) -> FloatArray:
-    r"""Quantiles of a signed measure on the line (spec section 3.4).
+    r"""Quantiles of a signed measure on the line.
 
     Equal values are merged, the cumulative weights are projected onto non-decreasing
     sequences by isotonic regression and clipped to [0, 1], and the quantile at level

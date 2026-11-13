@@ -14,8 +14,9 @@ if TYPE_CHECKING:
     from telescopic.tuning import TuningReport
 
 
+# Spec section 3.6.
 def tv_bound(meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike) -> FloatArray:
-    r"""Estimated upper bound on the total variation distance to the target (spec section 3.6).
+    r"""Estimated upper bound on the total variation distance to the target.
 
     .. math:: d_{TV}(\pi_t, \pi) \le \mathbb E\big[\max(0, \lceil (\tau - L - t)/L \rceil)\big]
 
@@ -52,6 +53,7 @@ def tv_bound(meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike) -> FloatA
     return bound
 
 
+# Spec section 3.6.
 def w1_bound(
     distance_time: npt.ArrayLike,
     distance: npt.ArrayLike,
@@ -59,7 +61,7 @@ def w1_bound(
     lag: int,
     t: npt.ArrayLike,
 ) -> FloatArray:
-    r"""Estimated upper bound on the 1-Wasserstein distance to the target (spec section 3.6).
+    r"""Estimated upper bound on the 1-Wasserstein distance to the target.
 
     .. math:: d_{W_1}(\pi_t, \pi) \le \mathbb E\Big[\sum_{j=1}^{\lceil(\tau - L - t)/L\rceil}
               \lVert X_{t+jL} - Y_{t+(j-1)L}\rVert\Big]
@@ -185,8 +187,9 @@ def variance_share(values: npt.ArrayLike) -> FloatArray:
     return share
 
 
+# Spec section 7.4.
 class Issue(NamedTuple):
-    """A condition of spec section 7.4 that applies to a result.
+    """A condition that applies to a result and makes it warn.
 
     Attributes
     ----------
@@ -199,8 +202,9 @@ class Issue(NamedTuple):
     message: str
 
 
+# Spec section 7.4.
 def issues(result: Result) -> list[Issue]:
-    """The warnings of spec section 7.4 that apply to ``result``.
+    """The warnings that apply to ``result`` (Warnings, in :doc:`/guide/diagnostics`).
 
     Parameters
     ----------
@@ -263,8 +267,9 @@ def issues(result: Result) -> list[Issue]:
     return found
 
 
+# Spec section 6.3.
 def slow_pair_threshold(lag: int, m: int) -> int:
-    r"""The time :math:`\max(10^4, 10\max(L, m))` past which a pair is slow (spec section 6.3).
+    r"""The time :math:`\max(10^4, 10\max(L, m))` past which a pair is slow.
 
     Parameters
     ----------
@@ -280,8 +285,9 @@ def slow_pair_threshold(lag: int, m: int) -> int:
     return max(10_000, 10 * max(integer("lag", lag, minimum=1), integer("m", m, minimum=0)))
 
 
+# Spec section 5.3.
 def tuning_disagreement(tuning: TuningReport | None) -> str | None:
-    r"""The warning about tuning chains that disagree (spec section 5.3), or ``None``.
+    r"""The warning about tuning chains that disagree, or ``None``.
 
     The chains disagree when, in some coordinate, their means spread more widely than the
     chains themselves: :math:`\hat R > \sqrt 2`, a sign of several modes or of chains

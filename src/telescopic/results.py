@@ -21,9 +21,10 @@ from telescopic.tuning import TuningReport
 from telescopic.warnings import ConvergenceWarning, warn
 
 
+# Spec R-OUT-2.
 @dataclass(frozen=True, eq=False)
 class Estimate:
-    r"""An unbiased estimate of :math:`\pi(h)` with its Monte Carlo error (spec R-OUT-2).
+    r"""An unbiased estimate of :math:`\pi(h)` with its Monte Carlo error.
 
     Attributes
     ----------
@@ -58,8 +59,10 @@ class Estimate:
         return f"Estimate({body}, R={len(self.replicates)})"
 
 
+# Spec R-OUT-1; settings, section 3.2; n_grad_zeroed, R-INPUT-1; interrupted,
+# section 6.5.
 class Result:
-    r"""The output of a run of coupled chains (spec R-OUT-1).
+    r"""The output of a run of coupled chains.
 
     Censored pairs appear in ``meeting_times`` as ``inf`` and are excluded from the
     estimates, from ``n_replicates`` and from ``measure``.
@@ -81,7 +84,7 @@ class Result:
     Attributes
     ----------
     k, m, lag, thin : int
-        The settings of the run (spec section 3.2).
+        The settings of the run.
     max_iter : int or None
         The cap of the run.
     seed : numpy.random.SeedSequence
@@ -101,12 +104,12 @@ class Result:
         of tuning and of the meeting-time pilot.
     n_grad_zeroed : int
         Gradients of the replicates taken as 0 because they were not finite where the
-        log-density is (spec R-INPUT-1).
+        log-density is.
     wall_time : float
         Seconds spent running the replicates, without tuning and the pilot.
     interrupted : bool
         Whether a requested replicate never ran, so that the estimates are consistent
-        but not exactly unbiased until it does (spec section 6.5).
+        but not exactly unbiased until it does.
     """
 
     def __init__(
@@ -154,8 +157,9 @@ class Result:
         # their estimates.
         self._stopped = replicates.stopped.astype(np.int64)
 
+    # Spec section 3.3.
     def estimate(self, h: Callable[[FloatArray], npt.ArrayLike], level: float = 0.95) -> Estimate:
-        r"""Estimate :math:`\pi(h)` with a confidence interval (spec section 3.3).
+        r"""Estimate :math:`\pi(h)` with a confidence interval.
 
         Parameters
         ----------
@@ -226,8 +230,9 @@ class Result:
         deviations: FloatArray = np.sqrt(np.maximum(0.0, self.var()))
         return deviations
 
+    # Spec section 3.4.
     def quantile(self, q: npt.ArrayLike) -> FloatArray:
-        """Quantiles of each coordinate under the pooled signed measure (spec section 3.4).
+        """Quantiles of each coordinate under the pooled signed measure.
 
         Consistent as :math:`R` grows, not unbiased.
 
@@ -263,10 +268,11 @@ class Result:
         mass = real("mass", mass, 0, 1)
         return self.quantile([(1 - mass) / 2, (1 + mass) / 2])
 
+    # Spec section 3.4.
     def histogram(
         self, dims: int | Sequence[int], bins: int = 20, range: npt.ArrayLike | None = None
     ) -> tuple[FloatArray, FloatArray, FloatArray | list[FloatArray]]:
-        """Histogram of one coordinate or several, with standard errors (spec section 3.4).
+        """Histogram of one coordinate or several, with standard errors.
 
         The mass of each half-open bin is the average over replicates of its signed mass,
         so a bin can be negative. It is unbiased for a ``range`` fixed before the run; the
@@ -316,10 +322,12 @@ class Result:
         error = np.sqrt(squares / (n - 1) / n)
         return mean.reshape(shape), error.reshape(shape), edges if np.ndim(dims) else edges[0]
 
+    # Spec section 3.6.
     def tv_bound(self, t: npt.ArrayLike | None = None) -> FloatArray:
         """Estimated upper bound on the total variation distance from the law of X_t to the target.
 
-        Spec section 3.6; with censored pairs it is a lower bound of that estimate.
+        The bound derived under Distance to stationarity, in :doc:`/theory`; with censored
+        pairs it is a lower bound of that estimate.
 
         Parameters
         ----------
@@ -335,10 +343,12 @@ class Result:
             t = self._times(int(np.max(self._stopped)))
         return diagnostics.tv_bound(self._stopped, self.lag, t)
 
+    # Spec section 3.6.
     def w1_bound(self, t: npt.ArrayLike | None = None) -> FloatArray:
         """Estimated upper bound on the 1-Wasserstein distance from the law of X_t to the target.
 
-        Spec section 3.6. It depends on the parameterization of the target. A censored
+        The bound derived under Distance to stationarity, in :doc:`/theory`. It depends on
+        the parameterization of the target. A censored
         pair's distances stop at its cap, so with censored pairs it is a lower bound of the
         estimate without a cap.
 
@@ -358,6 +368,7 @@ class Result:
             replicates.distance_time, replicates.distance, len(self.index), self.lag, t
         )
 
+    # Spec section 3.6 and R-TUNE-4.
     def diagnostics(self) -> dict[str, Any]:
         """Diagnostics of the run: meeting times, censoring, bias corrections, cost.
 
@@ -371,13 +382,13 @@ class Result:
             ``n_tail`` :math:`= \\lfloor R/10 \\rfloor`, ``nan`` below 500 replicates;
             ``censored``; ``late_fraction``, the fraction of pairs with
             :math:`\\tau - L > k`, censored ones included (the leading term of the TV
-            bound at :math:`k`, spec section 3.6), with ``late_fraction_upper``, its
+            bound at :math:`k`), with ``late_fraction_upper``, its
             one-sided 95% Clopper-Pearson upper bound, which stays informative when the
             fraction is 0; ``tv_bound_at_k``; ``variance_share``, the largest share of one
             replicate in the sample variance of the estimate of a coordinate's mean or
             variance, and ``variance_share_of``, that estimate, ``nan`` and ``None``
             below 2 replicates; ``mean_cost``, ``seconds_per_replicate`` and
-            ``relative_cost``, the mean cost over :math:`m - k + 1` (spec R-TUNE-4).
+            ``relative_cost``, the mean cost over :math:`m - k + 1`.
         """
         return dict(self._diagnostics)
 
@@ -427,8 +438,9 @@ class Result:
             "relative_cost": mean_cost / (self.m - self.k + 1),
         }
 
+    # Spec R-OUT-3.
     def summary(self) -> Summary:
-        """Estimates per parameter and the diagnostics of the run (spec R-OUT-3).
+        """Estimates per parameter and the diagnostics of the run.
 
         Returns
         -------
@@ -458,10 +470,11 @@ class Result:
         }
         return Summary(self.names, table, footer)
 
+    # Spec R-OUT-1.
     def merge(self, other: Result) -> Result:
         """Join with a run of the same seed and configuration and disjoint replicates.
 
-        Spec R-OUT-1; :func:`telescopic.engine.merge` checks the seeds, the settings, the
+        :func:`telescopic.engine.merge` checks the seeds, the settings, the
         dimensions and the replicates. That the runs share the target, the kernel and the
         initial distribution is the caller's to ensure: their descriptions omit parameters.
         The merged result takes this result's names, and its kernel, initial distribution,
@@ -487,8 +500,9 @@ class Result:
             pilot=self.pilot if self.pilot is not None else other.pilot,
         )
 
+    # Spec R-OUT-1.
     def save(self, path: str | os.PathLike[str] | IO[bytes]) -> None:
-        """Save as a versioned ``.npz`` file, without pickle (spec R-OUT-1).
+        """Save as a versioned ``.npz`` file, without pickle.
 
         The kernel and the initial distribution are saved as their descriptions,
         ``str(kernel)`` and ``str(initial)``; the engine's paths are not saved.
@@ -594,8 +608,11 @@ class Result:
 
         return plotting.corner(self, dims, bins)
 
+    # Spec section 7.4.
     def check(self, strict: bool = False) -> None:
-        """Warn about the conditions of spec section 7.4 that apply to this run.
+        """Warn about the conditions that apply to this run.
+
+        They are listed under Warnings, in :doc:`/guide/diagnostics`.
 
         Parameters
         ----------

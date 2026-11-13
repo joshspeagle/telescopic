@@ -20,11 +20,12 @@ except ImportError as error:
     ) from error
 
 
+# Spec section 7.5.
 def meeting_times(result: Result, axes: Sequence[Axes] | None = None) -> list[Axes]:
     r"""The meeting times: a histogram of :math:`\tau - L`, and its survival function.
 
     The survival function :math:`P(\tau - L > t)` is on a log scale, where a straight
-    tail means geometric meeting times (spec section 7.5). A censored pair counts in it
+    tail means geometric meeting times. A censored pair counts in it
     at every time up to the cap, where the curve ends at the fraction censored, and not
     in the histogram.
 
@@ -56,10 +57,11 @@ def meeting_times(result: Result, axes: Sequence[Axes] | None = None) -> list[Ax
     return [histogram, survival]
 
 
+# Spec section 3.6.
 def tv_bound(result: Result, ax: Axes | None = None) -> Axes:
     """The estimated bound on the total variation distance to the target against t.
 
-    The bound is on a log scale, with ``k`` marked (spec section 3.6).
+    The bound is on a log scale, with ``k`` marked.
 
     Parameters
     ----------
@@ -87,6 +89,7 @@ def tv_bound(result: Result, ax: Axes | None = None) -> Axes:
     return ax
 
 
+# Spec section 7.5.
 def marginals(
     result: Result,
     dims: int | Sequence[int] | None = None,
@@ -97,7 +100,7 @@ def marginals(
 
     A bin's density is the average over replicates of its signed mass, divided by its
     width, so a bin can be negative: the bias corrections carry negative weights, and
-    where few atoms fall they can outweigh the others (spec section 7.5). The boxes show
+    where few atoms fall they can outweigh the others. The boxes show
     the Monte Carlo error.
 
     Parameters
@@ -131,12 +134,13 @@ def marginals(
     return axes
 
 
+# Spec section 7.5.
 def corner(result: Result, dims: int | Sequence[int] | None = None, bins: int = 20) -> Any:
     """A corner plot of signed histograms: marginals on the diagonal, pairs below it.
 
-    The pairs are colored by signed density with a diverging map centered on 0
-    (spec section 7.5). Telescopic never passes signed weights to ``corner`` or ArviZ,
-    whose weighted quantiles assume non-negative weights.
+    The pairs are colored by signed density with a diverging map centered on 0.
+    Telescopic never passes signed weights to ``corner`` or ArviZ, whose weighted
+    quantiles assume non-negative weights.
 
     Parameters
     ----------

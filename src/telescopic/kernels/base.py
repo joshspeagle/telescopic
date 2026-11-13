@@ -79,15 +79,16 @@ class State:
             self.grad[rows] = other.grad
 
 
+# Spec section 5.1, R-KER-1 to R-KER-6.
 class Kernel(ABC):
-    """A Markov kernel with its coupling (spec section 5.1, R-KER-1 to R-KER-5).
+    """A Markov kernel with its coupling.
 
     Subclasses implement :meth:`step` and :meth:`coupled_step` on batches of chains.
     Each marginal of :meth:`coupled_step` must have exactly the law of :meth:`step`. The
     engine declares a meeting when a pair's returned positions are equal under ``==``, so a
     coupling that makes the two proposals identical must give the second chain a copy of
     the first chain's proposal, never a recomputation. A row's arithmetic must not depend
-    on the other rows of the batch (spec R-KER-6).
+    on the other rows of the batch.
     """
 
     @property
@@ -138,6 +139,7 @@ class Kernel(ABC):
                 f"the kernel works in {self.ndim} dimensions, but the initial points have {ndim}"
             )
 
+    # Spec R-TUNE-1; the namespace of rng is that of spec section 6.1.
     def tune(
         self,
         target: Target,
@@ -146,7 +148,7 @@ class Kernel(ABC):
         *,
         pilot: PilotRun | None = None,
     ) -> tuple[Kernel, TuningReport | None]:
-        """A copy with the unset parameters tuned on pilot chains (spec R-TUNE-1).
+        """A copy with the unset parameters tuned on pilot chains.
 
         Each kernel's documentation says which parameters it tunes and how.
 
@@ -159,7 +161,7 @@ class Kernel(ABC):
             an array of points of shape ``(n, d)``, as for
             :func:`telescopic.initial.as_initial`.
         rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
-            Seed of the tuning, in the tuning namespace (spec section 6.1): the pilot
+            Seed of the tuning, in the tuning namespace: the pilot
             chains, unless ``pilot`` is given, and dual averaging.
         pilot : PilotRun, optional
             Adaptive Metropolis chains already run, from
@@ -185,11 +187,12 @@ class Kernel(ABC):
             f"{type(self).__name__} has unset parameters but cannot tune them"
         )
 
+    # Spec R-INPUT-1.
     def init_state(self, target: Target, x: FloatArray) -> State:
         """Evaluate the target at the rows of ``x``, with gradients if the kernel needs them.
 
         A gradient that is not finite where the log-density is raises ``ValueError``
-        here, as chains cannot start there; elsewhere it is taken as 0 (spec R-INPUT-1).
+        here, as chains cannot start there; elsewhere it is taken as 0.
 
         Parameters
         ----------
@@ -245,12 +248,13 @@ class Kernel(ABC):
         """
 
 
+# Spec sections 5.4 and 5.5.
 class GradientKernel(Kernel):
     """A kernel with a step size and a covariance, driven by the gradient: MALA, HMC.
 
     :meth:`~telescopic.kernels.Kernel.tune` takes the covariance of the pilot chains unless ``cov`` was given, then
     the step size by dual averaging toward ``target_acceptance`` from the pilot's last
-    states unless ``step_size`` was given (spec sections 5.4 and 5.5).
+    states unless ``step_size`` was given.
 
     Parameters
     ----------
@@ -370,6 +374,7 @@ def evaluate_proposal(target: Target, x: FloatArray, live: BoolArray | None = No
     return State(x, log_prob, grad)
 
 
+# Spec R-KER-3.
 def evaluate_pair(
     evaluate_rows: Callable[[FloatArray], State],
     x: FloatArray,
@@ -378,7 +383,7 @@ def evaluate_pair(
 ) -> tuple[State, State]:
     """States at the coupled proposals ``x`` and ``y`` from one call of ``evaluate_rows``.
 
-    Identical proposals are evaluated once and their state is shared (spec R-KER-3).
+    Identical proposals are evaluated once and their state is shared.
 
     Parameters
     ----------

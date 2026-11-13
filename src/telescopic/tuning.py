@@ -24,9 +24,10 @@ N_CHAINS = 4
 DUAL_AVERAGING_STEPS = 1000
 
 
+# Spec R-TUNE-1 and section 5.3.
 @dataclass(frozen=True, eq=False)
 class TuningReport:
-    r"""What a tuning pilot found (spec R-TUNE-1, section 5.3).
+    r"""What a tuning pilot found.
 
     Attributes
     ----------
@@ -111,6 +112,7 @@ class PilotRun:
         )
 
 
+# Spec sections 5.3 and 6.1.
 def adaptive_metropolis(
     target: Target,
     initial: Any,
@@ -118,7 +120,7 @@ def adaptive_metropolis(
     *,
     n_steps: int | None = None,
 ) -> PilotRun:
-    r"""Four adaptive Metropolis chains that pool their adaptation (spec section 5.3).
+    r"""Four adaptive Metropolis chains that pool their adaptation.
 
     Chain :math:`c` proposes :math:`x' \sim \mathcal N(x_c, \lambda_c\Sigma)`. After step
     :math:`t = 1, 2, \dots` its scale moves toward an acceptance rate of 0.234, and the
@@ -135,7 +137,7 @@ def adaptive_metropolis(
     (Haario, Saksman & Tamminen 2001, with the global scales of Andrieu & Thoms 2008,
     section 5, pooled across chains as in Craiu, Rosenthal & Yang 2009). Chain ``i``
     starts from the first of its 25 draws, and draws from replicate ``i`` of the tuning
-    namespace (spec section 6.1).
+    namespace.
 
     Parameters
     ----------
@@ -242,6 +244,7 @@ def adaptive_metropolis(
     return PilotRun(samples, kept_log_p, accepted / (n_steps - first_kept), n_steps)
 
 
+# Spec sections 5.4 and 5.5.
 def dual_averaging(
     kernel_at: Callable[[float], Kernel],
     target: Target,
@@ -250,7 +253,7 @@ def dual_averaging(
     target_acceptance: float,
     step_size: float,
 ) -> float:
-    r"""A step size whose mean acceptance probability is ``target_acceptance`` (spec 5.4, 5.5).
+    r"""A step size whose mean acceptance probability is ``target_acceptance``.
 
     One chain per pilot chain runs ``kernel_at(step_size)`` from that chain's last state,
     where a gradient that is not finite where the log-density is counts as 0.
@@ -305,8 +308,9 @@ def dual_averaging(
     return float(np.exp(log_average))
 
 
+# Spec R-TUNE-2.
 def choose_k(meeting_times: npt.ArrayLike, quantile: float = 0.99) -> int:
-    r"""Choose ``k`` from lag-1 pilot meeting times (spec R-TUNE-2).
+    r"""Choose ``k`` from lag-1 pilot meeting times.
 
     :math:`k = \max(1, \hat q_\beta(\tau - 1))`, with :math:`\hat q_\beta` the
     inverted-CDF sample quantile (Atchade & Jacob 2024). The recipe then sets
