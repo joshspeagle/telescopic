@@ -172,8 +172,9 @@ class CoupledSampler:
         Parameters
         ----------
         n : int
+            Pilot pairs to add, at least 1.
         max_iter : int
-            The cap; a pair still unmet there is censored (spec section 6.3).
+            The cap, above 1; a pair still unmet there is censored (spec section 6.3).
 
         Returns
         -------
@@ -181,6 +182,9 @@ class CoupledSampler:
             Meeting times, ``inf`` for a censored pair.
         """
         n = integer("n", n, minimum=1)
+        # Before check_settings, which takes None for no cap: an uncapped pilot can run
+        # forever where the coupling never meets (D-23).
+        max_iter = integer("max_iter", max_iter)
         settings = engine.check_settings(PILOT_SETTINGS._replace(max_iter=max_iter))
         with opened(self.pool) as pool:
             return self._meeting_times(n, settings, pool, self.progress)

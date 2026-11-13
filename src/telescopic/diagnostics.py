@@ -268,13 +268,16 @@ def slow_pair_threshold(lag: int, m: int) -> int:
 
     Parameters
     ----------
-    lag, m : int
+    lag : int
+        At least 1.
+    m : int
+        At least 0.
 
     Returns
     -------
     int
     """
-    return max(10_000, 10 * max(integer("lag", lag), integer("m", m)))
+    return max(10_000, 10 * max(integer("lag", lag, minimum=1), integer("m", m, minimum=0)))
 
 
 def tuning_disagreement(tuning: TuningReport | None) -> str | None:

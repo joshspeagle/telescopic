@@ -344,3 +344,9 @@ def test_a_run_warns_when_it_first_takes_a_gradient_as_zero():
     evaluated = int(re.search(pattern, message).group(1))
     assert 0 < evaluated < result.n_grad
     assert result.n_grad_zeroed > 0
+
+
+def test_meeting_times_refuses_max_iter_none():
+    # None ran an uncapped pilot, whose pairs then chose k.
+    with pytest.raises(TypeError, match="max_iter must be an integer, not None"):
+        CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=0).meeting_times(5, max_iter=None)

@@ -128,3 +128,5 @@ All notable changes to this project are documented here. The format follows
   among them that each replicate index is an integer in range, and keeps them read-only,
   so that `Result.measure` cannot be changed after its sums are cached;
   `unbiased_variance` and `unbiased_covariance` of a scalar raise `ValueError`.
+  `CoupledSampler.meeting_times` refuses `max_iter=None`, so the pilot is always capped,
+  and `slow_pair_threshold` checks that `lag` is at least 1 and `m` at least 0.
