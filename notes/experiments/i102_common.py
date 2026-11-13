@@ -3,21 +3,26 @@
 The experiment asks why a run whose kernel has an automatically tuned `Independence`
 component returns confidently wrong estimates on a target with well-separated modes, and
 whether a check at run time could warn of it. It ran against the package at commit
-c961089, in this order: i102_pilot_inspect.py, i102_pilot_starts.py and
-i102_pilot_history.py (what the pilot holds), i102_q1_split.py (why its chains end in one
-mode), i102_q2_rules.py with i102_q2_analysis.py and i102_q2_pooled.py (candidate rules on
-two seed sets), and i102_q3_confirm.py (one rule, fixed in advance, on fresh seeds). An
-adversarial review then ran the same job function on other targets, starts and seeds:
-i102_review_runner.py and i102_review_full_list.py, whose outputs are the
-i102_review_*.out files, and i102_review_recount.py and i102_review_repro.py, which check
-the confirmation's saved rows.
+c961089, in this order: i102_pilot_inspect.py and i102_pilot_history.py (what the pilot
+holds), i102_q1_split.py (why its chains end in one mode), i102_q2_rules.py with
+i102_q2_analysis.py and i102_q2_pooled.py (candidate rules on two seed sets), and
+i102_q3_confirm.py (one rule, fixed in advance, on fresh seeds). An adversarial review
+then ran the same job function on other targets, starts and seeds: i102_review_runner.py
+and i102_review_full_list.py, whose outputs are the i102_review_*.out files, and
+i102_review_recount.py and i102_review_repro.py, which check the confirmation's saved
+rows.
 
 `pilot` is a copy of `telescopic.tuning.adaptive_metropolis` with one switch: `pooled=True`
 reproduces the package bit for bit (checked in i102_q1_split.py); `pooled=False` gives each
 chain the mean and covariance of its own states only. It also returns the trajectories of
 x0, log pi and the proposal variance along x0 that i102_q1_split.py needs. It imports
 private names of the package, as they were at c961089.
+
+The run scripts write their rows under ROWS, notes/experiments/_rows/, which git ignores,
+and the analysis scripts read them there.
 """
+
+from pathlib import Path
 
 import numpy as np
 from scipy.special import logsumexp
@@ -29,6 +34,7 @@ from telescopic.kernels.independence import MultivariateT
 from telescopic.tuning import PilotRun
 
 N = 4
+ROWS = Path(__file__).parent / "_rows"
 
 
 def two_modes(d, s, weights=(0.7, 0.3), sd2=1.0):

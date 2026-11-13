@@ -275,30 +275,29 @@ assert one_mode.meeting_times.max() < 200
 
 The estimate is 0, with an error bar of 0, every pair met within about a hundred steps,
 and the run emits no warning. The tuning chains agree, and the Student-$t$ proposal fitted
-to them sits in the mode at $6e_1$. The four tuning chains share one proposal covariance;
-on this target they settle on one side of the origin during their descent, before they
-reach a mode, and the proposal fitted to their second halves covers that mode alone.
-Both chains of a pair receive the same proposal, accept it, and meet in that mode. As with a random walk whose steps are much shorter than the gap between
-modes ([Theory](../theory.md#guarantees-and-their-limits)), the replicates that would
-correct the estimate are too rare to occur in a run.
+to them sits in the mode at $6e_1$. The four tuning chains settled in one mode
+([Tuning](../guide/kernels.md#tuning)), so the proposal fitted to them covers that mode
+alone. Both chains of a pair receive the same proposal, accept it, and meet in that
+mode. As with a random walk whose steps are much shorter than the gap between modes
+([Theory](../theory.md#guarantees-and-their-limits)), the replicates that would correct
+the estimate are too rare to occur in a run.
 
-Runs with ten seeds, each with its warnings counted:
+The next cell runs ten seeds and lists the kinds of warning that each run emits:
 
 ```{code-cell} python
 def compare_seeds(proposal=None):
     rows = []
     for seed in range(10):
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", telescopic.ConvergenceWarning)
             result = mixture_run(seed, proposal)
         estimate = result.estimate(left_mode)
         wrong = abs(estimate.value - 0.7) > 5 * estimate.standard_error
-        disagree = result.tuning.rhat.max() > np.sqrt(2)
-        variance_only = all("of the variance" in str(w.message) for w in caught)
-        rows.append((wrong, disagree, len(caught), variance_only))
+        kinds = {issue.kind for issue in telescopic.diagnostics.issues(result)}
+        rows.append((wrong, "tuning" in kinds, bool(kinds), kinds <= {"variance"}))
         print(
             f"seed {seed}: {estimate}, more than 5 standard errors from 0.7: {wrong}, "
-            f"tuning chains disagree: {disagree}, warnings: {len(caught)}"
+            f"warnings: {sorted(kinds)}"
         )
     return np.array(rows)
 
@@ -319,11 +318,12 @@ assert np.all(variance_only[wrong])
 ```
 
 Most runs estimate the weight 0.7 as 0 or 1, depending on the mode that the tuning
-chains found, each with a small error bar. The tuning chains disagree only in a run whose
-estimate is right: there they split between the modes, and the proposal fitted to them
-spans both. Agreeing tuning chains do not show that the run found every mode. Some of the
-wrong runs emit no warning at all, and the others only the warning that one replicate
-holds most of the variance, which does not name the cause
+chains found, each with a small error bar. The warning that the tuning chains disagree
+(`tuning`) fires only in a run whose estimate is right: there they split between the
+modes, and the proposal fitted to them spans both. Agreeing tuning chains do not show
+that the run found every mode. Some of the wrong runs emit no warning at all, and the
+others only the warning that one replicate holds most of the variance (`variance`),
+which does not name the cause
 ([Diagnostics and warnings](../guide/diagnostics.md#measured-rates)).
 
 Two things help. Runs with different seeds disagree by far more than their error bars,
@@ -486,6 +486,6 @@ The run emits no warning, no replicate dominates, and the standard deviations an
 variances agree with the exact ones, with small error bars.
 
 Each run above printed its warnings as it ended, or, for a slow pair, as it happened,
-except the runs of `compare_seeds`, which counted them.
+except the runs of `compare_seeds`, which listed them.
 [Diagnostics and warnings](../guide/diagnostics.md) shows how to read them from a result
 and how to turn them into errors.

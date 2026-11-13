@@ -8,12 +8,12 @@ Outputs:
   i102_review_pumps_full2.out   "ex pumps default@2206,2491,2625,2863,2980,2981"
   i102_review_g50b_full.out     "gauss d=50 cond=10000 tight@2000,2001,...,2009"
 Every run in them has a right estimate, with |z| at most 3.06. CAP was raised for these
-runs, which took up to 239 s.
+runs, which took up to about four minutes each.
 
 Ran against commit c961089.
 
-Run: OUT=<folder for the rows> CAP=<seconds> \
-     python notes/experiments/i102_review_full_list.py "<cell>@<seed>,<seed>"
+Run: CAP=<seconds> python notes/experiments/i102_review_full_list.py "<cell>@<seed>,<seed>"
+The rows go where i102_review_runner.py writes them.
 """
 
 import sys

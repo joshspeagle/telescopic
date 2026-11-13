@@ -61,12 +61,13 @@ Narrowed by the adversarial review, which ran this job function unchanged on fre
     and the silencing were chosen after the first rule failed: this run is a holdout for
     these cells and this start width only.
 
-Ran against commit c961089: 5,352 s of job time on 2 workers, plus the four jobs
-stopped at 540 s.
+Ran against commit c961089: about an hour on two workers, plus the four jobs stopped at
+540 s.
 
 Run: python notes/experiments/i102_q3_confirm.py
-It writes one file per job to rows_q3/ and all rows to q3_rows.npy in the current folder,
-which i102_review_recount.py and i102_review_repro.py read; neither is committed.
+It writes one file per job to notes/experiments/_rows/rows_q3/ and all rows to
+notes/experiments/_rows/q3_rows.npy, which i102_review_recount.py and i102_review_repro.py
+read there; git ignores the folder.
 """
 
 import os
@@ -78,11 +79,12 @@ from multiprocessing import Pool
 from pathlib import Path
 
 import numpy as np
+from i102_common import ROWS
 from i102_q2_analysis import CRIT, ci, r1, r1_cost
 from i102_q2_rules import CELLS, one, path_of, saved
 
 STAT, M, DIV, C = "end", 8, 8, 10.0
-FOLDER = "rows_q3"
+FOLDER = ROWS / "rows_q3"
 CAP = 540  # seconds: a job still running then is stopped and recorded as timed out
 
 
@@ -138,7 +140,7 @@ def main():
         (pickle.loads(Path(path_of(FOLDER, j)).read_bytes()) for j in jobs),
         key=lambda r: (order.index(r["cell"]), r["seed"]),
     )
-    np.save("q3_rows.npy", np.array(rows, dtype=object), allow_pickle=True)
+    np.save(ROWS / "q3_rows.npy", np.array(rows, dtype=object), allow_pickle=True)
     timed_out = [r for r in rows if r.get("timed_out")]
     print(
         f"jobs stopped at {CAP} s (rule not evaluated): {[(r['cell'], r['seed']) for r in timed_out] or 'none'}"

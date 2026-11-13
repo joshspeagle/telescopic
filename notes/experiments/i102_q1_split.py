@@ -29,7 +29,7 @@ its R-hat warning then fires in 19 of 20 and 20 of 20 runs (d = 10 and 32, s = 6
 the warning fires exactly in the runs that split (5 of 20 and 2 of 20), whose proposal
 then spans both modes.
 
-Ran against commit c961089, in 273 s of wall time on 3 workers (the output's last line).
+Ran against commit c961089, in about five minutes on three workers.
 
 Run: python notes/experiments/i102_q1_split.py [workers]   (default 3)
 """

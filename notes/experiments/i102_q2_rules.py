@@ -46,16 +46,16 @@ i102_q3_confirm.py tests the rule chosen next.
 The rows of the main set were written by an earlier version of this script, which did not
 record the field `error` and recorded `m` wrongly; no analysis reads either.
 
-Ran against commit c961089. Each set is on the order of an hour of job time on 3 workers
-(the confirmation run of i102_q3_confirm.py, similar jobs, records 5,352 s); a set that
-is stopped resumes from its saved rows, so the wall time printed last is that of the
-last invocation.
+Ran against commit c961089. Each set takes on the order of an hour on three workers; a
+set that is stopped resumes from its saved rows, so the wall time printed last is that of
+the last invocation.
 
-Run (the rows are written to the current folder):
+Run:
   python notes/experiments/i102_q2_rules.py 0 100 main [workers]
   python notes/experiments/i102_q2_rules.py 20 200 confirm <workers> confirm
-Each writes one file per job to rows_<tag>/ and all rows to q2_rows_<tag>.npy, which the
-analysis scripts read; neither is committed.
+Each writes one file per job to notes/experiments/_rows/rows_<tag>/ and all rows to
+notes/experiments/_rows/q2_rows_<tag>.npy, which the analysis scripts read there; git
+ignores the folder.
 """
 
 import os
@@ -68,13 +68,21 @@ from multiprocessing import Pool
 from pathlib import Path
 
 import numpy as np
-from i102_common import gaussian, initial_points, probe, proposal_of, student, two_modes
+from i102_common import (
+    ROWS,
+    gaussian,
+    initial_points,
+    probe,
+    proposal_of,
+    student,
+    two_modes,
+)
 
 import telescopic
 from telescopic import examples
 from telescopic._random import root_seed
 from telescopic.diagnostics import tuning_disagreement
-from telescopic.initial import Normal, Uniform
+from telescopic.initial import Normal, Uniform, as_initial, draw
 from telescopic.kernels import Independence, Mixture, RandomWalk
 from telescopic.target import Target
 from telescopic.tuning import adaptive_metropolis, choose_k
@@ -222,8 +230,6 @@ def one(job):
     r0a_dens = float(np.max(np.where(lp0 >= lp_low, lp0 - q.log_density(pts), -np.inf)) - lmax)
     # R0b: 2,000 fresh draws.
     rng = np.random.default_rng([seed, 102])
-    from telescopic.initial import as_initial, draw
-
     init = as_initial(initial)
     fresh = np.array([draw(init, rng, d) for _ in range(2000)])
     lpf = log_prob(fresh)
@@ -332,7 +338,7 @@ if __name__ == "__main__":
     # Big ones first, for load balance. Each row is saved as it arrives, so that a rerun
     # resumes; a worker killed for memory is reported, not waited for.
     jobs.sort(key=lambda j: -CELLS[j[0]][3])
-    folder = f"rows_{tag}"
+    folder = ROWS / f"rows_{tag}"
     os.makedirs(folder, exist_ok=True)
     todo = [j for j in jobs if not os.path.exists(path_of(folder, j))]
     with Pool(workers, maxtasksperchild=10) as pool:
@@ -345,7 +351,7 @@ if __name__ == "__main__":
     rows = [pickle.loads(Path(path_of(folder, j)).read_bytes()) for j in jobs]
     order = list(CELLS)
     rows.sort(key=lambda r: (order.index(r["cell"]), r["seed"]))
-    np.save(f"q2_rows_{tag}.npy", np.array(rows, dtype=object), allow_pickle=True)
+    np.save(ROWS / f"q2_rows_{tag}.npy", np.array(rows, dtype=object), allow_pickle=True)
     print(
         f"\nraw table ({tag}): cell | seed | n_steps pilot-evals run-evals k m=10k tau_max | estimate se z wrong |"
         " q-side Lmax Lmed disagree | R0a R0b | R1 half_dens at (m=16, n=n_steps/16) | (m=32, n=n_steps/8) | warnings"

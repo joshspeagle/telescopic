@@ -59,9 +59,8 @@ for seed in range(6):
     x = np.stack([c[0] for c in calls])
     lp = np.stack([c[1] for c in calls])  # (steps, 4, d), (steps, 4)
     typical = np.median(pilot.log_prob)
-    near = lp > typical - 3 * np.sqrt(
-        d
-    )  # proposals with log density in the range of the fitted mode's
+    # Proposals whose log density lies in the range of the fitted mode's.
+    near = lp > typical - 3 * np.sqrt(d)
     left = near & (x[:, :, 0] < 0)
     right = near & (x[:, :, 0] > 0)
     n = len(calls)

@@ -168,6 +168,6 @@ All notable changes to this project are documented here. The format follows
   `CoupledSampler.tune` says that chains that agree do not show that the target has one
   mode.
 - The documentation states that an automatically tuned `Independence` proposal covers
-  only the modes its tuning chains reached, so that a run on a target with well-separated
-  modes can meet within a few tens of steps and be confidently wrong without any warning; the
-  failure-modes tutorial runs such a case, with two checks that help.
+  only the modes its tuning chains reached, so a run on well-separated modes can be
+  confidently wrong without a warning; the failure-modes tutorial shows such a run and
+  two checks that help.

@@ -7,7 +7,7 @@ a setting found here needs fresh seeds. Also shown, as chosen after seeing the d
 R1 silenced when the existing R-hat warning already fires ("R1 unless R-hat").
 
 Design. Reads q2_rows_main.npy and q2_rows_confirm.npy, which i102_q2_rules.py writes to
-the current folder. For each setting within 50% of the pilot: the smallest statistic
+notes/experiments/_rows/. For each setting within 50% of the pilot: the smallest statistic
 over the wrong runs of the criterion cells, the largest over the false-alarm runs, and the
 detection at c = (largest false-alarm statistic) + 1, rounded down; then the same with
 the runs silenced by R-hat left out of the false alarms and of the detections.

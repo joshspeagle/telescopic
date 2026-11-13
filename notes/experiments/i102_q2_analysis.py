@@ -18,7 +18,7 @@ seeds (62 of 62 detected, no false alarm in 440), and i102_q2_analysis_confirm.o
 same setting on the confirm seeds: 62 of 62 detected, 2 false alarms in 440, both on
 pumps from its default start, so it fails the criterion.
 
-Reads the rows q2_rows_<tag>.npy that i102_q2_rules.py writes to the current folder;
+Reads the rows notes/experiments/_rows/q2_rows_<tag>.npy that i102_q2_rules.py writes;
 runs in seconds.
 
 Run, for i102_q2_analysis_main.out, _main_fixed.out and _confirm.out in turn:
@@ -31,6 +31,7 @@ The last four arguments evaluate one fixed setting: statistic, m, divisor of n_s
 import sys
 
 import numpy as np
+from i102_common import ROWS
 from scipy.stats import binomtest
 
 MS = (4, 8, 16, 32)
@@ -47,7 +48,7 @@ def ci(k, n):
 
 
 def load(tag):
-    return list(np.load(f"q2_rows_{tag}.npy", allow_pickle=True))
+    return list(np.load(ROWS / f"q2_rows_{tag}.npy", allow_pickle=True))
 
 
 def r1(r, stat, m, div):

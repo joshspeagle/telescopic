@@ -53,7 +53,6 @@ initial = Normal(np.zeros(d), 100 * np.eye(d))
 for seed in (0, 1, 2, 3, 4, 5):
     target = Target(log_prob, vectorize=True)
     pilot = adaptive_metropolis(target, initial, seed)
-    ends = pilot.samples[:, -1, 0]
     means = pilot.samples[:, :, 0].mean(axis=1)
     q = MultivariateT(pilot.mean, pilot.cov, df=5)
     rng = np.random.default_rng(100 + seed)
@@ -75,9 +74,8 @@ for seed in (0, 1, 2, 3, 4, 5):
         np.round(lw, 1),
         f" pilot log w median {np.median(lwp):.1f} max {lwp.max():.1f}",
     )
-    if x0 is not None:
-        lw0 = log_prob(x0) - q.log_density(x0)
-        print(
-            f"   initial draws: max log w {lw0.max():.1f}, max log pi {log_prob(x0).max():.1f};"
-            f" pilot log pi median {np.median(pilot.log_prob):.1f}"
-        )
+    lw0 = log_prob(x0) - q.log_density(x0)
+    print(
+        f"   initial draws: max log w {lw0.max():.1f}, max log pi {log_prob(x0).max():.1f};"
+        f" pilot log pi median {np.median(pilot.log_prob):.1f}"
+    )

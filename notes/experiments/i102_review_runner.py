@@ -35,8 +35,10 @@ it (about 100 s for family1, 60 s for family2).
 
 Ran against commit c961089; each line of an output gives its job's seconds.
 
-Run: OUT=<folder for the rows> [CAP=150] [WORKERS=2] \
+Run: [CAP=150] [WORKERS=2] \
      python notes/experiments/i102_review_runner.py "<cells>" <first seed> <count> [rule]
+It writes one file per job to notes/experiments/_rows/review/, which git ignores, and
+reuses a job's file when it is there.
 """
 
 import os
@@ -48,11 +50,13 @@ from multiprocessing import Pool
 
 import i102_q2_rules as q2_rules
 import numpy as np
+from i102_common import ROWS
 from i102_q2_rules import gaussian, student, tight, two_modes, wide
+from scipy.special import digamma
 
 from telescopic.initial import Normal
 
-OUT = os.environ["OUT"]
+OUT = ROWS / "review"
 
 ORIG = dict(q2_rules.CELLS)
 MS = (4, 8, 16, 32)
@@ -142,8 +146,6 @@ def new_cells():
             d,
             np.zeros(d),
         )
-    from scipy.special import digamma
-
     for d in (2, 10):
         out[f"loggamma.5 d={d} wide"] = ("fa", skew_gamma(d), wide(d), d, np.full(d, digamma(0.5)))
         out[f"loggamma.5 d={d} N(0,I)"] = (
@@ -181,7 +183,8 @@ def job(args):
         f"{args[0].replace(' ', '_').replace('/', '_')}__{args[1]}__{int(len(args) > 2 and args[2])}.pkl",
     )
     if os.path.exists(path):
-        return pickle.load(open(path, "rb"))
+        with open(path, "rb") as f:
+            return pickle.load(f)
     signal.signal(signal.SIGALRM, _alarm)
     signal.alarm(CAP)
     t0 = time.time()
@@ -206,9 +209,13 @@ def stat(r):
     return float(r["stats"][MS.index(8), DIVS.index(8), 0])
 
 
+def fires(r):
+    return stat(r) > 10 and not r["disagree"]
+
+
 def show(r):
     w = "T" if r.get("timed_out") else ("E" if r["wrong"] is None else int(r["wrong"]))
-    fire = int(stat(r) > 10 and not r["disagree"])
+    fire = int(fires(r))
     return (
         f"{r['cell']:34s} | {r['seed']:5d} | k {r['k']:6d} tau {r['tau_max']:8.0f} thin {r['thin']:2d} | {r['value']:8.4f} {r['se']:7.4f} z {r['z']:9.2f} "
         f"wrong {w} | rhat {r['rhat']:6.3f} | stat {stat(r):7.1f} | fires {fire} | {r['secs']:.0f}s {r.get('error') or ''}"
@@ -231,9 +238,8 @@ if __name__ == "__main__":
         c = [r for r in rows if r["cell"] == n]
         wrong = [r for r in c if r["wrong"] is True]
         right = [r for r in c if r["wrong"] is False and not skip]
-        f = lambda r: stat(r) > 10 and not r["disagree"]
         print(
             f"SUMMARY {n}: runs {len(c)}, wrong {len(wrong)}, right {len(right)}, raised/timed out/rule-only {len(c) - len(wrong) - len(right)}; "
-            f"fires on wrong {sum(map(f, wrong))}/{len(wrong)}; fires on right {sum(map(f, right))}/{len(right)}; fires overall {sum(map(f, c))}/{len(c)}; "
+            f"fires on wrong {sum(map(fires, wrong))}/{len(wrong)}; fires on right {sum(map(fires, right))}/{len(right)}; fires overall {sum(map(fires, c))}/{len(c)}; "
             f"R-hat warns {sum(r['disagree'] for r in c)}; stat>10 {sum(stat(r) > 10 for r in c)}; stat min/med/max {min(map(stat, c)):.1f}/{np.median(list(map(stat, c))):.1f}/{max(map(stat, c)):.1f}"
         )

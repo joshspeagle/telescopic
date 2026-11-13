@@ -1,39 +1,37 @@
 """The adversarial review: recount the confirmation's verdict from its saved rows.
 
-Checks that q3_rows.npy and the per-job files of rows_q3/, which i102_q3_confirm.py writes,
-agree field by field; recomputes from them the detections, the false alarms, the cost and
-each run's z; lists the seeds, the statistics of the wrong runs and the largest ones of
-the right runs; and gives Clopper-Pearson intervals.
+Checks that q3_rows.npy and the per-job files of rows_q3/, which i102_q3_confirm.py writes
+to notes/experiments/_rows/, agree field by field; recomputes from them the detections,
+the false alarms, the cost and each run's z; lists the seeds, the statistics of the wrong
+runs and the largest ones of the right runs; and gives Clopper-Pearson intervals.
 
 Result (i102_review_recount.out): 67 of 67 wrong criterion runs detected, no false alarm in
 440 right runs (95% interval [0, 0.0083]), cost at most 0.25 of the pilot, no mismatch
 in z; without the R-hat silencing, 2 of the 440 right runs would fire. This output was
-captured when the experiment was recorded, from the confirmation's rows; it does not use
-the package.
+captured when the experiment was recorded, from the confirmation's rows; it runs no
+sampler.
 
-Run: python notes/experiments/i102_review_recount.py <folder where i102_q3_confirm.py ran>
+Run: python notes/experiments/i102_review_recount.py
 """
 
-import glob
-import os
 import pickle
-import sys
-from pathlib import Path
 
 import numpy as np
+from i102_common import ROWS
 from scipy.stats import beta
 
-E = sys.argv[1]
 MS = (4, 8, 16, 32)
 DIVS = (64, 32, 16, 8, 4, 2)
 CRIT = {f"bimodal d={d} s={s}" for d in (10, 32) for s in (6, 12)}
-rows = list(np.load(os.path.join(E, "q3_rows.npy"), allow_pickle=True))
-pk = [
-    pickle.loads(Path(p).read_bytes())
-    for p in sorted(glob.glob(os.path.join(E, "rows_q3", "*.pkl")))
-]
+rows = list(np.load(ROWS / "q3_rows.npy", allow_pickle=True))
+pk = [pickle.loads(p.read_bytes()) for p in sorted((ROWS / "rows_q3").glob("*.pkl"))]
 print("npy rows", len(rows), "pkl rows", len(pk))
-key = lambda r: (r["cell"], r["seed"])
+
+
+def key(r):
+    return (r["cell"], r["seed"])
+
+
 d1 = {key(r): r for r in rows}
 d2 = {key(r): r for r in pk}
 assert set(d1) == set(d2)
@@ -52,8 +50,16 @@ print("npy == pkl for every row and field")
 to = [r for r in rows if r.get("timed_out")]
 print("timed out:", [key(r) for r in to])
 rows = [r for r in rows if not r.get("timed_out")]
-stat = lambda r: r["stats"][MS.index(8), DIVS.index(8), 0]
-fires = lambda r: bool(stat(r) > 10 and not r["disagree"])
+
+
+def stat(r):
+    return r["stats"][MS.index(8), DIVS.index(8), 0]
+
+
+def fires(r):
+    return bool(stat(r) > 10 and not r["disagree"])
+
+
 seeds = {}
 for r in rows + to:
     seeds.setdefault(r["kind"], set()).add(r["seed"])
@@ -102,7 +108,6 @@ print(
     "pilot_evals == 4(n_steps+1):", all(r["pilot_evals"] == 4 * (r["n_steps"] + 1) for r in rows)
 )
 # independent recheck of wrong: |z|>5 from value/se for detect cells (truth weights)
-truth = dict.fromkeys(CRIT, 0.7)
 bad = 0
 for r in crit_all:
     if r["wrong"] is None:
