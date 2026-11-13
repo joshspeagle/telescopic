@@ -589,7 +589,7 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
                      max_iter=None, pool=None, names=None, progress=False, rng=None) -> Result
    ```
 
-   `kernel` is a `Kernel` or one of the strings `"auto"`, `"rwmh"`, `"mala"`, `"hmc"` and `"independence"`. `"auto"` means RWMH, with or without a gradient; gradient kernels are requested by name (D-3).
+   `n_replicates` is at least 2, checked before any work, since the estimates need two replicates that met; `CoupledSampler.run`, whose runs accumulate, takes 1 (DECISIONS #92). `kernel` is a `Kernel` or one of the strings `"auto"`, `"rwmh"`, `"mala"`, `"hmc"` and `"independence"`. `"auto"` means RWMH, with or without a gradient; gradient kernels are requested by name (D-3).
 2. **Sampler object:**
 
    ```python
