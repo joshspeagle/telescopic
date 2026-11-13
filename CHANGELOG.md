@@ -187,3 +187,9 @@ All notable changes to this project are documented here. The format follows
   two checks that help.
 - `Independence`'s `proposal` is typed as any object with `sample` and `log_density`,
   as it already behaved, so type checkers accept a custom proposal.
+- The documentation states that the default range of `Result.histogram` biases every
+  bin, not only the two outer ones; that `CouplingReport.stay` is Bonferroni-corrected
+  and that `passed()` fails a correct coupling with probability up to about 4 `alpha`;
+  the formulas of `Result.cov` and `Result.var`; the draws of `RandomWalk`'s maximal
+  coupling; and that `State.take` takes an index array, a mask or a slice, not a single
+  index.
