@@ -714,7 +714,7 @@ These targets are measured by `benchmarks/` and are not gating.
    - `fold_in(root, i)` streams;
    - a persistent-lanes `while_loop` with in-loop refill (never `vmap` over whole replicates: 2–11× waste);
    - autodiff gradients;
-   - statistical, not bitwise, invariance to the lane layout (R-EXEC-2 holds bitwise only for this NumPy engine), since XLA does not promise that a row's bits are independent of its batch (DECISIONS #73).
+   - statistical, not bitwise, invariance to the lane layout (R-EXEC-2 holds bitwise only for the NumPy engine), since XLA does not promise that a row's bits are independent of its batch (DECISIONS #73).
 2. **Experiments under DECISIONS #1:**
    - coupled elliptical slice sampling with coupled pCN meeting steps (unpublished: met at $d \le 200$ in the census check);
    - coupled NUTS;

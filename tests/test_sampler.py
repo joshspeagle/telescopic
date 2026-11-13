@@ -304,8 +304,9 @@ def test_the_readme_example_runs_without_a_warning(capsys):
 def test_citation_version_matches_package_version():
     # The version is written in both files; the test group has no YAML parser.
     text = (Path(__file__).parents[1] / "CITATION.cff").read_text(encoding="utf-8")
-    version = re.search(r"^version:\s*[\"']?([^\"'\s]+)", text, re.MULTILINE).group(1)
-    assert version == __version__
+    match = re.search(r"^version:\s*[\"']?([^\"'\s]+)", text, re.MULTILINE)
+    assert match, "CITATION.cff has no version line"
+    assert match.group(1) == __version__
 
 
 def test_chains_cannot_start_where_the_gradient_is_not_finite():
