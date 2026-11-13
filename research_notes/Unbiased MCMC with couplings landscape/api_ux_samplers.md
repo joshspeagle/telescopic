@@ -1,7 +1,7 @@
 # API and user-experience design of MCMC and sampling packages: lessons from emcee and dynesty, and candidate API shapes for `telescopic` (unbiased MCMC with coupled chains)
 
 Scope, date and method:
-- **What this note covers.** It covers what is specific to MCMC sampler packages and to running coupled chains. It builds on the sibling note `/home/user/pastry/research_notes/Population inference software landscape/api_ux_validation.md` (2026-10-22) and does not repeat that note's general material on packaging, documentation, validation, scikit-learn conventions, SPEC 7, or the basics of nautilus, UltraNest, ArviZ and PyMC. Where this note relies on that note, it says so.
+- **What this note covers.** It covers what is specific to MCMC sampler packages and to running coupled chains. It builds on `api_ux_validation.md` (2026-10-22), a sibling note in the pastry project's research notes (*Population inference software landscape*, not in this repository), and does not repeat that note's general material on packaging, documentation, validation, scikit-learn conventions, SPEC 7, or the basics of nautilus, UltraNest, ArviZ and PyMC. Where this note relies on that note, it says so.
 - **Research date:** 2026-10-23.
 - **Versions and release dates.** These come from the PyPI JSON API (`https://pypi.org/pypi/<name>/json`), queried that day.
 - **Source reading.** Package source was read from wheels or sdists downloaded from PyPI into a scratch directory. Signatures were extracted with Python's `ast` module, so no package code was executed.
