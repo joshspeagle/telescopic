@@ -14,7 +14,6 @@ from telescopic._types import FloatArray, IndexArray, Seed
 MAIN = 0
 TUNING = 1
 PILOT = 2
-GRADIENT_CHECK = 3
 
 # The two kinds of buffered numbers, each read from its own child generator.
 NORMAL = 0

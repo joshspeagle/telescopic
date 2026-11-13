@@ -12,23 +12,8 @@ import numpy as np
 from telescopic import diagnostics, engine
 from telescopic._parallel import Interrupt, check_pool, execute, opened
 from telescopic._progress import Progress, tuning
-from telescopic._random import (
-    GRADIENT_CHECK,
-    MAIN,
-    PILOT,
-    namespace_seed,
-    replicate_generator,
-    root_seed,
-)
-from telescopic._types import (
-    FloatArray,
-    IntArray,
-    Seed,
-    flag,
-    integer,
-    parameter_names,
-    shown,
-)
+from telescopic._random import MAIN, PILOT, namespace_seed, replicate_generator, root_seed
+from telescopic._types import FloatArray, IntArray, Seed, flag, integer, parameter_names
 from telescopic.initial import as_initial, draw
 from telescopic.kernels import HMC, MALA, Independence, Kernel, RandomWalk
 from telescopic.results import Result
@@ -50,15 +35,6 @@ PILOT_SETTINGS = engine.Settings(0, 0, 1, max_iter=PILOT_MAX_ITER, store=False)
 # The peak memory of a run's first estimates over the bytes the run stores: 2.9 to 3.0
 # from d = 2 to 50, and 3.8 at d = 1 (notes/experiments/i73_memory_peak.out).
 PEAK_PER_STORED = 3
-# The gradient check (DECISIONS #133): the draws of the initial distribution at which
-# it compares grad with central differences; the least rounding error of a log-density,
-# in units of the last place of its largest value near the point; and the tolerance of
-# a difference, this factor times its estimated error, and at least this fraction of
-# the largest component, below which a wrong drift barely changes a proposal.
-GRADIENT_POINTS = 3
-GRADIENT_ULPS = 64
-GRADIENT_SAFETY = 10
-GRADIENT_RELATIVE = 0.01
 # The warnings of spec section 7.4 that a run emits as they happen, not at its end, or as
 # it ends for slow pairs on a pool.
 _LIVE = ("slow", "tuning")
@@ -93,15 +69,6 @@ class CoupledSampler:
     grad : callable, optional
         :math:`\nabla\log\pi` with the signature of ``log_prob``. Only the kernels that
         need it, MALA and HMC, evaluate it; ``"auto"`` is random-walk Metropolis.
-    check_grad : bool
-        Whether to compare ``grad`` with central differences of ``log_prob`` now, when
-        the kernel needs gradients, and emit an ``InputWarning`` where they differ by more
-        than 10 times the differences' estimated error and 1% of the largest component
-        (spec section 4.1). The check evaluates the target at 3 draws of the initial
-        distribution from a stream of its own, so it changes no result: :math:`3(4d + 1)`
-        evaluations of ``log_prob`` and 3 of ``grad``, in 9 calls with
-        ``vectorize=True``. It skips points of zero density or of a gradient that is not
-        finite, and coordinates whose differences reach zero density.
     vectorize : bool
         Whether ``log_prob`` and ``grad`` take a batch of points.
     kernel : Kernel or str
@@ -147,7 +114,6 @@ class CoupledSampler:
         args: tuple[Any, ...] = (),
         kwargs: Mapping[str, Any] | None = None,
         grad: Callable[..., Any] | None = None,
-        check_grad: bool = True,
         vectorize: bool = False,
         kernel: Kernel | str = "auto",
         names: Sequence[str] | None = None,
@@ -156,7 +122,6 @@ class CoupledSampler:
         rng: Seed = None,
     ) -> None:
         self.pool, self.progress = check_pool(pool), flag("progress", progress)
-        check_grad = flag("check_grad", check_grad)
         self.target = Target(log_prob, grad, args=args, kwargs=kwargs, vectorize=vectorize)
         self.initial = as_initial(init)
         if isinstance(kernel, str) and kernel in KERNELS:
@@ -175,10 +140,6 @@ class CoupledSampler:
         # The dimension comes from a draw, so a length error blames the initial distribution.
         draws = "the initial distribution draws points"
         self.names = None if names is None else parameter_names(names, self.ndim, draws)
-        if check_grad and self.kernel.needs_grad:
-            generator = replicate_generator(self.seed, GRADIENT_CHECK, 0)
-            points = [draw(self.initial, generator, self.ndim) for _ in range(GRADIENT_POINTS)]
-            _check_gradient(self.target, np.array(points))
         self.tuning: TuningReport | None = None
         self.pilot: FloatArray | None = None
         self._pilot_zero_density = 0  # pilot pairs started where the density is zero
@@ -471,7 +432,6 @@ def sample(
     args: tuple[Any, ...] = (),
     kwargs: Mapping[str, Any] | None = None,
     grad: Callable[..., Any] | None = None,
-    check_grad: bool = True,
     vectorize: bool = False,
     kernel: Kernel | str = "auto",
     k: int | str = "auto",
@@ -500,7 +460,7 @@ def sample(
         a callable ``init(rng)`` or an array of points of shape ``(n, d)``.
     n_replicates : int
         The number :math:`R` of replicates, at least 2.
-    args, kwargs, grad, check_grad, vectorize, kernel, names, pool, progress, rng
+    args, kwargs, grad, vectorize, kernel, names, pool, progress, rng
         As for :class:`CoupledSampler`.
     k, m, lag, thin, max_iter
         As for :meth:`CoupledSampler.run`: ``"auto"`` chooses ``k`` from the pilot, then
@@ -523,7 +483,6 @@ def sample(
         args=args,
         kwargs=kwargs,
         grad=grad,
-        check_grad=check_grad,
         vectorize=vectorize,
         kernel=kernel,
         names=names,
@@ -637,75 +596,6 @@ class _ZeroedGradients:
                 "scipy.special.logsumexp, or check it",
                 InputWarning,
             )
-
-
-def _check_gradient(target: Target, points: FloatArray) -> None:
-    # Spec section 4.1: warns once if grad and the central differences of log_prob
-    # disagree beyond their tolerance at a row of points. The step is eps^(1/3) times
-    # each coordinate's spread over the points, which balances truncation against
-    # rounding at the target's scale.
-    spread = points.std(axis=0)
-    scale = np.where(spread > 0, spread, np.maximum(np.abs(points).max(axis=0), 1.0))
-    step = np.finfo(np.float64).eps ** (1 / 3) * scale
-    for x in points:
-        compared = _gradient_comparison(target, x, step)
-        if compared is None:
-            continue
-        grad, differences, tolerance = compared
-        wrong = np.flatnonzero(np.abs(grad - differences) > tolerance)
-        if len(wrong):
-            warn(
-                f"grad disagrees with central differences of log_prob at x = "
-                f"{shown(x.tolist())} in coordinates {shown(wrong.tolist())}: grad gives "
-                f"{shown(grad[wrong].tolist())}, the differences "
-                f"{shown(differences[wrong].tolist())}; MALA and HMC stay exact with a "
-                "wrong gradient, but their pairs can take orders of magnitude longer to "
-                "meet: check grad, or pass check_grad=False to skip this check",
-                InputWarning,
-            )
-            return
-
-
-def _gradient_comparison(
-    target: Target, x: FloatArray, step: FloatArray
-) -> tuple[FloatArray, FloatArray, FloatArray] | None:
-    # grad at x, the central differences D_h of log_prob, and the tolerance of their
-    # difference, inf where D_h cannot be computed; None where log_prob is -inf or grad
-    # is not finite. The tolerance is GRADIENT_SAFETY times the estimated error of D_h,
-    # and at least GRADIENT_RELATIVE times the largest |D_h|. D_h and D_2h have
-    # truncation errors a h^2 and 4 a h^2, so |D_h - D_2h| is three times that of D_h.
-    # Rounding errors of size sigma in log_prob add about sigma / h. The fourth
-    # differences f(x - 2h) - 4 f(x - h) + 6 f(x) - 4 f(x + h) + f(x + 2h), about
-    # sqrt(70) sigma for independent rounding errors (their smooth part, h^4 times the
-    # fourth derivative, is negligible), give sigma, pooled over the coordinates; it is at
-    # least GRADIENT_ULPS units in the last place of the largest |log_prob| near x, and
-    # cancellation inside log_prob makes it larger.
-    zeroed = target.n_grad_zeroed
-    log_p, grad = target.log_prob_and_grad(x[None])
-    if log_p[0] == -np.inf or target.n_grad_zeroed > zeroed:
-        return None
-    d = len(x)
-    # x + h e_i, x - h e_i, x + 2h e_i and x - 2h e_i for each coordinate i, and the
-    # steps as rounded at x, which a coordinate far from 0 can shrink or remove.
-    stencil = x + np.multiply.outer([1.0, -1.0, 2.0, -2.0], np.diag(step))
-    moved = np.diagonal(stencil, axis1=1, axis2=2)
-    widths = (moved[0] - moved[1], moved[2] - moved[3])
-    values = target.log_prob(stencil.reshape(-1, d)).reshape(4, d)
-    usable = np.isfinite(values).all(axis=0) & (widths[1] > widths[0]) & (widths[0] > 0)
-    if not usable.any():
-        return None
-    values, widths = values[:, usable], (widths[0][usable], widths[1][usable])
-    fourth = values[2] + values[3] - 4 * (values[0] + values[1]) + 6 * log_p[0]
-    largest = np.maximum(np.abs(values).max(axis=0), abs(log_p[0]))
-    sigma = np.maximum(
-        np.sqrt(np.mean(fourth**2) / 70), GRADIENT_ULPS * np.finfo(np.float64).eps * largest
-    )
-    fine = (values[0] - values[1]) / widths[0]
-    error = np.abs(fine - (values[2] - values[3]) / widths[1]) + 2 * sigma / widths[0]
-    differences, tolerance = np.full(d, np.nan), np.full(d, np.inf)
-    differences[usable] = fine
-    tolerance[usable] = np.maximum(GRADIENT_SAFETY * error, GRADIENT_RELATIVE * np.abs(fine).max())
-    return grad[0], differences, tolerance
 
 
 def _settings(given: dict[str, int]) -> engine.Settings:

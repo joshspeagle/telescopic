@@ -116,17 +116,6 @@ restricted.log_prob(np.array([[0.0, 1.0], [0.0, -1.0]]))
 
 For the gradient:
 
-- A wrong gradient, such as one of the wrong sign, keeps MALA and HMC exact, but their
-  pairs can take orders of magnitude longer to meet. When the kernel needs gradients,
-  the sampler compares `grad` with central differences of `log_prob` at 3 draws of the
-  initial distribution as it is built, and emits an
-  {class}`~telescopic.warnings.InputWarning` naming the point and the coordinates where
-  they differ by more than 10 times the differences' estimated error and by more than 1%
-  of the gradient's largest component. That costs $3(4d + 1)$ evaluations of the
-  log-density and 3 of the gradient, and changes no result. A log-density that loses
-  most of its digits to cancellation, so that it barely changes over steps of about
-  $10^{-5}$ of the initial distribution's spread, can make it warn wrongly;
-  `check_grad=False` skips it.
 - Where the log-density is `-inf`, the gradient is not evaluated, so it may fail there.
   States there carry a gradient of 0, so MALA and HMC propose from them without drift.
 - Where the log-density is finite, a gradient that is not finite raises `ValueError`
