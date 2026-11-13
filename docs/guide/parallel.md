@@ -173,12 +173,12 @@ reticulate.
 On a pool, telescopic's workers start no new replicate after the first Ctrl-C, and a chunk
 that starts afterwards runs nothing, unless it is the first, so that the result holds at
 least one replicate. On an executor of your own, the running chunks finish and the chunks
-not yet started are cancelled, except one that the executor has already queued for its
-workers: a `ProcessPoolExecutor` queues one chunk beyond those running, which then runs
-all its replicates, and the result includes them. A pool with only `map` returns the
-waves it completed. How
-the rest of a pool of your own reacts to Ctrl-C is up to the pool. A process pool of your
-own should ignore Ctrl-C in its workers, as telescopic's do:
+not yet started are cancelled, except those that the executor has already queued for its
+workers: a `ProcessPoolExecutor` queues up to one more chunk than it has workers. Those
+chunks run in full and the result includes their replicates, so the run can take up to
+two chunk durations longer to return. A pool with only `map` returns the waves it
+completed. How the rest of a pool of your own reacts to Ctrl-C is up to the pool. A
+process pool of your own should ignore Ctrl-C in its workers, as telescopic's do:
 `ProcessPoolExecutor(4, initializer=signal.signal, initargs=(signal.SIGINT, signal.SIG_IGN))`.
 Otherwise Ctrl-C kills its idle workers and breaks the pool: the run returns the chunks
 that had finished, flagged `interrupted`, or raises `BrokenProcessPool` if none had, and
