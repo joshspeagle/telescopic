@@ -69,6 +69,11 @@ All notable changes to this project are documented here. The format follows
   index of the meeting times and the largest share of one replicate in a variance.
 - Documentation: Getting started, a user guide, six tutorials executed when the site is
   built, a theory page, the API reference and a citing page.
+- The documentation site has its own theme and identity: the Focus mark, two chain colors
+  that mean the two chains, Red Hat type served with the site, light and dark themes, a
+  landing page with a coupled pair drawn by telescopic itself, and navigation by section
+  (Start, Tutorials, How-to guides, Theory, Reference, Project). Every plot of the
+  executed pages shares one style. The design records are no longer built into the site.
 - Fixes from an audit of the whole package: a number argument of the wrong type raises
   `TypeError`, and one out of bounds `ValueError`, naming the argument; `names` must be
   distinct strings, one per coordinate; `Kernel.check_ndim` checks a kernel's dimension;

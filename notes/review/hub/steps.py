@@ -803,8 +803,7 @@ PHASES = [
                 ),
                 "docs": [
                     "docs/theory.md",
-                    "docs/guide/index.md",
-                    "docs/tutorials/index.md",
+                    "docs/index.md",
                     "docs/tutorials/how-it-works.md",
                 ],
                 "decisions": [37, 42, 43],

@@ -58,13 +58,15 @@ dev = [
 docs = [
     "sphinx==9.2.0",
     "myst-nb==1.4.0",
-    "furo==2025.12.19",
     "sphinx-copybutton==0.5.2",
     "numpydoc==1.11.0",
     "matplotlib>=3.8",
     "ipykernel",
     # The quickstart tutorial runs emcee beside telescopic.
     "emcee==3.1.6",
+    # docs/_scripts/brand.py reads the wordmark's outlines from the served woff2 font.
+    "fonttools==4.68.0",
+    "brotli==1.2.1",
 ]
 
 [tool.hatch.version]
