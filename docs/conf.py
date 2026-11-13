@@ -46,28 +46,19 @@ nb_execution_raise_on_error = True
 nb_merge_streams = True
 
 numpydoc_show_class_members = False
+# Signatures show names and defaults, one per line once they pass 88 characters; the
+# docstrings give the types.
+python_maximum_signature_line_length = 88
+autodoc_typehints = "none"
 
-# Every cross-reference must resolve, but for type hints that have no page of their own.
+# Every cross-reference must resolve.
 nitpicky = True
-nitpick_ignore = [
-    ("py:class", name)
-    for name in (
-        "Seed",
-        "matplotlib.axes._axes.Axes",
-        "numpy._typing._array_like.ArrayLike",
-        "numpy._typing._array_like.NDArray",
-        "numpy.float64",
-        "numpy.int64",
-        "telescopic._random.Streams",
-        "telescopic._types.Distribution",
-        "telescopic._types.Proposal",
-    )
-]
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
+    "matplotlib": ("https://matplotlib.org/stable", None),
 }
 
 # The design records are read in the repository, not on the site.

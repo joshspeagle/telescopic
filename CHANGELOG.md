@@ -84,6 +84,9 @@ All notable changes to this project are documented here. The format follows
   citation carried meaning, it links the page that explains it.
 - The docstring of `telescopic.sample` describes each of its parameters, and that of
   `Estimate` its `level`.
+- Signatures in the API reference show the parameters' names and defaults, one per line
+  when long, and the types stay in the docstrings; returned matplotlib axes link to
+  matplotlib's documentation.
 - Fixes from an audit of the whole package: a number argument of the wrong type raises
   `TypeError`, and one out of bounds `ValueError`, naming the argument; `names` must be
   distinct strings, one per coordinate; `Kernel.check_ndim` checks a kernel's dimension;

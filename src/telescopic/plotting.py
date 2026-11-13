@@ -37,7 +37,7 @@ def meeting_times(result: Result, axes: Sequence[Axes] | None = None) -> list[Ax
 
     Returns
     -------
-    list of two Axes
+    list of two :class:`~matplotlib.axes.Axes`
     """
     histogram, survival = (
         plt.subplots(1, 2, figsize=(9, 3.5))[1] if axes is None else _axes(axes, 2)
@@ -71,7 +71,7 @@ def tv_bound(result: Result, ax: Axes | None = None) -> Axes:
 
     Returns
     -------
-    Axes
+    :class:`~matplotlib.axes.Axes`
     """
     ax = plt.subplots(figsize=(5, 3.5))[1] if ax is None else ax
     # At most 4,000 times draw the step function, however long the tail of meeting times.
@@ -114,7 +114,7 @@ def marginals(
 
     Returns
     -------
-    list of Axes
+    list of :class:`~matplotlib.axes.Axes`
     """
     result._require(2)
     bins = integer("bins", bins, minimum=1)
@@ -151,7 +151,7 @@ def corner(result: Result, dims: int | Sequence[int] | None = None, bins: int = 
 
     Returns
     -------
-    ndarray of Axes, shape (len(dims), len(dims))
+    ndarray of :class:`~matplotlib.axes.Axes`, shape (len(dims), len(dims))
     """
     result._require(2)
     bins = integer("bins", bins, minimum=1)
