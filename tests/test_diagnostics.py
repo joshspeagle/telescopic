@@ -55,8 +55,9 @@ def test_the_tv_bound_from_the_exact_meeting_law_exceeds_the_exact_tv(lag):
     pi /= pi.sum()
     t = np.arange(21)
     tv = [0.5 * np.abs(start @ np.linalg.matrix_power(P, u) - pi).sum() for u in t]
-    # From t = 16 the two agree within 3e-16, the rounding that the tolerance allows for.
-    assert np.all(_lagged_tail(survival, lag, t) >= np.array(tv) - 1e-12)
+    # From t = 16 the two agree within 3e-16, rounding; the bound exceeds the distance by
+    # 4e-14 at t = 13, so the tolerance leaves t <= 13 checked.
+    assert np.all(_lagged_tail(survival, lag, t) >= np.array(tv) - 1e-14)
 
 
 def test_the_w1_bound_sums_the_distances_at_lagged_times():

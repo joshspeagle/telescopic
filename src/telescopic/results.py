@@ -206,7 +206,7 @@ class Result:
         .. math:: \widehat{\mathrm{Var}}_\pi(x_j) = R^{-1}\sum_r \hat\pi_r(x_j^2)
                   - \bar a_j^2 + S_{a,jj}/R
 
-        the diagonal of :meth:`cov`, in the notation there.
+        This is the diagonal of :meth:`cov`, whose docstring defines the notation.
 
         Returns
         -------

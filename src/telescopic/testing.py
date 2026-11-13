@@ -34,9 +34,9 @@ class CouplingReport:
         often in a coupled step as in a step of the kernel alone.
     moves : tuple of two floats
         For the first and the second chain, the Bonferroni-corrected p-value of two-sample
-        Kolmogorov-Smirnov tests that compare the moved positions of a coupled step with
-        those of a step alone, along random directions and in the distance moved; NaN
-        where a position is NaN.
+        Kolmogorov-Smirnov tests, from each starting point, that compare the moved
+        positions of a coupled step with those of a step alone, along random directions
+        and in the distance moved; NaN where a position is NaN.
     met : float
         The fraction of pairs that met: a coupling that never meets gives no estimate.
     stale : int
