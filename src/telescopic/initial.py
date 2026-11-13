@@ -145,6 +145,27 @@ def draw(
     """One validated draw from ``initial``: finite, of shape ``(d,)`` with d >= 1, or ``(ndim,)``.
 
     A draw of shape ``(1, d)``, as from a frozen ``scipy.stats.dirichlet``, becomes ``(d,)``.
+
+    Parameters
+    ----------
+    initial : distribution
+        An object with ``rvs(random_state=generator)``, as :func:`as_initial` returns.
+    generator : numpy.random.Generator
+        The generator passed to ``rvs``.
+    ndim : int, optional
+        The dimension the draw must have; any ``d >= 1`` if ``None``.
+
+    Returns
+    -------
+    ndarray, shape (d,)
+        A new array of float64.
+
+    Raises
+    ------
+    TypeError
+        If the draw is not real numbers.
+    ValueError
+        If the draw has another shape or is not finite.
     """
     point = real_array(
         "a draw of the initial distribution",

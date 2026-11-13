@@ -257,4 +257,4 @@ assert np.all((ratio > 1) & (ratio < np.sqrt(10) / 2))
 The same seed, kernel and settings give the same chains, so the two runs differ only in
 the states they average. Thinning by 10 stores a tenth of the atoms, and the standard
 errors grow by the factors above, far less than the $\sqrt{10}$ of independent states,
-since neighbouring states of a random walk are strongly correlated.
+since neighboring states of a random walk are strongly correlated.

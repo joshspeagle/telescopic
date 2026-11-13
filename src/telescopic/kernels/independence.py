@@ -11,7 +11,7 @@ from scipy.special import gammaln
 
 from telescopic._linalg import covariance, inverse_lower, matvec
 from telescopic._random import Draws
-from telescopic._types import FloatArray, Seed, integer, log_densities, vector
+from telescopic._types import FloatArray, Proposal, Seed, integer, log_densities, vector
 from telescopic.kernels.base import Kernel, State, acceptance, evaluate, log_ratio, select
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport
@@ -82,7 +82,7 @@ class Independence(Kernel):
 
     Parameters
     ----------
-    proposal : MultivariateT, optional
+    proposal : object, optional
         Any object with ``sample(draws)`` and ``log_density(x)``, where a NaN or ``+inf``
         log-density raises ``ValueError`` with the point; its ``mean``, if it has one that
         is not a method, fixes the dimension. ``None`` leaves the kernel untuned:
@@ -105,7 +105,7 @@ class Independence(Kernel):
     no warning. Give ``proposal`` explicitly to cover modes that are known.
     """
 
-    def __init__(self, proposal: MultivariateT | None = None) -> None:
+    def __init__(self, proposal: Proposal | None = None) -> None:
         if proposal is not None and not (
             hasattr(proposal, "sample") and hasattr(proposal, "log_density")
         ):
@@ -152,7 +152,7 @@ class Independence(Kernel):
         state_y = select(log_u < log_ratio(new, old_y), proposal, state_y)
         return state_x, state_y
 
-    def _ready(self) -> MultivariateT:
+    def _ready(self) -> Proposal:
         if self.proposal is None:
             raise ValueError("Independence needs a proposal; give one, or tune the kernel")
         return self.proposal
@@ -161,7 +161,7 @@ class Independence(Kernel):
         return f"Independence(proposal={self.proposal!r})"
 
 
-def _log_weights(q: MultivariateT, *states: State) -> list[FloatArray]:
+def _log_weights(q: Proposal, *states: State) -> list[FloatArray]:
     # log pi - log q at each state's positions, from one call of q.log_density, whose rows
     # do not depend on each other (spec R-KER-6). A NaN log q would make every move to its
     # point a rejection, and so bias the chain without an error.

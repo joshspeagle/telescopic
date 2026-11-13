@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+import telescopic
 from references import Normal as Conditional
 from references import gaussian_log_prob, synthetic
 from telescopic import CoupledSampler, __version__, sample
@@ -269,8 +270,9 @@ def test_tuning_chains_in_separate_modes_warn():
 
 
 def test_a_run_with_censored_pairs_warns():
+    kernel = RandomWalk(np.eye(2), scale=0.1)
     with pytest.warns(ConvergenceWarning) as record:  # censored pairs are also late
-        sample(log_prob, INIT, 20, kernel=RandomWalk(np.eye(2), scale=0.1), k=1, m=2, max_iter=3)
+        sample(log_prob, INIT, 20, kernel=kernel, k=1, m=2, max_iter=3, rng=17)
     assert any("reached max_iter = 3" in str(warning.message) for warning in record)
 
 
@@ -384,6 +386,15 @@ def test_citation_version_matches_package_version():
     match = re.search(r"^version:\s*[\"']?([^\"'\s]+)", text, re.MULTILINE)
     assert match, "CITATION.cff has no version line"
     assert match.group(1) == __version__
+
+
+def test_the_package_exports_what_the_readme_uses():
+    # A name left out of __all__ is left out of `from telescopic import *`.
+    text = (Path(__file__).parents[1] / "README.md").read_text()
+    code = re.search(r"```python\n(.*?)```", text, re.DOTALL).group(1)
+    used = set(re.findall(r"\btelescopic\.(\w+)", code))
+    assert used, "the README's example takes no name from telescopic"
+    assert used | {"__version__"} <= set(telescopic.__all__)
 
 
 def test_the_package_is_marked_as_typed():

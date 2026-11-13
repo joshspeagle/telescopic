@@ -16,7 +16,7 @@ All notable changes to this project are documented here. The format follows
   coupling with the bounded-variance `eta` option, and the maximal coupling of discrete
   distributions (`telescopic.couplings`); `telescopic.testing.fixed_draws` to inject
   random numbers in tests, and `telescopic.testing.random_draws` for fresh ones.
-- `Target` with a batched interface over scalar or vectorised log-densities and gradients;
+- `Target` with a batched interface over scalar or vectorized log-densities and gradients;
   initial distributions `Normal`, `Uniform`, `Empirical` and `as_initial`.
 - Kernels with their couplings: `RandomWalk` (reflection-maximal or maximal proposals),
   `Independence` with a `MultivariateT` proposal, and `Mixture`. A row's transition does
@@ -185,6 +185,11 @@ All notable changes to this project are documented here. The format follows
   only the modes its tuning chains reached, so a run on well-separated modes can be
   confidently wrong without a warning; the failure-modes tutorial shows such a run and
   two checks that help.
+- `Independence`'s `proposal` is typed as any object with `sample` and `log_density`,
+  as it already behaved, so type checkers accept a custom proposal.
+- The documentation states that the default range of `Result.histogram` biases every
+  bin, and that `CouplingReport.passed()` fails a correct coupling with probability up
+  to about 4 `alpha`.
 - The docstrings of `sample()` and `CoupledSampler.run` say that their estimates are
   unbiased unless `max_iter` censors a pair, which biases them, or a Ctrl-C interrupts
   the run, which leaves them consistent.

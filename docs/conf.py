@@ -58,6 +58,7 @@ nitpick_ignore = [
         "numpy.int64",
         "telescopic._random.Streams",
         "telescopic._types.Distribution",
+        "telescopic._types.Proposal",
     )
 ]
 
