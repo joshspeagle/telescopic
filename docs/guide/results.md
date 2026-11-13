@@ -147,8 +147,9 @@ total = result.measure.atoms.sum(axis=1)  # x0 + x1 at every atom
 ## Histograms
 
 {meth}`telescopic.Result.histogram` returns the mass of each bin, its standard error and
-the edges of the bins. The mass of a half-open bin $[a, b)$ is the average over
-replicates of their signed mass in it. It is unbiased for a `range` fixed before the
+the edges of the bins. The mass of a bin is the average over replicates of their signed
+mass in it. The bins are half-open, $[a, b)$, except the last, which is closed, as in
+`numpy.histogram`, so an atom on the upper edge of `range` is counted. It is unbiased for a `range` fixed before the
 run, and it can be negative where few atoms fall and the negative weights of the bias
 corrections outweigh the others. By default the bins span the atoms, so the masses sum to
 1, and the two outer bins, whose edges the atoms set, are biased by a term of order

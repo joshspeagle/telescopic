@@ -131,7 +131,7 @@ Kernel-specific tests:
   - reproduces NumPy's inverted-CDF quantiles for positive integer weights, through repeated values (NumPy's `weights=` needs NumPy 2.0, newer than the oldest supported stack);
   - is monotone in $q$;
   - returns finite answers for non-monotone signed CDFs.
-- Histograms (M4, through `per_replicate` of bin indicators) use half-open bins, and their bin masses sum to the total weight inside the range.
+- Histograms (M4, through `per_replicate` of bin indicators) use half-open bins with a closed last bin, as `numpy.histogram` does, and their bin masses sum to the total weight inside the range.
 
 **Exact expectation.**
 - Fast tier: with $\mathbb E\,h(X_t) = a_t$ converging geometrically, $|S|^{-1}\sum_{l\in S} a_l + \sum_t c_t (a_t - a_{t-L})$, computed with the package's `correction_coefficients`, equals $\lim a_t$ to $10^{-12}$ for random $(k, m, L, \text{thin})$. Since a faithful coupling's marginals give exactly this expectation, this is the unbiasedness of the weights, checked against the truth rather than a reference. (A 4-state chain is one such sequence; the recursion on its joint law adds nothing.)

@@ -176,9 +176,10 @@ $\bar a$ and sample covariance $S_a$ (divisor $R - 1$).
   $\widehat{\mathrm{Cov}}_\pi(h) = R^{-1}\sum_r \hat\pi_r(hh^\top) - \bar a\bar a^\top + S_a/R$
   is unbiased. Standard deviations are $\sqrt{\max(0, \widehat{\mathrm{Var}})}$, which is
   consistent but not unbiased.
-- **Histograms:** each replicate's signed mass in each half-open bin $[a, b)$, averaged
-  over replicates, is unbiased for bins fixed before the run, with standard errors from
-  the replicates. A bin can be negative.
+- **Histograms:** each replicate's signed mass in each bin, averaged over replicates, is
+  unbiased for bins fixed before the run, with standard errors from
+  the replicates. Bins are half-open, $[a, b)$, except the last, which is closed, as in
+  `numpy.histogram`. A bin can be negative.
 - **Quantiles:** pool the atoms of all replicates with weights $\omega/R$, merging atoms
   with equal coordinates; sort them along the coordinate; project the cumulative weights
   onto non-decreasing sequences by isotonic regression and clip them to $[0, 1]$; the

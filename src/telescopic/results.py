@@ -252,8 +252,10 @@ class Result:
     ) -> tuple[FloatArray, FloatArray, FloatArray | list[FloatArray]]:
         """Histogram of one coordinate or several, with standard errors (spec section 3.4).
 
-        The mass of each half-open bin is the average over replicates of its signed mass,
-        so a bin can be negative. It is unbiased for a ``range`` fixed before the run; the
+        The mass of each bin is the average over replicates of its signed mass, so a bin
+        can be negative. The bins are half-open, :math:`[a, b)`, except the last, which is
+        closed, as in ``numpy.histogram``, so that an atom on the upper edge of ``range``
+        is counted. It is unbiased for a ``range`` fixed before the run; the
         default range, from the atoms, biases the two outer bins by a term of order
         :math:`1/R`. Memory: a few floats per atom, and per bin.
 
@@ -593,12 +595,12 @@ class Result:
         self, column: int, bins: int, limit: tuple[float, float] | None = None
     ) -> tuple[npt.NDArray[np.intp], FloatArray]:
         # The bin of each atom along a coordinate, below 0 or from bins outside the edges,
-        # and the edges; by default the last is nudged up to keep the largest atom inside.
+        # and the edges; the last bin is closed, as in numpy.histogram.
         values = self.measure.atoms[:, column]
         edges = np.histogram_bin_edges(values, bins, limit)
-        if limit is None:
-            edges[-1] = np.nextafter(edges[-1], np.inf)
-        return np.searchsorted(edges, values, side="right") - 1, edges
+        which = np.searchsorted(edges, values, side="right") - 1
+        which[values == edges[-1]] = bins - 1
+        return which, edges
 
     def _centred(self) -> tuple[FloatArray, FloatArray]:
         # The atoms about their mean, and each replicate's mean of them. Each replicate's

@@ -111,6 +111,7 @@ def test_quantiles_keep_apart_atoms_that_share_some_coordinates():
     ("dims", "limits"), [(0, (-2.0, 3.0)), ([1, 0], [(-3.0, 2.0), (-2.0, 3.0)])]
 )
 def test_histogram_bins_average_each_replicates_signed_mass_in_half_open_bins(dims, limits):
+    # Half-open but for the last bin along each coordinate, which is closed.
     masses, errors, edges = RESULT.histogram(dims, bins=7, range=limits)
     if np.ndim(dims) == 0:
         dims, edges, limits = [dims], [edges], [limits]
@@ -123,7 +124,13 @@ def test_histogram_bins_average_each_replicates_signed_mass_in_half_open_bins(di
     )
     cells = itertools.product(*(itertools.pairwise(edge) for edge in edges))
     inside = [
-        np.all([(atoms[:, i] >= a) & (atoms[:, i] < b) for i, (a, b) in enumerate(cell)], axis=0)
+        np.all(
+            [
+                (atoms[:, i] >= a) & ((atoms[:, i] < b) | (b == edges[i][-1]) & (atoms[:, i] == b))
+                for i, (a, b) in enumerate(cell)
+            ],
+            axis=0,
+        )
         for cell in cells
     ]
     per_replicate = np.array(
@@ -133,6 +140,24 @@ def test_histogram_bins_average_each_replicates_signed_mass_in_half_open_bins(di
     np.testing.assert_allclose(errors, per_replicate.std(axis=0, ddof=1) / np.sqrt(40), atol=1e-12)
     total, _, _ = RESULT.histogram(dims, bins=7)
     assert abs(total.sum() - 1) < 1e-12
+
+
+@pytest.mark.parametrize("dims", [0, [0, 1]])
+def test_histogram_keeps_an_atom_on_the_upper_edge_of_its_range(dims):
+    # Each replicate's one atom of weight 1 lies on the edges [0, 1] of the range, so
+    # closing the last bin counts all of the mass, as numpy.histogram does.
+    values = np.array([[0.0, 0.0], [1.0, 1.0], [0.5, 1.0], [1.0, 0.25]])
+    result = synthetic([1] * 4, values)
+    limits = (0.0, 1.0) if np.ndim(dims) == 0 else [(0.0, 1.0)] * 2
+    masses, _, _ = result.histogram(dims, bins=4, range=limits)
+    assert masses.sum() == 1
+    expected, _ = np.histogramdd(
+        values[:, np.atleast_1d(dims)], bins=4, range=np.reshape(limits, (-1, 2))
+    )
+    np.testing.assert_array_equal(masses, expected / 4)
+    # The default range ends at the largest atom, which the same rule keeps.
+    automatic, _, _ = result.histogram(dims, bins=4)
+    np.testing.assert_array_equal(automatic, masses)
 
 
 def test_a_numpy_integer_of_bins_computes_as_a_python_integer():

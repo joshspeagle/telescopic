@@ -117,3 +117,5 @@ All notable changes to this project are documented here. The format follows
   gradients, and `coupling="crn"` with conditionals whose `mean` and `cov` are methods
   raise a `ValueError` or `TypeError` that names the cause; MALA's coupled step no
   longer warns when its drift overflows.
+- Changes to `Result` ruled before the first release: the last bin of a histogram is
+  closed, as in `numpy.histogram`, so an atom on the upper edge of `range` is counted.
