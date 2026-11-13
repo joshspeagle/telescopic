@@ -151,11 +151,15 @@ class Status(NamedTuple):
         Index of the unmet replicate that has run longest, or -1 if every pair has met.
     t : int
         Its time :math:`t`, or 0.
+    zero_density : tuple of int
+        The replicates started so far whose :math:`X_0` or :math:`Y_0` has zero target
+        density.
     """
 
     finished: int
     slowest: int
     t: int
+    zero_density: tuple[int, ...] = ()
 
 
 def run(
@@ -393,7 +397,7 @@ class _Batch:
         self.finished = _Chunks(integers, integers)
         self.atoms = _Chunks(integers, np.zeros((0, ndim)), reals)
         self.distances = _Chunks(integers, integers, reals)
-        self.zero_density: list[int] = []
+        self.zero_density: tuple[int, ...] = ()
         self.paths: dict[int, tuple[list[FloatArray], list[FloatArray]]] = {}
         self.n_finished = 0
         self.counts = {name: getattr(target, name) for name in COUNTS}  # before any step
@@ -412,7 +416,9 @@ class _Batch:
         self.x.put(lanes, states.take(slice(0, None, 2)))
         self.y.put(lanes, states.take(slice(1, None, 2)))
         outside = np.isneginf(states.log_prob).reshape(-1, 2).any(axis=1)
-        self.zero_density += [s.index for s, bad in zip(starting, outside, strict=True) if bad]
+        self.zero_density += tuple(
+            s.index for s, bad in zip(starting, outside, strict=True) if bad
+        )
         for lane, start in zip(lanes.tolist(), starting, strict=True):
             self.streams.assign(lane, start.generator)
             if self.keep_paths:
@@ -466,9 +472,11 @@ class _Batch:
     def status(self) -> Status:
         unmet = self.active & (self.tau < 0)
         if not unmet.any():
-            return Status(self.n_finished, -1, 0)
+            return Status(self.n_finished, -1, 0, self.zero_density)
         lane = int(np.argmax(np.where(unmet, self.t, -1)))
-        return Status(self.n_finished, int(self.replicate[lane]), int(self.t[lane]))
+        return Status(
+            self.n_finished, int(self.replicate[lane]), int(self.t[lane]), self.zero_density
+        )
 
     def result(self, seed: SeedSequence, requested: IntArray, start: float) -> Replicates:
         # The seconds since start include this join, a large part of a run with many atoms.

@@ -2,6 +2,7 @@ import itertools
 import re
 import runpy
 import tempfile
+import warnings
 from importlib import resources
 from pathlib import Path
 
@@ -9,7 +10,7 @@ import numpy as np
 import pytest
 
 from references import Normal as Conditional
-from references import gaussian_log_prob
+from references import gaussian_log_prob, synthetic
 from telescopic import CoupledSampler, __version__, sample
 from telescopic.engine import Settings, Status
 from telescopic.initial import Empirical, Normal
@@ -289,8 +290,61 @@ def test_starts_outside_the_support_warn(call, kind):
     sampler = CoupledSampler(
         half_normal, Empirical([[-1.0], [1.0]]), kernel=RandomWalk(np.eye(1)), rng=9
     )
-    with pytest.warns(InputWarning, match=f" {kind} start where the target density is zero"):
+    with pytest.warns(InputWarning, match=f"{kind} start where the target density is zero"):
         call(sampler)
+
+
+def test_a_zero_density_start_warns_before_the_run_ends():
+    # The log-density counts its calls, and the warning records the count when it comes.
+    calls = []
+
+    def counting(x):
+        calls.append(1)
+        return half_normal(x)
+
+    seen = []
+    sampler = CoupledSampler(
+        counting, Empirical([[-1.0], [1.0]]), kernel=RandomWalk(np.eye(1)), rng=9
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("always")
+        warnings.showwarning = lambda message, *_, **__: seen.append((str(message), len(calls)))
+        sampler.run(6, k=40)
+    outside = [n for message, n in seen if "start where the target density is zero" in message]
+    assert outside
+    assert outside[0] < len(calls)
+
+
+def test_choose_k_failure_names_zero_density_starts():
+    # From -50 a random-walk chain on the half-normal never proposes a point of positive
+    # density, so the pairs that start there never meet within the pilot's cap.
+    sampler = CoupledSampler(
+        half_normal, Empirical([[-50.0], [1.0]]), kernel=RandomWalk(np.eye(1)), rng=9
+    )
+    with pytest.warns(InputWarning):
+        sampler.meeting_times(100, max_iter=20)
+    with pytest.raises(ValueError, match=r"pilot pairs never met .* of the 100 started where"):
+        sampler.run(2)
+
+
+def slow_pair_from_zero_density_as_it_happens(slow):
+    slow(Status(0, 1, 10_000, (1,)))
+
+
+def slow_pair_from_zero_density_after_a_run(slow):
+    replicates = synthetic([2, 20_000], [0.0, 1.0])._replicates
+    replicates.zero_density = np.array([1])
+    slow.after(replicates)
+
+
+@pytest.mark.parametrize(
+    "seen",
+    [slow_pair_from_zero_density_as_it_happens, slow_pair_from_zero_density_after_a_run],
+    ids=["as it happens", "after a run"],
+)
+def test_a_slow_pair_that_started_at_zero_density_says_so(seen):
+    with pytest.warns(ConvergenceWarning, match="replicate 1 .* it started where the target"):
+        seen(_SlowPairs(lag=1, m=10, kind="replicate"))
 
 
 def test_a_run_that_would_store_gigabytes_warns():

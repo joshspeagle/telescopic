@@ -138,7 +138,9 @@ censored: its meeting time is `inf`, and it is left out of the estimates, of $R$
 the signed measure. `result.n_censored` counts them. **Meaning:** leaving them out biases
 the estimates, since they are the replicates whose chains take longest to meet.
 **Remedy:** a new sampler with a larger `max_iter`, or none; a sampler keeps the cap of
-its first run.
+its first run. When pairs started where the target density is zero, the warning says how
+many and advises an initial distribution inside the support first: such a pair may never
+meet, so a run without a cap could wait forever.
 
 ### Late pairs (`late`)
 

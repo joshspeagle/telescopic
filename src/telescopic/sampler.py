@@ -139,6 +139,7 @@ class CoupledSampler:
         self.names = None if names is None else parameter_names(names, self.ndim, draws)
         self.tuning: TuningReport | None = None
         self.pilot: FloatArray | None = None
+        self._pilot_zero_density = 0  # pilot pairs started where the density is zero
         self._replicates: engine.Replicates | None = None
 
     @property
@@ -199,8 +200,10 @@ class CoupledSampler:
         self.tune()
         start = 0 if self.pilot is None else len(self.pilot)
         indices = np.arange(start, start + n)
-        times = self._run(PILOT, indices, settings, pool, progress).meeting_time
+        replicates = self._run(PILOT, indices, settings, pool, progress)
+        times = replicates.meeting_time
         self.pilot = times if self.pilot is None else np.concatenate([self.pilot, times])
+        self._pilot_zero_density += len(replicates.zero_density)
         return times
 
     def run(
@@ -316,6 +319,7 @@ class CoupledSampler:
             **settings._asdict(),
         )
         kind = "replicate" if main else "pilot pair"
+        outside = _ZeroDensityStarts(kind)
         slow = _SlowPairs(settings.lag, settings.m, kind)
         zeroed = _ZeroedGradients(self.target, kind)
         bar = Progress(len(indices), f"{kind}s") if progress else None
@@ -323,6 +327,7 @@ class CoupledSampler:
         def monitor(status: engine.Status) -> bool:
             if bar is not None:
                 bar.update(status.finished)
+            outside(status)
             slow(status)
             zeroed()
             return interrupt is not None and interrupt.stopping
@@ -332,15 +337,9 @@ class CoupledSampler:
         finally:
             if bar is not None:
                 bar.close()
+        outside.after(replicates)
         slow.after(replicates)
         zeroed.after(replicates)
-        if len(replicates.zero_density):
-            warn(
-                f"{len(replicates.zero_density)} {kind}s start where the target density "
-                f"is zero (the first is {replicates.zero_density[0]}); the initial "
-                "distribution should lie inside the support of the target",
-                InputWarning,
-            )
         return replicates
 
     def _check(
@@ -380,8 +379,24 @@ class CoupledSampler:
             done = 0 if self.pilot is None else len(self.pilot)
             if done < PILOT_REPLICATES:
                 self._meeting_times(PILOT_REPLICATES - done, PILOT_SETTINGS, pool, progress)
-            given = given | {"k": choose_k(cast(FloatArray, self.pilot))}
+            given = given | {"k": self._choose_k(cast(FloatArray, self.pilot))}
         return _settings(given)
+
+    def _choose_k(self, pilot: FloatArray) -> int:
+        # choose_k's advice of a wider initial distribution makes zero-density starts,
+        # from which a pair may never meet, more frequent.
+        try:
+            return choose_k(pilot)
+        except ValueError as error:
+            if not self._pilot_zero_density:
+                raise
+            raise ValueError(
+                "k cannot be chosen: too many pilot pairs never met within their cap, and "
+                f"{self._pilot_zero_density} of the {len(pilot)} started where the target "
+                "density is zero, from which a pair may never meet; draw the initial "
+                "distribution inside the support of the target, or give k, lag and m "
+                "explicitly"
+            ) from error
 
     def _check_memory(self, settings: engine.Settings, n_replicates: int) -> None:
         # Spec R-EXEC-7: estimate the atoms and distances to store before running, and warn
@@ -471,6 +486,36 @@ def sample(
     return sampler.run(n_replicates, k=k, m=m, lag=lag, thin=thin, max_iter=max_iter)
 
 
+class _ZeroDensityStarts:
+    # Warns once about pairs that start where the target density is zero (spec section
+    # 4.2): from the engine's status as soon as one starts, or from the replicates after a
+    # run on a pool, whose workers' statuses do not reach the parent. A chain there moves
+    # only to a proposal of finite density, so a start far outside the support can keep a
+    # run waiting forever. kind names the pairs.
+    def __init__(self, kind: str) -> None:
+        self.kind = kind
+        self.warned = False
+
+    def __call__(self, status: engine.Status) -> None:
+        if status.zero_density:
+            self._warn(len(status.zero_density), status.zero_density[0], " so far")
+
+    def after(self, replicates: engine.Replicates) -> None:
+        if len(replicates.zero_density):
+            self._warn(len(replicates.zero_density), int(replicates.zero_density[0]), "")
+
+    def _warn(self, count: int, first: int, so_far: str) -> None:
+        if not self.warned:
+            self.warned = True
+            warn(
+                f"{self.kind}s start where the target density is zero ({count}{so_far}, the "
+                f"first is {first}): a chain there moves only to a proposal of finite "
+                "density, so its pair may never meet; draw the initial distribution inside "
+                "the support of the target",
+                InputWarning,
+            )
+
+
 class _SlowPairs:
     # Warns once about a pair still unmet at the slow-pair threshold (spec section 6.3):
     # from the engine's status as it happens, or from the meeting times after a run on a
@@ -481,7 +526,7 @@ class _SlowPairs:
         self.warned = False
 
     def __call__(self, status: engine.Status) -> None:
-        if status.t >= self.threshold:
+        if status.t >= self.threshold and not self.warned:
             # The first Ctrl-C lets the replicates in progress finish (spec section 6.5),
             # this one too, so it does not end the wait.
             waiting = ", and the run waits for it"
@@ -490,21 +535,27 @@ class _SlowPairs:
                     ": a first Ctrl-C starts no new replicate but lets this one finish, "
                     "and a second stops the run without a result"
                 )
-            self._warn(status.slowest, waiting)
+            self._warn(status.slowest, waiting, status.slowest in status.zero_density)
 
     def after(self, replicates: engine.Replicates) -> None:
         # A pair is unmet at the threshold when it meets, or is censored, after it.
         slow = replicates.index[replicates.stopped > self.threshold]
         if len(slow):
-            self._warn(int(slow[0]), "")
+            self._warn(int(slow[0]), "", bool(np.isin(slow[0], replicates.zero_density)))
 
-    def _warn(self, replicate: int, waiting: str) -> None:
+    def _warn(self, replicate: int, waiting: str, outside: bool) -> None:
         if not self.warned:
             self.warned = True
+            cause = (
+                "it started where the target density is zero, so draw the initial "
+                "distribution inside the support of the target"
+                if outside
+                else "the meeting times may be heavy-tailed: look at the kernel and the "
+                "initial distribution"
+            )
             warn(
                 f"{self.kind} {replicate} has not met after {self.threshold} "
-                f"iterations{waiting}; the meeting times may be heavy-tailed: look at the "
-                "kernel and the initial distribution",
+                f"iterations{waiting}; {cause}",
                 ConvergenceWarning,
             )
 

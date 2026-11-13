@@ -214,12 +214,22 @@ def issues(result: Result) -> list[Issue]:
     found = []
     values = result.diagnostics()
     if result.n_censored:
+        # A pair that starts where the density is zero may never meet, so no cap would
+        # leave the run waiting forever.
+        outside = len(result._replicates.zero_density)
+        remedy = (
+            f"{outside} pairs started where the target density is zero, from which a pair "
+            "may never meet: draw the initial distribution inside the support of the "
+            "target, and run a new sampler with a larger max_iter"
+            if outside
+            else "run a new sampler with a larger max_iter, or none"
+        )
         found.append(
             Issue(
                 "censored",
                 f"{result.n_censored} of {len(result.meeting_times)} pairs reached max_iter = "
                 f"{result.max_iter} without meeting and are excluded, which biases the "
-                "estimates; run a new sampler with a larger max_iter, or none",
+                f"estimates; {remedy}",
             )
         )
     if values["late_fraction"] > 0.25:

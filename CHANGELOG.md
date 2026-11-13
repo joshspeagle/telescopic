@@ -195,3 +195,9 @@ All notable changes to this project are documented here. The format follows
 - `Result.diagnostics()` reports `variance_share_replicate`, the index of the replicate
   that holds the largest share of the variance of an estimate, and the variance warning
   names it.
+- A replicate or pilot pair that starts where the target density is zero is reported
+  as soon as it starts, in this process, instead of when the run ends; the slow-pair
+  warning of such a pair says so, the censoring warning no longer suggests running
+  without a cap after such starts, and a pilot that cannot choose `k` names them instead
+  of advising a wider initial distribution. `engine.Status` carries the replicates
+  started at zero density so far.

@@ -112,6 +112,14 @@ def test_a_pair_censored_after_the_slow_threshold_is_slow(met):
     assert {"censored", "slow"} <= {issue.kind for issue in found}
 
 
+def test_the_censored_warning_does_not_advise_no_cap_after_zero_density_starts():
+    result = synthetic([3, -1, 4], [0.0, 0.0, 1.0], max_iter=50)
+    result._replicates.zero_density = np.array([1])
+    (message,) = [issue.message for issue in issues(result) if issue.kind == "censored"]
+    assert "or none" not in message
+    assert "1 pairs started where the target density is zero" in message
+
+
 def test_changing_the_diagnostics_returned_leaves_the_results_own():
     result = synthetic([2] * 50, np.zeros(50), k=5)
     result.diagnostics()["late_fraction"] = 1.0
