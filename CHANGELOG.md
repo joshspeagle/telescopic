@@ -159,3 +159,6 @@ All notable changes to this project are documented here. The format follows
 - The package ships a `py.typed` marker, so type checkers such as mypy and pyright read
   its annotations, and its metadata lists the supported Python versions (3.11 to 3.15),
   that it runs on any operating system, that it is typed, and a link to its issues.
+- Fixes and checks of a hardening pass, now recorded and tested: a `Mixture` never
+  applies a component of weight 0, which the largest uniforms could select where
+  rounding left the cumulative weights below 1.

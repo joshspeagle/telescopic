@@ -417,7 +417,7 @@ The documentation says that settings optimal for HMC alone can fail to contract 
 
 `Mixture(kernels, weights)`. A common uniform chooses the same component for both chains, and that component's coupling is applied.
 
-The choice of component must not depend on the states (AJ24 §4.2). Switching between couplings of the same kernel may depend on them (§5.7).
+The choice of component must not depend on the states (AJ24 §4.2). Switching between couplings of the same kernel may depend on them (§5.7). A component of weight 0 is never applied, even where rounding leaves the cumulative weights below 1 (DECISIONS #119).
 
 ---
 

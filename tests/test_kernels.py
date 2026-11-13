@@ -961,9 +961,12 @@ def test_kernels_consume_the_draws_they_document(kernel, step, coupled):
             getattr(kernel, call)(TARGET, *args, short)
 
 
-def test_mixture_never_selects_trailing_zero_weight_components():
-    rw1 = RandomWalk(np.eye(1), scale=1.0)
-    rw2 = RandomWalk(np.eye(1), scale=2.0)
-    mix = Mixture([rw1, rw2], [1.0, 0.0])
-    draws = fixed_draws(normals=[np.zeros(4)], uniforms=[np.array([1.0, 0.5])])
-    np.testing.assert_array_equal(mix._choose(draws), [0])
+def test_a_mixture_never_applies_a_trailing_component_of_weight_zero():
+    # The cumulative weights of ten weights of 0.1 end at 1 - 2^-53, the largest uniform,
+    # which selected the eleventh component, of weight 0.
+    kernel = Mixture([Shift(float(i)) for i in range(11)], [0.1] * 10 + [0.0])
+    largest = np.nextafter(1.0, 0.0)
+    new, _ = kernel.step(
+        TARGET, State(np.zeros((1, 1)), np.zeros(1)), fixed_draws(uniforms=[[largest]])
+    )
+    assert new.x[0, 0] == 9.0
