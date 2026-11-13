@@ -122,6 +122,40 @@ All notable changes to this project are documented here. The format follows
   gradients, and `coupling="crn"` with conditionals whose `mean` and `cov` are methods
   raise a `ValueError` or `TypeError` that names the cause; MALA's coupled step no
   longer warns when its drift overflows.
+- Input validation: an array argument that is not real numbers, such as a string (a
+  numeric one included), `None`, a boolean, a complex number or a ragged list, raises
+  `TypeError` naming the argument and the expected form, where NumPy's message named
+  neither; real numbers held as objects, such as `Fraction`, `Decimal` or an object
+  column of pandas, still convert to floats. `as_initial` raises its own `TypeError` for
+  a ragged `init`. A flag that is not `True` or `False` (`vectorize`, `progress`,
+  `strict`, `store`, `keep_paths`), and an `args` that is not a tuple or a list, raise
+  `TypeError` naming the argument, and so do a target or a kernel that is not a
+  `Target` or `Kernel` instance, such as a bare log-density passed to `engine.run` or a
+  kernel class in a `Mixture`. `SignedMeasure` checks its arrays: `atoms` and `weights`
+  that are not real numbers raise `TypeError`, and wrong shapes or a replicate index
+  that is not an integer in range raise `ValueError`. Its attributes are read-only views
+  of the arrays passed in, so they cannot be written through; the arrays passed in, such
+  as those of the `Replicates` that `engine.run` returns, stay writable: the package
+  never writes to them, and a user who does changes the measure. `unbiased_variance`
+  and `unbiased_covariance` of a scalar raise `ValueError`.
+  `CoupledSampler.meeting_times` refuses `max_iter=None`, so the pilot is always capped,
+  and `slow_pair_threshold` checks that `lag` is at least 1 and `m` at least 0.
+- A target function's output that is not numbers, such as `None` or a string, at one
+  point among good ones raises `ValueError` naming the function and the point; an emcee
+  `(log_prob, blobs)` tuple is told that derived quantities come from `Result.estimate`.
+  A pointwise function whose outputs differ from point to point only by axes of length
+  1, such as a float at some points and SciPy's `logpdf` of shape `(1,)` at others, is
+  accepted, and one evaluated on no points returns an empty array. A complex output
+  with an imaginary part of exactly 0 is its real part, and any other complex output
+  raises; floating outputs narrower than float64, as JAX returns by default, emit one
+  `InputWarning` per target that names their dtype.
+- When `names` and the initial distribution differ in dimension, the error names the
+  dimension the initial distribution draws; tuning chains whose covariance overflows,
+  on a target flat in some direction or with scales near the float64 limit, raise an
+  error that says so, instead of NumPy's overflow warnings and "cov must be finite".
+- Tuning a MALA or HMC step size no longer raises when a pilot chain ends where the
+  gradient is not finite but the log-density is: its dual-averaging chains take that
+  gradient as 0, as runs do wherever chains move.
 - Changes to `Result` ruled before the first release: the last bin of a histogram is
   closed, as in `numpy.histogram`, so an atom on the upper edge of `range` is counted,
   and the last edge of the default range is no longer nudged up; the TV bound and its

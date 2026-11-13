@@ -13,11 +13,25 @@ which each pair of chains starts.
 
 `log_prob(x, *args, **kwargs)` takes one point `x` of shape `(d,)` and returns its
 log-density, up to an additive constant, as a float. The arguments `args` and `kwargs`
-of {func}`telescopic.sample` are passed on to it. With `vectorize=True` it takes a batch
-of shape `(n, d)` and returns shape `(n,)`, so that a step of many chains costs one call
-instead of one per point. An output whose shape differs from the expected one only by
-axes of length 1, such as the shape `()` that SciPy's `multivariate_normal.logpdf`
-returns for a batch of one point, is reshaped; any other shape raises `ValueError`.
+of {func}`telescopic.sample` are passed on to it: `args` is a tuple or a list, such as
+`(data,)`, and any other `args`, such as an array, raises `TypeError`. With
+`vectorize=True` it takes a batch of shape `(n, d)` and returns shape `(n,)`, so that a
+step of many chains costs one call instead of one per point. An output whose shape
+differs from the expected one only by axes of length 1, such as the shape `()` that
+SciPy's `multivariate_normal.logpdf` returns for a batch of one point, is reshaped; a
+function called point by point may return a float at some points and an array of one
+element at others. Integers, booleans and real numbers held as objects, such as
+`Fraction`s or `Decimal`s, convert to float64. Any other shape raises `ValueError`, as
+does an output that is not numbers, such as `None` or emcee's `(log_prob, blobs)` tuple:
+quantities derived from the parameters are computed after the run, with
+{meth}`telescopic.Result.estimate`. A complex output whose imaginary part is exactly 0,
+as complex-step derivatives give, counts as its real part; any other complex output
+raises. telescopic computes in float64: a function that returns float32 values, as JAX
+does unless `jax.config.update("jax_enable_x64", True)` is called first, rounds the
+target, so it emits an `InputWarning`, once per target and naming the dtype. On a pool,
+each worker process evaluates its own copy of the target and warns there, so the warning
+appears in the workers' output rather than in this process, unless this process also
+evaluates the target, as tuning does.
 
 ```{code-cell} python
 import numpy as np
@@ -107,11 +121,13 @@ For the gradient:
 - Where the log-density is finite, a gradient that is not finite raises `ValueError`
   with the point at the states that chains start from: a MALA chain could not leave such
   a start, since a move back is accepted only if the reverse proposal, which carries the
-  full drift, could return. Elsewhere it is taken as 0 too, which keeps MALA and HMC exact
-  but takes their drift away there. The pilot pairs and the replicates of a run that meet
-  one warn, in this process as soon as they do and on a pool when the run ends, and
-  `Result.n_grad_zeroed` counts the replicates' ones. Tuning does not warn: its search for
-  a step size reaches far into the tails.
+  full drift, could return. Tuning's step-size search starts its chains from the
+  pilot's last states, not from the initial distribution, and takes it as 0 there, since
+  only the step size depends on those chains. Elsewhere it is taken as 0 too, which
+  keeps MALA and HMC exact but takes their drift away there. The pilot pairs and the
+  replicates of a run that meet one warn, in this process as soon as they do and on a
+  pool when the run ends, and `Result.n_grad_zeroed` counts the replicates' ones. Tuning
+  does not warn: its search for a step size reaches far into the tails.
 - Such a gradient costs nothing where the chains do not go, as with a mixture's
   responsibilities computed from densities, which underflow far in the tails. Where they
   go, it slows them, and HMC pairs that lose their drift over much of the target may not

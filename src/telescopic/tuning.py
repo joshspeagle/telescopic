@@ -12,7 +12,7 @@ import numpy.typing as npt
 
 from telescopic._linalg import matvec
 from telescopic._random import TUNING, Streams, replicate_generator, root_seed
-from telescopic._types import FloatArray, Seed, integer, integral, real
+from telescopic._types import FloatArray, Seed, instance, integer, integral, real, real_array
 from telescopic.initial import as_initial, draw
 from telescopic.target import Target
 
@@ -156,6 +156,7 @@ def adaptive_metropolis(
     Cholesky factorisations: beyond 20 dimensions the chains refactor the covariance and
     keep their states every :math:`\lceil d/20\rceil` steps, or fewer for a short pilot.
     """
+    instance("target", target, Target)
     if n_steps is not None:
         # The second half of each chain needs two states for R-hat.
         n_steps = integer("n_steps", n_steps, "an integer or None", minimum=3)
@@ -199,7 +200,17 @@ def adaptive_metropolis(
         if step % stride == 0:
             if step:
                 block = deltas.reshape(-1, d)
-                total += block.T @ block / N_CHAINS
+                with np.errstate(over="ignore", invalid="ignore"):
+                    total += block.T @ block / N_CHAINS
+                # Where the target is flat, the scales grow until the covariance overflows,
+                # and RandomWalk would blame its cov (DECISIONS #112).
+                if not np.isfinite(total).all():
+                    raise ValueError(
+                        "the tuning chains diverged (their covariance is not finite): the "
+                        "target may be improper, or its scales near the float64 limit; check "
+                        "that log_prob decreases in every direction, or give the kernel's "
+                        "parameters"
+                    )
             # A ridge of 1e-12 times each coordinate's variance, which keeps the
             # factorisation independent of the coordinates' scales.
             chol = np.linalg.cholesky(total / (step + 1) * ridge)
@@ -239,7 +250,8 @@ def dual_averaging(
 ) -> float:
     r"""A step size whose mean acceptance probability is ``target_acceptance`` (spec 5.4, 5.5).
 
-    One chain per pilot chain runs ``kernel_at(step_size)`` from that chain's last state.
+    One chain per pilot chain runs ``kernel_at(step_size)`` from that chain's last state,
+    where a gradient that is not finite where the log-density is counts as 0.
     After step :math:`t` the step size becomes
     :math:`\epsilon_t = \exp(\mu - \sqrt t\,\bar H_t/\gamma)`, where :math:`\bar H_t`
     averages the target acceptance minus the chains' mean acceptance probability with
@@ -272,7 +284,15 @@ def dual_averaging(
     for chain in range(N_CHAINS):
         streams.assign(chain, replicate_generator(root, TUNING, N_CHAINS + chain))
     draws = streams.view(np.arange(N_CHAINS))
-    state = kernel_at(step_size).init_state(target, pilot.samples[:, -1])
+    # Not init_state, which raises at a gradient that is not finite where the density is:
+    # these starts are the pilot's, not the user's, and only the step size depends on
+    # them, so such a gradient is taken as 0 there too (DECISIONS #113).
+    from telescopic.kernels.base import evaluate
+
+    kernel, starts = kernel_at(step_size), pilot.samples[:, -1]
+    kernel.check_ndim(starts.shape[1])
+    kernel.check_target(target)
+    state = evaluate(target, starts, kernel.needs_grad)
     mu, h_bar, log_average = np.log(10 * step_size), 0.0, 0.0
     for t in range(1, DUAL_AVERAGING_STEPS + 1):
         state, acceptance = kernel_at(step_size).step(target, state, draws)
@@ -303,7 +323,7 @@ def choose_k(meeting_times: npt.ArrayLike, quantile: float = 0.99) -> int:
     -------
     int
     """
-    tau = np.asarray(meeting_times, dtype=np.float64)
+    tau = real_array("meeting_times", meeting_times, "positive integers or inf, shape (R0,)")
     if tau.ndim != 1 or len(tau) == 0:
         raise ValueError("meeting_times must be a non-empty one-dimensional array")
     finite = tau[tau < np.inf]

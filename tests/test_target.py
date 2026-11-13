@@ -1,11 +1,15 @@
 import math
+from decimal import Decimal
+from fractions import Fraction
 
 import numpy as np
 import pytest
+from scipy import stats
 
 from telescopic.kernels import MALA
 from telescopic.target import Target
 from telescopic.testing import random_draws
+from telescopic.warnings import InputWarning
 
 
 def gaussian(x, scale=1.0):
@@ -110,13 +114,20 @@ def test_vectorize_must_be_a_bool():
         Target(gaussian, vectorize="no")
 
 
+@pytest.mark.parametrize("args", [np.zeros(2), "ab", 5])
+def test_target_refuses_args_that_are_not_a_tuple(args):
+    # An array's rows, or a string's letters, became extra positional arguments.
+    with pytest.raises(TypeError, match="args must be a tuple of extra arguments"):
+        Target(gaussian, args=args)
+
+
 def test_a_target_without_gradient_refuses_gradient_requests():
     with pytest.raises(ValueError, match="no gradient"):
         Target(gaussian).log_prob_and_grad(np.zeros((1, 2)))
 
 
 def test_a_wrong_output_shape_raises():
-    with pytest.raises(ValueError, match="expected"):
+    with pytest.raises(ValueError, match=r"returned shape \(3,\) for 2 points"):
         Target(lambda x: np.zeros(3), vectorize=True).log_prob(np.zeros((2, 1)))
 
 
@@ -179,3 +190,132 @@ def test_a_target_without_a_log_density_gives_zero_and_takes_no_gradient():
     assert not target.has_log_prob
     with pytest.raises(ValueError, match="grad needs log_prob"):
         Target(None, grad=lambda x: -x)
+
+
+@pytest.mark.parametrize(("bad", "returned"), [(None, "None"), (np.zeros(1), r"shape \(1,\)")])
+def test_a_pointwise_grad_returning_none_or_a_wrong_shape_at_one_point_names_it_and_the_point(
+    bad, returned
+):
+    # One bad row among good ones raised NumPy's "inhomogeneous shape" ValueError, which
+    # named neither grad nor the point.
+    def grad(x):
+        return bad if x[0] > 0 else -x
+
+    target = Target(gaussian, grad)
+    with pytest.raises(ValueError, match=f"grad returned {returned} at x = \\[1.0, 0.0\\]"):
+        target.log_prob_and_grad(np.array([[-1.0, 0.0], [1.0, 0.0]]))
+
+
+@pytest.mark.parametrize(
+    ("output", "returned"),
+    [([[0.0], [0.0, 1.0]], "a ragged sequence"), (np.array(["a", "b"]), "array")],
+)
+def test_a_vectorized_output_that_is_not_numbers_is_named(output, returned):
+    with pytest.raises(ValueError, match=f"<lambda> returned {returned}.* for 2 points"):
+        Target(lambda x: output, vectorize=True).log_prob(np.zeros((2, 1)))
+
+
+def test_a_log_prob_returning_emcee_blobs_is_told_where_derived_quantities_go():
+    with pytest.raises(ValueError, match=r"computed after the run with Result\.estimate"):
+        Target(lambda x: (gaussian(x), x[0])).log_prob(np.zeros((2, 1)))
+
+
+@pytest.mark.parametrize("vectorize", [False, True])
+def test_a_complex_grad_with_an_imaginary_part_raises_naming_grad(vectorize):
+    # It was cast to its real part with only a ComplexWarning.
+    def grad(x):
+        return -x + 1j * (x > 0)
+
+    target = Target(gaussian, grad, vectorize=vectorize)
+    with pytest.raises(ValueError, match=r"grad returned \[\(-1\+1j\)\] at x = \[1.0\]"):
+        target.log_prob_and_grad(np.array([[-1.0], [1.0]]))
+
+
+@pytest.mark.parametrize("vectorize", [False, True])
+def test_a_complex_output_with_a_zero_imaginary_part_is_its_real_part(vectorize):
+    # A complex log_prob raised TypeError, and a complex grad warned (ComplexWarning).
+    def log_prob(x):
+        return gaussian(x) + 0j
+
+    def grad(x):
+        return -x + 0j
+
+    x = np.array([[1.0], [2.0]])
+    values, gradients = Target(log_prob, grad, vectorize=vectorize).log_prob_and_grad(x)
+    np.testing.assert_array_equal(values, [-0.5, -2.0])
+    np.testing.assert_array_equal(gradients, -x)
+    assert gradients.dtype == np.float64
+
+
+@pytest.mark.parametrize("vectorize", [False, True])
+@pytest.mark.parametrize("narrow", ["log_prob", "grad"])
+def test_a_float32_output_warns_once(vectorize, narrow):
+    # float32 values, as JAX returns by default, were accepted silently.
+    def log_prob(x):
+        return gaussian(x).astype(np.float32 if narrow == "log_prob" else np.float64)
+
+    def grad(x):
+        return -x.astype(np.float32 if narrow == "grad" else np.float64)
+
+    target = Target(log_prob, grad, vectorize=vectorize)
+    with pytest.warns(InputWarning, match=f"^{narrow} returned float32 values"):
+        target.log_prob_and_grad(np.ones((2, 1)))
+    target.log_prob_and_grad(np.ones((1, 1)))  # filterwarnings = error
+
+
+def test_a_complex64_output_is_named_complex64_in_the_warning():
+    # The warning read "float32", the dtype of the real part.
+    target = Target(lambda x: np.complex64(gaussian(x)))
+    with pytest.warns(InputWarning, match="returned complex64 values.*rounded to float32"):
+        target.log_prob(np.ones((2, 1)))
+
+
+def test_an_integer_log_prob_does_not_warn():
+    values = Target(lambda x: 0).log_prob(np.ones((2, 1)))  # filterwarnings = error
+    assert values.dtype == np.float64
+
+
+def test_a_pointwise_grad_on_no_points_returns_an_empty_array():
+    # The empty list of outputs stacked as shape (0,), which raised StopIteration.
+    values, gradients = Target(gaussian, np.negative).log_prob_and_grad(np.empty((0, 2)))
+    assert values.shape == (0,)
+    assert gradients.shape == (0, 2)
+
+
+def test_pointwise_outputs_that_differ_only_by_axes_of_length_one_are_accepted():
+    # A float on one branch and SciPy's logpdf, shape (1,), on the other raised, naming
+    # the float as the wrong shape.
+    target = Target(
+        lambda x: -np.inf if x[0] < 0 else stats.norm.logpdf(x),
+        lambda x: -x[None] if x[0] < 1 else -x,
+    )
+    x = np.array([[2.0], [-1.0], [0.5]])
+    values, gradients = target.log_prob_and_grad(x)
+    np.testing.assert_array_equal(
+        values, [stats.norm.logpdf(2.0), -np.inf, stats.norm.logpdf(0.5)]
+    )
+    np.testing.assert_array_equal(gradients, [[-2.0], [0.0], [-0.5]])
+
+
+@pytest.mark.parametrize("vectorize", [False, True])
+@pytest.mark.parametrize("number", [Fraction, Decimal, float])
+def test_real_numbers_held_as_objects_convert_as_floats(vectorize, number):
+    # Fractions, Decimals and object arrays of floats, which NumPy's float conversion took,
+    # were refused as not numbers.
+    def log_prob(x):
+        values = np.array([number(str(-row @ row / 2)) for row in np.atleast_2d(x)], object)
+        return values if vectorize else values[:1]
+
+    values = Target(log_prob, vectorize=vectorize).log_prob(np.array([[1.0], [3.0]]))
+    np.testing.assert_array_equal(values, [-0.5, -4.5])
+    assert values.dtype == np.float64
+
+
+@pytest.mark.parametrize("vectorize", [False, True])
+def test_none_among_real_numbers_held_as_objects_is_refused(vectorize):
+    def log_prob(x):
+        values = np.array([None if row[0] > 0 else 0.0 for row in np.atleast_2d(x)], object)
+        return values if vectorize else values[0]
+
+    with pytest.raises(ValueError, match="log_prob returned"):
+        Target(log_prob, vectorize=vectorize).log_prob(np.array([[-1.0], [1.0]]))

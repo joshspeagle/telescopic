@@ -105,3 +105,12 @@ def test_an_object_without_rvs_is_not_an_initial_distribution():
 def test_invalid_helper_parameters_raise(factory, message):
     with pytest.raises(ValueError, match=message):
         factory()
+
+
+def test_normal_and_empirical_do_not_alias_the_arrays_they_are_given():
+    mean, cov, points = np.zeros(2), np.eye(2), np.ones((3, 2))
+    normal, empirical = Normal(mean, cov), Empirical(points)
+    mean[0], cov[0, 0], points[0, 0] = 5.0, 9.0, 7.0
+    np.testing.assert_array_equal(normal.mean, [0.0, 0.0])
+    np.testing.assert_array_equal(normal.cov, np.eye(2))
+    np.testing.assert_array_equal(empirical.points, np.ones((3, 2)))

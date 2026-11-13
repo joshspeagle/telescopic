@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, NamedTuple
 import numpy as np
 import numpy.typing as npt
 
-from telescopic._types import FloatArray, integer, integral
+from telescopic._types import FloatArray, integer, integral, real_array
 
 if TYPE_CHECKING:
     from telescopic.results import Result
@@ -42,7 +42,7 @@ def tv_bound(meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike) -> FloatA
     Computed as :math:`\sum_{j \ge 1} \hat S(t + jL)` with the empirical survival
     function :math:`\hat S(u) = R^{-1}\#\{\tau > u\}`, in :math:`O(R + \max\tau)`.
     """
-    tau = np.asarray(meeting_times, dtype=np.float64)
+    tau = real_array("meeting_times", meeting_times, "integers of shape (R,)")
     if tau.ndim != 1 or len(tau) == 0 or not integral(tau, 0):
         raise ValueError(
             "meeting_times must be a non-empty one-dimensional array of non-negative "
@@ -83,7 +83,8 @@ def w1_bound(
     ndarray, shape of ``t``
     """
     n_replicates = integer("n_replicates", n_replicates, minimum=1)
-    times, distances = np.asarray(distance_time), np.asarray(distance, dtype=np.float64)
+    times = real_array("distance_time", distance_time, "integers of shape (M,)", dtype=None)
+    distances = real_array("distance", distance, "real numbers of shape (M,)")
     if times.ndim != 1 or times.shape != distances.shape:
         raise ValueError(
             f"distance_time and distance must have one shape (M,), not {times.shape} and "
@@ -102,7 +103,7 @@ def _lagged_tail(values: FloatArray, lag: int, t: npt.ArrayLike) -> FloatArray:
     # sum_{j >= 1} values[t + jL], with values zero past the end. tail[i, r] sums values
     # over the times i'L + r with i' >= i; the padding adds a last row of zeros.
     lag = integer("lag", lag, minimum=1)
-    times = np.asarray(t)
+    times = real_array("t", t, "integers", dtype=None)
     if not integral(times, 0):
         raise ValueError(f"t must be non-negative integers, not {times}")
     # Past the end every sum is 0, so a larger t needs no larger integer.
@@ -140,7 +141,7 @@ def hill(values: npt.ArrayLike, n_tail: int) -> float:
         ``nan`` where ties make the smallest value the threshold, and otherwise ``inf``
         when the :math:`k + 1` largest values are equal.
     """
-    x = np.asarray(values, dtype=np.float64)
+    x = real_array("values", values, "real numbers of shape (n,)")
     if x.ndim != 1:
         raise ValueError(f"values must have shape (n,), not {x.shape}")
     x = np.sort(x)
@@ -170,7 +171,7 @@ def variance_share(values: npt.ArrayLike) -> FloatArray:
     ndarray, shape () or (p,)
         0 for a column without variance, or whose values differ only by rounding.
     """
-    values = np.asarray(values, dtype=np.float64)
+    values = real_array("values", values, "real numbers of shape (R,) or (R, p)")
     if values.ndim not in (1, 2) or len(values) == 0:
         raise ValueError(f"values must have shape (R,) or (R, p) with R >= 1, not {values.shape}")
     if not np.isfinite(values).all():
@@ -268,13 +269,16 @@ def slow_pair_threshold(lag: int, m: int) -> int:
 
     Parameters
     ----------
-    lag, m : int
+    lag : int
+        At least 1.
+    m : int
+        At least 0.
 
     Returns
     -------
     int
     """
-    return max(10_000, 10 * max(integer("lag", lag), integer("m", m)))
+    return max(10_000, 10 * max(integer("lag", lag, minimum=1), integer("m", m, minimum=0)))
 
 
 def tuning_disagreement(tuning: TuningReport | None) -> str | None:

@@ -244,7 +244,7 @@ def test_a_result_missing_requested_replicates_is_interrupted_until_they_run():
 @pytest.mark.parametrize(
     ("names", "error", "message"),
     [
-        (["a"], ValueError, "names must have 2 entries"),
+        (["a"], ValueError, "the atoms are points of dimension 2, but names gives 1"),
         (["a", "a"], ValueError, "names must be distinct"),
         ([0, 1], TypeError, "names must be a sequence of strings"),
         ("ab", TypeError, "names must be a sequence of strings"),

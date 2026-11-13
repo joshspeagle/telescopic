@@ -284,3 +284,33 @@ def test_choose_k_refuses_a_quantile_on_a_censored_pair():
     tau = np.concatenate([np.arange(1, 99), [np.inf, np.inf]])
     with pytest.raises(ValueError, match="never met within their cap"):
         choose_k(tau)
+
+
+def test_a_flat_target_raises_that_the_tuning_chains_diverged():
+    # The covariance overflowed with six RuntimeWarnings, which filterwarnings = error
+    # turns into errors, and RandomWalk then raised "cov must be finite".
+    with pytest.raises(ValueError, match="the tuning chains diverged"):
+        RandomWalk().tune(Target(lambda x: 0.0), Normal(np.zeros(2), 4 * np.eye(2)), 1)
+
+
+def test_a_target_with_scales_near_the_float64_limit_raises_naming_that_cause():
+    # The running sum of squares overflows on a proper target too, and the message named
+    # only an improper one.
+    scale = 1e153
+    target = Target(lambda x: -0.5 * np.sum((x / scale) ** 2, axis=-1), vectorize=True)
+    with pytest.raises(ValueError, match="or its scales near the float64 limit"):
+        RandomWalk().tune(target, Normal(np.zeros(2), scale**2 * np.eye(2)), 1)
+
+
+@pytest.mark.parametrize("kernel", [MALA(), HMC()])
+def test_tuning_does_not_raise_at_a_pilot_state_with_a_nan_gradient(kernel):
+    # Dual averaging started its chains with init_state at the pilot's last states, so a
+    # NaN gradient there raised "chains cannot start there": on N(0, 1) with a NaN
+    # gradient beyond 1, from N(-1, 0.01), tune() failed in 9 of 20 seeds (issue #82).
+    target = Target(lambda x: -0.5 * x @ x, grad=lambda x: np.where(x > 1, np.nan, -x))
+    samples = np.random.default_rng(0).standard_normal((4, 50, 1))
+    samples[:, -1, 0] = [1.5, -0.5, 0.2, -1.0]
+    pilot = PilotRun(samples, -0.5 * samples[..., 0] ** 2, np.full(4, 0.3), 100)
+    tuned, _ = kernel.tune(target, Normal([-1.0], [0.01]), 0, pilot=pilot)
+    step_size = (tuned.kernels[0] if isinstance(tuned, HMC) else tuned).step_size
+    assert 0 < step_size < np.inf

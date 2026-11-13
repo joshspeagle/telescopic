@@ -6,7 +6,7 @@ import numpy as np
 import numpy.typing as npt
 from scipy.linalg import solve_triangular
 
-from telescopic._types import FloatArray
+from telescopic._types import FloatArray, real_array
 
 
 def matvec(matrix: FloatArray, vectors: FloatArray) -> FloatArray:
@@ -59,7 +59,7 @@ def _symmetric(name: str, cov: npt.ArrayLike, ndim: int | None) -> FloatArray:
     # The symmetric part of a finite square matrix, of size ndim if given, symmetric up
     # to rounding: |C_ij - C_ji| <= 1e-8 sqrt(C_ii C_jj), a test that does not depend on
     # the coordinates' scales.
-    matrix = np.array(cov, dtype=np.float64, ndmin=2)
+    matrix = real_array(name, cov, "real numbers of shape (d, d)", ndmin=2)
     if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
         raise ValueError(f"{name} must be a square matrix, not shape {np.shape(cov)}")
     if ndim is not None and len(matrix) != ndim:

@@ -13,7 +13,7 @@ from telescopic import diagnostics, engine
 from telescopic._parallel import Interrupt, check_pool, execute, opened
 from telescopic._progress import Progress
 from telescopic._random import MAIN, PILOT, namespace_seed, replicate_generator, root_seed
-from telescopic._types import FloatArray, IntArray, Seed, integer, parameter_names
+from telescopic._types import FloatArray, IntArray, Seed, flag, integer, parameter_names
 from telescopic.initial import as_initial, draw
 from telescopic.kernels import HMC, MALA, Independence, Kernel, RandomWalk
 from telescopic.results import Result
@@ -59,8 +59,10 @@ class CoupledSampler:
         points of shape ``(n, d)``. Every :math:`\pi_0` from which the chain converges
         keeps the estimates unbiased (Guarantees and their limits, in :doc:`/theory`);
         one wider than the target and covering all its modes keeps them reliable.
-    args, kwargs
-        Extra arguments of ``log_prob`` and ``grad``.
+    args : tuple or list
+        Extra positional arguments of ``log_prob`` and ``grad``, such as ``(data,)``.
+    kwargs : mapping, optional
+        Extra keyword arguments of ``log_prob`` and ``grad``.
     grad : callable, optional
         :math:`\nabla\log\pi` with the signature of ``log_prob``. Only the kernels that
         need it, MALA and HMC, evaluate it; ``"auto"`` is random-walk Metropolis.
@@ -116,7 +118,7 @@ class CoupledSampler:
         progress: bool = False,
         rng: Seed = None,
     ) -> None:
-        self.pool, self.progress = check_pool(pool), progress
+        self.pool, self.progress = check_pool(pool), flag("progress", progress)
         self.target = Target(log_prob, grad, args=args, kwargs=kwargs, vectorize=vectorize)
         self.initial = as_initial(init)
         if isinstance(kernel, str) and kernel in KERNELS:
@@ -132,7 +134,9 @@ class CoupledSampler:
         # the names are checked now rather than after tuning.
         self.ndim = len(draw(self.initial, replicate_generator(self.seed, MAIN, 0)))
         self.kernel.check_ndim(self.ndim)
-        self.names = None if names is None else parameter_names(names, self.ndim)
+        # The dimension comes from a draw, so a length error blames the initial distribution.
+        draws = "the initial distribution draws points"
+        self.names = None if names is None else parameter_names(names, self.ndim, draws)
         self.tuning: TuningReport | None = None
         self.pilot: FloatArray | None = None
         self._replicates: engine.Replicates | None = None
@@ -170,8 +174,9 @@ class CoupledSampler:
         Parameters
         ----------
         n : int
+            Pilot pairs to add, at least 1.
         max_iter : int
-            The cap; a pair still unmet there is censored (spec section 6.3).
+            The cap, above 1; a pair still unmet there is censored (spec section 6.3).
 
         Returns
         -------
@@ -179,6 +184,9 @@ class CoupledSampler:
             Meeting times, ``inf`` for a censored pair.
         """
         n = integer("n", n, minimum=1)
+        # Before check_settings, which takes None for no cap: an uncapped pilot can run
+        # forever where the coupling never meets (D-23).
+        max_iter = integer("max_iter", max_iter)
         settings = engine.check_settings(PILOT_SETTINGS._replace(max_iter=max_iter))
         with opened(self.pool) as pool:
             return self._meeting_times(n, settings, pool, self.progress)
@@ -240,7 +248,7 @@ class CoupledSampler:
         """
         n_replicates = integer("n_replicates", n_replicates, minimum=1)
         given = self._check(k, m, lag, thin, max_iter)
-        show = self.progress if progress is None else progress
+        show = self.progress if progress is None else flag("progress", progress)
         interrupt = Interrupt()
         with ExitStack() as catching:
             # Worker processes start before tuning, which runs here meanwhile, and serve

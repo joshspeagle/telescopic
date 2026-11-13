@@ -20,7 +20,10 @@ from telescopic._types import (
     IntArray,
     Seed,
     averaging,
+    flag,
+    instance,
     integer,
+    real_array,
 )
 from telescopic.estimators import correction_coefficients
 from telescopic.initial import as_initial, draw
@@ -225,9 +228,12 @@ def run(
     (8d + 16)` bytes, and the :math:`\tau - L` distances of each replicate 24 bytes each
     (spec R-EXEC-7).
     """
-    settings = check_settings(Settings(k, m, lag, thin, max_iter, store))
+    instance("target", target, Target)
+    instance("kernel", kernel, Kernel)
+    settings = check_settings(Settings(k, m, lag, thin, max_iter, flag("store", store)))
+    keep_paths = flag("keep_paths", keep_paths)
     lanes = integer("lanes", lanes, minimum=1)
-    requested = np.asarray(indices)
+    requested = real_array("indices", indices, "distinct integers >= 0", dtype=None)
     if (
         requested.ndim != 1
         or not len(requested)

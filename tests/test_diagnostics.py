@@ -258,3 +258,10 @@ def test_the_tv_bound_at_k_of_the_diagnostics_is_the_bounds():
 def test_hill_refuses_invalid_arguments(values, n_tail, error, message):
     with pytest.raises(error, match=message):
         hill(values, n_tail)
+
+
+@pytest.mark.parametrize(("lag", "m", "name"), [(0, 5, "lag"), (1, -5, "m")])
+def test_slow_pair_threshold_refuses_a_lag_below_1_or_a_negative_m(lag, m, name):
+    # slow_pair_threshold(0, -5) returned 10000.
+    with pytest.raises(ValueError, match=f"{name} must be at least"):
+        slow_pair_threshold(lag, m)
