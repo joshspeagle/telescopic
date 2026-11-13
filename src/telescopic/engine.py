@@ -379,7 +379,7 @@ class _Start:
 
 
 def stored_bytes(settings: Settings, ndim: int, coupled: npt.ArrayLike) -> float:
-    r"""Bytes of the atoms and distances that replicates store (spec R-EXEC-7).
+    r"""Bytes of the atoms and distances that replicates store.
 
     A replicate that met after :math:`c = \tau - L` coupled steps stores the
     :math:`|S|` atoms of the time average and two atoms for each of the

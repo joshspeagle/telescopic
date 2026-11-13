@@ -272,7 +272,7 @@ def issues(result: Result) -> list[Issue]:
             Issue(
                 "slow",
                 f"a pair was still unmet after {threshold} iterations; the meeting times may "
-                "be heavy-tailed: look at the kernel and the initial distribution",
+                "be heavy-tailed; look at the kernel and the initial distribution",
             )
         )
     return found
@@ -323,7 +323,8 @@ def tuning_disagreement(tuning: TuningReport | None) -> str | None:
             f"the tuning chains disagree (R-hat up to {largest:.2f}): the target may have "
             "several modes, or the chains may not have converged; several modes make "
             "meeting times heavy-tailed, and pairs that never leave one mode miss the "
-            "others; use an initial distribution that covers every mode"
+            "others; unless the initial distribution already covers every mode, use one "
+            "that does"
         )
     if nan.any():
         parts.append(

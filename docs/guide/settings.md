@@ -229,7 +229,9 @@ peak, since sorting the atoms at the end of a run makes a copy, and its first es
 about three times, for a random walk's rejection rate at `thin` $= 1$ from $d = 2$ on.
 Quantiles sort the atoms that are not consecutive repeats, so in one or two dimensions,
 with `thin` above 1 or a kernel that rarely rejects, the estimates take up to about six
-times the stored size. Before each run the sampler estimates the total for all the
+times the stored size. These figures count the arrays that NumPy allocates, as
+`tracemalloc` traces them; the process's resident memory adds Python's own and can run
+somewhat higher. Before each run the sampler estimates the total for all the
 replicates, and emits an {class}`~telescopic.warnings.InputWarning` that states the
 stored size and the peak, with twice the peak as its upper end in one or two
 dimensions, when three times the stored size would exceed 1 GB.

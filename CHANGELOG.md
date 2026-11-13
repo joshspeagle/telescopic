@@ -213,7 +213,9 @@ All notable changes to this project are documented here. The format follows
 - The warnings about late pairs, a replicate dominating the variance, heavy-tailed
   meeting times and slow pairs end with the remedy in a few words, as the warning about
   censored pairs did. A slow pair seen as it happens says that the run waits for it,
-  and for a replicate that a first Ctrl-C lets it finish.
+  and for a replicate that a first Ctrl-C lets it finish. The warning about tuning
+  chains that disagree advises an initial distribution that covers every mode only
+  unless the one given already does.
 - `Result.diagnostics()` reports `variance_share_replicate`, the index of the replicate
   that holds the largest share of the variance of an estimate, and the variance warning
   names it.

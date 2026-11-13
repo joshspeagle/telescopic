@@ -128,7 +128,7 @@ def test_each_warning_fires_on_a_result_built_to_trigger_it(
             {},
             "; look at the survival function of plot_meeting_times, and at the kernel",
         ),
-        ([2, 20_000], [0.0, 1.0], {}, ": look at the kernel and the initial distribution"),
+        ([2, 20_000], [0.0, 1.0], {}, "; look at the kernel and the initial distribution"),
     ],
     ids=["late", "variance share", "tail index", "slow"],
 )
@@ -191,6 +191,9 @@ def test_the_tuning_warning_names_coordinates_whose_r_hat_is_nan(rhat, disagree)
     message = tuning_disagreement(report)
     assert ("disagree (R-hat up to 3.00)" in message) == disagree
     assert ("several modes" in message) == disagree
+    # Conditional: the initial distribution may already cover every mode.
+    conditional = "; unless the initial distribution already covers every mode, use one that does"
+    assert (conditional in message) == disagree
     nan = [i for i, value in enumerate(rhat) if np.isnan(value)]
     assert f"never moved in coordinates {nan} (R-hat NaN)" in message
 

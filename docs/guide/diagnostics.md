@@ -126,9 +126,10 @@ it happens in this process, or when the run ends on a pool. {meth}`telescopic.Re
 emits the warnings that apply to any result, and {func}`telescopic.diagnostics.issues`
 returns them, without warning, as a list of {class}`telescopic.diagnostics.Issue` with
 the `kind` named in each heading below and a `message`, which ends with the remedy in a
-few words. An empty list means only that none of them holds, not that the run is right. They are heuristics, with thresholds set
-so that clean Gaussian runs at the default settings rarely trigger them; the measured
-rates below show how often they fire elsewhere.
+few words. An empty list means only that none of them holds, not that the run is right.
+They are heuristics, with thresholds set so that clean Gaussian runs at the default
+settings rarely trigger them; the measured rates below show how often they fire
+elsewhere.
 
 ### Censored pairs (`censored`)
 
@@ -156,13 +157,13 @@ sample variance of the estimate of some coordinate's mean or variance.
 `result.diagnostics()` reports the largest share as `variance_share`, the estimate that
 holds it as `variance_share_of`, and the index of the replicate that holds it, which
 the warning names, as `variance_share_replicate`, whether or not the warning fires.
-**Meaning:**
-heavy tails or rare excursions make the error bars unreliable. A replicate whose chain is
-still on its way to the target at `k` does this, as from a start far wider than the
-target ([Initial distributions](targets.md#choosing-one)), and so does a replicate that
-found a mode that the others missed. **Remedy:** check the initial distribution, and
-look for a mode that the other replicates missed, starting with the one named; its row
-in the `replicates` of an estimate is its position among the replicates that met. The warning looks at the first two moments of each coordinate only;
+**Meaning:** heavy tails or rare excursions make the error bars unreliable. A replicate
+whose chain is still on its way to the target at `k` does this, as from a start far
+wider than the target ([Initial distributions](targets.md#choosing-one)), and so does a
+replicate that found a mode that the others missed. **Remedy:** check the initial
+distribution, and look for a mode that the other replicates missed, starting with the
+one named; its row in the `replicates` of an estimate is its position among the
+replicates that met. The warning looks at the first two moments of each coordinate only;
 {func}`telescopic.diagnostics.variance_share` applied to `result.estimate(h).replicates`
 checks a function of your own.
 
@@ -194,7 +195,7 @@ miss the others. A NaN says the pilot never moved in that coordinate, so the tun
 kernel's variance there is about $10^{-10}$ and its chains barely move in it either;
 this happens where float64 cannot resolve the target's scale at the coordinate's values,
 such as a scale of $10^3$ at $2^{70}$, where floats are $2^{18}$ apart. **Remedy:** for
-several modes, an initial distribution that covers every mode
+several modes, unless the initial distribution already covers every mode, one that does
 ([Initial distributions](targets.md#choosing-one)); for a NaN, a target written in
 coordinates centered near 0, or the kernel's parameters given instead of tuned
 ([Kernels](kernels.md)). Chains that agree can still all sit in one mode, and the

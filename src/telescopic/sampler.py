@@ -509,15 +509,14 @@ class _ZeroDensityStarts:
         self.warned = False
 
     def __call__(self, status: engine.Status) -> None:
-        if status.zero_density:
-            self._warn(status.zero_density, status.first_zero_density, " so far")
+        self._warn(status.zero_density, status.first_zero_density, " so far")
 
     def after(self, replicates: engine.Replicates) -> None:
-        if len(replicates.zero_density):
-            self._warn(len(replicates.zero_density), int(replicates.zero_density[0]), "")
+        starts = replicates.zero_density
+        self._warn(len(starts), int(starts[0]) if len(starts) else -1, "")
 
     def _warn(self, count: int, first: int, so_far: str) -> None:
-        if not self.warned:
+        if count and not self.warned:
             self.warned = True
             warn(
                 f"{self.kind}s start where the target density is zero ({count}{so_far}, the "
@@ -539,7 +538,7 @@ class _SlowPairs:
         self.warned = False
 
     def __call__(self, status: engine.Status) -> None:
-        if status.t >= self.threshold and not self.warned:
+        if status.t >= self.threshold:
             # The first Ctrl-C lets the replicates in progress finish (spec section 6.5),
             # this one too, so it does not end the wait.
             waiting = ", and the run waits for it"
@@ -564,7 +563,7 @@ class _SlowPairs:
                 "it started where the target density is zero, so draw the initial "
                 "distribution inside the support of the target"
                 if outside
-                else "the meeting times may be heavy-tailed: look at the kernel and the "
+                else "the meeting times may be heavy-tailed, so look at the kernel and the "
                 "initial distribution"
             )
             warn(
