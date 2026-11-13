@@ -124,11 +124,13 @@ assert abs(values["late_fraction"] - values["tv_bound_at_k"]) < 0.01
   `censored`: the quantiles of the meeting times of every pair, each an observed meeting
   time from the sorted values, where censored pairs sort above every pair that met, and
   the number of censored pairs. A quantile that falls on a censored pair is `inf`.
-- `tail_index`: Hill's estimate of the tail index of $\tau - L + 1$, `nan` below 500
-  replicates or behind ties ([`tail`](#heavy-tailed-meeting-times-tail)).
+- `tail_index`: the tail index of $\tau - L + 1$, the power $\alpha$ at which the
+  probability of a value above $t$ falls as $t^{-\alpha}$, by Hill's estimate from the
+  largest values; `nan` below 500 replicates or behind ties
+  ([`tail`](#heavy-tailed-meeting-times-tail)).
 - `late_fraction` and `late_fraction_upper`: the fraction of pairs that met after
   `k + lag`, censored ones included, and its one-sided 95% Clopper-Pearson upper bound,
-  which stays informative when the fraction is 0. The fraction is the leading term of
+  an exact binomial confidence bound, which stays informative when the fraction is 0. The fraction is the leading term of
   `tv_bound_at_k`, the TV bound at $k$, and with `lag = k` the two are close.
 - `variance_share` and `variance_share_of`: the largest share of one replicate in the
   variance of the estimate of a coordinate's mean or variance, and that estimate, such as
@@ -139,11 +141,17 @@ assert abs(values["late_fraction"] - values["tv_bound_at_k"]) < 0.01
 
 ## Warnings
 
-Each run ends by emitting a
+A run emits a
 {class}`telescopic.ConvergenceWarning <telescopic.warnings.ConvergenceWarning>` for each
-condition below that applies to the result of all its replicates so far. Disagreeing
-tuning chains warn instead when the kernel is tuned, and a slow pair when it is seen: as
-it happens in this process, or when the run ends on a pool. {meth}`telescopic.Result.check`
+condition below that applies, at the time this table gives:
+
+| Warning | Emitted |
+|---|---|
+| `censored`, `late`, `variance`, `tail` | when the run ends, about the result of all its replicates so far |
+| `tuning` | when the kernel is tuned, before any pair runs |
+| `slow` | when a pair passes the [threshold](#slow-pairs-slow) in this process, or when the run ends on a pool |
+
+{meth}`telescopic.Result.check`
 emits the warnings that apply to any result, and {func}`telescopic.diagnostics.issues`
 returns them, without warning, as a list of {class}`telescopic.diagnostics.Issue` with
 the `kind` named in each heading below and a `message`. An empty list means only that
@@ -188,9 +196,9 @@ checks a function of your own.
 **Trigger:** with at least 500 replicates, Hill's estimate of the tail index of
 $\tau - L + 1$ ({func}`telescopic.diagnostics.hill`), from its $\lfloor R/10 \rfloor$
 largest values, is below 2. `result.diagnostics()` reports it as `tail_index` whether or
-not the warning fires. When nine pairs in ten or more share the earliest meeting time,
-the estimate is `nan` and the warning silent: above such ties, Hill's estimate reads a
-light tail as a heavy one, so a heavy tail behind them goes undetected. The warning
+not the warning fires. Ties among the earliest meeting times can leave the estimate
+`nan` and the warning silent, and a heavy tail behind them undetected
+({func}`telescopic.diagnostics.hill` gives the rule). The warning
 also sees only a tail that shows up in the run: a heavy tail carried by well under one
 pair in $R$, as with an independence proposal whose weights are unbounded
 ([Independence](kernels.md#independence)), leaves it silent.

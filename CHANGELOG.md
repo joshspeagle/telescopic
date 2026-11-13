@@ -93,6 +93,9 @@ All notable changes to this project are documented here. The format follows
   consistent estimate where it first uses them, and says how to turn on the tail check.
 - Theory opens with what it derives, defines the meeting time before the algorithm uses
   it, and says what the conditions of unbiasedness ask in practice before stating them.
+- The kernels guide defines its coupling terms before its table, and the diagnostics guide
+  says what Hill's estimate and the Clopper-Pearson bound measure and when each warning
+  is emitted; the docstring of `diagnostics.hill` gives the rule for ties.
 - Fixes from an audit of the whole package: a number argument of the wrong type raises
   `TypeError`, and one out of bounds `ValueError`, naming the argument; `names` must be
   distinct strings, one per coordinate; `Kernel.check_ndim` checks a kernel's dimension;

@@ -127,7 +127,9 @@ def hill(values: npt.ArrayLike, n_tail: int) -> float:
     :math:`P(X > x) \propto x^{-\alpha}` has finite moments below :math:`\alpha` only.
     Where ties make the smallest value the threshold :math:`x_{(n-k)}`, as when most
     meeting times take their smallest possible value, the estimate is undefined: above such
-    ties it reads a light tail as a heavy one.
+    ties it reads a light tail as a heavy one. With ``n_tail`` :math:`= \lfloor n/10
+    \rfloor`, as in the ``tail`` warning of :meth:`telescopic.Result.check`, this happens
+    when nine values in ten or more share the smallest.
 
     Parameters
     ----------
