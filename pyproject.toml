@@ -101,12 +101,9 @@ precision = 2
 
 [tool.mypy]
 strict = true
+# The scipy-stubs marker of the dev group; the tests cover Python 3.11.
 python_version = "3.12"
 files = ["src/telescopic"]
-
-[[tool.mypy.overrides]]
-module = ["pandas.*", "tqdm.*"]
-ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 99
