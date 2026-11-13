@@ -297,4 +297,5 @@ example: [Gibbs](../tutorials/gibbs.md).
 a uniform with probabilities `weights`. Coupled chains take the same component and its
 coupling. The choice never depends on the states, which keeps each chain's moves those
 of the mixture (Atchadé & Jacob 2024, §4.2). `tune` tunes the untuned components on one
-pilot. HMC is a mixture of its trajectories and its meeting step.
+pilot, and the start of the chains checks that every component works in their
+dimension. HMC is a mixture of its trajectories and its meeting step.

@@ -64,6 +64,11 @@ class Mixture(Kernel):
     def ndim(self) -> int | None:
         return next((kernel.ndim for kernel in self.kernels if kernel.ndim is not None), None)
 
+    def check_ndim(self, ndim: int) -> None:
+        # Every component, which tuning, unlike the constructor, does not compare.
+        for kernel in self.kernels:
+            kernel.check_ndim(ndim)
+
     def _tuned(
         self, target: Target, initial: Any, pilot: PilotRun, rng: Seed
     ) -> tuple[Kernel, TuningReport]:

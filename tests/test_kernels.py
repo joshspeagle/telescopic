@@ -320,6 +320,16 @@ def test_mixture_refuses_components_of_different_dimensions():
         Mixture([RandomWalk(np.eye(1)), RandomWalk(np.eye(2))], [0.5, 0.5])
 
 
+def test_a_tuned_mixture_with_components_of_different_dimensions_raises():
+    # Tuning sets the random walk's dimension, which the constructor could not compare.
+    mixture = Mixture(
+        [RandomWalk(), Independence(MultivariateT(np.zeros(1), np.eye(1)))], [0.5, 0.5]
+    )
+    tuned, _ = mixture.tune(TARGET, np.random.default_rng(0).standard_normal((100, 2)), rng=0)
+    with pytest.raises(ValueError, match="works in 1 dimensions, but the initial points have 2"):
+        tuned.init_state(TARGET, np.zeros((3, 2)))
+
+
 class StandardNormal:
     """A proposal in two dimensions with only the methods that Independence documents."""
 
