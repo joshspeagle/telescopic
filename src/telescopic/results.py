@@ -38,6 +38,7 @@ class Estimate:
         freedom; valid as :math:`R` grows when the variance is finite, and exact at every
         :math:`R \ge 2` for normal replicates.
     level : float
+        The confidence level of ``interval``, such as 0.95.
     replicates : ndarray, shape (R,) or (R, p)
         The replicates' estimates :math:`\hat\pi_r(h)`.
     """

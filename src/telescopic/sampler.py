@@ -230,6 +230,7 @@ class CoupledSampler:
         Parameters
         ----------
         n_replicates : int
+            The number of replicates to add, at least 1.
         k, m, lag : int or "auto"
             ``"auto"`` derives a value on the first call: the pilot's quantile for ``k``,
             then ``lag = max(1, k)`` and ``m = 10 k``. A value given
@@ -438,12 +439,38 @@ def sample(
         a callable ``init(rng)`` or an array of points of shape ``(n, d)``.
     n_replicates : int
         The number :math:`R` of replicates, at least 2.
-    args, kwargs, grad, vectorize, kernel, names, pool, progress, rng
-        As for :class:`CoupledSampler`.
-    k, m, lag, thin, max_iter
-        As for :meth:`CoupledSampler.run`: ``"auto"`` chooses ``k`` from the pilot, then
-        ``lag = max(1, k)`` and ``m = 10 k``; ``thin`` averages every ``thin``-th state;
-        ``max_iter`` censors pairs still unmet at that time.
+    args : tuple or list
+        Extra positional arguments of ``log_prob`` and ``grad``, such as ``(data,)``.
+    kwargs : mapping, optional
+        Extra keyword arguments of ``log_prob`` and ``grad``.
+    grad : callable, optional
+        :math:`\nabla\log\pi` with the signature of ``log_prob``. Only the kernels that
+        need it, MALA and HMC, evaluate it; ``"auto"`` is random-walk Metropolis.
+    vectorize : bool
+        Whether ``log_prob`` and ``grad`` take a batch of points.
+    kernel : Kernel or str
+        A kernel, or one of ``"auto"`` and ``"rwmh"`` (random-walk Metropolis with the
+        reflection-maximal coupling), ``"mala"`` and ``"hmc"`` (which need ``grad``) and
+        ``"independence"``.
+    k, m, lag : int or "auto"
+        ``"auto"`` chooses ``k`` from the pilot's meeting times, then ``lag = max(1, k)``
+        and ``m = 10 k``. A value given explicitly is kept.
+    thin : int, optional
+        Average every ``thin``-th state from ``k``; ``None`` averages every state.
+    max_iter : int, optional
+        Censor pairs still unmet at this time; ``None`` runs every pair until it meets.
+    names : sequence of str, optional
+        Parameter names for summaries.
+    pool : None, int, executor or pool
+        Where the pilot pairs and the replicates run: ``None`` in this process; an
+        integer, that many worker processes; or an object with ``submit``, such as a
+        :class:`concurrent.futures.Executor`, or with ``map``, such as an emcee or
+        schwimmbad pool. See :class:`CoupledSampler` for how a pool runs them.
+    progress : bool
+        Show the progress of the pilot and of the run: a tqdm bar when tqdm is installed,
+        lines on stderr otherwise.
+    rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
+        The root of every random stream.
 
     Returns
     -------
