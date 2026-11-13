@@ -235,7 +235,9 @@ result.summary()
 
 {class}`telescopic.kernels.Independence` proposes $x' \sim q$ whatever the current
 state, and accepts when
-$\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]$.
+$\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]$. The weight $\pi/q$
+is 0 wherever $\pi$ is 0, even where $q$ is 0 too, so a chain at zero density accepts
+any proposal of finite density, as the random walk does.
 
 - The coupled step gives both chains the same proposal and the same uniform, so a pair
   meets when both accept. It is a maximal coupling of the kernel (O'Leary, Wang & Jacob
