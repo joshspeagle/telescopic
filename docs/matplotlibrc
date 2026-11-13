@@ -4,7 +4,7 @@ figure.facecolor: FBFAF7
 axes.facecolor: FBFAF7
 savefig.facecolor: FBFAF7
 figure.constrained_layout.use: True
-axes.prop_cycle: cycler('color', ['2A5DB0', 'C07A00', '7B4FB8', '5A8A1F'])
+axes.prop_cycle: cycler('color', ['1E4BF0', 'B48700', '960000', '00694B'])
 text.color: 062A4F
 axes.labelcolor: 062A4F
 axes.edgecolor: 55657A

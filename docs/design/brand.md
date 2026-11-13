@@ -6,16 +6,14 @@ style sheet Overprint and the mark Focus, from a design board of five marks and 
 style sheets (issue #103). The page is a design record in the repository and is not built
 into the site.
 
-Every color, font, type style, size and coordinate of the identity lives in one place,
-`docs/_scripts/brand.py`; the layout (widths, spacing, breakpoints, and the relative
-sizes of the landing page's name and tagline and of the sidebar) lives in the theme's
-style sheet. That script
-writes the theme's tokens, the font rules, the marks, the lockups, the favicon, the
-landing page's hero, the Matplotlib style of the executed pages, and the tables below
-between their markers. `python docs/_scripts/brand.py --check` fails, naming the file,
-when any of them differs from what the script would write, and CI runs it before the
-documentation build. A change to the design changes `brand.py` first, then the prose of
-this page.
+Every color, font, type style, size and coordinate of the identity is defined in
+`docs/_scripts/brand.py`, whose docstring lists the files it writes; the tables below,
+between their markers, are among them. The theme's style sheet holds the layout (widths,
+spacing and breakpoints) and these sizes only: the landing page's name and tagline, the
+top bar's links and search field, the hero's labels, the larger links and captions of the
+phone menu, and sizes relative to the running text for inline code, tables, the copy
+button and search results. A change to the design changes `brand.py` first, then the
+prose of this page.
 
 ## Concept
 
@@ -35,13 +33,9 @@ Two chains enter an objective lens from the left, $X$ above and $Y$ below, and a
 brought to one point, the focus, which is their meeting time. One line in the ink of
 met chains leaves the focus through the eyepiece. A ring marks the meeting.
 
-The geometry is fixed in a 256 by 256 square. The lens is
-`M62 30 Q96 128 62 226 Q28 128 62 30 Z`; chain $X$ runs from (14, 70) through (62, 70)
-to the focus at (178, 128), chain $Y$ from (14, 186) through (62, 186) to the focus; the
-merged line runs from the focus to (244, 128); the eyepiece is
-`M216 100 Q230 128 216 156 Q202 128 216 100 Z`. In the full cut each chain is 15 steps
-jittered about its guide with the board's seed, so that it reads as a chain and not as a
-ray, with its steps marked by small beads in the ground color.
+The geometry is fixed in a square, and `brand.py` holds its coordinates. In the full cut
+each chain is jittered about its guide with the board's seed, so that it reads as a chain
+and not as a ray, with its steps marked by small beads in the ground color.
 
 The mark has three cuts. They share the geometry and differ in detail and stroke, so
 that each reads at its size:
@@ -68,11 +62,11 @@ Rules for the mark:
 
 ## The wordmark
 
-The wordmark is "telescopic" in lowercase Red Hat Display 800, with the headings' letter
-spacing of −0.02 em, converted to outlines so that no font is needed to show it. In the
+The wordmark is "telescopic" in lowercase Red Hat Display 800, with the page titles'
+letter spacing, converted to outlines so that no font is needed to show it. In the
 lockup it sits to the right of the mid cut, its x-height centered on the focus, so that
-the merged line leads into the word. The mark's height is 34/22 of the type size, as on
-the board. The lockup exists for each ground: `brand/lockup-light.svg` and
+the merged line leads into the word. The mark's height over the type size is the board's
+(the sizes table). The lockup exists for each ground: `brand/lockup-light.svg` and
 `brand/lockup-dark.svg`. The site shows it in the top bar and the footer.
 
 ## Color
@@ -93,8 +87,8 @@ no minimum; the borders of controls use `muted`.
 | `line` | rules and borders (decorative) | `#D9D5CB` | 1.40 | 1.27 | `#22385A` | 1.54 | 1.36 |
 | `cx` | chain X (magenta), in marks and figures only | `#D93A74` | 4.18 | 3.80 | `#FF6FA3` | 6.97 | 6.13 |
 | `cy` | chain Y (teal), in marks and figures only | `#0095A6` | 3.44 | 3.12 | `#35C6D6` | 8.83 | 7.76 |
-| `met` | the chains after they meet | `#062A4F` | 13.86 | 12.58 | `#FFFFFF` | 18.17 | 15.98 |
-| `accent` | links, focus, interactive | `#006C7A` | 5.87 | 5.33 | `#5ED3E0` | 10.27 | 9.04 |
+| `met` | the chains after they meet | `#062A4F` | 13.86 | 12.58 | `#FFFFFF` | 18.17 | 15.99 |
+| `accent` | links, focus, interactive | `#006C7A` | 5.87 | 5.33 | `#5ED3E0` | 10.27 | 9.03 |
 | `ochre` | strings in code; warnings | `#8A5A00` | 5.68 | 5.15 | `#E6B65C` | 9.70 | 8.53 |
 | `violet` | numbers in code | `#6B3FA0` | 7.07 | 6.42 | `#C3A6F0` | 8.68 | 7.64 |
 <!-- colors:end -->
@@ -107,16 +101,43 @@ magenta nor teal.
 
 Plots are drawn on the light ground in both themes, and the dark theme sets them on a
 light panel. Series that are not the two chains take these colors, in order. None is
-magenta or teal, so the chain colors keep their meaning; adjacent colors differ by a
-Delta E of at least 23 under simulated deutan, protan and tritan vision.
+magenta or teal, so the chain colors keep their meaning. Under normal vision and under
+simulated deutan, protan and tritan vision (Machado, Oliveira & Fernandes 2009), every
+pair of plot colors, and each plot color against `cx`, `cy` and `met`, differ by a
+CIEDE2000 Delta E of at least 15, and each plot color has 3:1 contrast on the figure
+ground; `brand.py` refuses a palette that falls short. The second table gives every
+difference and the least for each vision.
 
 <!-- plots:start -->
 | Slot | Color | on the figure ground |
 |---|---|---|
-| 0 | `#2A5DB0` | 6.11 |
-| 1 | `#C07A00` | 3.34 |
-| 2 | `#7B4FB8` | 5.51 |
-| 3 | `#5A8A1F` | 3.95 |
+| 0 | `#1E4BF0` | 6.06 |
+| 1 | `#B48700` | 3.14 |
+| 2 | `#960000` | 8.76 |
+| 3 | `#00694B` | 6.44 |
+
+| Delta E (CIEDE2000) | normal | deutan | protan | tritan |
+|---|---|---|---|---|
+| slot 0 and slot 1 | 67.1 | 70.2 | 65.2 | 47.7 |
+| slot 0 and slot 2 | 46.4 | 61.5 | 57.8 | 56.7 |
+| slot 1 and slot 2 | 41.1 | 25.9 | 31.6 | 27.0 |
+| slot 0 and slot 3 | 44.4 | 39.0 | 44.3 | 17.4 |
+| slot 1 and slot 3 | 39.7 | 31.6 | 23.3 | 48.7 |
+| slot 2 and slot 3 | 56.9 | 17.1 | 17.0 | 53.2 |
+| slot 0 and `cx` | 35.3 | 45.0 | 20.4 | 60.6 |
+| slot 1 and `cx` | 50.3 | 19.8 | 38.4 | 15.8 |
+| slot 2 and `cx` | 27.8 | 23.8 | 32.6 | 20.4 |
+| slot 3 and `cx` | 67.2 | 17.3 | 20.3 | 61.2 |
+| slot 0 and `cy` | 33.1 | 18.5 | 20.6 | 18.0 |
+| slot 1 and `cy` | 42.9 | 44.8 | 39.0 | 47.0 |
+| slot 2 and `cy` | 55.7 | 43.7 | 45.4 | 60.5 |
+| slot 3 and `cy` | 25.9 | 27.3 | 29.5 | 19.2 |
+| slot 0 and `met` | 22.5 | 24.0 | 27.0 | 24.6 |
+| slot 1 and `met` | 57.7 | 61.7 | 55.9 | 53.7 |
+| slot 2 and `met` | 40.9 | 45.6 | 37.2 | 44.2 |
+| slot 3 and `met` | 35.5 | 30.1 | 33.8 | 18.9 |
+| `cx` and `cy`, for comparison | 63.6 | 25.7 | 16.7 | 63.6 |
+| least of the plot colors (refused below 15) | 22.5 | 17.1 | 17.0 | 15.8 |
 <!-- plots:end -->
 
 ## Type
@@ -137,7 +158,7 @@ set by MathJax, not by these faces, and other scripts fall back to the system fo
 | minor headings, card titles | Red Hat Display | 600 | 17 px | 1.3 | -0.01 em |
 | running text | Red Hat Text | 400 | 16.5 px | 1.6 | 0 |
 | code and outputs | Red Hat Mono | 400 | 14 px | 1.55 | 0 |
-| captions, sidebar, outline | Red Hat Text | 400 | 14 px | 1.45 | 0 |
+| captions, sidebar, outline, card text | Red Hat Text | 400 | 14 px | 1.45 | 0 |
 | labels, upper case | Red Hat Mono | 400 | 12 px | 1.4 | 0.06 em |
 <!-- type:end -->
 
@@ -183,11 +204,12 @@ extension `docs/_ext/telescopic_theme.py` gives its templates what they need.
 
 - **Top bar:** the lockup, the sections (the captioned root toctrees of `docs/index.md`,
   the current one underlined in the ink of met chains), search, the theme toggle and a link to the
-  repository. Below 1080 px the sections move into a menu.
-- **Sidebar:** the pages of the current section, the current page marked by a rule in
-  the ink of met chains. Below 900 px it becomes a full-screen menu.
-- **On this page:** the outline of a page with two or more sections, its current section
-  marked in `accent` as the reader scrolls.
+  repository. Below 1080 px the sections leave the top bar: on the landing page they move
+  into a menu, and on other pages the sidebar lists every section.
+- **Sidebar:** the pages of the current section, in the caption style, the current page
+  marked by a rule in the ink of met chains. Below 900 px it becomes a full-screen menu.
+- **On this page:** the outline of a page with two or more sections, in the caption
+  style, its current section marked in `accent` as the reader scrolls.
 - **Code:** blocks on `surface` with a `line` border and the corner radius, token colors
   as above, a copy button; notebook outputs joined below their cell on `bg`, with a rule
   in `ochre` for standard error and warnings; plots on a light panel.
@@ -201,12 +223,10 @@ extension `docs/_ext/telescopic_theme.py` gives its templates what they need.
 
 ## Accessibility
 
-The site aims at WCAG 2.2 AA. Text, links and code tokens meet 4.5:1 against both
-grounds in both themes (the table above), and the chain colors meet 3:1 as marks.
-Every interactive element has a visible focus ring in `accent`; the menu, search, theme
+The site aims at WCAG 2.2 AA, and the colors meet the minimums of the Color section in
+both themes. Every interactive element has a visible focus ring in `accent`; the menu, search, theme
 toggle and pause button are reachable by keyboard, and blocks that scroll sideways
 (code, outputs, tables, equations, signatures) receive focus so that the keyboard can
 scroll them. A skip link leads to the content. The theme follows the system's color
-scheme until the reader picks one, which is remembered. The hero's animation stops for a
-reader who prefers reduced motion and has a pause button otherwise. Without JavaScript
+scheme until the reader picks one, which is remembered. Without JavaScript
 every page is complete, and the menu is shown as a list.

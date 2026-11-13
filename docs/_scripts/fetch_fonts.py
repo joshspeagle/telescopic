@@ -14,17 +14,16 @@ import io
 import tarfile
 import urllib.request
 
-from brand import FONT_DIR, FONTS, face_file
+from brand import FONT_DIR, FONTS, FONTSOURCE, face_file
 
 REGISTRY = "https://registry.npmjs.org/@fontsource/{0}/-/{0}-{1}.tgz"
 
 
 def main() -> None:
-    FONT_DIR.mkdir(parents=True, exist_ok=True)
-    for old in FONT_DIR.glob("*.woff2"):  # faces no longer in FONTS go too
-        old.unlink()
-    for family, package, version, sha256, faces, _ in FONTS.values():
-        url = REGISTRY.format(package, version)
+    # every tarball is downloaded and checked before anything is replaced
+    files: dict[str, bytes] = {}
+    for family, package, sha256, faces, _ in FONTS.values():
+        url = REGISTRY.format(package, FONTSOURCE)
         with urllib.request.urlopen(url, timeout=60) as response:
             data = response.read()
         if hashlib.sha256(data).hexdigest() != sha256:
@@ -32,10 +31,14 @@ def main() -> None:
         with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
             for weight, style in faces:
                 name = face_file(package, weight, style)
-                (FONT_DIR / name).write_bytes(tar.extractfile(f"package/files/{name}").read())
+                files[name] = tar.extractfile(f"package/files/{name}").read()
             lines = tar.extractfile("package/LICENSE").read().decode("utf-8").splitlines()
-        license_text = "\n".join(line.rstrip() for line in lines) + "\n"
-        (FONT_DIR / f"OFL-{package}.txt").write_text(license_text, encoding="utf-8")
+        files[f"OFL-{package}.txt"] = "".join(line.rstrip() + "\n" for line in lines).encode()
+    FONT_DIR.mkdir(parents=True, exist_ok=True)
+    for old in FONT_DIR.glob("*.woff2"):  # faces no longer in FONTS go too
+        old.unlink()
+    for name, content in files.items():
+        (FONT_DIR / name).write_bytes(content)
     print("\n".join(sorted(p.name for p in FONT_DIR.iterdir())))
 
 

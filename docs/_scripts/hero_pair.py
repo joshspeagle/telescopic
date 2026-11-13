@@ -6,9 +6,10 @@ by the reflection-maximal coupling, chains started from N(0, 4^2) and the lag 1.
 replicate drawn is the first, by index, whose X starts at least one standard deviation
 above the target's mean and whose Y starts at least one below it, so that the two chains
 enter the picture from opposite sides. ``python docs/_scripts/hero_pair.py`` writes
-``hero_pair.json`` beside this script, with the seed and the last commit that changed the
-package; ``brand.py`` draws the hero from it. ``--check`` runs the pair again and fails if
-the saved coordinates are no longer what the package produces; CI runs it.
+``hero_pair.json`` beside this script, with the seed, the last commit that changed the
+package and the NumPy version; ``brand.py`` draws the hero from it. ``--check`` runs the
+pair again and fails, saying what moved, if the saved coordinates are no longer what the
+package produces; CI runs it.
 """
 
 from __future__ import annotations
@@ -35,6 +36,10 @@ LAG = 1
 # focus sits at 164/230 of the width the chains cross), so X must run that long.
 SPAN = 230 / 164
 DECIMALS = 4
+NEXT = (
+    "then run docs/_scripts/brand.py to redraw the hero, and update the replicate and the "
+    "meeting time quoted in notes/DECISIONS.md if they changed"
+)
 
 
 def log_prob(x: np.ndarray) -> np.ndarray:
@@ -82,21 +87,30 @@ def main(argv: list[str] | None = None) -> int:
     fresh = pair()
     if args.check:
         saved = json.loads(DATA.read_text(encoding="utf-8"))
-        same = (
-            saved["replicate"] == fresh["replicate"]
-            and saved["meeting_time"] == fresh["meeting_time"]
-            and all(
-                np.shape(saved[c]) == np.shape(fresh[c])
-                and np.allclose(saved[c], fresh[c], atol=10.0**-DECIMALS)
-                for c in ("x", "y")
+        moved = [
+            f"{key} {saved[key]} -> {fresh[key]}"
+            for key in ("replicate", "meeting_time")
+            if saved[key] != fresh[key]
+        ]
+        if not moved:
+            for c in ("x", "y"):
+                if np.shape(saved[c]) != np.shape(fresh[c]):
+                    moved.append(f"{c} has {len(fresh[c])} points, not {len(saved[c])}")
+                    continue
+                gap = np.abs(np.subtract(saved[c], fresh[c])).max()
+                if gap > 10.0**-DECIMALS:
+                    moved.append(f"{c} moved by up to {gap:.2g}")
+        if moved:
+            print(
+                f"{DATA.relative_to(ROOT)} is stale: "
+                + "; ".join(moved)
+                + f". Run docs/_scripts/hero_pair.py, {NEXT}."
             )
-        )
-        if not same:
-            print(f"{DATA.relative_to(ROOT)} is stale (run docs/_scripts/hero_pair.py)")
-        return 0 if same else 1
+        return 1 if moved else 0
     record = {
         "generated_by": "docs/_scripts/hero_pair.py",
         "package_commit": package_commit(),
+        "numpy": np.__version__,
         "seed": SEED,
         "target": "N(0, 1)",
         "kernel": f"RandomWalk(cov=[[1.0]], scale={SCALE}), reflection-maximal coupling",
@@ -108,6 +122,10 @@ def main(argv: list[str] | None = None) -> int:
         "y_is": "Y_t for t = 0, ..., meeting_time - lag",
     }
     DATA.write_text(json.dumps(record, indent=1) + "\n", encoding="utf-8")
+    print(
+        f"wrote {DATA.relative_to(ROOT)}: replicate {fresh['replicate']}, meeting time "
+        f"{fresh['meeting_time']}; {NEXT}."
+    )
     return 0
 
 

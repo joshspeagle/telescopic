@@ -68,3 +68,20 @@
   --t-blend: screen;
   color-scheme: dark;
 }
+@media print {
+  :root:not([data-theme="light"]) {
+  --t-bg: #FBFAF7;
+  --t-surface: #F1EFE9;
+  --t-ink: #062A4F;
+  --t-muted: #55657A;
+  --t-line: #D9D5CB;
+  --t-cx: #D93A74;
+  --t-cy: #0095A6;
+  --t-met: #062A4F;
+  --t-accent: #006C7A;
+  --t-ochre: #8A5A00;
+  --t-violet: #6B3FA0;
+  --t-blend: multiply;
+  color-scheme: light;
+  }
+}

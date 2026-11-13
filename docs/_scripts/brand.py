@@ -68,21 +68,51 @@ MINIMUM = {
 }
 #: plots are drawn on the light ground in both themes; the dark theme sets them on it
 FIGURE_GROUND = TOKENS["bg"][0]
-#: plot series that are not the two chains, in this order: neither magenta nor teal, so
-#: the chain colors keep their meaning (checked with a CVD palette validator: adjacent
-#: pairs differ by a Delta E of at least 23 under deutan, protan and tritan simulation)
-CATEGORICAL = ("#2A5DB0", "#C07A00", "#7B4FB8", "#5A8A1F")
+#: plot series that are not the two chains, in this order. ``palette_problems`` refuses a
+#: palette in which, under any vision of ``MACHADO``, two of them, or one of them and a
+#: color that means the chains (``cx``, ``cy``, ``met``), differ by a CIEDE2000 Delta E
+#: below ``DISTINCT``, or one has less than 3:1 contrast on the figure ground
+CATEGORICAL = ("#1E4BF0", "#B48700", "#960000", "#00694B")
+#: the least Delta E allowed there: a little below the 16.7 by which the chain colors
+#: themselves differ under protan vision, the nearest they come (brand.md's plots table)
+DISTINCT = 15.0
+#: the simulated visions: Machado, Oliveira & Fernandes (2009), severity 1, on linear sRGB
+MACHADO = {
+    "normal": np.eye(3),
+    "deutan": np.array(
+        [
+            [0.367322, 0.860646, -0.227968],
+            [0.280085, 0.672501, 0.047413],
+            [-0.011820, 0.042940, 0.968881],
+        ]
+    ),
+    "protan": np.array(
+        [
+            [0.152286, 1.052583, -0.204868],
+            [0.114503, 0.786281, 0.099216],
+            [-0.003882, -0.048116, 1.051998],
+        ]
+    ),
+    "tritan": np.array(
+        [
+            [1.255528, -0.076749, -0.178779],
+            [-0.078411, 0.930809, 0.147602],
+            [0.004733, 0.691367, 0.303900],
+        ]
+    ),
+}
 
 # --------------------------------------------------------------------------- type
 
-#: role: (family, npm package, version, SHA-256 of its tarball, faces as (weight, style),
-#: CSS stack). Faces are served in the Latin subset, so Greek and other scripts fall back
-#: to the next font of the stack; mathematics is set by MathJax.
+#: the version of the Fontsource packages on npm that the faces come from
+FONTSOURCE = "5.3.0"
+#: role: (family, npm package, SHA-256 of its tarball, faces as (weight, style), CSS
+#: stack). Faces are served in the Latin subset, so Greek and other scripts fall back to
+#: the next font of the stack; mathematics is set by MathJax.
 FONTS = {
     "display": (
         "Red Hat Display",
         "red-hat-display",
-        "5.3.0",
         "0429b7b9c45303a64fdb3e437ee5224fc97afcca48cacb9bd6a1c824f2012582",
         ((600, "normal"), (800, "normal")),
         "'Red Hat Display', system-ui, sans-serif",
@@ -90,7 +120,6 @@ FONTS = {
     "text": (
         "Red Hat Text",
         "red-hat-text",
-        "5.3.0",
         "afc21b5e80b6a3e00bad564a412e2f889862b34e9e17e31761b880d6609b7243",
         ((400, "normal"), (400, "italic"), (600, "normal")),
         "'Red Hat Text', system-ui, sans-serif",
@@ -98,7 +127,6 @@ FONTS = {
     "mono": (
         "Red Hat Mono",
         "red-hat-mono",
-        "5.3.0",
         "bc7b535c64a064d6527a210c3cf684b1483d154040a7e1250144aab4e09297da",
         ((400, "normal"), (600, "normal")),
         "'Red Hat Mono', ui-monospace, monospace",
@@ -118,7 +146,7 @@ TYPE = {
     "minor": ("minor headings, card titles", "display", 600, 17, 1.3, -0.01),
     "text": ("running text", "text", 400, 16.5, 1.6, 0),
     "code": ("code and outputs", "mono", 400, 14, 1.55, 0),
-    "caption": ("captions, sidebar, outline", "text", 400, 14, 1.45, 0),
+    "caption": ("captions, sidebar, outline, card text", "text", 400, 14, 1.45, 0),
     "label": ("labels, upper case", "mono", 400, 12, 1.4, 0.06),
 }
 #: other sizes: name: (value in px, use)
@@ -182,9 +210,8 @@ MARK_EM = 34 / 22
 GAP = 9 / 34 * BOX
 WORDMARK = "telescopic"
 WORDMARK_FACE = FONT_DIR / "red-hat-display-latin-800-normal.woff2"
-#: the hero: its box, and its chains' stroke width
+#: the hero's box; its strokes and labels are styled by the theme's classes
 HERO_BOX = (640.0, 256.0)
-HERO_STROKE = 3.5
 
 
 def _f(x: float) -> str:
@@ -196,8 +223,8 @@ def _theme(theme: int) -> dict[str, str]:
 
 
 def _chain(guide: tuple[tuple[float, float], ...], n: int, jitter: float, rng) -> np.ndarray:
-    """``n`` points along a polyline, evenly spaced by arc length, jittered by a normal
-    spread that vanishes at both ends; the guide itself when ``n`` is 0."""
+    # n points along the guide, evenly spaced by arc length, jittered by a normal spread
+    # that vanishes at both ends; the guide itself when n is 0
     points = np.asarray(guide)
     if n == 0:
         return points
@@ -367,7 +394,7 @@ def hero_svg() -> str:
         + shifted(LENS, 62)
         + shifted(EYEPIECE, 216)
         + '<g clip-path="url(#hero-reveal)" fill="none" stroke-linecap="round" '
-        f'stroke-linejoin="round" stroke-width="{HERO_STROKE}">'
+        'stroke-linejoin="round">'
         + line(merged, "hero-met")
         + line(chain_x, "hero-x")
         + line(chain_y, "hero-y")
@@ -396,7 +423,7 @@ def tokens_css() -> str:
         lines.append(f"  color-scheme: {('light', 'dark')[theme]};")
         return "\n".join(lines)
 
-    fixed = [f"  --t-font-{role}: {font[5]};" for role, font in FONTS.items()]
+    fixed = [f"  --t-font-{role}: {font[4]};" for role, font in FONTS.items()]
     for name, (_, face, weight, px, height, tracking) in TYPE.items():
         fixed.append(f"  --t-type-{name}: {weight} {_f(px)}px/{height} var(--t-font-{face});")
         if tracking:
@@ -410,6 +437,7 @@ def tokens_css() -> str:
         f'@media (prefers-color-scheme: dark) {{\n  :root:not([data-theme="light"]) {{\n'
         f"{dark}\n  }}\n}}\n"
         f':root[data-theme="dark"] {{\n{dark}\n}}\n'
+        f'@media print {{\n  :root:not([data-theme="light"]) {{\n{colors(0)}\n  }}\n}}\n'
     )
 
 
@@ -417,14 +445,22 @@ def face_file(package: str, weight: int, style: str) -> str:
     return f"{package}-latin-{weight}-{style}.woff2"
 
 
+def font_faces() -> list[tuple[str, int, str, str]]:
+    """Every served face: its family, weight, style and file name."""
+    return [
+        (family, weight, style, face_file(package, weight, style))
+        for family, package, _, faces, _ in FONTS.values()
+        for weight, style in faces
+    ]
+
+
 def fonts_css() -> str:
     faces = [
         f"@font-face {{\n  font-family: '{family}';\n  font-style: {style};\n"
         f"  font-weight: {weight};\n  font-display: swap;\n"
-        f"  src: url({face_file(package, weight, style)}) format('woff2');\n"
+        f"  src: url({name}) format('woff2');\n"
         f"  unicode-range: {LATIN};\n}}"
-        for family, package, _, _, faces, _ in FONTS.values()
-        for weight, style in faces
+        for family, weight, style, name in font_faces()
     ]
     return f"/* {GENERATED} */\n" + "\n".join(faces) + "\n"
 
@@ -459,16 +495,102 @@ def matplotlibrc() -> str:
 # --------------------------------------------------------------------------- checks and tables
 
 
-def _luminance(color: str) -> float:
-    channels = [int(color[i : i + 2], 16) / 255 for i in (1, 3, 5)]
-    linear = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in channels]
-    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+#: sRGB (IEC 61966-2-1): linear RGB to CIE XYZ under D65
+SRGB_XYZ = np.array(
+    [
+        [0.4124564, 0.3575761, 0.1804375],
+        [0.2126729, 0.7151522, 0.0721750],
+        [0.0193339, 0.1191920, 0.9503041],
+    ]
+)
+
+
+def _linear(colors: list[str]) -> np.ndarray:
+    channels = np.array([[int(c[i : i + 2], 16) for i in (1, 3, 5)] for c in colors]) / 255
+    return np.where(channels <= 0.04045, channels / 12.92, ((channels + 0.055) / 1.055) ** 2.4)
 
 
 def contrast(a: str, b: str) -> float:
     """The WCAG 2 contrast ratio of two colors."""
-    high, low = sorted((_luminance(a), _luminance(b)), reverse=True)
-    return (high + 0.05) / (low + 0.05)
+    high, low = sorted(_linear([a, b]) @ SRGB_XYZ[1], reverse=True)
+    return float((high + 0.05) / (low + 0.05))
+
+
+def seen(colors: list[str], vision: str) -> np.ndarray:
+    """CIELAB coordinates, shape (n, 3), of ``colors`` as ``vision`` in ``MACHADO`` sees
+    them: the simulation's matrix on linear sRGB, clipped to the gamut, then CIE XYZ (D65)
+    and CIELAB."""
+    xyz = np.clip(_linear(colors) @ MACHADO[vision].T, 0, 1) @ SRGB_XYZ.T
+    t = xyz / SRGB_XYZ.sum(axis=1)
+    f = np.where(t > (6 / 29) ** 3, np.cbrt(t), t * (29 / 6) ** 2 / 3 + 4 / 29)
+    return np.column_stack(
+        [116 * f[:, 1] - 16, 500 * (f[:, 0] - f[:, 1]), 200 * (f[:, 1] - f[:, 2])]
+    )
+
+
+def delta_e(lab1: np.ndarray, lab2: np.ndarray) -> np.ndarray:
+    """The CIEDE2000 color difference of CIELAB colors, broadcast over leading axes, as
+    Sharma, Wu & Dalal (2005) state it."""
+    (l1, a1, b1), (l2, a2, b2) = np.moveaxis(lab1, -1, 0), np.moveaxis(lab2, -1, 0)
+    c7 = ((np.hypot(a1, b1) + np.hypot(a2, b2)) / 2) ** 7
+    g = 1 + 0.5 * (1 - np.sqrt(c7 / (c7 + 25.0**7)))
+    c1, c2 = np.hypot(g * a1, b1), np.hypot(g * a2, b2)
+    h1, h2 = np.degrees(np.arctan2(b1, g * a1)) % 360, np.degrees(np.arctan2(b2, g * a2)) % 360
+    chromatic = c1 * c2 != 0
+    turn = h2 - h1
+    dh = np.where(chromatic, np.where(np.abs(turn) <= 180, turn, turn - 360 * np.sign(turn)), 0)
+    hue_sum = np.where(np.abs(h1 - h2) > 180, h1 + h2 + 360, h1 + h2) % 720
+    h = np.where(chromatic, hue_sum / 2, h1 + h2)
+    lm, cm = (l1 + l2) / 2, (c1 + c2) / 2
+    t = (
+        1
+        - 0.17 * np.cos(np.radians(h - 30))
+        + 0.24 * np.cos(np.radians(2 * h))
+        + 0.32 * np.cos(np.radians(3 * h + 6))
+        - 0.20 * np.cos(np.radians(4 * h - 63))
+    )
+    dl = (l2 - l1) / (1 + 0.015 * (lm - 50) ** 2 / np.sqrt(20 + (lm - 50) ** 2))
+    dc = (c2 - c1) / (1 + 0.045 * cm)
+    dhh = 2 * np.sqrt(c1 * c2) * np.sin(np.radians(dh / 2)) / (1 + 0.015 * cm * t)
+    rotation = (
+        -2
+        * np.sqrt(cm**7 / (cm**7 + 25.0**7))
+        * np.sin(np.radians(60 * np.exp(-(((h - 275) / 25) ** 2))))
+    )
+    return np.sqrt(dl**2 + dc**2 + dhh**2 + rotation * dc * dhh)
+
+
+def palette_distances() -> dict[str, np.ndarray]:
+    """For each vision of ``MACHADO``, the Delta E between the plot colors and the colors
+    that mean the chains: shape (4 + 3, 4), rows the plot colors, then ``cx``, ``cy`` and
+    ``met`` on the light ground, columns the plot colors."""
+    chains = [TOKENS[name][0] for name in ("cx", "cy", "met")]
+    distances = {}
+    for vision in MACHADO:
+        lab = seen([*CATEGORICAL, *chains], vision)
+        distances[vision] = delta_e(lab[:, None], lab[None, : len(CATEGORICAL)])
+    return distances
+
+
+def _palette_pairs() -> np.ndarray:
+    # the entries of palette_distances below the diagonal: each pair once
+    return np.tril(np.ones((len(CATEGORICAL) + 3, len(CATEGORICAL)), dtype=bool), -1)
+
+
+def palette_problems() -> list[str]:
+    problems = [
+        f"categorical {c} on the figure ground is {contrast(c, FIGURE_GROUND):.2f}, below 3"
+        for c in CATEGORICAL
+        if contrast(c, FIGURE_GROUND) < 3
+    ]
+    names = [*CATEGORICAL, "cx", "cy", "met"]
+    for vision, distance in palette_distances().items():
+        problems += [
+            f"categorical {CATEGORICAL[j]} and {names[i]} differ by {distance[i, j]:.1f} "
+            f"under {vision} vision, below {DISTINCT}"
+            for i, j in np.argwhere(_palette_pairs() & (distance < DISTINCT))
+        ]
+    return problems
 
 
 def contrast_problems() -> list[str]:
@@ -479,11 +601,6 @@ def contrast_problems() -> list[str]:
                 ratio = contrast(TOKENS[name][theme], TOKENS[ground][theme])
                 if ratio < least:
                     problems.append(f"{name} on {ground} ({mode}) is {ratio:.2f}, below {least}")
-    problems += [
-        f"categorical {c} on the figure ground is {contrast(c, FIGURE_GROUND):.2f}, below 3"
-        for c in CATEGORICAL
-        if contrast(c, FIGURE_GROUND) < 3
-    ]
     return problems
 
 
@@ -507,10 +624,24 @@ def tables() -> dict[str, str]:
     plots += [
         f"| {i} | `{c}` | {contrast(c, FIGURE_GROUND):.2f} |" for i, c in enumerate(CATEGORICAL)
     ]
-    names = list(CUTS)
+    distances = palette_distances()
+    names = [f"slot {i}" for i in range(len(CATEGORICAL))] + ["`cx`", "`cy`", "`met`"]
+    plots += ["", "| Delta E (CIEDE2000) | " + " | ".join(MACHADO) + " |"]
+    plots.append("|---" * (len(MACHADO) + 1) + "|")
+    for i, name in enumerate(names):
+        for j in range(min(i, len(CATEGORICAL))):
+            cells = " | ".join(f"{d[i, j]:.1f}" for d in distances.values())
+            plots.append(f"| {names[j]} and {name} | {cells} |")
+    chains = " | ".join(
+        f"{delta_e(*seen([TOKENS['cx'][0], TOKENS['cy'][0]], vision)):.1f}" for vision in MACHADO
+    )
+    plots.append(f"| `cx` and `cy`, for comparison | {chains} |")
+    cells = " | ".join(f"{d[_palette_pairs()].min():.1f}" for d in distances.values())
+    plots.append(f"| least of the plot colors (refused below {DISTINCT:g}) | {cells} |")
+    cut_names = list(CUTS)
     cuts = ["| Cut | Used at | Chain stroke | Detail | Files |", "|---|---|---|---|---|"]
     for i, (name, c) in enumerate(CUTS.items()):
-        upper = CUTS[names[i - 1]]["px"] if i else None
+        upper = CUTS[cut_names[i - 1]]["px"] if i else None
         used = (
             f"{c['px']} px and up"
             if upper is None
@@ -574,11 +705,7 @@ def outputs() -> dict[Path, str]:
 
 
 def font_problems() -> list[str]:
-    files = [
-        face_file(package, weight, style)
-        for _, package, _, _, faces, _ in FONTS.values()
-        for weight, style in faces
-    ]
+    files = [name for *_, name in font_faces()]
     files += [f"OFL-{font[1]}.txt" for font in FONTS.values()]
     return [
         f"docs/_themes/telescopic/static/fonts/{name} is missing (run docs/_scripts/fetch_fonts.py)"
@@ -591,7 +718,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--check", action="store_true", help="fail if a written file is stale")
     args = parser.parse_args(argv)
-    problems = contrast_problems() + font_problems()
+    problems = contrast_problems() + palette_problems() + font_problems()
     if problems:
         print(*problems, sep="\n")
         return 1

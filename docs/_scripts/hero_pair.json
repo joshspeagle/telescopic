@@ -1,6 +1,7 @@
 {
  "generated_by": "docs/_scripts/hero_pair.py",
  "package_commit": "3d779c6ff369872622fb2fd11f3b5fcc5753503c",
+ "numpy": "2.5.4",
  "seed": 0,
  "target": "N(0, 1)",
  "kernel": "RandomWalk(cov=[[1.0]], scale=0.5), reflection-maximal coupling",
