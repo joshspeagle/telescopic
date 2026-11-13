@@ -319,5 +319,5 @@ Append only. One entry per working session or milestone.
   2 min 15 s.
 - The review hub (`notes/review/`) shows the audit's findings on its steps.
 
-This log records the first draft and is closed. Later sessions are logged on GitHub, as
+This log records the first draft and is no longer updated. Later sessions are logged on GitHub, as
 comments on the tracking issue #65 (DECISIONS #96).

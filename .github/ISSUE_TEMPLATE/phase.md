@@ -11,6 +11,10 @@ about: A tracking issue for work that spans several pull requests
 
 <!-- How the work is divided, who reviews what, and the gate each part passes. -->
 
+## State
+
+<!-- One row per epic: its state and what it waits on. Each session adds a dated log comment. -->
+
 ## Sub-issues
 
 - [ ] #
@@ -20,4 +24,4 @@ about: A tracking issue for work that spans several pull requests
 - [ ] Every sub-issue closed or deferred with a recorded decision
 - [ ] The gate passes on `main`, with the slow tests of the changed modules
 - [ ] Documentation updated for every user-visible change
-- [ ] Report posted as a comment on its epic, and this issue's State table and log current
+- [ ] A review's report posted as a comment on the issue it reviewed; the State table current and a log comment for each session
