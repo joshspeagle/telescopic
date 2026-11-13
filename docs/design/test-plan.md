@@ -80,7 +80,6 @@ Most estimator bugs cannot be caught statistically. In the census, an off-by-one
 - **Validation:**
   - wrong shapes or non-finite draws raise;
   - a draw with $\log\pi = -\infty$ emits `InputWarning`.
-- **Independence:** $X_0$ and $Y_0$ are drawn independently from the replicate's stream.
 
 ### 2.4 `tests/test_kernels.py` (R-KER-*)
 
@@ -139,6 +138,7 @@ Kernel-specific tests:
 
 ### 2.6 `tests/test_engine.py` (R-EST-1–3, R-EST-7, R-EXEC-3, R-EXEC-4)
 
+- **Initial states:** each replicate draws $X_0$, then $Y_0$, from its own stream, so that replicates are independent. Every pair with a start outside the support is recorded in `zero_density`.
 - **Estimates against recorded paths:** with `keep_paths=True`, every replicate's stored signed measure equals the one computed by a reference implementation of §3.2 from the recorded paths. Exact to `1e-12`, for random $(k, m, L, \text{thin})$.
 - **Lag:** $X$ runs exactly $L$ steps alone before the first coupled step.
 - **Meeting:**
@@ -149,7 +149,8 @@ Kernel-specific tests:
 - **Refill:** with $R > B$ lanes, every requested index is run exactly once, and per-replicate results do not depend on $B$ (1, 7, 64) for a point-by-point target, bitwise. This is the invariance contract of R-EXEC-2, extended to a kernel with variable draw counts (RWMH `"maximal"`), and to MALA and HMC in M6.
 - **Censoring:**
   - with `max_iter`, unmet pairs are returned as censored, never dropped, and `max_iter` $\le \max(L, m)$ raises;
-  - a pair past the slow-pair threshold triggers the one-time `ConvergenceWarning`.
+  - a pair past the slow-pair threshold triggers the one-time `ConvergenceWarning`;
+  - the monitor's `Status` names the unmet replicate that has run longest, and $-1$ when no pair is unmet.
 - **Pilot mode:** `k=0, m=0, store=False` returns meeting times only.
 - **Memory:** the stored atom count stays within the bound of §3.2 (R-EXEC-7).
 
