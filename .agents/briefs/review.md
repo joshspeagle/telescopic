@@ -61,8 +61,9 @@ Your assignment names one lens:
    `input -> expected -> actual -> root cause`. A performance claim needs a measurement
    or an operation count, not an impression.
 3. **Check the record.** The package has been audited before. Before reporting, search
-   `notes/DECISIONS.md`, `notes/QUESTIONS.md`, `notes/reviews/*.md` and the decision table
-   of `docs/design/spec.md` for your candidate. If it was decided or answered, drop it,
+   `notes/DECISIONS.md`, `notes/QUESTIONS.md`, `notes/reviews/*.md`, the issues and their
+   comments (open and closed, including the review reports posted on epics) and the
+   decision table of `docs/design/spec.md` for your candidate. If it was decided or answered, drop it,
    unless you have evidence the answer is wrong; then keep it and say why in
    `prior_record`.
 4. **Score.** Confidence 0 to 100: 25 an unverified suspicion or a preference; 50 a
@@ -94,7 +95,7 @@ Carlo tolerances. A convention finding must quote the rule and the line that bre
   "probe": "path of the script that shows it, or null",
   "proposed_change": "the concrete change, small enough to judge",
   "effort": "S (under an hour) | M (a day) | L (more)",
-  "prior_record": "DECISIONS number or review file that touches this and why it is still raised, or null"
+  "prior_record": "DECISIONS number, review file or issue that touches this and why it is still raised, or null"
 }
 ```
 

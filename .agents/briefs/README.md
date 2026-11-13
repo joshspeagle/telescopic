@@ -62,11 +62,8 @@ resolve a relative path to their own copy.
 ```
 
 The state folder is working space and is lost with the machine. What must outlive the
-session goes where `CLAUDE.md` says the record is: the task's tracking issue (the
-request, each ruling with its date, which agents ran and what each returned in a line,
-and what is next, kept current in its body or a pinned comment), the issues filed from
-the drafts, and `notes/` (`PLAN.md`, `LOG.md`, `DECISIONS.md`, a report in
-`notes/reviews/`, experiments in `notes/experiments/`). A session that takes over a task
+session goes where the Agents section of `CLAUDE.md` says the record is, including
+which agents ran and what each returned in a line. A session that takes over a task
 starts from the tracking issue, not from a state folder.
 
 ## The path of a review
@@ -75,8 +72,8 @@ starts from the tracking issue, not from a state folder.
    reviewer one group and one lens (the lenses are defined in `review.md`). An issue
    under the task's epic states the scope and the method.
 2. **Review.** Reviewers work blind to earlier audits, probe what they suspect, then
-   check their candidates against `notes/DECISIONS.md`, `notes/QUESTIONS.md` and
-   `notes/reviews/`, and score each finding.
+   check their candidates against `notes/DECISIONS.md`, `notes/QUESTIONS.md`,
+   `notes/reviews/` and the issues, and score each finding.
 3. **Validate.** A validator that did not produce a finding re-reads the cited lines,
    traces one dependency further than the claim does, and reproduces bugs and
    measurements with its own script. Its verdict is one of `confirmed`,
@@ -88,8 +85,9 @@ starts from the tracking issue, not from a state folder.
 6. **Rule.** Josh decides which items to act on. Nothing is fixed before that.
 7. **Fix.** Each accepted item, or group of items, is a change under `CLAUDE.md`: an
    issue, a branch, a regression test that fails without the fix, the gate, a review.
-8. **Record.** A report in `notes/reviews/` lists what was reviewed, the counts by
-   verdict, and what was refuted or dropped and why.
+8. **Record.** A report, posted as a comment on the review's epic, or on its issue when
+   it has none, lists what was reviewed, the counts by verdict, and what was refuted or
+   dropped and why.
 
 ## The path of a research direction
 

@@ -9,7 +9,7 @@ import pytest
 
 from references import Normal as Conditional
 from references import gaussian_log_prob
-from telescopic import CoupledSampler, sample
+from telescopic import CoupledSampler, __version__, sample
 from telescopic.engine import Settings, Status
 from telescopic.initial import Empirical, Normal
 from telescopic.kernels import HMC, MALA, Gibbs, Mixture, RandomWalk
@@ -308,6 +308,14 @@ def test_the_readme_example_runs_without_a_warning(capsys):
         runpy.run_path(str(script))
     pytest.importorskip("matplotlib.pyplot").close("all")
     assert "slope" in capsys.readouterr().out
+
+
+def test_citation_version_matches_package_version():
+    # The version is written in both files; the test group has no YAML parser.
+    text = (Path(__file__).parents[1] / "CITATION.cff").read_text(encoding="utf-8")
+    match = re.search(r"^version:\s*[\"']?([^\"'\s]+)", text, re.MULTILINE)
+    assert match, "CITATION.cff has no version line"
+    assert match.group(1) == __version__
 
 
 def test_chains_cannot_start_where_the_gradient_is_not_finite():
