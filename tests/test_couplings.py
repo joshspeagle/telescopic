@@ -359,6 +359,15 @@ def test_discrete_maximal_refuses_a_row_without_a_finite_maximum(row):
         discrete_maximal(np.zeros((2, 2)), log_q, fixed_draws(uniforms=np.full((2, 3), 0.5)))
 
 
+def test_a_uniform_of_zero_never_draws_a_category_of_zero_weight():
+    # p = (0, 1) and q = (1, 0) never overlap: the first uniform, 0.5, fails the meeting
+    # test, and uniforms of 0 then draw each residual's only category of positive weight.
+    with np.errstate(divide="ignore"):
+        log_p, log_q = np.log([[0.0, 1.0]]), np.log([[1.0, 0.0]])
+    i, j = discrete_maximal(log_p, log_q, fixed_draws(uniforms=[[0.5, 0.0, 0.0]]))
+    assert (i[0], j[0]) == (1, 0)
+
+
 def test_discrete_maximal_normalises_each_distribution_in_log_space():
     # The same distribution under different, extreme normalising constants always meets.
     rng = np.random.default_rng(6)

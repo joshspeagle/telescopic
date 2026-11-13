@@ -106,6 +106,14 @@ def test_random_walk_reflection_coupling_matches_the_reference(gap, u_accept):
     )
 
 
+def test_identical_proposals_cost_one_evaluation():
+    # From equal states the reflection coupling proposes one point for both chains.
+    target = Target(gaussian_log_prob, vectorize=True)
+    x = state(np.zeros((50, 2)))
+    RandomWalk(np.eye(2)).coupled_step(target, x, x, random_draws(50, 2))
+    assert target.n_log_prob == 50
+
+
 def test_independence_kernels_share_the_proposal_and_meet_when_both_accept():
     # With a N(0, I) proposal on a N(0, I) target the weights are constant, so both chains
     # accept the shared proposal x' = z whatever u < 1 is.
@@ -131,10 +139,11 @@ class Shift(Kernel):
         return self.step(target, state_x, draws)[0], self.step(target, state_y, draws)[0]
 
 
-def test_mixture_gives_both_chains_the_component_its_uniform_selects():
+@pytest.mark.parametrize("weights", [[0.25, 0.75], [1.0, 3.0]], ids=["normalized", "unnormalized"])
+def test_mixture_gives_both_chains_the_component_its_uniform_selects(weights):
     n = 4000
     uniforms = np.random.default_rng(3).random((n, 1))
-    kernel = Mixture([Shift(1.0), Shift(100.0)], [0.25, 0.75])
+    kernel = Mixture([Shift(1.0), Shift(100.0)], weights)
     zeros = State(np.zeros((n, 1)), np.zeros(n))
     ones = State(np.ones((n, 1)), np.zeros(n))
     new_x, new_y = kernel.coupled_step(TARGET, zeros, ones, fixed_draws(uniforms=uniforms))
@@ -601,6 +610,25 @@ def test_gradient_kernels_enter_the_support_from_a_start_outside_it():
         np.testing.assert_array_equal(moved.x, [[0.5], [-0.5]])
 
 
+def test_an_hmc_trajectory_that_enters_a_zero_density_gap_stops_and_is_rejected():
+    # A flat density on (-5, 5) without (0.2, 0.8). From 0 with momentum 1 and step size
+    # 0.5, the first leap lands at 0.5, in the gap, and the second at 1.0, back in the
+    # support; with a zero gradient the momentum stays 1. The trajectory stops at the
+    # gap: the target is not evaluated at 1.0, and the step is rejected.
+    def log_prob(x):
+        inside = (np.abs(x[:, 0]) < 5) & ~((x[:, 0] > 0.2) & (x[:, 0] < 0.8))
+        return np.where(inside, 0.0, -np.inf)
+
+    target = Target(log_prob, grad=lambda x: np.zeros_like(x), vectorize=True)
+    kernel = HMC(0.5, 2, cov=np.eye(1))
+    start = kernel.init_state(target, np.array([[0.0]]))
+    evaluated = target.n_log_prob
+    # The first uniform, 0.1, chooses the trajectory component.
+    moved, _ = kernel.step(target, start, fixed_draws([[1.0]], [[0.1, 0.5]]))
+    np.testing.assert_array_equal(moved.x, [[0.0]])
+    assert target.n_log_prob - evaluated == 1
+
+
 @pytest.mark.parametrize("step_size", [0.0, -1.0, np.inf, np.nan])
 def test_gradient_kernels_refuse_step_sizes_that_are_not_positive_and_finite(step_size):
     makers = (
@@ -647,6 +675,21 @@ def test_maximal_gibbs_couplings_draw_each_chain_from_its_conditionals():
         second = (new.x[:, 1] - RHO * new.x[:, 0]) / sd
         for residual in (first, second):
             assert stats.kstest(residual, "norm").pvalue > P_MIN
+
+
+def test_maximal_gibbs_couplings_meet_at_the_rate_eta_allows():
+    # Block 0's conditionals are p = N(-0.8, 0.6^2) for X and q = N(-0.4, 0.6^2) for Y;
+    # once block 0 meets, block 1's conditionals are equal and its draw is shared. So the
+    # pair meets with probability int min(eta p, q), 0.599 at eta = 0.7 and 0.739 at
+    # eta = 1, 9 standard errors apart at n = 1000.
+    n, eta, sd = 1000, 0.7, np.sqrt(1 - RHO**2)
+    kernel = Gibbs(conditional, [[0], [1]], eta=eta)
+    x, y = gibbs_state(np.tile([0.0, -1.0], (n, 1))), gibbs_state(np.tile([0.0, -0.5], (n, 1)))
+    new_x, new_y = kernel.coupled_step(Target(None), x, y, random_draws(n, 35))
+    met = np.all(new_x.x == new_y.x, axis=1).sum()
+    p, q = stats.norm(-0.8, sd).pdf, stats.norm(-0.4, sd).pdf
+    rate = integrate.quad(lambda t: min(eta * p(t), q(t)), -10, 10, points=[-0.6])[0]
+    assert stats.binomtest(int(met), n, rate).pvalue > P_MIN
 
 
 def test_crn_gibbs_couplings_push_one_uniform_through_both_quantile_functions():

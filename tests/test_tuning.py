@@ -170,11 +170,17 @@ def test_tuning_freezes_kernels_with_the_pilots_mean_and_covariance():
     walk, _ = RandomWalk().tune(TARGET, START, pilot=pilot)
     np.testing.assert_array_equal(walk.cov, pilot.cov)
     assert RandomWalk(scale=0.1).tune(TARGET, START, pilot=pilot)[0].scale == 0.1
+    assert RandomWalk(coupling="maximal").tune(TARGET, START, pilot=pilot)[0].coupling == "maximal"
     independence, report = Independence().tune(TARGET, START, pilot=pilot)
     assert independence.proposal.df == 5
     np.testing.assert_array_equal(independence.proposal.mean, pilot.mean)
     np.testing.assert_array_equal(independence.proposal.cov, pilot.cov)
-    assert report.max_weight_ratio >= 1
+    # The largest importance weight pi / q over the pilot's states, relative to the median.
+    log_weights = pilot.log_prob.ravel() - independence.proposal.log_density(
+        pilot.samples.reshape(-1, 5)
+    )
+    expected = np.exp(np.max(log_weights) - np.median(log_weights))
+    assert report.max_weight_ratio == pytest.approx(expected, rel=1e-12)
     mixture, mixed = Mixture([RandomWalk(), Independence()], [0.5, 0.5]).tune(
         TARGET, START, pilot=pilot
     )

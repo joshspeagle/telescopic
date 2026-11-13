@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from references import assert_same_replicates, gaussian_log_prob
+from telescopic._random import MAIN, replicate_generator
 from telescopic.engine import Status, merge, run
 from telescopic.estimators import averaging_times, correction_coefficients
 from telescopic.initial import Empirical, Normal
@@ -67,6 +68,18 @@ def test_the_meeting_time_is_the_first_time_the_chains_agree(initial, lag):
             replicates.distance[rows], np.linalg.norm(x[lag:tau] - y[:-1], axis=1)
         )
     assert np.any(replicates.meeting_time == lag) == (initial is not FAR)
+
+
+def test_each_replicate_draws_x0_then_y0_from_its_own_stream():
+    # Drawing Y0 from another replicate's stream keeps each estimate unbiased but makes
+    # the replicates dependent, against what the standard error assumes.
+    indices = [0, 3, 4, 9]
+    replicates = simulate(indices=indices, keep_paths=True)
+    for index in indices:
+        generator = replicate_generator(replicates.seed, MAIN, index)
+        x, y = replicates.paths[index]
+        np.testing.assert_array_equal(x[0], FAR.rvs(random_state=generator))
+        np.testing.assert_array_equal(y[0], FAR.rvs(random_state=generator))
 
 
 @pytest.mark.parametrize("coupling", ["reflection", "maximal"])
@@ -176,6 +189,36 @@ def test_a_monitor_sees_the_progress_and_can_stop_new_replicates():
     assert seen[-1].finished == 4
 
 
+class Still(RandomWalk):
+    """Neither chain moves, so pairs from a continuous initial distribution never meet."""
+
+    def step(self, target, state, draws):
+        return state, np.zeros(len(state))
+
+    def coupled_step(self, target, state_x, state_y, draws):
+        return state_x, state_y
+
+
+def test_the_status_names_the_oldest_unmet_replicate():
+    # Replicates 0 and 1 run on the two lanes until max_iter censors them; replicate 2
+    # then runs on lane 0 beside an idle lane.
+    seen = []
+
+    def monitor(status):
+        seen.append(status)
+        return False
+
+    simulate(Still(np.eye(2)), n=3, lanes=2, k=0, m=1, lag=1, max_iter=3, monitor=monitor)
+    assert seen == [
+        Status(0, 0, 1),
+        Status(0, 0, 2),
+        Status(2, -1, 0),
+        Status(2, 2, 1),
+        Status(2, 2, 2),
+        Status(3, -1, 0),
+    ]
+
+
 def test_the_run_records_its_evaluations_and_the_starts_outside_the_support():
     def half_line(x):
         return 0.0 if x[0] > 0 else -np.inf
@@ -191,10 +234,12 @@ def test_the_run_records_its_evaluations_and_the_starts_outside_the_support():
         m=2,
         lag=1,
         max_iter=50,
+        keep_paths=True,
     )
     assert replicates.n_log_prob == target.n_log_prob > 0
-    # Each replicate starts outside with probability 3/4, so 0 < count < 30 but for 2e-4.
-    assert 0 < len(replicates.zero_density) < 30
+    # A pair with either start outside the support is recorded, whichever chain it is.
+    outside = [i for i, (x, y) in replicates.paths.items() if x[0, 0] < 0 or y[0, 0] < 0]
+    np.testing.assert_array_equal(replicates.zero_density, sorted(outside))
 
 
 def test_the_engine_takes_an_array_of_points_as_its_initial_distribution():
