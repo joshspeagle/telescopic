@@ -227,7 +227,8 @@ def issues(result: Result) -> list[Issue]:
             Issue(
                 "late",
                 f"{values['late_fraction']:.0%} of the pairs met after k + lag, so k may be "
-                "too small: the bias correction is large and the variance high",
+                "too small: the bias correction is large and the variance high; run a new "
+                "sampler with a larger k",
             )
         )
     if result.n_replicates >= 100 and values["variance_share"] > 0.5:
@@ -236,7 +237,8 @@ def issues(result: Result) -> list[Issue]:
                 "variance",
                 f"one replicate holds {values['variance_share']:.0%} of the variance of "
                 f"{values['variance_share_of']}: heavy tails or rare excursions make the "
-                "error bars unreliable",
+                "error bars unreliable; check the initial distribution, and look for a mode "
+                "that the other replicates missed",
             )
         )
     # The tail index is nan, which compares false, below 500 replicates.
@@ -245,7 +247,8 @@ def issues(result: Result) -> list[Issue]:
             Issue(
                 "tail",
                 f"the meeting times look heavy-tailed (tail index {values['tail_index']:.2f} "
-                "< 2), so the variance of the estimates may be infinite",
+                "< 2), so the variance of the estimates may be infinite; look at the "
+                "survival function of plot_meeting_times, and at the kernel",
             )
         )
     disagreement = tuning_disagreement(result.tuning)
@@ -257,7 +260,7 @@ def issues(result: Result) -> list[Issue]:
             Issue(
                 "slow",
                 f"a pair was still unmet after {threshold} iterations; the meeting times may "
-                "be heavy-tailed",
+                "be heavy-tailed: look at the kernel and the initial distribution",
             )
         )
     return found

@@ -80,6 +80,31 @@ def test_each_warning_fires_on_a_result_built_to_trigger_it(
     assert any(message in issue.message for issue in found), found
 
 
+@pytest.mark.parametrize(
+    ("meeting_times", "values", "options", "remedy"),
+    [
+        ([2] * 70 + [9] * 30, np.arange(100.0), {"k": 5}, "; run a new sampler with a larger k"),
+        (
+            [2] * 100,
+            [0.0] * 99 + [100.0],
+            {},
+            "; check the initial distribution, and look for a mode that the other",
+        ),
+        (
+            np.random.default_rng(4).pareto(1.0, size=500).astype(int) + 2,
+            np.random.default_rng(5).standard_normal(500),
+            {},
+            "; look at the survival function of plot_meeting_times, and at the kernel",
+        ),
+        ([2, 20_000], [0.0, 1.0], {}, ": look at the kernel and the initial distribution"),
+    ],
+    ids=["late", "variance share", "tail index", "slow"],
+)
+def test_each_warning_ends_with_its_remedy(meeting_times, values, options, remedy):
+    found = issues(synthetic(meeting_times, values, **options))
+    assert any(remedy in issue.message for issue in found), found
+
+
 @pytest.mark.parametrize("met", [9, 0], ids=["some met", "none met"])
 def test_a_pair_censored_after_the_slow_threshold_is_slow(met):
     # Where no pair met, the largest meeting time was nan, and max(nan, max_iter) nan.

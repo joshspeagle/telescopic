@@ -188,3 +188,7 @@ All notable changes to this project are documented here. The format follows
 - The docstrings of `sample()` and `CoupledSampler.run` say that their estimates are
   unbiased unless `max_iter` censors a pair, which biases them, or a Ctrl-C interrupts
   the run, which leaves them consistent.
+- The warnings about late pairs, a replicate dominating the variance, heavy-tailed
+  meeting times and slow pairs end with the remedy in a few words, as the warning about
+  censored pairs did. A slow pair seen as it happens says that the run waits for it,
+  and for a replicate that a first Ctrl-C lets it finish.

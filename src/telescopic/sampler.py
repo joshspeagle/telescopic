@@ -482,20 +482,29 @@ class _SlowPairs:
 
     def __call__(self, status: engine.Status) -> None:
         if status.t >= self.threshold:
-            self._warn(status.slowest)
+            # The first Ctrl-C lets the replicates in progress finish (spec section 6.5),
+            # this one too, so it does not end the wait.
+            waiting = ", and the run waits for it"
+            if self.kind == "replicate":
+                waiting += (
+                    ": a first Ctrl-C starts no new replicate but lets this one finish, "
+                    "and a second stops the run without a result"
+                )
+            self._warn(status.slowest, waiting)
 
     def after(self, replicates: engine.Replicates) -> None:
         # A pair is unmet at the threshold when it meets, or is censored, after it.
         slow = replicates.index[replicates.stopped > self.threshold]
         if len(slow):
-            self._warn(int(slow[0]))
+            self._warn(int(slow[0]), "")
 
-    def _warn(self, replicate: int) -> None:
+    def _warn(self, replicate: int, waiting: str) -> None:
         if not self.warned:
             self.warned = True
             warn(
-                f"{self.kind} {replicate} has not met after {self.threshold} iterations; "
-                "the meeting times may be heavy-tailed",
+                f"{self.kind} {replicate} has not met after {self.threshold} "
+                f"iterations{waiting}; the meeting times may be heavy-tailed: look at the "
+                "kernel and the initial distribution",
                 ConvergenceWarning,
             )
 

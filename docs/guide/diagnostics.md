@@ -124,8 +124,8 @@ tuning chains warn instead when the kernel is tuned, and a slow pair when it is 
 it happens in this process, or when the run ends on a pool. {meth}`telescopic.Result.check`
 emits the warnings that apply to any result, and {func}`telescopic.diagnostics.issues`
 returns them, without warning, as a list of {class}`telescopic.diagnostics.Issue` with
-the `kind` named in each heading below and a `message`. An empty list means only that
-none of them holds, not that the run is right. They are heuristics, with thresholds set
+the `kind` named in each heading below and a `message`, which ends with the remedy in a
+few words. An empty list means only that none of them holds, not that the run is right. They are heuristics, with thresholds set
 so that clean Gaussian runs at the default settings rarely trigger them; the measured
 rates below show how often they fire elsewhere.
 
@@ -199,8 +199,10 @@ warning is then silent ([Tuning](kernels.md#tuning)).
 
 **Trigger:** a pair still unmet after $\max(10^4, 10 \max(L, m))$ iterations; the
 sampler names the replicate in one warning per run. **Meaning:** the meeting times may be
-heavy-tailed, and the run waits for that pair. **Remedy:** look at the kernel and the
-initial distribution. In the meeting-time pilot, whose own cap is on
+heavy-tailed, and the run waits for that pair: a first Ctrl-C starts no new replicate
+but lets the pairs in progress finish, this one too, and a second stops the run without
+a result ([Parallel runs](parallel.md#interrupting-a-run)). **Remedy:** look at the
+kernel and the initial distribution. In the meeting-time pilot, whose own cap is on
 [Settings](settings.md#the-automatic-pipeline), the threshold is $10^4$.
 
 ## A run that warns

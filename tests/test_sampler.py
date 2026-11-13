@@ -243,6 +243,19 @@ def test_a_slow_pair_warns_once_when_unmet_at_the_threshold():
     slow(Status(0, 3, 10_001))  # a second warning would fail under -W error
 
 
+@pytest.mark.parametrize(
+    ("kind", "after"),
+    [
+        ("replicate", "waits for it: a first Ctrl-C starts no new replicate but lets this one"),
+        ("pilot pair", "waits for it; the meeting times"),
+    ],
+    ids=["replicate", "pilot"],
+)
+def test_a_slow_pair_seen_as_it_happens_says_that_the_run_waits_for_it(kind, after):
+    with pytest.warns(ConvergenceWarning, match=f"{kind} 3 .* the run {after}"):
+        _SlowPairs(lag=1, m=10, kind=kind)(Status(0, 3, 10_000))
+
+
 def test_tuning_chains_in_separate_modes_warn():
     starts = itertools.cycle([[-20.0], [20.0]])
 
