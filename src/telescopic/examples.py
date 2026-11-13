@@ -65,7 +65,7 @@ def gaussian(d: int = 10, rho: float = 0.9) -> Example:
     d : int
         Dimension, at least 1.
     rho : float
-        Correlation of neighbouring coordinates, in (-1, 1).
+        Correlation of neighboring coordinates, in (-1, 1).
 
     Returns
     -------

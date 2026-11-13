@@ -147,8 +147,8 @@ mass in it. The bins are half-open, $[a, b)$, except the last, which is closed, 
 `numpy.histogram`, so an atom on the upper edge of `range` is counted. It is unbiased
 for a `range` fixed before the run, and it can be negative where few atoms fall and the
 negative weights of the bias corrections outweigh the others. By default the bins span
-the atoms, so the masses sum to 1, and the two outer bins, whose edges the atoms set,
-are biased by a term of order $1/R$:
+the atoms, so the masses sum to 1, and since the atoms set the edges, every bin is
+biased, the two outer ones by a term of order $1/R$:
 
 ```{code-cell} python
 masses, errors, edges = result.histogram(0, bins=10)

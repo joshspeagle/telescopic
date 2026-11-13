@@ -29,14 +29,14 @@ class CouplingReport:
     Attributes
     ----------
     stay : tuple of two floats
-        For the first and the second chain of the pairs, the p-value of Fisher's exact
-        test that the chain stays put as often in a coupled step as in a step of the
-        kernel alone.
+        For the first and the second chain of the pairs, the Bonferroni-corrected p-value
+        of Fisher's exact tests, one from each starting point, that the chain stays put as
+        often in a coupled step as in a step of the kernel alone.
     moves : tuple of two floats
         For the first and the second chain, the Bonferroni-corrected p-value of two-sample
-        Kolmogorov-Smirnov tests that compare the moved positions of a coupled step with
-        those of a step alone, along random directions and in the distance moved; NaN
-        where a position is NaN.
+        Kolmogorov-Smirnov tests, from each starting point, that compare the moved
+        positions of a coupled step with those of a step alone, along random directions
+        and in the distance moved; NaN where a position is NaN.
     met : float
         The fraction of pairs that met: a coupling that never meets gives no estimate.
     stale : int
@@ -57,7 +57,9 @@ class CouplingReport:
     def passed(self, alpha: float = 1e-3) -> bool:
         """Whether every p-value is at least ``alpha`` and pairs met, with no stale state or near miss.
 
-        A p-value of NaN fails.
+        A p-value of NaN fails. Each of the four p-values is compared with ``alpha``
+        without a correction for their number, so a correct coupling fails these checks
+        with probability at most about ``4 * alpha``.
 
         Parameters
         ----------
