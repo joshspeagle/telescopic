@@ -8,7 +8,7 @@ import numpy as np
 import numpy.typing as npt
 from scipy.optimize import isotonic_regression
 
-from telescopic._types import FloatArray, IntArray, averaging, integer, integral
+from telescopic._types import FloatArray, IntArray, averaging, integer, integral, real_array
 
 
 def averaging_times(k: int, m: int, thin: int) -> IntArray:
@@ -46,7 +46,7 @@ def correction_coefficients(t: npt.ArrayLike, k: int, m: int, lag: int, thin: in
     """
     k, m, thin = averaging(k, m, thin)
     lag = integer("lag", lag, minimum=1)
-    times = np.asarray(t)
+    times = real_array("t", t, "integers", dtype=None)
     # A float beyond int64 would cast to -2**63.
     if not integral(times) or (times.dtype.kind == "f" and np.any(np.abs(times) >= 2.0**63)):
         raise ValueError(f"t must be integers within int64, not {times}")
@@ -156,7 +156,9 @@ def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike)
     -------
     ndarray, shape of ``q``
     """
-    q = np.asarray(q, dtype=np.float64)
+    q = real_array("q", q, "real numbers in [0, 1]")
+    values = real_array("values", values, "real numbers of shape (N,)")
+    weights = real_array("weights", weights, "real numbers of shape (N,)")
     if not np.all((q >= 0) & (q <= 1)):
         raise ValueError(f"q must be in [0, 1], not {q}")
     if np.ndim(values) != 1 or np.shape(weights) != np.shape(values):

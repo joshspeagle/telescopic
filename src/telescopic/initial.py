@@ -9,7 +9,7 @@ import numpy as np
 import numpy.typing as npt
 
 from telescopic._linalg import covariance
-from telescopic._types import Distribution, FloatArray, vector
+from telescopic._types import Distribution, FloatArray, real_array, vector
 
 
 class Normal:
@@ -24,7 +24,7 @@ class Normal:
 
     def __init__(self, mean: npt.ArrayLike, cov: npt.ArrayLike) -> None:
         self.mean = vector("mean", mean)
-        matrix = np.asarray(cov, dtype=np.float64)
+        matrix = real_array("cov", cov, "real numbers of shape (d, d) or (d,)")
         self.cov, self._chol = covariance(
             "cov", np.diag(matrix) if matrix.ndim == 1 else matrix, len(self.mean)
         )
@@ -72,7 +72,7 @@ class Empirical:
     """
 
     def __init__(self, points: npt.ArrayLike) -> None:
-        self.points = np.array(points, dtype=np.float64)
+        self.points = real_array("points", points, "real numbers of shape (n, d)")
         if self.points.ndim != 2 or self.points.size == 0:
             raise ValueError(
                 f"points must have shape (n, d) with n >= 1 and d >= 1, not {self.points.shape}"
@@ -124,14 +124,19 @@ def as_initial(init: Any) -> Distribution:
         return distribution
     if callable(init):
         return _Callable(init)
-    points = np.asarray(init)
+    message = (
+        "init must have rvs(random_state=...), like a frozen SciPy distribution, or be a "
+        "callable init(rng) or an array of points of shape (n, d), such as an emcee "
+        "state's coords; a single point of shape (d,) is a point mass: pass "
+        "Empirical([point]) to use one"
+    )
+    try:
+        points = np.asarray(init)
+    except ValueError as error:  # a ragged sequence
+        raise TypeError(message) from error
     if points.ndim == 2 and np.issubdtype(points.dtype, np.number):
         return Empirical(points)
-    raise TypeError(
-        "init must have rvs(random_state=...), like a frozen SciPy distribution, or be a "
-        "callable init(rng) or an array of points of shape (n, d); a single point of shape "
-        "(d,) is a point mass: pass Empirical([point]) to use one"
-    )
+    raise TypeError(message)
 
 
 def draw(
@@ -141,7 +146,12 @@ def draw(
 
     A draw of shape ``(1, d)``, as from a frozen ``scipy.stats.dirichlet``, becomes ``(d,)``.
     """
-    point = np.array(initial.rvs(random_state=generator), dtype=np.float64, ndmin=1)
+    point = real_array(
+        "a draw of the initial distribution",
+        initial.rvs(random_state=generator),
+        "real numbers of shape (d,)",
+        ndmin=1,
+    )
     if point.ndim == 2 and len(point) == 1:
         point = point[0]
     if point.ndim != 1 or len(point) == 0 or (ndim is not None and len(point) != ndim):

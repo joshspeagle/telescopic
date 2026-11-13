@@ -10,7 +10,7 @@ import numpy as np
 import numpy.typing as npt
 
 from telescopic._random import Draws
-from telescopic._types import FloatArray, IndexArray, Seed
+from telescopic._types import FloatArray, IndexArray, Seed, real_array
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport
@@ -35,7 +35,7 @@ class Mixture(Kernel):
 
     def __init__(self, kernels: Sequence[Kernel], weights: npt.ArrayLike) -> None:
         self.kernels = list(kernels)
-        weights = np.asarray(weights, dtype=np.float64)
+        weights = real_array("weights", weights, "real numbers, one per kernel")
         # Finite weights near the largest float can have a sum that overflows, and inf and
         # -inf one that is NaN; a finite positive sum of non-negative weights makes each
         # finite.

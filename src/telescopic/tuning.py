@@ -12,7 +12,7 @@ import numpy.typing as npt
 
 from telescopic._linalg import matvec
 from telescopic._random import TUNING, Streams, replicate_generator, root_seed
-from telescopic._types import FloatArray, Seed, integer, integral, real
+from telescopic._types import FloatArray, Seed, integer, integral, real, real_array
 from telescopic.initial import as_initial, draw
 from telescopic.target import Target
 
@@ -303,7 +303,7 @@ def choose_k(meeting_times: npt.ArrayLike, quantile: float = 0.99) -> int:
     -------
     int
     """
-    tau = np.asarray(meeting_times, dtype=np.float64)
+    tau = real_array("meeting_times", meeting_times, "positive integers or inf, shape (R0,)")
     if tau.ndim != 1 or len(tau) == 0:
         raise ValueError("meeting_times must be a non-empty one-dimensional array")
     finite = tau[tau < np.inf]

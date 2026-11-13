@@ -608,7 +608,7 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
 
 - **Randomness:** every function that draws random numbers takes `rng` (SPEC 7). There is no global state.
 - **Shapes:** batch first. States are `(n, d)`; test functions map `(n, d)` to `(n,)` or `(n, p)`; per-replicate values are `(R, ...)`.
-- **Errors:** a scalar number argument of the wrong type raises `TypeError`, and one out of bounds `ValueError`, with messages that name it and say what was expected (DECISIONS #50); NumPy converts array arguments, and its errors apply. Questionable inputs emit `InputWarning`; reliability problems emit `ConvergenceWarning`.
+- **Errors:** a scalar number argument of the wrong type raises `TypeError`, and one out of bounds `ValueError`, with messages that name it and say what was expected (DECISIONS #50). An array argument that is not real numbers, such as a string, `None`, a complex number or a ragged sequence, raises `TypeError` naming the argument and the expected form, with NumPy's error chained when NumPy raised one (DECISIONS #103). Questionable inputs emit `InputWarning`; reliability problems emit `ConvergenceWarning`.
 - **Progress:** `progress=True` draws tqdm's text bar when tqdm is installed, in notebooks too, and falls back to periodic lines on stderr (DECISIONS #39).
 - **Types and documentation:** public signatures are typed, with NumPy-style docstrings.
 - **Vocabulary:** the documentation says "replicates" and "pairs", never "walkers".

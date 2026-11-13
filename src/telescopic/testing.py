@@ -11,7 +11,7 @@ from numpy.random import Generator
 from scipy import stats
 
 from telescopic._random import Draws, Streams, root_seed
-from telescopic._types import FloatArray, Seed, integer, real
+from telescopic._types import FloatArray, Seed, integer, real, real_array
 from telescopic.kernels.base import Kernel, State, evaluate
 from telescopic.target import Target
 
@@ -114,7 +114,8 @@ def check_coupling(
     Costs one coupled step and two steps of ``n`` chains, and an evaluation of the target
     at each of their ``4n`` new positions.
     """
-    x, y = np.asarray(x, dtype=np.float64), np.asarray(y, dtype=np.float64)
+    x = real_array("x", x, "real numbers of shape (d,)")
+    y = real_array("y", y, "real numbers of shape (d,)")
     if x.ndim != 1 or x.shape != y.shape:
         raise ValueError(f"x and y must be points of one shape (d,), not {x.shape} and {y.shape}")
     n = integer("n", n, minimum=2)
@@ -203,8 +204,8 @@ def fixed_draws(
         Draws for ``n`` rows; a request beyond the prescribed numbers raises ``IndexError``.
     """
     arrays = [
-        None if a is None else np.array(a, dtype=np.float64, ndmin=2, order="C")
-        for a in (normals, uniforms)
+        None if a is None else real_array(name, a, "real numbers of shape (n, k)", ndmin=2)
+        for name, a in (("normals", normals), ("uniforms", uniforms))
     ]
     rows = {len(a) for a in (*arrays, generators) if a is not None}
     if len(rows) != 1:

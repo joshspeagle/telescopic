@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numbers
 import operator
+import reprlib
 from collections.abc import Sequence
 from typing import Any, Protocol
 
@@ -84,9 +85,30 @@ def coordinates(dims: int | Sequence[int], ndim: int) -> npt.NDArray[np.intp]:
     return columns.astype(np.intp)
 
 
+def real_array(
+    name: str,
+    values: Any,
+    expected: str,
+    *,
+    dtype: type[np.floating[Any]] | None = np.float64,
+    ndmin: int = 0,
+) -> npt.NDArray[Any]:
+    # values as a new array of real numbers, of dtype unless None, which keeps integers.
+    # Strings, None, booleans, complex numbers and ragged sequences raise TypeError naming
+    # the argument, with NumPy's error chained when it raised one (DECISIONS #103).
+    cause = None
+    try:
+        array = np.array(values, ndmin=ndmin, order="C")
+    except (TypeError, ValueError) as error:
+        cause = error
+    if cause is not None or array.dtype.kind not in "iuf":
+        raise TypeError(f"{name} must be {expected}, not {reprlib.repr(values)}") from cause
+    return array if dtype is None else array.astype(dtype, copy=False)
+
+
 def vector(name: str, values: npt.ArrayLike, ndim: int | None = None) -> FloatArray:
     # A finite vector of shape (d,), d >= 1, or a scalar as shape (1,).
-    array = np.array(values, dtype=np.float64, ndmin=1)
+    array = real_array(name, values, "real numbers of shape (d,)", ndmin=1)
     if array.ndim != 1 or len(array) == 0:
         raise ValueError(f"{name} must have shape (d,) with d >= 1, not {array.shape}")
     if ndim is not None and len(array) != ndim:

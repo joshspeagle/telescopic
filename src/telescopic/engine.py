@@ -21,6 +21,7 @@ from telescopic._types import (
     Seed,
     averaging,
     integer,
+    real_array,
 )
 from telescopic.estimators import correction_coefficients
 from telescopic.initial import as_initial, draw
@@ -227,7 +228,7 @@ def run(
     """
     settings = check_settings(Settings(k, m, lag, thin, max_iter, store))
     lanes = integer("lanes", lanes, minimum=1)
-    requested = np.asarray(indices)
+    requested = real_array("indices", indices, "distinct integers >= 0", dtype=None)
     if (
         requested.ndim != 1
         or not len(requested)
