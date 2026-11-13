@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import functools
+import html
 import os
+import re
+import textwrap
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import IO, Any
@@ -19,6 +22,14 @@ from telescopic.estimators import unbiased_covariance, unbiased_variance, weight
 from telescopic.measure import SignedMeasure
 from telescopic.tuning import TuningReport
 from telescopic.warnings import ConvergenceWarning, warn
+
+# The summary's footer wraps at the width of a terminal, which a code output of the
+# documentation also holds at 1440 px (83 characters).
+_WRAP = textwrap.TextWrapper(
+    80, subsequent_indent="    ", break_long_words=False, break_on_hyphens=False
+)
+# A float in a kernel's repr: digits with a point or an exponent, not inside a name.
+_FLOAT = re.compile(r"(?<![\w.])\d+(?:\.\d*(?:[eE][-+]?\d+)?|[eE][-+]?\d+)")
 
 
 @dataclass(frozen=True, eq=False)
@@ -644,6 +655,11 @@ class Result:
 class Summary:
     """Estimates per parameter and the diagnostics of a run, printable as a table.
 
+    ``repr`` gives the table, then the footer as lines of at most 80 characters (a word
+    longer than that keeps its line), with the kernel on a line of its own and its
+    floats to 4 significant figures. A notebook shows the summary as an HTML table and
+    the footer as a list, one warning per item.
+
     Attributes
     ----------
     names : list of str
@@ -678,39 +694,70 @@ class Summary:
         return pd.DataFrame(self.table, index=self.names)
 
     def __repr__(self) -> str:
-        width = max(len(name) for name in self.names)
-        header = f"{'':{width}}  " + "  ".join(f"{column:>14}" for column in self.table)
-        rows = [
-            f"{name:{width}}  "
-            + "  ".join(f"{float(values[i]):>14.6g}" for values in self.table.values())
-            for i, name in enumerate(self.names)
+        columns = [
+            [column, *(f"{float(value):.6g}" for value in values)]
+            for column, values in self.table.items()
         ]
+        widths = [max(map(len, cells)) for cells in columns]
+        names = ["", *self.names]
+        width = max(map(len, names))
+        table = [
+            f"{name:{width}}"
+            + "".join(f"  {cells[i]:>{w}}" for cells, w in zip(columns, widths, strict=True))
+            for i, name in enumerate(names)
+        ]
+        footer = [wrapped for line in self._footer_lines() for wrapped in _WRAP.wrap(line)]
+        return "\n".join([*table, "", *footer])
+
+    def _repr_html_(self) -> str:
+        head = "".join(f"<th>{html.escape(column)}</th>" for column in self.table)
+        rows = "".join(
+            f"<tr><th>{html.escape(name)}</th>"
+            + "".join(f"<td>{float(values[i]):.6g}</td>" for values in self.table.values())
+            + "</tr>"
+            for i, name in enumerate(self.names)
+        )
+        items = "".join(f"<li>{html.escape(line)}</li>" for line in self._footer_lines())
+        return (
+            f'<div class="telescopic-summary"><table><thead><tr><th></th>{head}</tr></thead>'
+            f"<tbody>{rows}</tbody></table><ul>{items}</ul></div>"
+        )
+
+    def _footer_lines(self) -> list[str]:
         footer = self.footer
-        # The tail index needs 500 replicates.
-        tail = "" if np.isnan(footer["tail_index"]) else f"; tail index {footer['tail_index']:.3g}"
         # A quantile that falls on a censored pair is inf: beyond the cap.
         times = [
             f"> {footer['max_iter']}" if value == np.inf else f"{value:.4g}"
             for value in (footer[f"meeting_time_{q}"] for q in ("50", "90", "99", "max"))
         ]
+        # The kernel's own repr keeps every digit; the summary rounds its floats.
+        kernel = _FLOAT.sub(lambda match: repr(float(f"{float(match[0]):.4g}")), footer["kernel"])
         lines = [
             (
                 f"R = {footer['n_replicates']}, k = {footer['k']}, m = {footer['m']}, "
-                f"lag = {footer['lag']}, thin = {footer['thin']}; {footer['kernel']}"
+                f"lag = {footer['lag']}, thin = {footer['thin']}"
             ),
+            f"kernel: {kernel}",
             (
                 f"meeting times: median {times[0]}, 90% {times[1]}, 99% {times[2]}, max "
-                f"{times[3]}{tail}; censored {footer['censored']}"
+                f"{times[3]}; censored {footer['censored']}"
             ),
+        ]
+        # The tail index needs 500 replicates.
+        if not np.isnan(footer["tail_index"]):
+            lines.append(f"tail index of the meeting times: {footer['tail_index']:.3g}")
+        lines += [
             (
                 f"cost per replicate: {footer['mean_cost']:.4g} kernel applications, "
                 f"{footer['seconds_per_replicate']:.3g} s; relative cost "
-                f"{footer['relative_cost']:.3g}; pairs meeting after k + lag "
-                f"{footer['late_fraction']:.1%} (at most {footer['late_fraction_upper']:.1%} "
-                "at 95%)"
+                f"{footer['relative_cost']:.3g}"
             ),
             (
-                "largest share of one replicate in the variance of an estimate: "
+                f"pairs meeting after k + lag: {footer['late_fraction']:.1%} (at most "
+                f"{footer['late_fraction_upper']:.1%} at 95%)"
+            ),
+            (
+                "largest share of one replicate in a variance: "
                 f"{footer['variance_share']:.0%}, for {footer['variance_share_of']}"
             ),
         ]
@@ -719,5 +766,4 @@ class Summary:
                 "interrupted: the estimates are consistent but not exactly unbiased; run "
                 "the remaining replicates to restore unbiasedness"
             )
-        lines += [f"warning: {message}" for message in footer["warnings"]]
-        return "\n".join([header, *rows, "", *lines])
+        return lines + [f"warning: {message}" for message in footer["warnings"]]

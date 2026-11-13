@@ -207,3 +207,7 @@ All notable changes to this project are documented here. The format follows
   target does: with unbounded weights $\pi/q$, a run usually gives too little mass to
   the region where the weights are large, with error bars that are too small and often
   without a warning; the kernels guide has a measured example.
+- The summary shows as an HTML table in notebooks, its footer a list with one warning
+  per item. Its text keeps the lines below the table within 80 characters, with the
+  kernel on a line of its own and its floating-point parameters to 4 significant
+  figures, and sizes each column of the table to its entries.

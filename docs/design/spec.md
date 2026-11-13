@@ -544,7 +544,7 @@ Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 - (should; deferred beyond v0.1, DECISIONS #38) $\hat R$ across the replicates' X-chains;
 - warnings raised.
 
-**Output forms:** `repr` prints the table. It also converts with `to_dict()`, and with `to_pandas()` when pandas is installed.
+**Output forms:** `repr` prints the table, then the footer in lines wrapped at 80 characters, with the kernel on a line of its own and its floating-point parameters to 4 significant figures; `_repr_html_` renders the table as an HTML table and the footer as a list, one warning per item, for notebooks (DECISIONS #133, #134). It also converts with `to_dict()`, and with `to_pandas()` when pandas is installed.
 
 ### 7.4 Warnings (R-DIAG-2)
 
