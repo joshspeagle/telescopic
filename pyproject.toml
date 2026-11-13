@@ -101,7 +101,8 @@ precision = 2
 
 [tool.mypy]
 strict = true
-# The scipy-stubs marker of the dev group; the tests cover Python 3.11.
+# 3.12: the oldest Python on which the dev group installs scipy-stubs, so the type check
+# needs Python 3.12 or newer; the test jobs cover Python 3.11.
 python_version = "3.12"
 files = ["src/telescopic"]
 

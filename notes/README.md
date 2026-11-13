@@ -12,6 +12,7 @@ last one stopped. They are not part of the documentation site.
 | `QUESTIONS.md` | Questions only Josh can answer, each with the default that work proceeds on | Items move to `DECISIONS.md` when settled |
 | `experiments/` | Prototype scripts behind design choices and unpublished constructions, each with its result in the header | Added per experiment |
 | `reviews/` | Reports of the first draft's milestone reviews and audits | Not updated; later reports are comments on their epic |
+| `review/` | Josh's review of the first draft: its guide, log, decisions, artifacts and the generated hub page (`hub/`) | Not updated |
 
 Design decisions taken while writing the specification live in its decision table
 (`docs/design/spec.md`), not here: each fact has one home.

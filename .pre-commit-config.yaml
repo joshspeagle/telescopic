@@ -1,4 +1,4 @@
-# The same files that the lint job of CI checks.
+# Ruff's checks of the CI lint job, on the same files; mypy runs in CI and in scripts/verify.sh.
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # The ruff pin of the dev group in pyproject.toml.
