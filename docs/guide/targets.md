@@ -15,7 +15,9 @@ which each pair of chains starts.
 log-density, up to an additive constant, as a float. The arguments `args` and `kwargs`
 of {func}`telescopic.sample` are passed on to it. With `vectorize=True` it takes a batch
 of shape `(n, d)` and returns shape `(n,)`, so that a step of many chains costs one call
-instead of one per point.
+instead of one per point. An output whose shape differs from the expected one only by
+axes of length 1, such as the shape `()` that SciPy's `multivariate_normal.logpdf`
+returns for a batch of one point, is reshaped; any other shape raises `ValueError`.
 
 ```{code-cell} python
 import numpy as np
@@ -38,7 +40,8 @@ mean, sd = np.array([1.0, -2.0]), np.array([0.5, 2.0])
 `grad` is the gradient of the log-density, with the same signature, returning shape
 `(d,)`, or `(n, d)` with `vectorize=True`. MALA and HMC need it
 ([Kernels and couplings](kernels.md)). Both functions receive read-only arrays, so one
-that writes to its input raises instead of corrupting the chains.
+that writes to its input raises instead of corrupting the chains, and what they return is
+copied, so one may reuse its output array from call to call.
 
 {class}`telescopic.Target` holds these functions. {func}`telescopic.sample` and
 {class}`telescopic.CoupledSampler` build one from their arguments; it is needed directly
@@ -197,9 +200,9 @@ for name, init in inits.items():
 
 ## Choosing one
 
-The estimates are unbiased for any initial distribution
-([Theory](../theory.md#guarantees-and-their-limits)), but the choice sets their variance
-and the cost, and decides whether the chains find every mode.
+The estimates are unbiased for every initial distribution from which the chain
+converges ([Theory](../theory.md#guarantees-and-their-limits)), but the choice sets their
+variance and the cost, and decides whether the chains find every mode.
 
 - **Cover every mode.** If every pair starts near one mode and the kernel rarely crosses
   to another, every pair meets in that mode, and the estimates and their error bars
@@ -228,5 +231,5 @@ and the cost, and decides whether the chains find every mode.
 - **Inside the support.** A replicate that starts where the target density is zero emits
   an {class}`~telescopic.warnings.InputWarning`, and its chains stay there until they
   accept a proposal of finite density.
-- **The last state of an ensemble** keeps the estimates unbiased, but covers only the
-  modes that the ensemble found.
+- **The last state of an ensemble** keeps the estimates unbiased when the chain
+  converges from it, but covers only the modes that the ensemble found.

@@ -234,7 +234,8 @@ $\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]$.
   2021).
 - `proposal` is a {class}`telescopic.kernels.MultivariateT`, a Student-$t$ with location
   `mean`, scale matrix `cov` and `df` degrees of freedom, a positive integer (`df=None`
-  gives a Gaussian).
+  gives a Gaussian). A proposal of your own whose `log_density` returns NaN or `+inf`
+  raises `ValueError` with the point.
 - `tune` sets a Student-$t$ with 5 degrees of freedom, located at the pilot's mean, with
   the pilot's covariance as scale matrix. The report's `max_weight_ratio` is the largest
   weight $\pi/q$ among the pilot's states, relative to their median; a large value
@@ -259,7 +260,8 @@ conditionals:
 - `coupling="crn"`: common random numbers, one uniform through `ppf` for a block of one
   coordinate, or common standard normals for a normal conditional, an object with `mean`
   and `cov`, a matrix of the block's size that may be singular. An object with `mean` and
-  `cov` that is not normal would get the wrong law. Common random numbers can bring the chains together,
+  `cov` that is not normal would get the wrong law, and one whose `mean` and `cov` are
+  methods, as a frozen SciPy `dirichlet`'s are, raises `TypeError`. Common random numbers can bring the chains together,
   but make them equal only by rounding; `"two-scale"` adds the maximal coupling.
 - `coupling="two-scale"`: common random numbers for pairs farther apart than `threshold`
   at the start of a sweep, and the maximal coupling for the others, as in Biswas,
@@ -295,4 +297,5 @@ example: [Gibbs](../tutorials/gibbs.md).
 a uniform with probabilities `weights`. Coupled chains take the same component and its
 coupling. The choice never depends on the states, which keeps each chain's moves those
 of the mixture (Atchadé & Jacob 2024, §4.2). `tune` tunes the untuned components on one
-pilot. HMC is a mixture of its trajectories and its meeting step.
+pilot, and the start of the chains checks that every component works in their
+dimension. HMC is a mixture of its trajectories and its meeting step.

@@ -24,8 +24,9 @@ the rules of [Special values](targets.md#special-values). A
 {class}`telescopic.kernels.State` holds `n` chains, batch first: positions `x` of shape
 `(n, d)`, log-densities `log_prob` of shape `(n,)`, and gradients `grad` of shape
 `(n, d)` or `None`. A kernel returns new states with the fields of its input states, all
-valid at the new positions: when the input carries gradients, so does the output. It
-never modifies its input states.
+valid at the new positions: when the input carries gradients, so does the output, and a
+run or a mixture raises `ValueError` when it lacks them. It never modifies its input
+states.
 
 A {class}`telescopic.kernels.Draws` holds the random numbers. Row `i` of every request
 belongs to chain, or pair, `i`:
@@ -92,8 +93,9 @@ that has met. To run on a pool of processes, the kernel must be picklable
 
 ## Coupling primitives
 
-{mod}`telescopic.couplings` holds the couplings that the built-in kernels use. Each
-works on a batch, and on rows where the two draws coincide it returns a copy.
+{mod}`telescopic.couplings` holds the couplings of the built-in kernels, and
+`discrete_maximal` for kernels on finite state spaces. Each works on a batch, and on
+rows where the two draws coincide it returns a copy.
 
 - {func}`telescopic.couplings.reflection_maximal` couples $\mathcal N(\mu_x, CC^\top)$
   and $\mathcal N(\mu_y, CC^\top)$, given $C$ and $C^{-1}$, with $d$ normals and 1

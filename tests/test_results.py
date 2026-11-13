@@ -39,15 +39,25 @@ def gaussian_result(n=40, **options):
 RESULT = gaussian_result()
 
 
-def test_an_estimate_averages_the_replicates_with_a_normal_interval():
-    estimate = RESULT.estimate(lambda x: x**2, level=0.9)
-    values = RESULT.measure.per_replicate(lambda x: x**2)
+@pytest.mark.parametrize(
+    "result",
+    [gaussian_result(2), gaussian_result(30, k=3, m=3, lag=1, max_iter=4)],
+    ids=["two replicates", "some censored"],
+)
+def test_an_estimate_averages_the_replicates_with_a_student_t_interval(result):
+    estimate = result.estimate(lambda x: x**2, level=0.9)
+    values = result.measure.per_replicate(lambda x: x**2)
     error = values.std(axis=0, ddof=1) / np.sqrt(len(values))
+    half_width = stats.t.ppf(0.95, len(values) - 1) * error
     np.testing.assert_array_equal(estimate.value, values.mean(axis=0))
     np.testing.assert_allclose(estimate.standard_error, error, rtol=1e-12)
-    np.testing.assert_allclose(
-        estimate.interval[1] - estimate.value, stats.norm.ppf(0.95) * error, rtol=1e-12
-    )
+    np.testing.assert_allclose(estimate.interval[0], estimate.value - half_width, rtol=1e-12)
+    np.testing.assert_allclose(estimate.interval[1], estimate.value + half_width, rtol=1e-12)
+
+
+def test_an_estimate_from_one_replicate_raises_instead_of_an_undefined_interval():
+    with pytest.raises(ValueError, match="at least 2 replicates that met, not 1"):
+        gaussian_result(1).estimate(lambda x: x)
 
 
 def test_the_covariance_combines_first_and_second_moments_coordinate_by_coordinate():
@@ -218,6 +228,24 @@ def test_a_result_needs_the_signed_measures_of_its_replicates():
     assert np.all(np.isinf(replicates.meeting_time))
     with pytest.raises(ValueError, match="store=True"):
         Result(replicates)
+
+
+def test_a_result_with_no_replicates_raises_at_construction():
+    # diagnostics() and check() divided by zero, and tv_bound() reduced an empty array.
+    with pytest.raises(ValueError, match="at least one replicate"):
+        synthetic([], [])
+
+
+def test_meeting_time_quantiles_sort_censored_pairs_above_the_cap():
+    # 4 of 10 pairs censored: the median is the 5th smallest meeting time, and the 90%
+    # and 99% quantiles and the maximum fall on censored pairs. Over the pairs that met,
+    # the median was 3.5 and the others at most 6.
+    result = synthetic([1, 2, 3, 4, 5, 6, -1, -1, -1, -1], np.arange(6.0), max_iter=8)
+    values = result.diagnostics()
+    assert values["meeting_time_50"] == 5
+    for key in ("meeting_time_90", "meeting_time_99", "meeting_time_max"):
+        assert values[key] == np.inf
+    assert "median 5, 90% > 8, 99% > 8, max > 8; censored 4" in repr(result.summary())
 
 
 def test_censored_pairs_need_the_cap_of_their_run():

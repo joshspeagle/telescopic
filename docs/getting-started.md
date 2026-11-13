@@ -32,10 +32,11 @@ leaves. The estimate is a **signed measure**: points with weights that sum to 1,
 them negative.
 
 The average of the replicates' estimates is **unbiased**: its expectation is the
-posterior expectation, whatever `k`, `m`, the lag and the initial distribution, and its
-error bar is valid as the number of replicates grows. A **consistent** estimate only
-converges as the number of replicates grows. [How it works](tutorials/how-it-works.md)
-shows a pair meeting, and [Theory](theory.md) derives the estimator.
+posterior expectation, whatever `k`, `m` and the lag, from every initial distribution
+from which the chain converges, and its error bar is valid as the number of replicates
+grows. A **consistent** estimate only converges as the number of replicates grows.
+[How it works](tutorials/how-it-works.md) shows a pair meeting, and [Theory](theory.md)
+derives the estimator and states the conditions.
 
 ## A first run
 

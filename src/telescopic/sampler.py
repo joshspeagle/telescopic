@@ -56,8 +56,9 @@ class CoupledSampler:
         The initial distribution :math:`\pi_0`: an object with
         ``rvs(random_state=rng)`` (such as a frozen SciPy distribution or
         :class:`telescopic.initial.Normal`), a callable ``init(rng)``, or an array of
-        points of shape ``(n, d)``. Any :math:`\pi_0` keeps the estimates unbiased; one
-        wider than the target and covering all its modes keeps them reliable.
+        points of shape ``(n, d)``. Every :math:`\pi_0` from which the chain converges
+        keeps the estimates unbiased (Guarantees and their limits, in :doc:`/theory`);
+        one wider than the target and covering all its modes keeps them reliable.
     args, kwargs
         Extra arguments of ``log_prob`` and ``grad``.
     grad : callable, optional
@@ -423,7 +424,7 @@ def sample(
         The initial distribution :math:`\pi_0`: an object with ``rvs(random_state=rng)``,
         a callable ``init(rng)`` or an array of points of shape ``(n, d)``.
     n_replicates : int
-        The number :math:`R` of replicates.
+        The number :math:`R` of replicates, at least 2.
     args, kwargs, grad, vectorize, kernel, names, pool, progress, rng
         As for :class:`CoupledSampler`.
     k, m, lag, thin, max_iter
@@ -436,6 +437,8 @@ def sample(
     Result
         Its estimates are unbiased; it warns about the conditions of spec section 7.4.
     """
+    # Checked before tuning: the estimates and the summary need 2 replicates that met.
+    integer("n_replicates", n_replicates, minimum=2)
     sampler = CoupledSampler(
         log_prob,
         init,

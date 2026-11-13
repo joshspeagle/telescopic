@@ -27,7 +27,7 @@ The census found no maintained, installable implementation of these methods in a
 
 Principles:
 
-1. **Unbiased by construction, honest about the limits.** Every replicate is an exactly unbiased estimate for its stated $(k, m, L)$ when its pair meets. Intervals are large-$R$ central-limit intervals. The package reports what can break them (pairs that do not meet, heavy tails, multimodal targets) instead of hiding it.
+1. **Unbiased by construction, honest about the limits.** Every replicate is an exactly unbiased estimate for its stated $(k, m, L)$ when its pair meets. Intervals are central-limit intervals with the Student-$t$ quantile, valid as $R$ grows. The package reports what can break them (pairs that do not meet, heavy tails, multimodal targets) instead of hiding it.
 2. **Easy things are one line, hard things are possible.** `telescopic.sample(log_prob, init)` covers the common case. Beneath it sit a sampler object, then kernels, couplings and an engine as building blocks, with helpers to test new couplings.
 3. **Tune on pilots, then freeze.** Kernels are tuned on independent pilot runs. Nothing adapts inside a coupled run.
 4. **Replicates are the unit of work, randomness and parallelism.** A replicate's result depends only on the root seed and its index, never on batching, workers or scheduling.
@@ -83,16 +83,16 @@ Ordinary MCMC starts a chain from $\pi_0$, discards a burn-in by eye or heuristi
 - **Documentation:** a theory page, a user guide, executed tutorials, and an API reference.
 
 **Should (v0.1 if time allows, otherwise v0.2):**
-- Budget mode with the Glynn–Heidelberger per-lane estimator (§3.7).
-- Checkpoint and resume to a file.
+- Budget mode with the Glynn–Heidelberger per-lane estimator (§3.7; deferred beyond v0.1, DECISIONS #22).
+- Checkpoint and resume to a file (deferred beyond v0.1, DECISIONS #76).
 - 1-Wasserstein bounds (§3.6).
-- Rank-normalised $\hat R$ and effective sample size across the replicates' X-chains; these are the atoms from $k$ to $m$ (deferred beyond v0.1, DECISIONS #38). Also a relative inefficiency against an autocorrelation-based MCMC baseline.
-- Export of the replicates' X-chains to ArviZ.
+- Rank-normalised $\hat R$ and effective sample size across the replicates' X-chains; these are the atoms from $k$ to $m$ (deferred beyond v0.1, DECISIONS #38). Also a relative inefficiency against an autocorrelation-based MCMC baseline (deferred beyond v0.1, DECISIONS #76).
+- Export of the replicates' X-chains to ArviZ (deferred beyond v0.1, DECISIONS #76).
 - Couplings:
-  - two-scale GCRN and GCRefl couplings for RWMH with gradients (Papp & Sherlock 2025);
-  - the kernel-maximal coupling $\bar P_C$ (O'Leary, Wang & Jacob 2021) for low-acceptance kernels.
-- HMC trajectory lengths chosen from pilot meeting times over a small grid (Heng & Jacob §5).
-- An unbiased asymptotic-variance report (Douc, Jacob, Lee & Vats).
+  - two-scale GCRN and GCRefl couplings for RWMH with gradients (Papp & Sherlock 2025; deferred beyond v0.1, DECISIONS #76);
+  - the kernel-maximal coupling $\bar P_C$ (O'Leary, Wang & Jacob 2021) for low-acceptance kernels (deferred beyond v0.1, DECISIONS #76).
+- HMC trajectory lengths chosen from pilot meeting times over a small grid (Heng & Jacob §5; deferred beyond v0.1, DECISIONS #76).
+- An unbiased asymptotic-variance report (Douc, Jacob, Lee & Vats; deferred beyond v0.1, DECISIONS #76).
 
 **Roadmap (v0.2 and later):**
 - A JAX backend: autodiff gradients and a persistent-lanes engine with in-loop refill on accelerators.
@@ -160,18 +160,13 @@ whose weights sum to 1. Some weights are negative, so estimates can fall outside
 ### 3.3 Guarantees and their limits (R-THEORY-1: the documentation must state them in these terms)
 
 **Guaranteed:**
-- **Unbiasedness:** $\mathbb E[H^{(L)}_{k:m}] = \pi(h)$ for every $0 \le k \le m$, $L \ge 1$ and $\pi_0$, provided:
-  - the coupling preserves both marginals;
-  - the pair stays together after meeting;
-  - the meeting time has enough moments.
+- **Unbiasedness:** $\mathbb E[H^{(L)}_{k:m}] = \pi(h)$ for every $0 \le k \le m$, $L \ge 1$ and every $\pi_0$ from which the chain converges, provided that the coupling preserves both marginals, the pair stays together after meeting, and one of three published sets of conditions holds (DECISIONS #77):
+  - JOA20 Prop. 3.1: the chain started from $\pi_0$ converges in the sense of their Assumption 2.1, $\mathbb E[h(X_t)] \to \pi(h)$ as $t \to \infty$ with $\sup_t \mathbb E|h(X_t)|^{2+\eta} < \infty$ for some $\eta > 0$, and $\tau$ has geometric tails;
+  - Middleton et al. 2020, Thm. 1: the same convergence assumption, and polynomial tails, $P(\tau > t) \le K t^{-\kappa}$ with $\kappa > 2(2/\eta + 1)$;
+  - Douc et al. 2022, Thm. 17: $P$ is $\pi$-irreducible, $\mathbb E_{\pi\otimes\pi}[\tau^\kappa] < \infty$ with $\kappa > 1$, $h \in L^p(\pi)$ with $p > \kappa/(\kappa-1)$, and $d\pi_0/d\pi \le M$, which replace the convergence assumption.
 
-  The moment conditions take any of three published forms:
-  - geometric tails of $\tau$ (JOA20 Prop. 3.1);
-  - polynomial tails (Middleton et al. 2020);
-  - $\mathbb E_{\pi\otimes\pi}[\tau^\kappa] < \infty$ with $\kappa > 1$, $h \in L^p(\pi)$ with $p > \kappa/(\kappa-1)$, and $d\pi_0/d\pi \le M$ (Douc et al., Thm. 17).
-
-  Under the last, the variance is finite if $\kappa > 2$ and $p > 2\kappa/(\kappa - 2)$.
-- **Error bars:** with $R$ independent replicates and finite variance, $\bar H \pm z_{1-\alpha/2}\,\hat\sigma/\sqrt R$ is an asymptotically valid interval as $R \to \infty$. The bounded work per replicate does not change this.
+  Under the last, the variance is finite if $\kappa > 2$ and $p > 2\kappa/(\kappa - 2)$. A fast meeting does not show convergence. A kernel that cannot leave the region where it starts, such as a Gibbs sampler on two squares that share no coordinate value, meets there and estimates the expectation over that region alone, and the guarantee does not hold. A kernel that can leave only by a rare move, such as a random walk whose steps are much shorter than a gap in the support, can meet the conditions and be unbiased, but the replicates that carry the correction are too rare to occur in a run, so the estimate is confidently wrong at any practical number of replicates.
+- **Error bars:** with $R \ge 2$ independent replicates and finite variance, $\bar H \pm t_{R-1,\,1-\alpha/2}\,\hat\sigma/\sqrt R$, with the quantile of Student's t with $R - 1$ degrees of freedom, is an asymptotically valid interval as $R \to \infty$, and exact at every $R$ for normal replicates; the normal quantile undercovers at small $R$ (DECISIONS #78). The bounded work per replicate does not change this.
 - **Fixed $R$:** unbiasedness holds for a number of replicates fixed before any result is seen. Choosing $R$ after looking at results (for example, extending a run until the error bar is small) is optional stopping: the mean stays consistent and the large-$R$ intervals stay valid, but exact unbiasedness is lost.
 - **Total-variation bounds:** meeting times give upper bounds on $d_{TV}(\pi_t, \pi)$, where $\pi_t$ is the law of $X_t$ (§3.6).
 
@@ -248,6 +243,7 @@ Averaging only the replicates completed by a deadline is biased by $-\mathbb E[H
 ### 4.1 Target (R-INPUT-1)
 
 - **Log-density:** `log_prob(x, *args, **kwargs)` returns a float for `x` of shape `(d,)`. With `vectorize=True` it takes `(n, d)` and returns `(n,)`.
+- **Output shapes:** an output of `log_prob` or `grad` whose shape differs from the expected one only by axes of length 1, such as the `()` that SciPy's `multivariate_normal.logpdf` returns for one point, or a one-element array per point, is reshaped; any other shape raises `ValueError` (DECISIONS #90). The `Target` copies every output, so a function that reuses its output array cannot change states already computed (DECISIONS #94).
 - **Gradient:** an optional `grad` with the same signature returns $\nabla \log\pi$, of shape `(d,)` or `(n, d)`. A kernel that needs a gradient raises `ValueError` without one.
 - **Special values:** `-inf` is a valid value and is rejected by every Metropolis step. NaN or `+inf` raises `ValueError` with the offending point. Where the log-density is `-inf`, the gradient is not evaluated, and states there carry a gradient of 0: a gradient kernel proposes from such a point without drift and accepts any proposal of finite density, as RWMH does (DECISIONS #14, #49). Where it is finite, a gradient that is not finite is taken as 0 too: MALA's proposal then has no drift there and HMC's kick none, which keeps both exact, since a Metropolis-Hastings proposal and a leapfrog map stay valid for any drift that depends on the position alone. At the states that chains start from, such a gradient raises `ValueError` with the point instead: a MALA chain could not leave such a start, since a move back is accepted only if the reverse proposal, which carries the full drift, could return. The target counts the gradients taken as 0, and the replicates and the result carry the count. The pilot pairs or the replicates of a run that meet one emit an `InputWarning`, from the run's monitor as soon as this process's target counts one, and from the replicates after a run on a pool; tuning does not (DECISIONS #67).
 - **Gibbs:** with a kernel that needs no log-density, a Gibbs kernel or a mixture of them, `log_prob` may be `None` (§5.7).
@@ -396,7 +392,7 @@ The documentation says that settings optimal for HMC alone can fail to contract 
 
 ### 5.6 Independence Metropolis–Hastings (R-KER-IMH)
 
-`Independence(proposal=None)`. `proposal` has `sample(draws)`, returning `(n, d)` from the buffered normals, and a batched, normalised `log_density(x)`. `MultivariateT(mean, cov, df=5)` is the built-in.
+`Independence(proposal=None)`. `proposal` has `sample(draws)`, returning `(n, d)` from the buffered normals, and a batched, normalized `log_density(x)`. A NaN or `+inf` value of `log_density` raises `ValueError` with the point, as a NaN or `+inf` value of the target's log-density does (§4.1, DECISIONS #91). `MultivariateT(mean, cov, df=5)` is the built-in.
 - **Acceptance:** accept when $\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]$.
 - **Coupling:** both chains share the proposal $x'$ and $u$, so they meet when both accept. This is already a maximal kernel coupling (O'Leary, Wang & Jacob 2021).
 - **Default proposal:** a multivariate Student-$t$ with 5 degrees of freedom, located at the RWMH pilot's mean, with the pilot's covariance as its scale matrix, so its covariance is $5/3$ of the pilot's (D-25). The tuning report gives the largest importance-weight ratio $\pi/q$ seen in the pilot, relative to the median.
@@ -476,7 +472,7 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 
 ### 6.5 Interruption (R-EXEC-6)
 
-- **First Ctrl-C:** no new replicate starts, the ones in progress finish, and the result is flagged `interrupted`. It contains every started replicate. The workers that telescopic creates hear of it through an event: they start no new replicate, and a chunk that starts afterwards runs nothing, except the first, so that a run returns a replicate. On a user's executor the chunks not started are cancelled and the running ones finish; a `.map` pool returns its completed waves only. How the rest of a user's pool reacts to Ctrl-C is up to the pool: a process pool whose workers do not ignore SIGINT breaks, and the run returns the chunks that had finished, or raises if none had (DECISIONS #45).
+- **First Ctrl-C:** no new replicate starts, the ones in progress finish, and the result is flagged `interrupted`. It contains every started replicate. The workers that telescopic creates hear of it through an event: they start no new replicate, and a chunk that starts afterwards runs nothing, except the first, so that a run returns a replicate. On a user's executor the running chunks finish and the chunks not started are cancelled, except those the executor has already queued for its workers, where cancelling fails: a `ProcessPoolExecutor` keeps a call queue of `max_workers + 1` chunks beyond its running ones, which it refills when a chunk ends, so up to `max_workers + 1` chunks start after the stop and run all their replicates, and they are included in the result; the run then returns up to two chunk durations later than if they had been cancelled (DECISIONS #95); a `.map` pool returns its completed waves only. How the rest of a user's pool reacts to Ctrl-C is up to the pool: a process pool whose workers do not ignore SIGINT breaks, and the run returns the chunks that had finished, or raises if none had (DECISIONS #45).
 - **Requested indices:** a result records the indices it was asked for, and `interrupted` is true while one of them has not run. In this process the started replicates form a prefix of the indices; on a pool they need not. The sampler's next run starts with the missing indices, and `merge` joins the requests, so a run that completes an interrupted one clears the flag (DECISIONS #20).
 - **Its estimates are consistent, not exactly unbiased:** the number of replicates depends on their costs, which correlate with $h$ through $\tau$, so the mean is a ratio estimator (Glynn & Heidelberger 1991). The bias is visible with few lanes (one lane: $z = -12.9$ in design review D-R3) and was not detectable with 16 or more. `summary()` says so. Running the remaining replicates of the requested $R$ restores exact unbiasedness, because $R$ is then fixed in advance (D-22).
 - **Second Ctrl-C:** raises `KeyboardInterrupt` at once, without a result, and stops the workers that telescopic started.
@@ -535,7 +531,7 @@ Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 **Footer:**
 - $R$, $k$, $m$, $L$, `thin`;
 - the kernel and its coupling;
-- meeting-time median, 90th and 99th percentiles, maximum, and number censored;
+- meeting-time median, 90th and 99th percentiles, maximum, and number censored. The quantiles cover every pair, censored ones sorted above every finite meeting time, by the inverted empirical CDF of §3.5, as in the pilot of §6.3; `diagnostics()` gives `inf` for a quantile that falls on a censored pair, and the summary prints it as `> max_iter`, with the cap's value (DECISIONS #93);
 - the tail index of warning 4 of §7.4, from 500 replicates (DECISIONS #40);
 - mean cost per replicate, in kernel applications and in seconds;
 - the relative cost, mean cost / $(m - k + 1)$ (R-TUNE-4);
@@ -561,7 +557,7 @@ Classes: `TelescopicWarning`, with subclasses `ConvergenceWarning` and `InputWar
 
 Rates measured at M11, on the first two targets with `sample()`'s defaults and on the third with the settings given (`notes/experiments/m11_warnings.out`, `m11_variance_share.out`):
 - `examples.gaussian(10)`: no warning in 100 runs at $R = 100$ and 50 at $R = 500$.
-- The banana from $U[-5, 5]^2$: at $R = 100$, the variance warning in 37 of 200 runs, where the 95% intervals of $E[x_0^2]$ covered at 0.89 against 0.96 elsewhere; at $R = 500$, the variance warning in 4 of 50 runs and the tail warning in 14.
+- The banana from $U[-5, 5]^2$: at $R = 100$, the variance warning in 37 of 200 runs, where the 95% intervals of $E[x_0^2]$ covered at 0.95 against 0.97 elsewhere (0.89 against 0.96 with the normal quantile, before DECISIONS #78); at $R = 500$, the variance warning in 4 of 50 runs and the tail warning in 14.
 - JOA20's bimodal target from $\mathcal N(10, 1)$ at $R = 1000$: 33 of 50 intervals of $P(x > 3)$ missed the truth, none with a warning; the 17 runs whose replicates found the other mode raised the variance warning and covered.
 
 The documentation explains each, with the failure cases of JOA20 §5.1, and says that a run that never left one mode cannot be detected from its own output at moderate $R$ (design review D-R9).
@@ -588,7 +584,7 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
                      max_iter=None, pool=None, names=None, progress=False, rng=None) -> Result
    ```
 
-   `kernel` is a `Kernel` or one of the strings `"auto"`, `"rwmh"`, `"mala"`, `"hmc"` and `"independence"`. `"auto"` means RWMH, with or without a gradient; gradient kernels are requested by name (D-3).
+   `n_replicates` is at least 2, checked before any work, since the estimates need two replicates that met; `CoupledSampler.run`, whose runs accumulate, takes 1 (DECISIONS #92). `kernel` is a `Kernel` or one of the strings `"auto"`, `"rwmh"`, `"mala"`, `"hmc"` and `"independence"`. `"auto"` means RWMH, with or without a gradient; gradient kernels are requested by name (D-3).
 2. **Sampler object:**
 
    ```python
@@ -704,7 +700,7 @@ These targets are measured by `benchmarks/` and are not gating.
   - tests on Linux, macOS and Windows, with a job on the oldest supported stack;
   - a docs build;
   - a wheel and sdist build with a smoke test;
-  - the slow tier on manual dispatch.
+  - the slow tier on every push to `main` and on manual dispatch (DECISIONS #75).
 - **Repository files:** `CITATION.cff`, `CHANGELOG.md`, `CONTRIBUTING.md` (with the validation philosophy), `LICENSE`.
 
 ---
@@ -715,7 +711,8 @@ These targets are measured by `benchmarks/` and are not gating.
    - pure kernels over pytrees;
    - `fold_in(root, i)` streams;
    - a persistent-lanes `while_loop` with in-loop refill (never `vmap` over whole replicates: 2–11× waste);
-   - autodiff gradients.
+   - autodiff gradients;
+   - statistical, not bitwise, invariance to the lane layout (R-EXEC-2 holds bitwise only for the NumPy engine), since XLA does not promise that a row's bits are independent of its batch (DECISIONS #73).
 2. **Experiments under DECISIONS #1:**
    - coupled elliptical slice sampling with coupled pCN meeting steps (unpublished: met at $d \le 200$ in the census check);
    - coupled NUTS;

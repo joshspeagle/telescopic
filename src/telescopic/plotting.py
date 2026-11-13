@@ -25,7 +25,8 @@ def meeting_times(result: Result, axes: Sequence[Axes] | None = None) -> list[Ax
 
     The survival function :math:`P(\tau - L > t)` is on a log scale, where a straight
     tail means geometric meeting times (spec section 7.5). A censored pair counts in it
-    up to the cap, and not in the histogram.
+    at every time up to the cap, where the curve ends at the fraction censored, and not
+    in the histogram.
 
     Parameters
     ----------
@@ -43,9 +44,10 @@ def meeting_times(result: Result, axes: Sequence[Axes] | None = None) -> list[Ax
     shifted = result.meeting_times - result.lag
     histogram.hist(shifted[np.isfinite(shifted)], bins="auto")
     histogram.set(xlabel=r"$\tau - L$", ylabel="pairs")
-    stopped = np.sort(result._stopped - result.lag)
-    t = np.union1d(0, stopped)  # the function steps only there
-    fraction = 1 - np.searchsorted(stopped, t, side="right") / len(stopped)
+    # Censored pairs, at inf, sort above every time, so the curve, which steps at the
+    # times the pairs stopped, ends at the cap at the fraction censored.
+    t = np.union1d(0, result._stopped - result.lag)
+    fraction = 1 - np.searchsorted(np.sort(shifted), t, side="right") / len(shifted)
     survival.step(t, fraction, where="post")
     survival.set(xlabel="$t$", ylabel=r"$P(\tau - L > t)$")
     # A log scale needs a positive value: none when every pair met at t = L.

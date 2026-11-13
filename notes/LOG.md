@@ -318,3 +318,6 @@ Append only. One entry per working session or milestone.
   4377bab, 607 fast tests in 41 s and 20 slow in 125 s pass, and the strict docs build in
   2 min 15 s.
 - The review hub (`notes/review/`) shows the audit's findings on its steps.
+
+This log records the first draft and is no longer updated. Later sessions are logged on GitHub, as
+comments on the tracking issue #65 (DECISIONS #96).

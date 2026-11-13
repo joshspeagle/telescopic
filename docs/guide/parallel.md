@@ -113,13 +113,19 @@ here = telescopic.sample(gaussian.log_prob, gaussian.initial, rng=3)
 
 ## Pickling and the main guard
 
-The workers receive the job pickled. With cloudpickle installed (the `parallel` extra),
-telescopic pickles it with cloudpickle, which also sends lambdas and functions defined in
-a notebook or a script. Without cloudpickle, the standard pickle needs functions defined
-at the top level of an importable module, as the log-density of
-{func}`telescopic.examples.gaussian` above: a lambda raises `TypeError`, and a function
-that a worker cannot import, such as one defined in a notebook, raises `RuntimeError`,
-each with that advice.
+Every pool, a thread pool included, runs the pilot pairs and the replicates on pickled
+copies of the target, the kernel and the initial distribution; tuning runs in this
+process, on your objects. Side effects of the log-density on a pool, such as a call
+counter or a cache, therefore happen on the copies and are not seen on your objects. An
+object that cannot be pickled, such as one that holds a `threading.Lock`, cannot run on a
+pool: telescopic raises `TypeError`.
+
+With cloudpickle installed (the `parallel` extra), telescopic pickles them with
+cloudpickle, which also sends lambdas and functions defined in a notebook or a script.
+Without cloudpickle, the standard pickle needs functions defined at the top level of an
+importable module, as the log-density of {func}`telescopic.examples.gaussian` above: a
+lambda raises `TypeError`, and a function that a worker cannot import, such as one
+defined in a notebook, raises `RuntimeError`, each with that advice.
 
 Under the spawn and forkserver start methods, the worker processes import the main
 script, and telescopic's own workers always use spawn. A script that runs on such a pool
@@ -172,10 +178,13 @@ reticulate.
 
 On a pool, telescopic's workers start no new replicate after the first Ctrl-C, and a chunk
 that starts afterwards runs nothing, unless it is the first, so that the result holds at
-least one replicate. On an executor of your own, the chunks not yet started are cancelled
-and the running ones finish; a pool with only `map` returns the waves it completed. How
-the rest of a pool of your own reacts to Ctrl-C is up to the pool. A process pool of your
-own should ignore Ctrl-C in its workers, as telescopic's do:
+least one replicate. On an executor of your own, the running chunks finish and the chunks
+not yet started are cancelled, except those that the executor has already queued for its
+workers: a `ProcessPoolExecutor` queues up to one more chunk than it has workers. Those
+chunks run in full and the result includes their replicates, so the run can take up to
+two chunk durations longer to return. A pool with only `map` returns the waves it
+completed. How the rest of a pool of your own reacts to Ctrl-C is up to the pool. A
+process pool of your own should ignore Ctrl-C in its workers, as telescopic's do:
 `ProcessPoolExecutor(4, initializer=signal.signal, initargs=(signal.SIGINT, signal.SIG_IGN))`.
 Otherwise Ctrl-C kills its idle workers and breaks the pool: the run returns the chunks
 that had finished, flagged `interrupted`, or raises `BrokenProcessPool` if none had, and

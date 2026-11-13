@@ -137,18 +137,22 @@ class AR1(Kernel):
 STANDARD_NORMAL = Target(gaussian_log_prob, vectorize=True)
 
 
-def test_intervals_cover_at_the_reference_rate():
-    # Intervals of R = 200 from a stationary start, under the recipe for this chain
-    # (k = L = 38, m = 380). The reference coverages of x and x^2 come from 10^4 intervals
-    # of an implementation written apart from the package
-    # (notes/experiments/m9_coverage_reference.py).
-    reference, reference_error = np.array([0.9509, 0.9489]), 0.0022
-    per_interval, batch = 200, 4000
+@pytest.mark.parametrize(
+    ("per_interval", "n", "reference", "reference_error", "seed"),
+    [(200, 2000, [0.9521, 0.9500], 0.0022, 20), (5, 4000, [0.9500, 0.9424], 0.0004, 21)],
+)
+def test_intervals_cover_at_the_reference_rate(per_interval, n, reference, reference_error, seed):
+    # Student-t intervals of R replicates from a stationary start, under the recipe for
+    # this chain (k = L = 38, m = 380). The reference coverages of x and x^2 come from 10^4
+    # intervals of R = 200 and 4 * 10^5 of R = 5 of an implementation written apart from
+    # the package (notes/experiments/m9_coverage_reference.py), where the normal quantile
+    # covered 0.878 at R = 5. Student-t is exact only for normal replicates; the skewed
+    # estimates of x^2 fall short of 0.95 at R = 5.
 
     def z_scores(n, rng):
-        # Runs of 4,000 replicates bound the memory of the stored atoms, until the streaming
-        # mode on the roadmap (spec section 6.6).
-        seed = int(rng.integers(2**63))
+        # Runs of 4,000 replicates bound the memory of the stored atoms, until the
+        # streaming mode on the roadmap (spec section 6.6).
+        run_seed, batch = int(rng.integers(2**63)), 4000
         values = np.concatenate(
             [
                 Result(
@@ -160,20 +164,19 @@ def test_intervals_cover_at_the_reference_rate():
                         k=38,
                         m=380,
                         lag=38,
-                        rng=seed,
+                        rng=run_seed,
                         lanes=1024,
                     )
                 ).measure.per_replicate(moments)
                 for start in range(0, n * per_interval, batch)
             ]
         ).reshape(n, per_interval, 2)
-        estimate = values.mean(axis=1)
-        error = stats.sem(values, axis=1)
-        inside = np.abs(estimate - [0.0, 1.0]) <= stats.norm.ppf(0.975) * error
+        quantile = stats.t.ppf(0.975, per_interval - 1)
+        inside = np.abs(values.mean(axis=1) - [0.0, 1.0]) <= quantile * stats.sem(values, axis=1)
         coverage = inside.mean(axis=0)
         return (coverage - reference) / np.sqrt(coverage * (1 - coverage) / n + reference_error**2)
 
-    assert_z_scores(z_scores, 2000, seed=20)
+    assert_z_scores(z_scores, n, seed)
 
 
 @functools.cache

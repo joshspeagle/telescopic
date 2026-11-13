@@ -49,11 +49,11 @@ def reflection_maximal(
     """
     z = draws.normal(mu_x.shape[1])
     log_u = draws.log_uniform()
-    delta = matvec(inverse, mu_x - mu_y)
-    squared = np.einsum("ij,ij->i", delta, delta)
-    # An infinite delta, from a drift that overflowed, can give inf - inf = NaN, which
-    # fails the test as it should.
+    # Infinite means, from a drift that overflowed, can give inf - inf = NaN, which fails
+    # the test as it should.
     with np.errstate(invalid="ignore"):
+        delta = matvec(inverse, mu_x - mu_y)
+        squared = np.einsum("ij,ij->i", delta, delta)
         identical = log_u < -np.einsum("ij,ij->i", z, delta) - 0.5 * squared
     norm = np.sqrt(squared)[:, None]
     # e = 0 where the norm is 0 or not finite: y is then mu_y + C z, which keeps its law.

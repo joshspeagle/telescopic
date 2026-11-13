@@ -30,20 +30,26 @@ class Mixture(Kernel):
         :meth:`~telescopic.kernels.Kernel.tune` tunes the untuned ones on one set of pilot chains; its report gives
         the largest weight ratio of any independence component.
     weights : array_like
-        Non-negative weights, normalized internally.
+        Non-negative weights with a finite sum, normalized internally.
     """
 
     def __init__(self, kernels: Sequence[Kernel], weights: npt.ArrayLike) -> None:
         self.kernels = list(kernels)
         weights = np.asarray(weights, dtype=np.float64)
-        valid = np.all(np.isfinite(weights) & (weights >= 0)) and weights.sum() > 0
+        # Finite weights near the largest float can have a sum that overflows, and inf and
+        # -inf one that is NaN; a finite positive sum of non-negative weights makes each
+        # finite.
+        with np.errstate(over="ignore", invalid="ignore"):
+            total = weights.sum()
+        valid = np.all(weights >= 0) and 0 < total < np.inf
         if weights.shape != (len(self.kernels),) or not valid:
             raise ValueError(
-                "weights must be one finite, non-negative number per kernel, not all zero"
+                "weights must be one finite, non-negative number per kernel, not all zero, "
+                "with a finite sum"
             )
         if len({kernel.ndim for kernel in self.kernels} - {None}) > 1:
             raise ValueError("the kernels work in different dimensions")
-        self.weights = weights / weights.sum()
+        self.weights = weights / total
         self._last = int(np.nonzero(self.weights)[0][-1])
         self._cumulative = np.cumsum(self.weights)
         self._cumulative[self._last :] = 1.0
@@ -63,6 +69,16 @@ class Mixture(Kernel):
     @property
     def ndim(self) -> int | None:
         return next((kernel.ndim for kernel in self.kernels if kernel.ndim is not None), None)
+
+    def check_ndim(self, ndim: int) -> None:
+        # The mixture's dimension, then every component's, which tuning, unlike the
+        # constructor, does not compare.
+        super().check_ndim(ndim)
+        for i, kernel in enumerate(self.kernels):
+            try:
+                kernel.check_ndim(ndim)
+            except ValueError as error:
+                raise ValueError(f"component {i} of the mixture: {error}") from None
 
     def _tuned(
         self, target: Target, initial: Any, pilot: PilotRun, rng: Seed

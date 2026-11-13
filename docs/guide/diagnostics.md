@@ -33,7 +33,8 @@ and `result.index` its replicate index.
 
 {meth}`telescopic.Result.plot_meeting_times` draws a histogram of $\tau - L$ and its
 survival function on a log scale, where a straight tail means geometric meeting times. A
-censored pair counts in the survival function up to its cap, and not in the histogram.
+censored pair counts in the survival function at every time up to its cap, where the
+curve ends at the fraction of pairs censored, and not in the histogram.
 
 ```{code-cell} python
 result.plot_meeting_times();
@@ -98,7 +99,9 @@ assert abs(values["late_fraction"] - values["tv_bound_at_k"]) < 0.01
 ```
 
 - `meeting_time_50`, `meeting_time_90`, `meeting_time_99`, `meeting_time_max` and
-  `censored`: the meeting times of the pairs that met, and the number of censored pairs.
+  `censored`: the quantiles of the meeting times of every pair, each an observed meeting
+  time from the sorted values, where censored pairs sort above every pair that met, and
+  the number of censored pairs. A quantile that falls on a censored pair is `inf`.
 - `tail_index`: Hill's estimate of the tail index of $\tau - L + 1$, `nan` below 500
   replicates or behind ties ([`tail`](#heavy-tailed-meeting-times-tail)).
 - `late_fraction` and `late_fraction_upper`: the fraction of pairs that met after
@@ -225,7 +228,7 @@ log-densities, and the first two targets `sample()`'s default settings:
   warning in 100 runs at $R = 100$ and 50 runs at $R = 500$.
 - The banana ({func}`telescopic.examples.banana`) from $U[-5, 5]^2$: at $R = 100$, the
   variance warning in 37 of 200 runs, whose 95% intervals of $E[x_0^2]$ covered the truth
-  in 89% of them against 96% in the other runs; at $R = 500$, the variance warning in 4
+  in 95% of them against 97% in the other runs; at $R = 500$, the variance warning in 4
   of 50 runs and the tail warning in 14.
 - The bimodal mixture of Jacob, O'Leary & Atchadé (2020, §5.1),
   {func}`telescopic.examples.mixture`, from $\mathcal N(10, 1)$, with a random walk of

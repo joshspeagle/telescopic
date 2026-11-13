@@ -10,7 +10,7 @@ telescopic/
 ├── README.md                 # pitch, install, the spec §8.3 example, links
 ├── CHANGELOG.md  CONTRIBUTING.md  CITATION.cff  LICENSE  CLAUDE.md
 ├── .pre-commit-config.yaml   # ruff lint and format
-├── .github/workflows/        # ci.yml (lint, types, tests, oldest stack, dist, slow on dispatch); docs.yml
+├── .github/workflows/        # ci.yml (lint, types, tests, oldest stack, dist, slow on pushes to main and on dispatch); docs.yml
 ├── src/telescopic/
 │   ├── __init__.py           # public API, __version__
 │   ├── warnings.py           # TelescopicWarning, ConvergenceWarning, InputWarning
@@ -261,7 +261,7 @@ These add to the rules of `CLAUDE.md`.
 | `oldest` | Python 3.11 with NumPy 1.26 and SciPy 1.12 |
 | `docs` | `sphinx-build -W --keep-going` with executed tutorials |
 | `dist` | `python -m build`; install the wheel in a clean environment; import smoke test |
-| `slow` | `pytest -m slow`, on manual dispatch |
+| `slow` | `pytest -m ""` (every test, the slow tier included), on every push to `main` and on manual dispatch (DECISIONS #75) |
 
 ## 7. Risks and mitigations
 

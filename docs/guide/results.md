@@ -53,12 +53,14 @@ A few of the pairs met after `k + lag`, so a few replicates carry bias correctio
 
 ## Expectations
 
-{meth}`telescopic.Result.estimate` estimates $\pi(h)$ for a function `h` that maps points
-of shape `(n, d)`, a read-only array, to values of shape `(n,)` or `(n, p)`; any other
-shape raises `ValueError`. It returns an {class}`telescopic.Estimate`: the mean of the replicates'
-estimates (`value`), its `standard_error`, a normal `interval` at `level` (0.95 by
-default) and the replicates' estimates (`replicates`). Here $E[x_0 x_1]$ is the
-covariance, 0.9:
+{meth}`telescopic.Result.estimate` estimates $\pi(h)$ for a function `h` that maps
+points of shape `(n, d)`, a read-only array, to values of shape `(n,)` or `(n, p)`; any
+other shape raises `ValueError`. It returns an {class}`telescopic.Estimate`: the mean of
+the replicates' estimates (`value`), its `standard_error`, an `interval` at `level`
+(0.95 by default) and the replicates' estimates (`replicates`). The interval is the
+value plus or minus the standard error times the quantile of Student's t with $R - 1$
+degrees of freedom ([Theory](../theory.md#guarantees-and-their-limits)). It needs at least 2 replicates; with 1,
+`estimate` raises `ValueError`. Here $E[x_0 x_1]$ is the covariance, 0.9:
 
 ```{code-cell} python
 product = result.estimate(lambda x: x[:, 0] * x[:, 1])
@@ -228,8 +230,10 @@ The columns of the table:
 The lines below it:
 
 - $R$, the settings `k`, `m`, `lag` and `thin` ([Settings](settings.md)), and the kernel;
-- the median, the 90% and 99% quantiles and the maximum of the meeting times of the
-  pairs that met; from 500 replicates, their tail index
+- the median, the 90% and 99% quantiles and the maximum of the meeting times of every
+  pair, where censored pairs sort above every pair that met, and a quantile that falls
+  on one shows as `>` and the cap, such as `> 12` for `max_iter=12`; from 500
+  replicates, the tail index of those that met
   ([`tail`](diagnostics.md#heavy-tailed-meeting-times-tail)); and the number of censored
   pairs ([`censored`](diagnostics.md#censored-pairs-censored));
 - the mean cost of a replicate in kernel applications and in seconds, and the relative

@@ -171,7 +171,8 @@ Every evaluation belongs to the run, and no pilot ran.
 
 ## How many replicates
 
-- {func}`telescopic.sample` runs 100 by default. The standard errors fall as
+- {func}`telescopic.sample` runs 100 by default, and at least 2, since the estimates and
+  their standard errors need two replicates that met. The standard errors fall as
   $1/\sqrt R$, and the error bars are valid as $R$ grows
   ([Theory](../theory.md#guarantees-and-their-limits)).
 - The estimates are exactly unbiased for a number of replicates fixed before the run.
@@ -189,10 +190,11 @@ Every evaluation belongs to the run, and no pilot ran.
 
 The cost of a replicate is the number of times it applies the kernel, a coupled step
 before the meeting counting as two; `result.costs` holds it for each replicate. The
-relative cost is the mean cost over the $m - k + 1$ steps of the MCMC average alone, and
-the theory gives its value under the automatic settings
-([Theory](../theory.md#choosing-k-m-and-l)). `result.diagnostics()` gives it, with the mean
-cost and the seconds per replicate.
+relative cost, the mean cost per averaged state, is the mean cost divided by
+$m - k + 1$ ([Theory](../theory.md#cost)), and
+[Choosing k, m and L](../theory.md#choosing-k-m-and-l) gives its value under the
+automatic settings. `result.diagnostics()` gives it, with the mean cost and the seconds
+per replicate.
 
 The inefficiency of an estimate is the mean cost times the variance of one replicate's
 estimate, $\mathbb E[C]\,\mathbb V[H]$ ([Theory](../theory.md#cost)): the figure to
