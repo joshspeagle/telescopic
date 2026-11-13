@@ -185,7 +185,7 @@ Let $a_r = \hat\pi_r(h) \in \mathbb R^p$ for replicates $r = 1, \dots, R$. Write
 - **Expectations:** $\bar a$, with standard error $\sqrt{\mathrm{diag}(S_a)/R}$ and Monte Carlo covariance $S_a / R$.
 - **Products of expectations:** $\bar a \bar a^\top - S_a/R$ is unbiased for $\pi(h)\pi(h)^\top$ when $R \ge 2$.
 - **Covariance:** $\widehat{\mathrm{Cov}}_\pi(h) = R^{-1}\sum_r \hat\pi_r(hh^\top) - \bar a\bar a^\top + S_a/R$ is unbiased. The plug-in $\sum\omega hh^\top - (\sum \omega h)(\sum\omega h)^\top$ is biased by $-S_a/R$ and is not used. Standard deviations are $\sqrt{\max(0, \widehat{\mathrm{Var}})}$, which is consistent, not unbiased.
-- **Histograms:** each replicate's signed mass in each half-open bin $[a, b)$, averaged over replicates. This is unbiased for bins fixed before the run, with standard errors from the replicates; the default range, from the atoms, biases the two outer bins by a term of order $1/R$ (M11 audit). Bins can be negative.
+- **Histograms:** each replicate's signed mass in each half-open bin $[a, b)$, averaged over replicates. This is unbiased for bins fixed before the run, with standard errors from the replicates; the default range, from the atoms, biases every bin, the two outer ones by a term of order $1/R$ (M11 audit). Bins can be negative.
 - **Quantiles:**
   1. Pool all replicates' atoms with weights $\omega/R$, and merge atoms with equal coordinates by summing their weights.
   2. Sort along the coordinate and take the cumulative sum of the weights.

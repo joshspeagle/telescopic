@@ -299,7 +299,9 @@ def test_ctrl_c_after_the_replicates_keeps_the_run(monkeypatch):
         signal.raise_signal(signal.SIGINT)
         return Result(*args, **kwargs)
 
-    sampler = telescopic.CoupledSampler(gaussian_log_prob, INIT, kernel=RandomWalk(np.eye(2)))
+    sampler = telescopic.CoupledSampler(
+        gaussian_log_prob, INIT, kernel=RandomWalk(np.eye(2)), rng=18
+    )
     monkeypatch.setattr("telescopic.sampler.Result", interrupted)
     try:
         result = sampler.run(20, k=40, m=40)
@@ -399,7 +401,9 @@ def test_progress_falls_back_to_lines_on_stderr_without_tqdm(pool, monkeypatch, 
 
 def test_the_progress_argument_of_a_run_covers_its_pilot(monkeypatch, capsys):
     monkeypatch.setitem(sys.modules, "tqdm", None)
-    sampler = telescopic.CoupledSampler(gaussian_log_prob, INIT, kernel=RandomWalk(np.eye(2)))
+    sampler = telescopic.CoupledSampler(
+        gaussian_log_prob, INIT, kernel=RandomWalk(np.eye(2)), rng=19
+    )
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", ConvergenceWarning)  # a short run may meet late
         sampler.run(5, progress=True)

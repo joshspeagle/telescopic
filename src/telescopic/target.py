@@ -90,7 +90,18 @@ class Target:
         return self._log_prob is not None
 
     def log_prob(self, x: FloatArray) -> FloatArray:
-        """Log-densities at the rows of ``x``, shape ``(n,)``; raises on NaN or ``+inf``."""
+        r"""Log-densities at the rows of ``x``; raises ``ValueError`` on NaN or ``+inf``.
+
+        Parameters
+        ----------
+        x : ndarray, shape (n, d)
+
+        Returns
+        -------
+        ndarray, shape (n,)
+            :math:`\log\pi` at each row, ``-inf`` at zero density; 0 for a target
+            without a log-density.
+        """
         if self._log_prob is None:
             return np.zeros(len(x))
         values = self._call(self._log_prob, x, ())
@@ -100,12 +111,23 @@ class Target:
     def log_prob_and_grad(
         self, x: FloatArray, *, start: bool = False
     ) -> tuple[FloatArray, FloatArray]:
-        """Log-densities, shape ``(n,)``, and gradients, shape ``(n, d)``, at the rows of ``x``.
+        """Log-densities and gradients at the rows of ``x``.
 
         The gradient is evaluated only where the log-density is finite, and is 0 where it
         is ``-inf``. Where it is finite, a gradient that is not finite is taken as 0 too,
         and counted in ``n_grad_zeroed``; at the states that chains ``start`` from, it
         raises ``ValueError`` with the point (spec R-INPUT-1).
+
+        Parameters
+        ----------
+        x : ndarray, shape (n, d)
+        start : bool
+            Whether chains start at the rows of ``x``.
+
+        Returns
+        -------
+        log_prob : ndarray, shape (n,)
+        grad : ndarray, shape (n, d)
         """
         if self._grad is None:
             raise ValueError("this target has no gradient; pass grad= to use this kernel")

@@ -12,7 +12,20 @@ from telescopic._types import FloatArray, IntArray, averaging, integer, integral
 
 
 def averaging_times(k: int, m: int, thin: int) -> IntArray:
-    """The averaging set :math:`S = \\{k, k + s, k + 2s, \\dots\\} \\cap [k, m]` for ``thin`` = s."""
+    r"""The averaging set :math:`S = \{k, k + s, k + 2s, \dots\} \cap [k, m]` for ``thin`` = s.
+
+    Parameters
+    ----------
+    k, m : int
+        First and last times that may be averaged, :math:`0 \le k \le m`.
+    thin : int
+        The spacing :math:`s \ge 1`.
+
+    Returns
+    -------
+    ndarray of int, shape (len(S),)
+        The times of :math:`S` in increasing order.
+    """
     k, m, thin = averaging(k, m, thin)
     return np.arange(k, m + 1, thin, dtype=np.int64)
 
