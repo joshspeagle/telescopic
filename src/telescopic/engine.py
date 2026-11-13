@@ -228,8 +228,7 @@ def run(
 
     Notes
     -----
-    Memory: the stored atoms take about :math:`R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})
-    (8d + 16)` bytes, and the :math:`\tau - L` distances of each replicate 24 bytes each
+    Memory: :func:`stored_bytes` gives the size of the stored atoms and distances
     (spec R-EXEC-7).
     """
     instance("target", target, Target)
@@ -372,6 +371,40 @@ class _Start:
         self.y0 = draw(initial, self.generator, len(self.x0))
 
 
+def stored_bytes(settings: Settings, ndim: int, coupled: npt.ArrayLike) -> float:
+    r"""Bytes of the atoms and distances that replicates store (spec R-EXEC-7).
+
+    A replicate that met after :math:`c = \tau - L` coupled steps stores the
+    :math:`|S|` atoms of the time average and two atoms for each of the
+    :math:`\max(0, c - k)` terms of the bias correction, each of :math:`8d + 16` bytes (its
+    coordinates in ``atoms``, its weight and its replicate in ``owner``), and :math:`c`
+    distances of 24 bytes (``distance_owner``, ``distance_time`` and ``distance``). With
+    ``thin`` above 1 some terms of the correction have no atoms, and this is an upper
+    bound.
+
+    Parameters
+    ----------
+    settings : Settings
+    ndim : int
+        The dimension :math:`d`.
+    coupled : array_like of int, shape (R,)
+        :math:`\tau - L` of each replicate, non-negative.
+
+    Returns
+    -------
+    float
+        The total over the replicates.
+    """
+    instance("settings", settings, Settings)
+    k, m, _, thin = check_settings(settings)[:4]
+    ndim = integer("ndim", ndim, minimum=1)
+    c = real_array("coupled", coupled, "non-negative numbers of shape (R,)")
+    if c.ndim != 1 or not np.all(c >= 0):
+        raise ValueError("coupled must be non-negative numbers of shape (R,)")
+    atoms = len(c) * len(range(k, m + 1, thin)) + 2 * np.maximum(0, c - k).sum()
+    return float(atoms * (8 * ndim + 16) + 24 * c.sum())
+
+
 class _Batch:
     # The lanes of a lockstep batch, and the outputs of the replicates they have run.
     def __init__(
@@ -395,6 +428,7 @@ class _Batch:
         self.y = _empty_state(lanes, ndim, kernel.needs_grad)
         integers, reals = np.zeros(0, dtype=np.int64), np.zeros(0)
         self.finished = _Chunks(integers, integers)
+        # The columns that stored_bytes counts: a change here changes it.
         self.atoms = _Chunks(integers, np.zeros((0, ndim)), reals)
         self.distances = _Chunks(integers, integers, reals)
         self.zero_density: tuple[int, ...] = ()

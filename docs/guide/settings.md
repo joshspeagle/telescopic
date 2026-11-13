@@ -223,9 +223,12 @@ A result stores each replicate's signed measure
 ([Theory](../theory.md#signed-measures)): one atom per averaged state,
 $\lfloor (m - k)/s \rfloor + 1$ of them for `thin` $= s$, and two per term of the bias
 correction, each atom of $8d + 16$ bytes (its coordinates, its weight and its
-replicate), and the $\tau - L$ distances of the 1-Wasserstein bound, 24 bytes each.
-Before each run the sampler estimates the total for all the replicates, and emits an
-{class}`~telescopic.warnings.InputWarning` above 1 GB.
+replicate), and the $\tau - L$ distances of the 1-Wasserstein bound, 24 bytes each
+({func}`telescopic.engine.stored_bytes`). A run takes two to three times that at its
+peak, and its first estimates about three times, since sorting the atoms at the end of
+a run and centering them for an estimate each make a copy. Before each run the sampler estimates the total for all the replicates, and
+emits an {class}`~telescopic.warnings.InputWarning` that states the stored size and the
+peak when the peak would exceed 1 GB.
 
 `thin` $= s$ stores about $1/s$ of the averaged states. The run is as long, and the
 estimates stay unbiased ([Theory](../theory.md#the-time-averaged-estimator)). Thinning

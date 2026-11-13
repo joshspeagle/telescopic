@@ -3,7 +3,7 @@ import pytest
 
 from references import assert_same_replicates, gaussian_log_prob
 from telescopic._random import MAIN, replicate_generator
-from telescopic.engine import Status, merge, run
+from telescopic.engine import Status, merge, run, stored_bytes
 from telescopic.estimators import averaging_times, correction_coefficients
 from telescopic.initial import Empirical, Normal
 from telescopic.kernels import MALA, RandomWalk, State
@@ -294,3 +294,15 @@ def test_the_replicates_count_the_gradients_taken_as_zero():
     whole = part(range(10))
     assert whole.n_grad_zeroed > 0
     assert_same_replicates(merge([part(range(5)), part(range(5, 10))]), whole)
+
+
+@pytest.mark.parametrize("lag", [1, 3])
+def test_the_storage_estimate_equals_the_bytes_a_run_stores(lag):
+    # Pairs met at different times, some before and some after k + L, so that the
+    # correction atoms and the distances both count.
+    replicates = simulate(n=40, k=2, m=6, lag=lag)
+    assert len(np.unique(replicates.meeting_time)) > 3
+    columns = ("atoms", "weights", "owner", "distance_owner", "distance_time", "distance")
+    stored = sum(getattr(replicates, name).nbytes for name in columns)
+    coupled = replicates.meeting_time - lag
+    assert stored_bytes(replicates.settings, 2, coupled) == stored

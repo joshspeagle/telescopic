@@ -481,9 +481,9 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 
 ### 6.6 Memory (R-EXEC-7)
 
-- **Atoms:** storage needs about $R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})\,(8d + 16)$ bytes for positions, weights and replicate indices, plus 24 bytes per stored distance. The engine stores each iteration's rows as small arrays and merges every 256 of them into one block, so at $d = 10$ a row holds 94 to 103 bytes against 92 of payload at 1 to 256 lanes (M3 review).
+- **Atoms:** storage needs $R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})\,(8d + 16)$ bytes for positions, weights and replicate indices, plus 24 bytes per stored distance, $\tau - L$ of them per replicate; `engine.stored_bytes` computes it, next to the engine's columns, exactly for `thin` $= 1$ and as an upper bound otherwise. The engine stores each iteration's rows as small arrays and merges every 256 of them into one block, so at $d = 10$ a row holds 94 to 103 bytes against 92 of payload at 1 to 256 lanes (M3 review).
 - **Join:** at the end of a run, sorting the atoms by replicate holds about three times their size for a moment (3.1 times at $d = 10$).
-- **Estimate first:** the sampler estimates this before each run and warns above 1 GB, suggesting `thin`.
+- **Estimate first:** the sampler estimates the stored size before each run, with the pilot's $\tau - 1$ standing in for the run's $\tau - L$, and warns when three times it, the peak of the run and its first estimates, exceeds 1 GB, stating both figures and suggesting `thin`. Measured with `RandomWalk(I)` at $k = 200$, $m = 2000$, $R = 200$, the run peaks at 2.0 to 2.7 times the stored size and `cov()` with `summary()` at 2.9 to 3.0 times from $d = 2$ to 50, and at 3.8 times at $d = 1$, where the result's own 24 bytes per atom weigh most (`notes/experiments/i73_memory_peak.out`, DECISIONS #131).
 - **Streaming:** a streaming mode with a fixed `h` and constant memory is on the roadmap.
 
 ---

@@ -201,3 +201,6 @@ All notable changes to this project are documented here. The format follows
   without a cap after such starts, and a pilot that cannot choose `k` names them instead
   of advising a wider initial distribution. `engine.Status` carries the replicates
   started at zero density so far.
+- The memory warning compares the estimated peak of a run and its first estimates, about
+  three times the stored atoms and distances, with its threshold of 1 GB, and states both
+  figures; `telescopic.engine.stored_bytes` computes the stored size.

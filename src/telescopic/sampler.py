@@ -32,6 +32,9 @@ PILOT_REPLICATES = 100
 PILOT_MAX_ITER = 100_000
 # The meeting-time pilot: lag 1, with nothing stored (spec R-TUNE-2).
 PILOT_SETTINGS = engine.Settings(0, 0, 1, max_iter=PILOT_MAX_ITER, store=False)
+# The peak memory of a run's first estimates over the bytes the run stores: 2.9 to 3.0
+# from d = 2 to 50, and 3.8 at d = 1 (notes/experiments/i73_memory_peak.out).
+PEAK_PER_STORED = 3
 # The warnings of spec section 7.4 that a run emits as they happen, not at its end, or as
 # it ends for slow pairs on a pool.
 _LIVE = ("slow", "tuning")
@@ -400,19 +403,19 @@ class CoupledSampler:
 
     def _check_memory(self, settings: engine.Settings, n_replicates: int) -> None:
         # Spec R-EXEC-7: estimate the atoms and distances to store before running, and warn
-        # above 1 GB. The pilot's meeting times stand in for those of the run, their
-        # tau - 1 for its tau - L.
-        n_averaged = len(range(settings.k, settings.m + 1, settings.thin))
-        late = distances = 0.0
+        # when a run and its first estimates, which peak at about three times that, would
+        # pass 1 GB. The pilot's meeting times stand in for those of the run, their tau - 1
+        # for its tau - L; without a pilot, the run's pairs count as meeting at once.
+        coupled = np.zeros(1)
         if self.pilot is not None and np.isfinite(self.pilot).any():
             coupled = self.pilot[np.isfinite(self.pilot)] - 1
-            late = float(np.mean(np.maximum(0, coupled - settings.k)))
-            distances = float(np.mean(coupled))
-        size = n_replicates * ((n_averaged + 2 * late) * (8 * self.ndim + 16) + 24 * distances)
-        if size > 1e9:
+        stored = n_replicates * engine.stored_bytes(settings, self.ndim, coupled) / len(coupled)
+        peak = PEAK_PER_STORED * stored
+        if peak > 1e9:
             warn(
-                f"the run will store about {size / 1e9:.1f} GB of atoms and distances; pass "
-                "thin= to store fewer atoms, or run fewer replicates",
+                f"the run will store about {stored / 1e9:.1f} GB of atoms and distances, "
+                f"and with its first estimates take about {peak / 1e9:.1f} GB; pass thin= "
+                "to store fewer atoms, or run fewer replicates",
                 InputWarning,
             )
 

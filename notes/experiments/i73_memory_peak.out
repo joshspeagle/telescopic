@@ -1,0 +1,10 @@
+python 3.13.18, numpy 2.5.4, scipy 1.18.1
+machine: x86_64, 4 cpus; OMP_NUM_THREADS=1
+commit 18860fb with the working tree's changes
+  d     k     m  stored MB  estimate pilot est.  run peak  estimates peak
+  1   200  2000        8.7    1.000x                2.72x           3.79x
+  2   200  2000       11.6    1.000x                2.51x           2.92x
+ 10   200  2000       34.8    1.000x                2.16x           2.91x
+ 50   200  2000      191.4    1.000x                2.03x           2.96x
+ 10   166  1660       29.0    1.000x     0.998x     2.16x           2.91x
+exit 0

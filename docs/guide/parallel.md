@@ -203,4 +203,5 @@ chunks finish.
 The workers send the signed measures of their replicates back to this process, which
 holds them all. [Settings](settings.md#memory-and-thinning) gives their size, the
 {class}`telescopic.InputWarning <telescopic.warnings.InputWarning>` that the sampler emits
-when they would take more than 1 GB, and `thin`, which stores fewer.
+when the run and its first estimates would take more than 1 GB, and `thin`, which stores
+fewer.
