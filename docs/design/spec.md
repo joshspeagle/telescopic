@@ -691,8 +691,10 @@ These targets are measured by `benchmarks/` and are not gating.
   - a fast tier under 2 minutes, and a `slow` statistical tier;
   - at least 90% line coverage of `src/`.
 - **Documentation:**
-  - toolchain: Sphinx, MyST-NB (tutorials executed at build time), numpydoc, furo, sphinx-copybutton;
-  - pages: Getting started, User guide, Theory, Tutorials, API reference, Design notes, Changelog, Contributing.
+  - toolchain: Sphinx, MyST-NB (tutorials executed at every build in CI and by default; a local build may reuse the cache or skip execution, DECISIONS #81), numpydoc, sphinx-copybutton, and a theme of the project's own on Sphinx's `basic` theme, whose colors, type, marks and plot style are written by one script (DECISIONS #79);
+  - pages: a landing page and six sections: Start (Getting started), Tutorials, How-to guides, Theory, Reference (API reference, Citing, Changelog) and Project (Contributing);
+  - the design records (this specification, the plans, the design of the site's identity, the landscape report and the research notes) stay in the repository and are not built (DECISIONS #80);
+  - hosting: GitHub Pages from `main`, once the site's structure is final (DECISIONS #82).
 - **CI (GitHub Actions):**
   - lint and types;
   - tests on Linux, macOS and Windows, with a job on the oldest supported stack;
@@ -751,7 +753,7 @@ These were decided without Josh's input so that work could proceed. Each is easy
 | D-14 | Unbiased covariances by the U-statistic; quantiles by an isotonic projection of the pooled signed CDF | exact where possible (§3.4); isotonic regression is the $L^2$ projection onto monotone curves. A running maximum is another monotonisation; both are consistent and biased at finite $R$, and gave the same quantiles in the design review's test | plug-in covariance (biased); a running maximum; the crossing rule (non-unique) |
 | D-15 | Literature notation for `k`, `m`, `lag` in the API | users read JOA20 and AJ24 alongside the docs; "auto" covers newcomers | `burn_in`, `n_iter` |
 | D-16 | Warning thresholds from §7.4, documented as heuristics: warning 2 at 0.25, warning 3 above one half (DECISIONS #36) and only for $R \ge 100$, warning 4 on $\tau - L + 1$ for $R \ge 500$ | no published calibration exists (`diagnostics_practice.md` §4). The first draft's thresholds fired on clean Gaussian runs at the defaults (warning 2 with probability 0.25 at $d = 10$ and 0.49 at $d = 30$; warning 3 with probability 0.73 at $R = 30$ for 10 estimates; design review D-R6) | no warnings; strict errors; binomial tests at a stated level |
-| D-17 | Docs with Sphinx, MyST-NB and furo | furo is the lead's most recent choice (GSPICE); MyST-NB executes the tutorials | pydata-sphinx-theme (pastry) |
+| D-17 | Docs with Sphinx and MyST-NB, in a theme of the project's own (furo until DECISIONS #79) | MyST-NB executes the tutorials; the theme carries the identity Josh chose (DECISIONS #79) | furo, the lead's choice for GSPICE when this was written; pydata-sphinx-theme (pastry) |
 | D-18 | Python ≥ 3.11, NumPy ≥ 1.26, SciPy ≥ 1.12 | the floors of Josh's other packages; SciPy 1.12 adds `isotonic_regression` | SPEC 0 floors (3.12, NumPy 2.0) |
 | D-19 | Implement from the papers, never from the GPL R code. The R package is a reference for numbers only | the MIT licence; `software_landscape.md` licence analysis | port the R code under GPL |
 | D-20 | Kernel arithmetic is row-independent: `np.einsum` without optimisation or elementwise operations, with precomputed inverse Cholesky factors (R-KER-6) | BLAS-backed products gave a row different bits in a batch of one (9 to 44 of 45 rows; design review D-R4); `einsum` never did. Measured cost at 256 lanes: 18 µs against 4 µs for `@` at $d = 10$, 645 against 104 µs at $d = 100$ | BLAS products, with bitwise invariance weakened to a statistical guarantee |

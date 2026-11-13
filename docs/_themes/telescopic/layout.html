@@ -1,0 +1,93 @@
+{#- The page: top bar, sidebar of the section, article, outline and footer (docs/design/brand.md, Components). #}
+{%- extends "basic/layout.html" %}
+
+{%- block extrahead %}
+    <link rel="preload" href="{{ pathto('_static/fonts/red-hat-text-latin-400-normal.woff2', 1) }}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{{ pathto('_static/fonts/red-hat-display-latin-800-normal.woff2', 1) }}" as="font" type="font/woff2" crossorigin>
+    <script>try { var t = localStorage.getItem("telescopic-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
+    <noscript><style>
+      .topbar .menubtn, .topbar [data-theme-toggle] { display: none; }
+      @media (max-width: 900px) { .side { display: block; position: static; border: 0; padding: 0 0 8px; } }
+      @media (max-width: 1080px) { .home-menu { display: block; position: static; border: 0; padding: 16px var(--gutter-r) 0 var(--gutter-l); } }
+    </style></noscript>
+    {{ super() }}
+{%- endblock %}
+
+{#- Both lockups load lazily, so the browser fetches only the one its theme shows. #}
+{%- macro lockup(height) %}
+<a class="brand" href="{{ pathto(root_doc) }}">
+  <img class="for-light" src="{{ pathto('_static/brand/lockup-light.svg', 1) }}" alt="telescopic home" height="{{ height }}" loading="lazy">
+  <img class="for-dark" src="{{ pathto('_static/brand/lockup-dark.svg', 1) }}" alt="telescopic home" height="{{ height }}" loading="lazy">
+</a>
+{%- endmacro %}
+
+{%- block header %}
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <div class="topbar-in">
+    <button class="iconbtn menubtn" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar" data-menu><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    {{ lockup(30) }}
+    <nav class="mainnav" aria-label="Sections">
+      {%- for s in sections %}<a href="{{ pathto(s.pages[0].docname) }}"{% if loop.index0 == section_index %} aria-current="true"{% endif %}>{{ s.caption }}</a>{% endfor -%}
+    </nav>
+    <div class="bar-right">
+      {%- if pagename != "search" %}
+      <form class="searchbar" action="{{ pathto('search') }}" method="get" role="search">
+        <label for="bar-q"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></label>
+        <input id="bar-q" type="search" name="q" placeholder="Search" aria-label="Search the documentation" autocomplete="off" spellcheck="false">
+      </form>
+      {%- endif %}
+      <button class="iconbtn" type="button" data-theme-toggle aria-label="Switch theme"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 2.5a7.5 7.5 0 0 1 0 15z" fill="currentColor"/></svg></button>
+      <a class="iconbtn" href="{{ theme_source_repository }}" aria-label="telescopic on GitHub"><svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+    </div>
+  </div>
+</header>
+{%- endblock %}
+
+{%- block relbar1 %}{% endblock %}
+{%- block relbar2 %}{% endblock %}
+
+{%- macro section_nav(home) %}
+<nav class="side{% if home %} home-menu{% endif %}" id="sidebar" aria-label="Documentation">
+  {%- for s in sections %}
+  <div class="side-section{% if loop.index0 == section_index %} current{% endif %}">
+    <p class="side-caption"><a href="{{ pathto(s.pages[0].docname) }}">{{ s.caption }}</a></p>
+    {%- if not home %}
+    <ul>
+      {%- for page in s.pages %}
+      <li><a href="{{ pathto(page.docname) }}"{% if page.docname == pagename %} aria-current="page"{% endif %}>{{ page.title }}</a></li>
+      {%- endfor %}
+    </ul>
+    {%- endif %}
+  </div>
+  {%- endfor %}
+</nav>
+{%- endmacro %}
+
+{%- block content %}
+<div class="docs">
+  {{ section_nav(false) }}
+  <main class="article" id="main" role="main">
+    {% block body %}{% endblock %}
+    {%- if prev or next %}
+    <nav class="pager" aria-label="Previous and next page">
+      {%- if prev %}<a href="{{ prev.link|e }}"><span class="pk">Previous</span><span class="pt">{{ prev.title }}</span></a>{% else %}<span></span>{% endif %}
+      {%- if next %}<a class="nx" href="{{ next.link|e }}"><span class="pk">Next</span><span class="pt">{{ next.title }}</span></a>{% endif %}
+    </nav>
+    {%- endif %}
+  </main>
+  {%- if outline %}
+  <aside class="toc" aria-labelledby="toc-caption"><p class="toc-caption" id="toc-caption">On this page</p>{{ toc }}</aside>
+  {%- endif %}
+</div>
+{%- endblock %}
+
+{%- block footer %}
+<footer class="foot"><div class="foot-in">
+  {{ lockup(24) }}
+  <span>{{ release }}</span><span aria-hidden="true">·</span>
+  <span>MIT License</span><span aria-hidden="true">·</span>
+  <a href="{{ theme_source_repository }}">GitHub</a><span aria-hidden="true">·</span>
+  <a href="{{ pathto('contributing') }}">Contributing</a>
+</div></footer>
+{%- endblock %}

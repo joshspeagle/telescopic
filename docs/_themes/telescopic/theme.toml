@@ -1,0 +1,8 @@
+[theme]
+inherit = "basic"
+stylesheets = ["basic.css", "fonts/fonts.css", "tokens.css"]
+sidebars = []
+pygments_style = { default = "none" }
+
+[options]
+source_repository = ""
