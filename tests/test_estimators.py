@@ -158,7 +158,7 @@ def test_weighted_quantiles_refuse_levels_outside_the_unit_interval():
 
 
 @pytest.mark.parametrize("estimator", [unbiased_variance, unbiased_covariance])
-def test_unbiased_variance_of_a_scalar_raises_value_error(estimator):
+def test_unbiased_variance_and_covariance_of_a_scalar_raise_value_error(estimator):
     # The shape of first was read before its dimension was checked: IndexError.
     with pytest.raises(ValueError, match=r"first must have shape \(R, p\)"):
         estimator(np.float64(1.0), np.float64(1.0))

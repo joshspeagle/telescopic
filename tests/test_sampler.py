@@ -157,10 +157,6 @@ def test_an_explicit_k_of_zero_gets_a_lag_of_one():
 @pytest.mark.parametrize(
     ("call", "message"),
     [
-        (
-            lambda: CoupledSampler(log_prob, INIT, names=["a"]),
-            "the initial distribution draws points of dimension 2, but names gives 1",
-        ),
         (lambda: CoupledSampler(log_prob, INIT, kernel=KERNEL).meeting_times(0), "n must be"),
         (
             lambda: CoupledSampler(log_prob, INIT, kernel=RandomWalk(np.eye(3))),

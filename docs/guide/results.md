@@ -177,7 +177,10 @@ The masses are not densities: divide them by the widths of the bins, as
 
 `result.measure` is a {class}`telescopic.SignedMeasure`: the `atoms`, of shape `(N, d)`,
 their `weights`, and for each atom the position, from 0 to $R - 1$, of the `replicate` it
-belongs to. The arrays are read-only. Each replicate's weights sum to 1. Its bias corrections add pairs of atoms
+belongs to. These attributes are read-only views, without a copy, of the arrays the
+measure was built from; those arrays, such as the ones of the replicates that
+{func}`telescopic.engine.run` returns, stay writable, and telescopic never writes to
+them. Each replicate's weights sum to 1. Its bias corrections add pairs of atoms
 with weights of opposite signs ([Theory](../theory.md#signed-measures)), so an estimate
 can fall outside the range of $h$:
 

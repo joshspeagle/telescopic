@@ -193,7 +193,9 @@ def test_a_target_without_a_log_density_gives_zero_and_takes_no_gradient():
 
 
 @pytest.mark.parametrize(("bad", "returned"), [(None, "None"), (np.zeros(1), r"shape \(1,\)")])
-def test_a_pointwise_grad_returning_none_at_one_point_names_grad_and_the_point(bad, returned):
+def test_a_pointwise_grad_returning_none_or_a_wrong_shape_at_one_point_names_it_and_the_point(
+    bad, returned
+):
     # One bad row among good ones raised NumPy's "inhomogeneous shape" ValueError, which
     # named neither grad nor the point.
     def grad(x):

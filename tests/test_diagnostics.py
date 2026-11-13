@@ -260,7 +260,7 @@ def test_hill_refuses_invalid_arguments(values, n_tail, error, message):
 
 
 @pytest.mark.parametrize(("lag", "m", "name"), [(0, 5, "lag"), (1, -5, "m")])
-def test_slow_pair_threshold_refuses_a_lag_below_1(lag, m, name):
+def test_slow_pair_threshold_refuses_a_lag_below_1_or_a_negative_m(lag, m, name):
     # slow_pair_threshold(0, -5) returned 10000.
     with pytest.raises(ValueError, match=f"{name} must be at least"):
         slow_pair_threshold(lag, m)

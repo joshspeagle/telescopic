@@ -55,12 +55,16 @@ def run_engine(**options):
         ("weights", lambda: Mixture([KERNEL, KERNEL], ["a", "b"])),
         ("x", lambda: testing.check_coupling(KERNEL, TARGET, "a", [1.0])),
         ("normals", lambda: testing.fixed_draws(normals=[["a"]])),
+        ("uniforms", lambda: testing.fixed_draws(uniforms=[["a"]])),
         ("meeting_times", lambda: diagnostics.tv_bound("abc", 1, 0)),
         ("t", lambda: diagnostics.tv_bound([1, 2], 1, "abc")),
+        ("distance_time", lambda: diagnostics.w1_bound("abc", [1.0], 1, 1, 0)),
         ("distance", lambda: diagnostics.w1_bound([1], "abc", 1, 1, 0)),
         ("values", lambda: diagnostics.hill([1.0, None, 2.0], 1)),
         ("values", lambda: diagnostics.variance_share([[1.0], [2.0, 3.0]])),
         ("q", lambda: estimators.weighted_quantile(np.zeros(2), np.full(2, 0.5), "q")),
+        ("values", lambda: estimators.weighted_quantile(["a", "b"], np.full(2, 0.5), 0.5)),
+        ("weights", lambda: estimators.weighted_quantile(np.zeros(2), ["a", "b"], 0.5)),
         ("t", lambda: estimators.correction_coefficients("t", 0, 1, 1, 1)),
         ("meeting_times", lambda: tuning.choose_k("abc")),
         (
@@ -117,9 +121,14 @@ def test_as_initial_raises_its_type_error_for_a_ragged_init():
         ("progress", lambda: CoupledSampler(log_prob, INIT, progress="no")),
         (
             "progress",
-            lambda: CoupledSampler(log_prob, INIT, rng=0).run(2, k=1, progress="no"),
+            lambda: CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=0).run(
+                2, k=10, m=20, lag=1, progress="no"
+            ),
         ),
-        ("progress", lambda: sample(log_prob, INIT, 2, k=1, progress=1)),
+        (
+            "progress",
+            lambda: sample(log_prob, INIT, 2, kernel=KERNEL, k=10, m=20, lag=1, progress=1, rng=0),
+        ),
         ("strict", lambda: synthetic([1, 1], [0.0, 1.0]).check(strict="no")),
         ("store", lambda: run_engine(store="no")),
         ("keep_paths", lambda: run_engine(keep_paths=1)),
@@ -141,19 +150,23 @@ def test_mixture_refuses_components_that_are_not_kernel_instances(kernels, given
         Mixture(kernels, np.ones(len(kernels)))
 
 
-def test_check_coupling_refuses_a_target_that_is_not_a_target():
+def test_check_coupling_refuses_a_kernel_or_target_that_is_not_an_instance():
     with pytest.raises(TypeError, match="target must be a Target instance, not function"):
         testing.check_coupling(KERNEL, log_prob, [0.0], [1.0])
     with pytest.raises(TypeError, match="kernel must be a Kernel instance, not function"):
         testing.check_coupling(log_prob, TARGET, [0.0], [1.0])
 
 
-def test_engine_run_and_tune_refuse_a_callable_target():
-    # Both raised AttributeError, on n_log_prob and has_log_prob.
+def test_engine_run_refuses_a_target_or_kernel_that_is_not_an_instance():
+    # Both raised AttributeError, the target's on n_log_prob.
     with pytest.raises(TypeError, match="target must be a Target instance, not function"):
         engine.run(log_prob, KERNEL, INIT, [0], k=0, m=0, lag=1)
     with pytest.raises(TypeError, match="kernel must be a Kernel instance, not str"):
         engine.run(TARGET, "rwmh", INIT, [0], k=0, m=0, lag=1)
+
+
+def test_tuning_refuses_a_target_that_is_not_a_target_instance():
+    # Kernel.tune raised AttributeError on has_log_prob.
     with pytest.raises(TypeError, match="target must be a Target instance, not function"):
         RandomWalk().tune(log_prob, INIT, 0)
     with pytest.raises(TypeError, match="target must be a Target instance, not function"):
