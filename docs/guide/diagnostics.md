@@ -168,7 +168,10 @@ $\tau - L + 1$ ({func}`telescopic.diagnostics.hill`), from its $\lfloor R/10 \rf
 largest values, is below 2. `result.diagnostics()` reports it as `tail_index` whether or
 not the warning fires. When nine pairs in ten or more share the earliest meeting time,
 the estimate is `nan` and the warning silent: above such ties, Hill's estimate reads a
-light tail as a heavy one, so a heavy tail behind them goes undetected.
+light tail as a heavy one, so a heavy tail behind them goes undetected. The warning
+also sees only a tail that shows up in the run: a heavy tail carried by well under one
+pair in $R$, as with an independence proposal whose weights are unbounded
+([Independence](kernels.md#independence)), leaves it silent.
 **Meaning:** unbiasedness needs moments of the meeting time, and valid error bars need a
 finite variance of the estimates ([Theory](../theory.md#guarantees-and-their-limits)).
 Meeting times with a polynomial tail can break both: a tail index below 2 means an
