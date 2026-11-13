@@ -16,9 +16,10 @@ from telescopic._types import Distribution, FloatArray, integer, real
 from telescopic.initial import Normal, Uniform
 
 
+# Spec section 9.
 @dataclass(frozen=True, eq=False)
 class Example:
-    """A target with exact answers (spec section 9).
+    """A target with exact answers.
 
     Attributes
     ----------
@@ -51,7 +52,12 @@ class Example:
 
     @property
     def ndim(self) -> int:
-        """The dimension ``d``."""
+        """The dimension ``d``.
+
+        Returns
+        -------
+        int
+        """
         return len(self.mean)
 
 
@@ -106,7 +112,7 @@ def banana() -> Example:
 def mixture() -> Example:
     r"""The bimodal mixture :math:`\tfrac12\mathcal N(-4, 1) + \tfrac12\mathcal N(4, 1)`.
 
-    Jacob, O'Leary & Atchade (2020), section 5.1. Its mean is 0 and its variance 17;
+    Jacob, O'Leary & Atchadé (2020), section 5.1. Its mean is 0 and its variance 17;
     its default initial distribution is :math:`\mathcal N(10, 10^2)`, theirs.
 
     Returns
@@ -150,7 +156,7 @@ ALPHA, GAMMA, DELTA = 1.802, 0.01, 1.0
 
 
 def pumps() -> Example:
-    r"""The pump-failure model, as in Jacob, O'Leary & Atchade (2020), section 5.2.
+    r"""The pump-failure model, as in Jacob, O'Leary & Atchadé (2020), section 5.2.
 
     For 10 pumps, :math:`s_i \sim \mathrm{Poisson}(\lambda_i t_i)`,
     :math:`\lambda_i \sim \mathrm{Gamma}(1.802, \text{rate } \beta)` and

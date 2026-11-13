@@ -25,8 +25,9 @@ from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport
 
 
+# Spec R-KER-RW; the tuning of cov is that of spec section 5.3.
 class RandomWalk(Kernel):
-    r"""Random-walk Metropolis-Hastings with a Gaussian proposal (spec R-KER-RW).
+    r"""Random-walk Metropolis-Hastings with a Gaussian proposal.
 
     The proposal is :math:`x' = x + \lambda C z` with :math:`CC^\top = \Sigma` (``cov``),
     :math:`\lambda` (``scale``) and :math:`z \sim \mathcal N(0, I)`; it is accepted when
@@ -37,13 +38,13 @@ class RandomWalk(Kernel):
     cov : array_like, shape (d, d), optional
         Shape of the proposal, usually an estimate of the target covariance. ``None``
         leaves the kernel untuned: :meth:`~telescopic.kernels.Kernel.tune` sets it to the covariance of adaptive
-        Metropolis pilot chains (spec section 5.3).
+        Metropolis pilot chains.
     scale : float, optional
         Scale :math:`\lambda`; defaults to :math:`2.38/\sqrt d`, the optimal scale for a
         Gaussian target whose covariance is ``cov`` (Roberts, Gelman & Gilks 1997).
     coupling : {"reflection", "maximal"}
         ``"reflection"`` couples the proposals by the reflection-maximal coupling and
-        uses one uniform for both acceptances (Jacob, O'Leary & Atchade 2020; O'Leary
+        uses one uniform for both acceptances (Jacob, O'Leary & Atchadé 2020; O'Leary
         2021). ``"maximal"`` uses the rejection maximal coupling with independent
         residuals, whose meeting times grow exponentially with the dimension; it is for
         comparison only.

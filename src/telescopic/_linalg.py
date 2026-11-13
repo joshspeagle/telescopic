@@ -1,4 +1,6 @@
-"""Row-independent linear algebra for kernels (spec R-KER-6), and validated covariances."""
+"""Row-independent linear algebra for kernels, and validated covariances."""
+
+# Spec R-KER-6.
 
 from __future__ import annotations
 

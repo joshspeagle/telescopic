@@ -110,7 +110,7 @@ def test_variances_stay_exact_far_from_the_origin():
 def test_without_bias_corrections_quantiles_are_those_of_the_pooled_draws():
     # With k past every meeting, all weights are 1 / |S|: an ordinary empirical measure.
     # The levels avoid multiples of 1 / N, where rounding of the cumulative weights
-    # decides between two neighbouring atoms; the interval's are 0.2225 and 0.7775.
+    # decides between two neighboring atoms; the interval's are 0.2225 and 0.7775.
     result = gaussian_result(k=40, m=45, lag=1, max_iter=None)
     assert not result.measure.weights.min() < 0
     levels = [0.137, 0.503, 0.911]

@@ -22,7 +22,7 @@ for arg in "$@"; do
 done
 
 python="${PYTHON:-python}"
-if ! "$python" -c "import numpy, scipy, pytest, ruff, mypy" 2>/dev/null; then
+if ! "$python" -c "import numpy, scipy, pytest, ruff, mypy, codespell_lib" 2>/dev/null; then
   echo "scripts/verify.sh: '$python' lacks the development dependencies." >&2
   echo "Install them with 'pip install -e . --group dev', or set PYTHON to an interpreter that has them." >&2
   exit 2
@@ -32,6 +32,7 @@ export PYTHONPATH="$PWD/src${PYTHONPATH:+:$PYTHONPATH}"
 
 "$python" -m ruff check .
 "$python" -m ruff format --check .
+git ls-files -z | xargs -0 "$python" -m codespell_lib
 "$python" -m mypy
 "$python" -m pytest -q -ra $cov "${marker[@]}"
 if $docs; then

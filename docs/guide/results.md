@@ -325,6 +325,17 @@ draws the signed histogram of each coordinate as a density, with boxes of plus o
 two standard errors:
 
 ```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      Two bell-shaped histograms, one for each coordinate, each bin topped by a
+      small box.
+  figure:
+    caption: >-
+      The signed histogram of each coordinate as a density, with a box of plus or
+      minus two standard errors on each bin.
+---
 result.plot_marginals();
 ```
 
@@ -333,6 +344,17 @@ joint density of each pair of coordinates below it, on a diverging color map cen
 0:
 
 ```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      A two-by-two grid: a histogram of each coordinate on the diagonal, and below
+      it a colored map of their joint density along a rising diagonal.
+  figure:
+    caption: >-
+      The corner plot: the signed marginal of each coordinate on the diagonal, and
+      their signed joint density below it, on a color map centered on 0.
+---
 result.plot_corner();
 ```
 

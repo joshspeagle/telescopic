@@ -23,8 +23,9 @@ from telescopic.kernels.base import (
 from telescopic.target import Target
 
 
+# Spec R-KER-MALA and section 5.4.
 class MALA(GradientKernel):
-    r"""The Metropolis-adjusted Langevin algorithm (spec R-KER-MALA).
+    r"""The Metropolis-adjusted Langevin algorithm.
 
     The proposal is :math:`x' = x + \tfrac{\epsilon^2}{2}\Sigma\nabla\log\pi(x) + \epsilon Cz`,
     with :math:`CC^\top = \Sigma` (``cov``) and :math:`z \sim \mathcal N(0, I)`, a draw from
@@ -33,14 +34,14 @@ class MALA(GradientKernel):
     proposal with a log-density of ``-inf`` or a non-finite position is rejected. Coupled
     chains draw their proposals from the reflection-maximal coupling of their proposal
     distributions, which share the covariance :math:`\epsilon^2\Sigma`, and share the
-    uniform (Jacob, O'Leary & Atchade 2020, section 4.4).
+    uniform (Jacob, O'Leary & Atchadé 2020, section 4.4).
 
     Parameters
     ----------
     step_size : float, optional
         :math:`\epsilon`. ``None`` leaves it to :meth:`~telescopic.kernels.Kernel.tune`: dual averaging toward an
-        acceptance rate of 0.574 from :math:`\epsilon_0 = 1.65\,d^{-1/6}` (spec section
-        5.4; Roberts & Rosenthal 1998).
+        acceptance rate of 0.574 from :math:`\epsilon_0 = 1.65\,d^{-1/6}` (Roberts &
+        Rosenthal 1998).
     cov : array_like, shape (d, d), optional
         :math:`\Sigma`, usually an estimate of the target covariance. ``None`` leaves it to
         :meth:`~telescopic.kernels.Kernel.tune`, which takes the covariance of adaptive Metropolis pilot chains.

@@ -197,7 +197,7 @@ button.copybtn {
   transition: opacity 0.15s; cursor: pointer;
 }
 div.highlight:hover button.copybtn, button.copybtn:focus-visible { opacity: 1; }
-/* copybutton.css greys the button on hover and press, which hides ink in the dark theme */
+/* copybutton.css grays the button on hover and press, which hides ink in the dark theme */
 div.highlight button.copybtn:is(:hover, :active) { background: var(--t-surface); }
 button.copybtn svg { display: none; }
 /* sphinx-copybutton draws its label as a tooltip beside the button; draw it inside */
@@ -231,6 +231,11 @@ div.cell_output .output pre { padding: 11px 16px; overflow-x: auto; }
 div.cell div.cell_output .output.stderr, div.cell div.cell_output .output.traceback {
   border-left: var(--t-rule) solid var(--t-ochre);
 }
+/* Output to stderr wraps instead of running past the column, warnings and progress bars
+   alike, as does the printed output of a cell tagged wrap-output. */
+div.cell_output .output.stderr pre, div.cell.tag_wrap-output div.cell_output pre {
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
 div.cell_output .output.text_html { padding: 11px 16px; overflow-x: auto; }
 /* Plots are drawn on the light figure ground (brand.py); in the dark theme they sit on a
    light panel. */
@@ -263,7 +268,7 @@ div.admonition > :last-child { margin-bottom: 0; }
 div.admonition :not(pre) > code { background: var(--t-bg); }
 div.admonition:is(.warning, .caution, .attention, .danger, .error) { --accent: var(--t-ochre); }
 
-/* ---------------------------------------------------------------- tables, maths, figures */
+/* ---------------------------------------------------------------- tables, math, figures */
 table.docutils {
   display: block; max-width: 100%; overflow-x: auto;
   margin: 1.3rem 0; font-size: 0.93rem;

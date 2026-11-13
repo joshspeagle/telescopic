@@ -16,7 +16,7 @@ def gaussian(x, scale=1.0):
     return -0.5 * np.sum((x / scale) ** 2, axis=-1)
 
 
-def test_vectorised_and_point_by_point_targets_agree():
+def test_vectorized_and_point_by_point_targets_agree():
     x = np.random.default_rng(0).standard_normal((5, 3))
     np.testing.assert_allclose(
         Target(gaussian).log_prob(x), Target(gaussian, vectorize=True).log_prob(x), rtol=1e-15

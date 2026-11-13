@@ -594,7 +594,7 @@ def test_multivariate_t_rejects_invalid_parameters(kwargs, message):
 
 
 @pytest.mark.parametrize("df", [None, 1, 5])
-def test_multivariate_t_log_density_is_normalised(df):
+def test_multivariate_t_log_density_is_normalized(df):
     mean, cov = np.array([0.5, -1.0]), np.array([[2.0, 0.3], [0.3, 0.5]])
     x = np.random.default_rng(12).standard_normal((5, 2))
     reference = (

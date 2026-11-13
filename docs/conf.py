@@ -11,6 +11,12 @@ sys.path.insert(0, str(DOCS / "_ext"))
 # The plot style of every executed page, written by _scripts/brand.py; the notebook
 # kernels inherit it from the environment.
 os.environ["MATPLOTLIBRC"] = str(DOCS / "matplotlibrc")
+# The kernels run this file before the first cell, as IPython runs PYTHONSTARTUP.
+os.environ["PYTHONSTARTUP"] = str(DOCS / "notebook_startup.py")
+# The modules that pages import to share code, such as the data of the line fit.
+os.environ["PYTHONPATH"] = os.pathsep.join(
+    filter(None, (str(DOCS / "_helpers"), os.environ.get("PYTHONPATH")))
+)
 
 project = "telescopic"
 author = "Joshua S. Speagle"
@@ -44,28 +50,52 @@ nb_execution_raise_on_error = True
 nb_merge_streams = True
 
 numpydoc_show_class_members = False
+# Signatures show names and defaults, one per line once they pass 88 characters; the
+# docstrings give the types.
+python_maximum_signature_line_length = 88
+autodoc_typehints = "none"
+# numpydoc links the types of Parameters, Returns and Attributes: the names below, and
+# its own list of Python and NumPy names. Other words of a type stay plain text.
+numpydoc_xref_param_type = True
+numpydoc_xref_ignore = "all"
+numpydoc_xref_aliases = {
+    "Axes": "matplotlib.axes.Axes",
+    "CouplingReport": "telescopic.testing.CouplingReport",
+    "Draws": "telescopic.kernels.Draws",
+    "Estimate": "telescopic.Estimate",
+    "Example": "telescopic.examples.Example",
+    "Issue": "telescopic.diagnostics.Issue",
+    "Kernel": "telescopic.kernels.Kernel",
+    "PilotRun": "telescopic.tuning.PilotRun",
+    "Replicates": "telescopic.engine.Replicates",
+    "Result": "telescopic.Result",
+    "Settings": "telescopic.engine.Settings",
+    "SignedMeasure": "telescopic.SignedMeasure",
+    "State": "telescopic.kernels.State",
+    "Summary": "telescopic.Summary",
+    "Target": "telescopic.Target",
+    "TuningReport": "telescopic.tuning.TuningReport",
+    # A full name is linked only through an alias that names its role.
+    **{
+        name: f":class:`{name}`"
+        for name in (
+            "numpy.random.Generator",
+            "numpy.random.SeedSequence",
+            "scipy.sparse.csr_array",
+            "telescopic.engine.Replicates",
+            "telescopic.engine.Settings",
+        )
+    },
+}
 
-# Every cross-reference must resolve, but for type hints that have no page of their own.
+# Every cross-reference must resolve.
 nitpicky = True
-nitpick_ignore = [
-    ("py:class", name)
-    for name in (
-        "Seed",
-        "matplotlib.axes._axes.Axes",
-        "numpy._typing._array_like.ArrayLike",
-        "numpy._typing._array_like.NDArray",
-        "numpy.float64",
-        "numpy.int64",
-        "telescopic._random.Streams",
-        "telescopic._types.Distribution",
-        "telescopic._types.Proposal",
-    )
-]
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
+    "matplotlib": ("https://matplotlib.org/stable", None),
 }
 
 # The design records are read in the repository, not on the site.

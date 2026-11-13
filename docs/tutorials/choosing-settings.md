@@ -46,6 +46,19 @@ The recipe then sets the lag to $k$ and $m$ to $10k$. The pilot's meeting times,
 dashed and the level 0.01 dotted:
 
 ```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      Left, a histogram of the pilot's meeting times less 1; right, their survival
+      function on a logarithmic scale; both with a dashed vertical line at k, and
+      the right with a dotted horizontal line at 0.01.
+  figure:
+    caption: >-
+      The meeting times of the pilot pairs, less the lag of 1: their histogram
+      (left) and survival function on a log scale (right), with $k$ dashed and the
+      level 0.01 dotted.
+---
 shifted = np.sort(times - 1)
 survival = 1 - np.arange(1, len(shifted) + 1) / len(shifted)
 survival[-1] = survival[-2]  # the last step falls to 0, off a log scale
@@ -53,10 +66,10 @@ fig, (left, right) = plt.subplots(1, 2, figsize=(9, 3.5))
 left.hist(shifted, bins=20)
 left.set(xlabel=r"$\tau - 1$", ylabel="pilot pairs")
 right.step(shifted, survival, where="post")
-right.axhline(0.01, color="grey", linestyle=":")
+right.axhline(0.01, color="gray", linestyle=":")
 right.set(yscale="log", xlabel="$t$", ylabel=r"$P(\tau - 1 > t)$")
 for ax in (left, right):
-    ax.axvline(k, color="grey", linestyle="--", label="$k$")
+    ax.axvline(k, color="gray", linestyle="--", label="$k$")
 right.legend();
 ```
 
@@ -192,12 +205,24 @@ same distance between it and the target
 ([Theory](../theory.md#distance-to-stationarity)), at about the same cost:
 
 ```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      Two lines on a logarithmic scale, one for lag 1 and one for lag k, each
+      falling from 1 as t grows, with a dashed vertical line at k.
+  figure:
+    caption: >-
+      The estimated upper bound on the total variation distance between the law of
+      $X_t$ and the target, from the run with lag 1 and the run with lag $k$, with
+      $k$ dashed.
+---
 t = np.arange(2 * k)
 fig, ax = plt.subplots(figsize=(5, 3.5))
 for label, result in (("lag 1", results["lag_1"]), (f"lag {k}", recipe)):
     bound = result.tv_bound(t)
     ax.plot(t[bound > 0], bound[bound > 0], label=label)
-ax.axvline(k, color="grey", linestyle="--", label="$k$")
+ax.axvline(k, color="gray", linestyle="--", label="$k$")
 ax.set(yscale="log", xlabel="$t$", ylabel=r"TV bound on $X_t$")
 ax.legend();
 ```

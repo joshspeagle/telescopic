@@ -11,7 +11,11 @@ chains so that each chain, on its own, moves by the kernel, and so that the two 
 become equal ([Theory](../theory.md#coupled-chains)). Each kernel of
 {mod}`telescopic.kernels` comes with its coupling. The argument `kernel` of
 {func}`telescopic.sample` and {class}`telescopic.CoupledSampler` takes a kernel, or the
-string that names it:
+string that names it. In the coupling column, a **maximal** coupling makes two draws
+equal with the largest probability that their two distributions allow. A
+**reflection-maximal** coupling does so for two Gaussians with one covariance, and when
+the draws differ, the offset of the second from its mean mirrors that of the first. A
+**common** uniform, momentum or random number is one draw that both chains use:
 
 | Kernel | String | Needs | Coupling | `tune` sets |
 |---|---|---|---|---|
