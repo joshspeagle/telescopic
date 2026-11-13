@@ -149,7 +149,14 @@ def test_the_censored_warning_does_not_advise_no_cap_after_zero_density_starts()
     result._replicates.zero_density = np.array([1])
     (message,) = [issue.message for issue in issues(result) if issue.kind == "censored"]
     assert "or none" not in message
-    assert "1 pairs started where the target density is zero" in message
+    assert "1 of them started where the target density is zero" in message
+
+
+def test_the_censored_warning_advises_no_cap_when_the_zero_density_starts_met():
+    result = synthetic([3, -1, 4], [0.0, 0.0, 1.0], max_iter=50)
+    result._replicates.zero_density = np.array([0, 2])
+    (message,) = [issue.message for issue in issues(result) if issue.kind == "censored"]
+    assert message.endswith("or none")
 
 
 def test_changing_the_diagnostics_returned_leaves_the_results_own():

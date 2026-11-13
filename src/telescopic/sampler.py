@@ -33,7 +33,10 @@ PILOT_MAX_ITER = 100_000
 # The meeting-time pilot: lag 1, with nothing stored (spec R-TUNE-2).
 PILOT_SETTINGS = engine.Settings(0, 0, 1, max_iter=PILOT_MAX_ITER, store=False)
 # The peak memory of a run's first estimates over the bytes the run stores: 2.9 to 3.0
-# from d = 2 to 50, and 3.8 at d = 1 (notes/experiments/i73_memory_peak.out).
+# from d = 2 to 50 for a random walk's rejection rate at thin = 1. In one or two
+# dimensions it reaches about twice that with thin above 1 or a kernel that rarely
+# rejects, since Result.quantile sorts the atoms that are not consecutive repeats
+# (notes/experiments/i73_memory_peak.out).
 PEAK_PER_STORED = 3
 # The warnings of spec section 7.4 that a run emits as they happen, not at its end, or as
 # it ends for slow pairs on a pool.
@@ -327,7 +330,7 @@ class CoupledSampler:
         )
         kind = "replicate" if main else "pilot pair"
         outside = _ZeroDensityStarts(kind)
-        slow = _SlowPairs(settings.lag, settings.m, kind)
+        slow = _SlowPairs(settings.lag, settings.m, kind, interrupt)
         zeroed = _ZeroedGradients(self.target, kind)
         bar = Progress(len(indices), f"{kind}s") if progress else None
 
@@ -416,10 +419,12 @@ class CoupledSampler:
         stored = n_replicates * engine.stored_bytes(settings, self.ndim, coupled) / len(coupled)
         peak = PEAK_PER_STORED * stored
         if peak > 1e9:
+            # In one or two dimensions the peak can reach twice the factor's figure.
+            upto = f" to {2 * peak / 1e9:.1f}" if self.ndim <= 2 else ""
             warn(
                 f"the run will store about {stored / 1e9:.1f} GB of atoms and distances, "
-                f"and with its first estimates take about {peak / 1e9:.1f} GB; pass thin= "
-                "to store fewer atoms, or run fewer replicates",
+                f"and with its first estimates take about {peak / 1e9:.1f}{upto} GB; pass "
+                "thin= to store fewer atoms, or run fewer replicates",
                 InputWarning,
             )
 
@@ -505,7 +510,7 @@ class _ZeroDensityStarts:
 
     def __call__(self, status: engine.Status) -> None:
         if status.zero_density:
-            self._warn(len(status.zero_density), status.zero_density[0], " so far")
+            self._warn(status.zero_density, status.first_zero_density, " so far")
 
     def after(self, replicates: engine.Replicates) -> None:
         if len(replicates.zero_density):
@@ -526,10 +531,11 @@ class _ZeroDensityStarts:
 class _SlowPairs:
     # Warns once about a pair still unmet at the slow-pair threshold (spec section 6.3):
     # from the engine's status as it happens, or from the meeting times after a run on a
-    # pool, whose workers' statuses do not reach the parent. kind names the pairs.
-    def __init__(self, lag: int, m: int, kind: str) -> None:
+    # pool, whose workers' statuses do not reach the parent. kind names the pairs, and
+    # interrupt is the run's Ctrl-C handler, None for a pilot.
+    def __init__(self, lag: int, m: int, kind: str, interrupt: Interrupt | None = None) -> None:
         self.threshold = diagnostics.slow_pair_threshold(lag, m)
-        self.kind = kind
+        self.kind, self.interrupt = kind, interrupt
         self.warned = False
 
     def __call__(self, status: engine.Status) -> None:
@@ -537,12 +543,13 @@ class _SlowPairs:
             # The first Ctrl-C lets the replicates in progress finish (spec section 6.5),
             # this one too, so it does not end the wait.
             waiting = ", and the run waits for it"
-            if self.kind == "replicate":
+            interrupt = self.interrupt
+            if interrupt is not None and interrupt.listening and not interrupt.stopping:
                 waiting += (
                     ": a first Ctrl-C starts no new replicate but lets this one finish, "
                     "and a second stops the run without a result"
                 )
-            self._warn(status.slowest, waiting, status.slowest in status.zero_density)
+            self._warn(status.slowest, waiting, status.slowest_zero_density)
 
     def after(self, replicates: engine.Replicates) -> None:
         # A pair is unmet at the threshold when it meets, or is censored, after it.

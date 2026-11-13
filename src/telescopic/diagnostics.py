@@ -216,10 +216,11 @@ def issues(result: Result) -> list[Issue]:
     if result.n_censored:
         # A pair that starts where the density is zero may never meet, so no cap would
         # leave the run waiting forever.
-        outside = len(result._replicates.zero_density)
+        censored = result.index[np.isinf(result.meeting_times)]
+        outside = int(np.isin(censored, result._replicates.zero_density).sum())
         remedy = (
-            f"{outside} pairs started where the target density is zero, from which a pair "
-            "may never meet: draw the initial distribution inside the support of the "
+            f"{outside} of them started where the target density is zero, from which a "
+            "pair may never meet: draw the initial distribution inside the support of the "
             "target, and run a new sampler with a larger max_iter"
             if outside
             else "run a new sampler with a larger max_iter, or none"

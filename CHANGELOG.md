@@ -221,10 +221,14 @@ All notable changes to this project are documented here. The format follows
   as soon as it starts, in this process, instead of when the run ends; the slow-pair
   warning of such a pair says so, the censoring warning no longer suggests running
   without a cap after such starts, and a pilot that cannot choose `k` names them instead
-  of advising a wider initial distribution. `engine.Status` carries the replicates
-  started at zero density so far.
+  of advising a wider initial distribution. `engine.Status` carries the number of
+  replicates started at zero density so far, the first of them, and whether the
+  slowest pair is one of them.
 - The memory warning compares the estimated peak of a run and its first estimates, about
   three times the stored atoms and distances, with its threshold of 1 GB, and states both
-  figures; `telescopic.engine.stored_bytes` computes the stored size.
+  figures, with twice the peak as its upper end in one or two dimensions, where few
+  repeated atoms can make the estimates take up to about six times the stored size;
+  `telescopic.engine.stored_bytes` computes the stored size, and refuses steps that are
+  not non-negative integers.
 - `progress=True` also shows the progress of tuning: the steps of the adaptive pilot
   chains and, for MALA and HMC, of the step size's dual averaging.

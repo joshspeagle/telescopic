@@ -13,6 +13,7 @@ import telescopic
 from references import Normal as Conditional
 from references import gaussian_log_prob, synthetic
 from telescopic import CoupledSampler, __version__, sample
+from telescopic._parallel import Interrupt
 from telescopic.engine import Settings, Status
 from telescopic.initial import Empirical, Normal
 from telescopic.kernels import HMC, MALA, Gibbs, Mixture, RandomWalk
@@ -245,17 +246,24 @@ def test_a_slow_pair_warns_once_when_unmet_at_the_threshold():
     slow(Status(0, 3, 10_001))  # a second warning would fail under -W error
 
 
-@pytest.mark.parametrize(
-    ("kind", "after"),
-    [
-        ("replicate", "waits for it: a first Ctrl-C starts no new replicate but lets this one"),
-        ("pilot pair", "waits for it; the meeting times"),
-    ],
-    ids=["replicate", "pilot"],
-)
-def test_a_slow_pair_seen_as_it_happens_says_that_the_run_waits_for_it(kind, after):
-    with pytest.warns(ConvergenceWarning, match=f"{kind} 3 .* the run {after}"):
-        _SlowPairs(lag=1, m=10, kind=kind)(Status(0, 3, 10_000))
+def test_a_slow_pair_seen_as_it_happens_says_that_the_run_waits_for_it():
+    with pytest.warns(ConvergenceWarning, match="pilot pair 3 .* the run waits for it; the"):
+        _SlowPairs(lag=1, m=10, kind="pilot pair")(Status(0, 3, 10_000))
+
+
+def test_a_slow_replicate_names_ctrl_c_only_while_its_handler_listens():
+    interrupt = Interrupt()
+    clause = "waits for it: a first Ctrl-C starts no new replicate but lets this one finish"
+    with interrupt.catching(), pytest.warns(ConvergenceWarning, match=clause):
+        _SlowPairs(1, 10, "replicate", interrupt)(Status(0, 3, 10_000))
+    # Outside its block, as in a thread or under a host that keeps its own handler, and
+    # after a first Ctrl-C, the clause would not be true.
+    with pytest.warns(ConvergenceWarning) as caught:
+        _SlowPairs(1, 10, "replicate", interrupt)(Status(0, 3, 10_000))
+    interrupt.stopping = True
+    with interrupt.catching(), pytest.warns(ConvergenceWarning) as stopped:
+        _SlowPairs(1, 10, "replicate", interrupt)(Status(0, 3, 10_000))
+    assert "Ctrl-C" not in str(caught[0].message) + str(stopped[0].message)
 
 
 def test_tuning_chains_in_separate_modes_warn():
@@ -330,7 +338,7 @@ def test_choose_k_failure_names_zero_density_starts():
 
 
 def slow_pair_from_zero_density_as_it_happens(slow):
-    slow(Status(0, 1, 10_000, (1,)))
+    slow(Status(0, 1, 10_000, 1, 1, True))
 
 
 def slow_pair_from_zero_density_after_a_run(slow):
@@ -359,10 +367,10 @@ def test_a_run_that_would_store_gigabytes_warns():
 def test_the_memory_warning_compares_the_peak_with_the_threshold():
     # A pilot pair meeting at 1001 stands for 1000 distances of 24 bytes and 2001 atoms
     # of 32 bytes at k = 0: 0.44 GB stored for 5,000 replicates, of which the atoms are
-    # 0.32, and a peak of three times that.
+    # 0.32, and a peak of three times that, up to twice as much in two dimensions.
     sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=10)
     sampler.pilot = np.full(100, 1001.0)
-    with pytest.warns(InputWarning, match="store about 0.4 GB .* take about 1.3 GB"):
+    with pytest.warns(InputWarning, match="store about 0.4 GB .* take about 1.3 to 2.6 GB"):
         sampler._check_memory(Settings(0, 0, 1), 5_000)
 
 

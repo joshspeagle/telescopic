@@ -3,7 +3,7 @@ import pytest
 
 from references import assert_same_replicates, gaussian_log_prob
 from telescopic._random import MAIN, replicate_generator
-from telescopic.engine import Status, merge, run, stored_bytes
+from telescopic.engine import Settings, Status, merge, run, stored_bytes
 from telescopic.estimators import averaging_times, correction_coefficients
 from telescopic.initial import Empirical, Normal
 from telescopic.kernels import MALA, RandomWalk, State
@@ -219,6 +219,35 @@ def test_the_status_names_the_oldest_unmet_replicate():
     ]
 
 
+def test_the_status_counts_the_starts_outside_the_support_across_reused_lanes():
+    # Pairs that never move run on 2 lanes in turn, each until max_iter censors it.
+    seen = []
+
+    def monitor(status):
+        seen.append(status)
+        return False
+
+    replicates = run(
+        Target(lambda x: 0.0 if x[0] > 0 else -np.inf),
+        Still(np.eye(1)),
+        Normal([0.5], [1.0]),
+        range(12),
+        rng=3,
+        k=0,
+        m=1,
+        lag=1,
+        max_iter=3,
+        lanes=2,
+        monitor=monitor,
+    )
+    outside = replicates.zero_density.tolist()
+    assert 0 < len(outside) < 12
+    assert seen[-1].zero_density == len(outside)
+    assert {status.first_zero_density for status in seen} <= {-1, outside[0]}
+    for status in seen:
+        assert status.slowest_zero_density == (status.slowest in outside)
+
+
 def test_the_run_records_its_evaluations_and_the_starts_outside_the_support():
     def half_line(x):
         return 0.0 if x[0] > 0 else -np.inf
@@ -306,3 +335,13 @@ def test_the_storage_estimate_equals_the_bytes_a_run_stores(lag):
     stored = sum(getattr(replicates, name).nbytes for name in columns)
     coupled = replicates.meeting_time - lag
     assert stored_bytes(replicates.settings, 2, coupled) == stored
+
+
+@pytest.mark.parametrize("coupled", [[3.0, np.inf], [2.5]], ids=["censored", "fraction"])
+def test_the_storage_estimate_refuses_steps_that_are_not_non_negative_integers(coupled):
+    with pytest.raises(ValueError, match="coupled must be non-negative integers"):
+        stored_bytes(Settings(2, 6, 1), 2, coupled)
+
+
+def test_the_storage_estimate_is_zero_for_a_run_that_stores_nothing():
+    assert stored_bytes(Settings(2, 6, 1, store=False), 2, [10]) == 0

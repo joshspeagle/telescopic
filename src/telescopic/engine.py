@@ -23,6 +23,7 @@ from telescopic._types import (
     flag,
     instance,
     integer,
+    integral,
     real_array,
 )
 from telescopic.estimators import correction_coefficients
@@ -151,15 +152,21 @@ class Status(NamedTuple):
         Index of the unmet replicate that has run longest, or -1 if every pair has met.
     t : int
         Its time :math:`t`, or 0.
-    zero_density : tuple of int
-        The replicates started so far whose :math:`X_0` or :math:`Y_0` has zero target
+    zero_density : int
+        Replicates started so far whose :math:`X_0` or :math:`Y_0` has zero target
         density.
+    first_zero_density : int
+        Index of the first of them, or -1 if there is none.
+    slowest_zero_density : bool
+        Whether the replicate ``slowest`` is one of them.
     """
 
     finished: int
     slowest: int
     t: int
-    zero_density: tuple[int, ...] = ()
+    zero_density: int = 0
+    first_zero_density: int = -1
+    slowest_zero_density: bool = False
 
 
 def run(
@@ -378,9 +385,10 @@ def stored_bytes(settings: Settings, ndim: int, coupled: npt.ArrayLike) -> float
     :math:`|S|` atoms of the time average and two atoms for each of the
     :math:`\max(0, c - k)` terms of the bias correction, each of :math:`8d + 16` bytes (its
     coordinates in ``atoms``, its weight and its replicate in ``owner``), and :math:`c`
-    distances of 24 bytes (``distance_owner``, ``distance_time`` and ``distance``). With
-    ``thin`` above 1 some terms of the correction have no atoms, and this is an upper
-    bound.
+    distances of 24 bytes (``distance_owner``, ``distance_time`` and ``distance``). This
+    is exact when ``thin`` is 1 and :math:`m - k + 1 \ge L`, and an upper bound otherwise,
+    where some terms of the correction have no atoms. With ``store=False`` nothing is
+    stored.
 
     Parameters
     ----------
@@ -396,11 +404,13 @@ def stored_bytes(settings: Settings, ndim: int, coupled: npt.ArrayLike) -> float
         The total over the replicates.
     """
     instance("settings", settings, Settings)
-    k, m, _, thin = check_settings(settings)[:4]
+    k, m, _, thin, _, store = check_settings(settings)
     ndim = integer("ndim", ndim, minimum=1)
-    c = real_array("coupled", coupled, "non-negative numbers of shape (R,)")
-    if c.ndim != 1 or not np.all(c >= 0):
-        raise ValueError("coupled must be non-negative numbers of shape (R,)")
+    c = real_array("coupled", coupled, "non-negative integers of shape (R,)")
+    if c.ndim != 1 or not integral(c, 0):
+        raise ValueError("coupled must be non-negative integers of shape (R,)")
+    if not store:
+        return 0.0
     atoms = len(c) * len(range(k, m + 1, thin)) + 2 * np.maximum(0, c - k).sum()
     return float(atoms * (8 * ndim + 16) + 24 * c.sum())
 
@@ -431,7 +441,9 @@ class _Batch:
         # The columns that stored_bytes counts: a change here changes it.
         self.atoms = _Chunks(integers, np.zeros((0, ndim)), reals)
         self.distances = _Chunks(integers, integers, reals)
-        self.zero_density: tuple[int, ...] = ()
+        # The replicates started at zero density, and whether each lane's did.
+        self.zero_density: list[int] = []
+        self.outside = np.zeros(lanes, dtype=bool)
         self.paths: dict[int, tuple[list[FloatArray], list[FloatArray]]] = {}
         self.n_finished = 0
         self.counts = {name: getattr(target, name) for name in COUNTS}  # before any step
@@ -450,9 +462,8 @@ class _Batch:
         self.x.put(lanes, states.take(slice(0, None, 2)))
         self.y.put(lanes, states.take(slice(1, None, 2)))
         outside = np.isneginf(states.log_prob).reshape(-1, 2).any(axis=1)
-        self.zero_density += tuple(
-            s.index for s, bad in zip(starting, outside, strict=True) if bad
-        )
+        self.outside[lanes] = outside
+        self.zero_density += [s.index for s, bad in zip(starting, outside, strict=True) if bad]
         for lane, start in zip(lanes.tolist(), starting, strict=True):
             self.streams.assign(lane, start.generator)
             if self.keep_paths:
@@ -505,11 +516,16 @@ class _Batch:
 
     def status(self) -> Status:
         unmet = self.active & (self.tau < 0)
+        outside = len(self.zero_density), self.zero_density[0] if self.zero_density else -1
         if not unmet.any():
-            return Status(self.n_finished, -1, 0, self.zero_density)
+            return Status(self.n_finished, -1, 0, *outside)
         lane = int(np.argmax(np.where(unmet, self.t, -1)))
         return Status(
-            self.n_finished, int(self.replicate[lane]), int(self.t[lane]), self.zero_density
+            self.n_finished,
+            int(self.replicate[lane]),
+            int(self.t[lane]),
+            *outside,
+            bool(self.outside[lane]),
         )
 
     def result(self, seed: SeedSequence, requested: IntArray, start: float) -> Replicates:
