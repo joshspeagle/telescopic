@@ -20,11 +20,15 @@ of the output records the commit, the machine, the thread settings and the versi
 Result (i119_t_far_log_density.out): relative differences from the reference of at most
 2e-16, at distances 1e155 and 1e300 for a scale matrix of unit size, and 1e5 and 1e160
 for one of size 1e-300, where the code before the fix returned -inf or NaN. Near the
-mean the outputs are bitwise equal. The fixed log_density costs about 2 us more per call
-(1.8 to 2.6 us for n up to 16, ratios 1.26 to 1.32; ratios 0.96 to 1.13 for n of 256
-and 4,096), from np.errstate, which keeps NumPy's overflow warning from announcing a
-value that is then computed correctly, and the whole-array test. A whole step costs
-1.02 to 1.08 times as much. The machine was shared with other jobs, and repeated runs
+mean the outputs are bitwise equal. The fixed log_density costs 1.9 to 3.7 us more per
+call for n up to 16 (ratios 1.25 to 1.39); for n of 256 and 4,096 its ratios are 0.96
+to 1.20, a spread that spans 1, so not distinguishable from 1. For n up to 16 most of
+the cost is np.errstate, which keeps NumPy's overflow warning from announcing a value
+that is then computed correctly: without it a call costs 1.3 to 2.8 us less, 0.3 to
+0.9 us more than before the fix; for n of 256 and 4,096 the ratios without it to with
+it are 0.82 to 1.06, not distinguishable from 1. A whole step costs 1.03 to 1.05 times
+as much for n up to 16, and 0.98 to 1.03 times for n of 256 and 4,096, not
+distinguishable from 1. The machine was shared with other jobs, and repeated runs
 scatter by several percent.
 
 Run: OMP_NUM_THREADS=1 python notes/experiments/i119_t_far_log_density.py
