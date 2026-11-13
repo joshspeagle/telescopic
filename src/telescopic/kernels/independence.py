@@ -11,7 +11,7 @@ from scipy.special import gammaln
 
 from telescopic._linalg import covariance, inverse_lower, matvec
 from telescopic._random import Draws
-from telescopic._types import FloatArray, Seed, integer, vector
+from telescopic._types import FloatArray, Seed, integer, log_densities, vector
 from telescopic.kernels.base import Kernel, State, acceptance, evaluate, log_ratio, select
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport
@@ -154,6 +154,8 @@ class Independence(Kernel):
 
 def _log_weights(q: MultivariateT, *states: State) -> list[FloatArray]:
     # log pi - log q at each state's positions, from one call of q.log_density, whose rows
-    # do not depend on each other (spec R-KER-6).
-    log_q = np.split(q.log_density(np.concatenate([state.x for state in states])), len(states))
+    # do not depend on each other (spec R-KER-6). A NaN log q would make every move to its
+    # point a rejection, and so bias the chain without an error.
+    x = np.concatenate([state.x for state in states])
+    log_q = np.split(log_densities("proposal log_density", q.log_density(x), x), len(states))
     return [state.log_prob - part for state, part in zip(states, log_q, strict=True)]

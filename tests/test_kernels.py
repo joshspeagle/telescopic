@@ -359,6 +359,26 @@ def test_independence_refuses_a_proposal_without_sample_and_log_density():
         Independence(stats.multivariate_normal(np.zeros(2)))
 
 
+class NaNAboveOne(MultivariateT):
+    """A proposal whose log-density is NaN where the first coordinate exceeds 1."""
+
+    def log_density(self, x):
+        return np.where(x[:, 0] > 1, np.nan, super().log_density(x))
+
+
+@pytest.mark.parametrize("coupled", [False, True])
+def test_independence_raises_on_a_nan_proposal_log_density(coupled):
+    # Every move to such a point was rejected, which sampled the target restricted to
+    # the rest of the space. Of 20 draws from N(0, 4), none is above 1 with probability
+    # 0.69^20 < 0.001.
+    kernel = Independence(NaNAboveOne([0.0], [[4.0]], df=None))
+    start = kernel.init_state(TARGET, np.zeros((20, 1)))
+    states = (start, start.take(slice(None))) if coupled else (start,)
+    step = kernel.coupled_step if coupled else kernel.step
+    with pytest.raises(ValueError, match=r"proposal log_density returned nan at x = \["):
+        step(TARGET, *states, random_draws(20, 0))
+
+
 @pytest.mark.parametrize(
     ("kwargs", "message"),
     [

@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 
-from telescopic._types import FloatArray, read_only
+from telescopic._types import FloatArray, log_densities, read_only
 
 
 class Target:
@@ -85,11 +85,7 @@ class Target:
             return np.zeros(len(x))
         values = self._call(self._log_prob, x, ())
         self.n_log_prob += len(x)
-        # One reduction finds NaN or +inf, which make the maximum fail the test.
-        if not np.max(values, initial=-np.inf) < np.inf:
-            row = int(np.argmax(np.isnan(values) | (values == np.inf)))
-            raise ValueError(f"log_prob returned {values[row]} at x = {x[row].tolist()}")
-        return values
+        return log_densities("log_prob", values, x)
 
     def log_prob_and_grad(
         self, x: FloatArray, *, start: bool = False

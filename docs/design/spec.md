@@ -397,7 +397,7 @@ The documentation says that settings optimal for HMC alone can fail to contract 
 
 ### 5.6 Independence Metropolis–Hastings (R-KER-IMH)
 
-`Independence(proposal=None)`. `proposal` has `sample(draws)`, returning `(n, d)` from the buffered normals, and a batched, normalised `log_density(x)`. `MultivariateT(mean, cov, df=5)` is the built-in.
+`Independence(proposal=None)`. `proposal` has `sample(draws)`, returning `(n, d)` from the buffered normals, and a batched, normalised `log_density(x)`. A NaN or `+inf` value of `log_density` raises `ValueError` with the point, as the log-density's do (§4.1, DECISIONS #91). `MultivariateT(mean, cov, df=5)` is the built-in.
 - **Acceptance:** accept when $\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]$.
 - **Coupling:** both chains share the proposal $x'$ and $u$, so they meet when both accept. This is already a maximal kernel coupling (O'Leary, Wang & Jacob 2021).
 - **Default proposal:** a multivariate Student-$t$ with 5 degrees of freedom, located at the RWMH pilot's mean, with the pilot's covariance as its scale matrix, so its covariance is $5/3$ of the pilot's (D-25). The tuning report gives the largest importance-weight ratio $\pi/q$ seen in the pilot, relative to the median.

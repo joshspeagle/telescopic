@@ -234,7 +234,8 @@ $\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]$.
   2021).
 - `proposal` is a {class}`telescopic.kernels.MultivariateT`, a Student-$t$ with location
   `mean`, scale matrix `cov` and `df` degrees of freedom, a positive integer (`df=None`
-  gives a Gaussian).
+  gives a Gaussian). A proposal of your own whose `log_density` returns NaN or `+inf`
+  raises `ValueError` with the point.
 - `tune` sets a Student-$t$ with 5 degrees of freedom, located at the pilot's mean, with
   the pilot's covariance as scale matrix. The report's `max_weight_ratio` is the largest
   weight $\pi/q$ among the pilot's states, relative to their median; a large value
