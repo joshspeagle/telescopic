@@ -109,6 +109,13 @@ def test_invalid_plot_arguments_raise_before_drawing(call, message):
     assert not any(ax.has_data() for ax in axes)
 
 
+@pytest.mark.parametrize("plot", ["plot_marginals", "plot_corner"])
+def test_histogram_plots_refuse_bins_before_opening_a_figure(plot):
+    with pytest.raises(ValueError, match="bins must be at least 1"):
+        getattr(RESULT, plot)(bins=0)
+    assert plt.get_fignums() == []
+
+
 def test_paths_need_the_paths_of_the_engine():
     replicates = run(
         Target(gaussian_log_prob),

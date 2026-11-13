@@ -281,6 +281,12 @@ def test_choose_k_refuses_no_meeting_times():
         choose_k([])
 
 
+@pytest.mark.parametrize("bad", [1.5, 0.0, np.nan])
+def test_choose_k_refuses_meeting_times_that_are_not_positive_integers_or_inf(bad):
+    with pytest.raises(ValueError, match="positive integers or inf"):
+        choose_k(np.concatenate([np.arange(1.0, 100.0), [bad]]))
+
+
 def test_choose_k_refuses_a_quantile_beyond_the_pilot():
     with pytest.raises(ValueError, match="run more pilot pairs"):
         choose_k(np.arange(1, 101), quantile=0.995)
