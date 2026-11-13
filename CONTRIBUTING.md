@@ -37,6 +37,9 @@ scripts/verify.sh --docs                              # the checks, then the str
 sphinx-build -W --keep-going docs docs/_build/html    # the strict build alone
 ```
 
+The gate builds from the checkout's sources. A bare `sphinx-build` imports the installed
+package: in a second checkout or a worktree, prefix it with `PYTHONPATH="$PWD/src"`.
+
 The environment variable `TELESCOPIC_DOCS_EXECUTE` sets how the build runs the notebooks.
 `force`, the default and what CI uses, runs every notebook. `cache` reuses the outputs
 of a notebook whose cells have not changed since it last ran, so after a change to the
