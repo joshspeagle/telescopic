@@ -258,7 +258,7 @@ def test_tuning_chains_in_separate_modes_warn():
         return np.logaddexp(-0.5 * (x[0] + 20) ** 2, -0.5 * (x[0] - 20) ** 2)
 
     sampler = CoupledSampler(two_modes, lambda rng: next(starts), rng=12)
-    with pytest.warns(ConvergenceWarning, match="tuning chains disagree"):
+    with pytest.warns(ConvergenceWarning, match="or the chains may not have converged"):
         sampler.tune()
 
 

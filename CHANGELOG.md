@@ -159,6 +159,32 @@ All notable changes to this project are documented here. The format follows
 - The package ships a `py.typed` marker, so type checkers such as mypy and pyright read
   its annotations, and its metadata lists the supported Python versions (3.11 to 3.15),
   that it runs on any operating system, that it is typed, and a link to its issues.
+- An `Independence` chain at a point where the target and the proposal both have zero
+  density, such as a start outside the support of a bounded proposal, accepts any
+  proposal of finite density, as the other Metropolis kernels do; it rejected every
+  proposal, with a NumPy `RuntimeWarning`.
+- Fixes and checks of a hardening pass, now recorded and tested: a `Mixture` never
+  applies a component of weight 0, which the largest uniforms could select where
+  rounding left the cumulative weights below 1. `Gibbs(coupling="crn")` refuses a
+  conditional whose `mean` is not a vector of its block's size, where a scalar was
+  added to every coordinate. `weighted_quantile` refuses values or weights that are not
+  finite, `choose_k` meeting times that are not positive integers or `inf`,
+  `SignedMeasure.mass` a cell that is not an integer, which it truncated, `hill` values
+  that are not finite, and `testing.random_draws` the seeds that a run refuses;
+  `plot_marginals` and `plot_corner` check `bins` and the number of replicates before
+  opening a figure. `Result.merge` takes the kernel, initial distribution, tuning report
+  and pilot meeting times of the other result where the first has none. The warning
+  about disagreeing tuning chains also fires where an R-hat is NaN, which hid a
+  disagreement in another coordinate: it names those coordinates, which the pilot never
+  moved in, and reports the largest finite R-hat.
+- The warning that the tuning chains disagree says that the chains may also not have
+  converged, and the documentation of `TuningReport.rhat`, `tuning_disagreement` and
+  `CoupledSampler.tune` says that chains that agree do not show that the target has one
+  mode.
+- The documentation states that an automatically tuned `Independence` proposal covers
+  only the modes its tuning chains reached, so a run on well-separated modes can be
+  confidently wrong without a warning; the failure-modes tutorial shows such a run and
+  two checks that help.
 - Changes to `Result` ruled before the first release: the last bin of a histogram is
   closed, as in `numpy.histogram`, so an atom on the upper edge of `range` is counted,
   and the last edge of the default range is no longer nudged up; the TV bound and its

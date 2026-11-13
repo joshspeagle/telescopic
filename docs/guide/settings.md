@@ -43,9 +43,10 @@ With the defaults, before the replicates run:
    ([Kernels and couplings](kernels.md)). Beyond 20 dimensions the chains refactor the
    covariance and keep their states only every $\lceil d/20\rceil$ steps, which bounds
    the pilot's time and memory. Chains that disagree raise a warning that the target may
-   have several modes
-   ([Diagnostics and warnings](diagnostics.md#disagreeing-tuning-chains-tuning)), and a
-   chain that accepts no proposal in its second half raises `ValueError`.
+   have several modes or the chains may not have converged
+   ([Diagnostics and warnings](diagnostics.md#disagreeing-tuning-chains-tuning)); chains
+   that agree can still all sit in one mode. A chain that accepts no proposal in its
+   second half raises `ValueError`.
 2. **The meeting-time pilot.** 100 pairs with lag 1 run until they meet, or until
    100,000 iterations, where they are censored.
 3. **The settings.** `k`, `lag` and `m` follow the recipe of Atchadé & Jacob (2024) from

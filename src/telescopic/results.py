@@ -486,6 +486,9 @@ class Result:
         Spec R-OUT-1; :func:`telescopic.engine.merge` checks the seeds, the settings, the
         dimensions and the replicates. That the runs share the target, the kernel and the
         initial distribution is the caller's to ensure: their descriptions omit parameters.
+        The merged result takes this result's names, and its kernel, initial distribution,
+        tuning report and pilot meeting times, each from ``other`` where this result has
+        none.
 
         Parameters
         ----------

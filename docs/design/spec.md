@@ -353,7 +353,7 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 - **Covariance:** pooled over the second halves of the chains, plus $10^{-10}$ times each coordinate's variance on the diagonal, or $10^{-10}$ for a coordinate of variance 0. The pilot's own factorisations add $10^{-12}$ times each variance (DECISIONS #47).
 - **Scale:** $2.38/\sqrt d$, `RandomWalk`'s default (DECISIONS #7).
 - **Divergence:** where the target is flat in some direction, the scales can grow until the running sum of the covariance overflows, as it also does for a proper target whose scales are near the float64 limit (about $10^{153}$); the pilot then raises `ValueError` saying that the tuning chains diverged and the target may be improper or its scales near that limit (DECISIONS #112).
-- **Report:** the pilot acceptance rates and $\hat R$ per coordinate. A `ConvergenceWarning` when the chains disagree: $\hat R > \sqrt 2$ in some coordinate, where the chain means spread more widely than the chains themselves, a sign of several modes (DECISIONS #6).
+- **Report:** the pilot acceptance rates and $\hat R$ per coordinate. A `ConvergenceWarning` when the chains disagree: $\hat R > \sqrt 2$ in some coordinate, where the chain means spread more widely than the chains themselves, a sign of several modes or of chains that have not converged (DECISIONS #6, #118), or $\hat R$ is NaN in some coordinate, where all four chains sat at one value, so the pilot never moved in it. The message gives the largest finite $\hat R$ with the advice about modes when it exceeds $\sqrt 2$, and names the NaN coordinates with advice about the target's scale and the kernel's parameters, joining the two when both occur (DECISIONS #122). Chains that agree do not show that the target has one mode: on $0.7\,\mathcal N(-6e_1, I) + 0.3\,\mathcal N(6e_1, I)$ from $\mathcal N(0, 100I)$, the four chains, which share one covariance, ended in one mode in 15 of 20 runs at d = 10 and 18 of 20 at d = 32, settling on one side during their descent, before all four reached a mode (`notes/experiments/i102_q1_split.out`).
 
 ### 5.4 MALA (R-KER-MALA)
 
@@ -394,10 +394,10 @@ The documentation says that settings optimal for HMC alone can fail to contract 
 ### 5.6 Independence Metropolis–Hastings (R-KER-IMH)
 
 `Independence(proposal=None)`. `proposal` has `sample(draws)`, returning `(n, d)` from the buffered normals, and a batched, normalized `log_density(x)`. A NaN or `+inf` value of `log_density` raises `ValueError` with the point, as a NaN or `+inf` value of the target's log-density does (§4.1, DECISIONS #91). `MultivariateT(mean, cov, df=5)` is the built-in.
-- **Acceptance:** accept when $\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]$.
+- **Acceptance:** accept when $\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]$. The weight $\log\pi - \log q$ is $-\infty$ wherever $\log\pi = -\infty$, even where $\log q = -\infty$ too, so a chain at zero density accepts any proposal of finite density, as RWMH does (DECISIONS #116).
 - **Coupling:** both chains share the proposal $x'$ and $u$, so they meet when both accept. This is already a maximal kernel coupling (O'Leary, Wang & Jacob 2021).
 - **Default proposal:** a multivariate Student-$t$ with 5 degrees of freedom, located at the RWMH pilot's mean, with the pilot's covariance as its scale matrix, so its covariance is $5/3$ of the pilot's (D-25). The tuning report gives the largest importance-weight ratio $\pi/q$ seen in the pilot, relative to the median.
-- **Documented caveats:** meeting times are geometric only for bounded importance weights. A poor proposal gives heavy-tailed meeting times.
+- **Documented caveats:** meeting times are geometric only for bounded importance weights. A poor proposal gives heavy-tailed meeting times. A tuned proposal covers only the modes that the pilot chains reached: on a target with well-separated modes, pairs then meet within a few tens of steps in one mode, and the estimates can be confidently wrong without any warning. No check that telescopic runs names this failure; the documentation says so, with runs from several seeds and an explicit proposal as what helps, and says that seeds can agree on a wrong estimate: with a second mode of standard deviation 0.3, the tuning chains of all 20 seeds settled in the other mode (`notes/experiments/i102_q2_rules_main.out`, `i102_q2_analysis_main.out`; DECISIONS #117).
 
 ### 5.7 Gibbs (R-KER-GIBBS)
 
@@ -407,7 +407,7 @@ The documentation says that settings optimal for HMC alone can fail to contract 
 - **Sweep:** blocks are updated in the given order.
 - **Couplings, per block:**
   - `"maximal"`: rejection maximal coupling (§5.2), with the $\eta$ option;
-  - `"crn"`: common random numbers, which contract but do not meet on their own (an `eta` other than 1 raises: DECISIONS #16): a common uniform through each `ppf` for a block of one coordinate whose conditionals have one; otherwise common standard normals through a square root of each conditional's `cov`, which may be singular, added to its `mean`. Such a conditional is taken to be the normal with that mean and covariance, whatever its type (DECISIONS #48);
+  - `"crn"`: common random numbers, which contract but do not meet on their own (an `eta` other than 1 raises: DECISIONS #16): a common uniform through each `ppf` for a block of one coordinate whose conditionals have one; otherwise common standard normals through a square root of each conditional's `cov`, which may be singular, added to its `mean`, a vector of the block's size; a scalar `mean` for a block of several coordinates raises rather than being broadcast (DECISIONS #120). Such a conditional is taken to be the normal with that mean and covariance, whatever its type (DECISIONS #48);
   - `"two-scale"`: CRN while $\lVert x - y\rVert >$ `threshold`, maximal otherwise (Biswas et al. 2022). The switch depends only on the pair at the start of each sweep, and both branches couple the same conditional, so it is valid (AJ24 §4.2). `threshold` is required.
 - **Identical conditionals:** when the coordinates outside block `b` are equal in the two chains, their conditionals are identical, and both chains receive the same draw. This identity coupling is a valid state-dependent choice; it also keeps equal states equal when $\eta < 1$, which the rejection coupling alone would split with probability $1 - \eta$ (design review D-R2).
 - **Meeting:** the engine's exact comparison after each sweep (R-EST-2). Blocks updated by CRN can become equal without a coupling event.
@@ -417,7 +417,7 @@ The documentation says that settings optimal for HMC alone can fail to contract 
 
 `Mixture(kernels, weights)`. A common uniform chooses the same component for both chains, and that component's coupling is applied.
 
-The choice of component must not depend on the states (AJ24 §4.2). Switching between couplings of the same kernel may depend on them (§5.7).
+The choice of component must not depend on the states (AJ24 §4.2). Switching between couplings of the same kernel may depend on them (§5.7). A component of weight 0 is never applied, even where rounding leaves the cumulative weights below 1 (DECISIONS #119).
 
 ---
 
@@ -512,7 +512,7 @@ Methods:
 - **Plots:** `plot_meeting_times(axes=None)`, `plot_tv_bound(ax=None)`, `plot_marginals(dims=None, bins=20, axes=None)` and `plot_corner(dims=None, bins=20)` (signed 2-D histograms); the first three draw on given axes (DECISIONS #30).
 - **Persistence and merging:**
   - `save(path)` and `Result.load(path)` use a versioned `.npz` schema, with no pickle: arrays, and the settings, names, seed state and descriptions as JSON (DECISIONS #26, #29). The engine's paths are not saved;
-  - `merge(other)` joins runs with the same seed, settings and dimension and disjoint replicate indices. It does not compare kernels or initial distributions, whose descriptions omit parameters and can hold addresses (DECISIONS #53).
+  - `merge(other)` joins runs with the same seed, settings and dimension and disjoint replicate indices. It does not compare kernels or initial distributions, whose descriptions omit parameters and can hold addresses (DECISIONS #53). The merged result takes the first result's names, kernel, initial distribution, tuning report and pilot meeting times, each of the last four from `other` where the first has none (DECISIONS #121).
 
 ### 7.2 `SignedMeasure` and `Estimate` (R-OUT-2)
 
@@ -562,6 +562,7 @@ Rates measured at M11, on the first two targets with `sample()`'s defaults and o
 - `examples.gaussian(10)`: no warning in 100 runs at $R = 100$ and 50 at $R = 500$.
 - The banana from $U[-5, 5]^2$: at $R = 100$, the variance warning in 37 of 200 runs, where the 95% intervals of $E[x_0^2]$ covered at 0.95 against 0.97 elsewhere (0.89 against 0.96 with the normal quantile, before DECISIONS #78); at $R = 500$, the variance warning in 4 of 50 runs and the tail warning in 14.
 - JOA20's bimodal target from $\mathcal N(10, 1)$ at $R = 1000$: 33 of 50 intervals of $P(x > 3)$ missed the truth, none with a warning; the 17 runs whose replicates found the other mode raised the variance warning and covered.
+- $0.7\,\mathcal N(-6e_1, I) + 0.3\,\mathcal N(6e_1, I)$ in 10 and 32 dimensions from $\mathcal N(0, 100I)$, with `Mixture([RandomWalk(), Independence()], [0.8, 0.2])` tuned automatically and $R = 400$ (measured for issue #102, `notes/experiments/i102_q2_analysis_main.out`): $P(x_0 < 0)$ more than 5 standard errors from 0.7 in 14 of 20 runs at $d = 10$ and 18 of 20 at $d = 32$; over these, modes 24 apart and two more sets of seeds, the tuning warning fired on none of the 191 wrong runs (`i102_q2_pooled.out`, `i102_q3_confirm.out`).
 
 The documentation explains each, with the failure cases of JOA20 §5.1, and says that a run that never left one mode cannot be detected from its own output at moderate $R$ (design review D-R9).
 

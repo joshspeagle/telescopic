@@ -227,11 +227,14 @@ variance and the cost, and decides whether the chains find every mode.
   [the theory's list of what is not guaranteed](../theory.md#guarantees-and-their-limits)
   cites a published case, and
   [When unbiased is not enough](../tutorials/failure-modes.md#a-start-that-misses-a-mode)
-  runs one. The tuning chains are a first check: when their means spread more widely
-  than the chains themselves, telescopic warns that the target may have several modes
-  ([Diagnostics and warnings](diagnostics.md#disagreeing-tuning-chains-tuning)). From a
-  start that covers every mode, pairs that start in different modes take longer to meet,
-  which the meeting times show.
+  runs one. The tuning chains are a first check, in one direction only: when their means
+  spread more widely than the chains themselves, telescopic warns that the target may
+  have several modes
+  ([Diagnostics and warnings](diagnostics.md#disagreeing-tuning-chains-tuning)), but
+  chains that agree can all sit in one mode. From a start that covers every mode, pairs
+  that start in different modes take longer to meet, which the meeting times show,
+  unless the kernel was tuned to one mode and meets quickly inside it
+  ([A tuned proposal that covers one mode](../tutorials/failure-modes.md#a-tuned-proposal-that-covers-one-mode)).
 - **Wider than the target, but not by orders of magnitude.** The automatic settings take
   `k` at the 99% quantile of the pilot's meeting times and the lag equal to `k`, so
   about one pair in a hundred meets while its chain is still on its way to the target.

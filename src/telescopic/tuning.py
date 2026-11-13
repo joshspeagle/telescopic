@@ -36,7 +36,9 @@ class TuningReport:
         Acceptance rates of the chains' second halves.
     rhat : ndarray, shape (d,)
         Gelman-Rubin :math:`\hat R` of the second halves; well above 1 when the chains
-        disagree, a sign of multimodality.
+        disagree, because they sit in different modes or have not converged. A value
+        near 1 does not show that the chains found every mode: on a target with
+        well-separated modes, the chains can settle in the same one.
     n_steps : int
         Steps per chain.
     max_weight_ratio : float, optional
@@ -313,8 +315,8 @@ def choose_k(meeting_times: npt.ArrayLike, quantile: float = 0.99) -> int:
     Parameters
     ----------
     meeting_times : array_like, shape (R0,)
-        Pilot meeting times with lag 1; ``inf`` for a censored pair, which sorts above
-        every finite one.
+        Pilot meeting times with lag 1, positive integers; ``inf`` for a censored pair,
+        which sorts above every finite one.
     quantile : float
         The level :math:`\beta`, at most :math:`1 - 1/R_0` so that the quantile is not
         the sample maximum.

@@ -149,7 +149,9 @@ class CoupledSampler:
     def tune(self) -> TuningReport | None:
         """Tune the kernel's unset parameters on pilot chains, once, and freeze the kernel.
 
-        Warns when the chains disagree, a sign of several modes (spec section 5.3).
+        Warns when the chains disagree, a sign of several modes or of chains that have not
+        converged; chains that agree do not show that the target has one mode (spec
+        section 5.3).
 
         Returns
         -------

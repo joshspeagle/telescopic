@@ -1,0 +1,11 @@
+bimodal d=10 s=12 49 reproduces the saved row exactly: True | z inf stat 28.11066308007658 disagree False
+bimodal d=32 s=6 53 reproduces the saved row exactly: True | z inf stat 34.509124213718415 disagree False
+bimodal d=32 s=12 46 reproduces the saved row exactly: True | z -0.39700998084970646 stat 7.72968702088108 disagree True
+ex pumps tight 304 reproduces the saved row exactly: True | z -3.0200703166064398 stat -0.653413039553584 disagree False
+student4 d=10 wide 311 reproduces the saved row exactly: True | z -1.3578773651417673 stat -1.0179938193987503 disagree False
+gauss d=10 cond=100 tight 307 reproduces the saved row exactly: True | z -1.4663238645005217 stat -0.7005411067594061 disagree False
+ex banana default 302 reproduces the saved row exactly: True | z -0.9035771357459761 stat 2.5550348750068625 disagree False
+bimodal d=10 s=6 51 reproduces the saved row exactly: True | z 1.5290141252856457 stat 0.057078758026587906 disagree True
+rule only: bimodal d=10 s=12 44 stat 27.7 R-hat warn False
+rule only: bimodal d=10 s=12 47 stat 26.7 R-hat warn False
+rule only: bimodal d=2 s=6 44 stat 10.8 R-hat warn False
