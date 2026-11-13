@@ -25,15 +25,14 @@ steps on a vectorized N(0, I_d); one coupled Gibbs step of 512 rows on a two-dim
 Gaussian with two blocks of one coordinate whose conditionals are normal with `mean` and
 `cov` values.
 
-Result (`i72_validation_cost.out`, the uncommitted code of this change against commit
-6623397, so the commit reads `6623397-dirty`): `Target.log_prob` costs the same at
-n = 512, pointwise or vectorized (medians 1.003 and 1.001), and less pointwise at n = 4
-(0.903), without the scan for NaN; the pilot costs 5.4% more at d = 2, where the toy
-log-density is almost free, so the error state and the finiteness test are a visible
-share of a step, and at d = 30 its ratio (median 1.024) has quartiles that span 1, so
-it is not distinguishable from 1; the Gibbs step with common random numbers costs 3.0%
-more, from `real_array`'s conversion and dtype test on each conditional's mean and
-covariance.
+Result (`i72_validation_cost.out`, commit 0331396 against the merge base 6659fb9, on a
+machine shared with another job): `Target.log_prob` at n = 512, pointwise or vectorized,
+has medians of 1.001 whose quartiles span 1, so it is not distinguishable from 1, and it
+costs less pointwise at n = 4 (0.904), without the scan for NaN; the pilot costs 4.4%
+more at d = 2 and 3.8% more at d = 30, where the toy log-density is almost free, so the
+error state and the finiteness test are a visible share of a step; the Gibbs step with
+common random numbers costs 4.1% more, from `real_array`'s conversion and dtype test on
+each conditional's mean and covariance.
 
 Run from the repository root: PYTHONPATH=src python notes/experiments/i72_validation_cost.py
 """
