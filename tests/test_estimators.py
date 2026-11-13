@@ -71,6 +71,16 @@ def test_the_covariance_is_the_mean_second_moment_minus_the_u_statistic():
     )
 
 
+def test_the_covariance_is_exactly_symmetric_for_a_second_moment_that_is_not():
+    # A pooled second moment computed as a matrix product can differ from its transpose
+    # in the last bits; here by about 4e-16, seven units in the last place of 0.3.
+    first = np.random.default_rng(2).standard_normal((5, 2))
+    second = np.array([[1.0, 0.3], [0.3 + 4e-16, 1.0]])
+    assert second[0, 1] != second[1, 0]
+    covariance = unbiased_covariance(first, second)
+    np.testing.assert_array_equal(covariance, covariance.T)
+
+
 @given(
     counts=st.lists(st.integers(1, 5), min_size=1, max_size=12),
     q=st.floats(0.0, 1.0),

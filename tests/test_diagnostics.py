@@ -123,16 +123,17 @@ def test_no_warning_fires_on_a_clean_gaussian_run():
     assert issues(Result(replicates)) == []
 
 
-def test_the_variance_share_names_the_moment_and_coordinate_that_hold_it():
-    # x1 is 1 or -1 about its mean 0 but for one replicate at 3, whose squared deviation,
-    # the only one apart from the 99 others, holds the share 1 - 1/R of their variance; it
-    # holds less of the mean's. Far from 0 the share is the same.
+@pytest.mark.parametrize("column", [0, 1])
+def test_the_variance_share_names_the_moment_and_coordinate_that_hold_it(column):
+    # The coordinate is 1 or -1 about its mean 0 but for one replicate at 3, whose squared
+    # deviation, the only one apart from the 99 others, holds the share 1 - 1/R of their
+    # variance; it holds less of the mean's. Far from 0 the share is the same.
     normal = np.random.default_rng(7).standard_normal((100, 2))
-    x1 = np.r_[np.repeat([1.0, -1.0], [48, 51]), 3.0]
+    outlier = np.r_[np.repeat([1.0, -1.0], [48, 51]), 3.0]
     for offset in (0.0, 1000.0):
-        values = np.column_stack([normal[:, 0], x1 + offset, normal[:, 1]])
+        values = np.insert(normal, column, outlier + offset, axis=1)
         found = synthetic([2] * 100, values, k=5).diagnostics()
-        assert found["variance_share_of"] == "the variance of x1"
+        assert found["variance_share_of"] == f"the variance of x{column}"
         assert found["variance_share"] == pytest.approx(0.99)
 
 

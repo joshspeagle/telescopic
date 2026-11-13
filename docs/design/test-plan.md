@@ -62,6 +62,7 @@ Most estimator bugs cannot be caught statistically. In the census, an off-by-one
 **Discrete maximal**
 - The joint frequencies of the outputs match the exact joint table (diagonal $\min(p_i, q_i)$, off-diagonal the product of the normalised residuals times $\mathrm{TV}$), computed independently in the test, by a chi-square test.
 - Log-space inputs with very peaked probabilities do not underflow.
+- A uniform of 0 never draws a category of zero weight.
 
 ### 2.3 `tests/test_target.py`, `tests/test_initial.py` (R-INPUT-1, R-INPUT-2)
 
@@ -71,16 +72,15 @@ Most estimator bugs cannot be caught statistically. In the census, an off-by-one
   - NaN or `+inf` raises `ValueError` naming the point;
   - `-inf` passes through.
 - **Wrappers:** `args` and `kwargs` are forwarded. Counters count evaluations. Input arrays are never modified.
-- **Gradients:** `log_prob_and_grad` without a gradient raises.
+- **Gradients:** `log_prob_and_grad` without a gradient raises. A gradient that is not finite in one coordinate, where the log-density is finite, is zero in every coordinate and counted once.
 
 **Initial distributions**
 - **Each input form:**
   - callables, SciPy frozen distributions and point arrays all give draws of shape `(d,)`;
   - point arrays are sampled uniformly over their rows (chi-square test on row counts).
 - **Validation:**
-  - wrong shapes or non-finite draws raise;
+  - wrong shapes or non-finite draws raise, and so does a `Uniform` box with `low` equal to `high` in one coordinate;
   - a draw with $\log\pi = -\infty$ emits `InputWarning`.
-- **Independence:** $X_0$ and $Y_0$ are drawn independently from the replicate's stream.
 
 ### 2.4 `tests/test_kernels.py` (R-KER-*)
 
@@ -102,20 +102,22 @@ Each kernel ($\times$ each coupling it offers) gets the same suite, via a parame
 Kernel-specific tests:
 - **RWMH:**
   - `"reflection"` meets more often than `"maximal"` at $d = 10$ (O'Leary 2021 Table 1 reference: about 30 vs 279 mean meeting time, checked loosely in the slow tier);
-  - draws per step as documented.
+  - draws per step as documented;
+  - identical coupled proposals cost one evaluation of the target.
 - **MALA:** the acceptance ratio includes both proposal densities. Checked against a reference for a non-Gaussian target, where omitting the reverse term changes the answer.
 - **HMC:**
   - trajectories equal an independent leapfrog implementation draw for draw, and on $\mathcal N(0, 1)$, where the leapfrog map is linear, each chain's one-step law matches the exact one, which holds only for a reversible, volume-preserving integrator with the right acceptance;
   - shared momentum contracts two chains on a Gaussian;
   - the meeting component meets with the probability of §5.2;
+  - a trajectory that reaches a log-density of $-\infty$ stops there: it does not evaluate the target again and is rejected, even where a later leap returns to the support;
   - a common uniform chooses the same component for both chains.
 - **IMH:** both chains propose the same point, and the pair meets when both accept.
 - **Gibbs:**
-  - `"maximal"` couplings of conditionals have exact marginals (KS against the conditional's CDF);
+  - `"maximal"` couplings of conditionals have exact marginals (KS against the conditional's CDF), and meet at the rate $\int\min(\eta p, q)$ (binomial test);
   - `"crn"` uses a common uniform through `ppf`;
   - `"two-scale"` switches at the threshold, and requires one;
   - when the coordinates outside a block are equal, both chains receive the same draw, so equal states stay equal with $\eta < 1$.
-- **Mixture:** the component frequencies match the weights. Component choice does not depend on the states (structural test with `fixed_draws`).
+- **Mixture:** the component frequencies match the weights, which are normalized when they do not sum to 1. Component choice does not depend on the states (structural test with `fixed_draws`).
 - **Draw counts (R-KER-5):** each kernel consumes the random numbers it documents, checked with `fixed_draws` arrays of exactly that size.
 
 ### 2.5 `tests/test_estimators.py` (R-EST-4–8)
@@ -126,7 +128,7 @@ Kernel-specific tests:
 - The cost equals $L + 2(\tau - L) + \max(0, m - \tau)$ (in 2.6).
 
 **Derived estimators**
-- `unbiased_covariance` matches the U-statistic $\frac{1}{R(R-1)}\sum_{r \ne s} a_r a_s^\top$ form exactly, which is unbiased by construction.
+- `unbiased_covariance` matches the U-statistic $\frac{1}{R(R-1)}\sum_{r \ne s} a_r a_s^\top$ form exactly, which is unbiased by construction, and is exactly symmetric for a second-moment matrix that is not.
 - `weighted_quantile`:
   - reproduces NumPy's inverted-CDF quantiles for positive integer weights, through repeated values (NumPy's `weights=` needs NumPy 2.0, newer than the oldest supported stack);
   - is monotone in $q$;
@@ -139,6 +141,7 @@ Kernel-specific tests:
 
 ### 2.6 `tests/test_engine.py` (R-EST-1–3, R-EST-7, R-EXEC-3, R-EXEC-4)
 
+- **Initial states:** each replicate draws $X_0$, then $Y_0$, from its own stream, so that replicates are independent. Every pair with a start outside the support is recorded in `zero_density`.
 - **Estimates against recorded paths:** with `keep_paths=True`, every replicate's stored signed measure equals the one computed by a reference implementation of §3.2 from the recorded paths. Exact to `1e-12`, for random $(k, m, L, \text{thin})$.
 - **Lag:** $X$ runs exactly $L$ steps alone before the first coupled step.
 - **Meeting:**
@@ -149,7 +152,8 @@ Kernel-specific tests:
 - **Refill:** with $R > B$ lanes, every requested index is run exactly once, and per-replicate results do not depend on $B$ (1, 7, 64) for a point-by-point target, bitwise. This is the invariance contract of R-EXEC-2, extended to a kernel with variable draw counts (RWMH `"maximal"`), and to MALA and HMC in M6.
 - **Censoring:**
   - with `max_iter`, unmet pairs are returned as censored, never dropped, and `max_iter` $\le \max(L, m)$ raises;
-  - a pair past the slow-pair threshold triggers the one-time `ConvergenceWarning`.
+  - a pair past the slow-pair threshold triggers the one-time `ConvergenceWarning`;
+  - the monitor's `Status` names the unmet replicate that has run longest, and $-1$ when no pair is unmet.
 - **Pilot mode:** `k=0, m=0, store=False` returns meeting times only.
 - **Memory:** the stored atom count stays within the bound of §3.2 (R-EXEC-7).
 
@@ -162,7 +166,7 @@ Kernel-specific tests:
 - **Repr:** `repr(result)` is the one line of stored fields of §7.1, and echoing it leaves the diagnostics uncomputed.
 - **Summary:** `summary()` contains the fields of §7.3 and converts with `to_dict()`. `to_pandas()` is skipped without pandas.
 - **Merging:** `merge` rejects different configurations and overlapping indices, and its output equals one run over the union of indices.
-- **Censored replicates** are excluded from estimates and from $R$, and listed with meeting time `inf`.
+- **Censored replicates** are excluded from estimates and from $R$, and listed with meeting time `inf`; `var`, `std` and `quantile` divide by the $R$ replicates that met. An estimate that needs more replicates that met than the run has raises, censored pairs not counted: 2 for `mean`, `cov` and `var`, 1 for `quantile`.
 - **Output shapes:** an `h` whose output is not `(n,)` or `(n, p)` raises.
 - **Interrupted results** say in `summary()` that their estimates are consistent, not exactly unbiased.
 
@@ -182,6 +186,8 @@ Kernel-specific tests:
   - a tail index below 2 at $R \ge 500$;
   - disagreeing pilots.
 
+  `variance_share_of` names the moment and the coordinate that hold the largest variance share, the first coordinate included.
+
   `check(strict=True)` raises instead. None fires on a clean Gaussian run in a configuration whose computed false-alarm probability is below $10^{-3}$.
 
 ### 2.9 `tests/test_tuning.py`, `tests/test_sampler.py`, `tests/test_api.py` (R-TUNE-*, R-API-*)
@@ -198,6 +204,7 @@ Kernel-specific tests:
   - $\beta > 1 - 1/R_0$ raises, and so does a quantile that falls on a censored pilot pair;
   - explicit values are kept, and `lag` and `m` follow an explicit `k` without a pilot.
 - **Dual averaging:** reaches its target acceptance within 0.05 on a Gaussian.
+- **Frozen kernels:** tuning keeps a random walk's `scale` and `coupling`, and an independence kernel's report gives the largest importance weight over the median, recomputed from the pilot.
 
 **`CoupledSampler`**
 - `run` tunes and pilots when needed, and records the reports.
@@ -237,7 +244,7 @@ Kernel-specific tests:
   - initial distributions have the documented shape.
 - **`check_coupling`:**
   - passes the built-in kernels, and in three dimensions checks every built-in coupling;
-  - flags a wrong $Y$ marginal, a coupling that reads another row's state, a coupling that recomputes $Y$ on the meeting branch, a stale cached log-density, and a coupling that never meets.
+  - flags a wrong $Y$ marginal, a coupling that reads another row's state, a coupling that recomputes $Y$ on the meeting branch, a stale cached log-density, even one off by one part in $10^6$, and a coupling that never meets.
 
 ### 2.12 Slow statistical tier (`-m slow`)
 

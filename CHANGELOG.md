@@ -156,6 +156,9 @@ All notable changes to this project are documented here. The format follows
 - Tuning a MALA or HMC step size no longer raises when a pilot chain ends where the
   gradient is not finite but the log-density is: its dual-averaging chains take that
   gradient as 0, as runs do wherever chains move.
+- The package ships a `py.typed` marker, so type checkers such as mypy and pyright read
+  its annotations, and its metadata lists the supported Python versions (3.11 to 3.15),
+  that it runs on any operating system, that it is typed, and a link to its issues.
 - Changes to `Result` ruled before the first release: the last bin of a histogram is
   closed, as in `numpy.histogram`, so an atom on the upper edge of `range` is counted,
   and the last edge of the default range is no longer nudged up; the TV bound and its
