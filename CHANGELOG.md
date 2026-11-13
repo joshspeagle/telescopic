@@ -85,14 +85,17 @@ All notable changes to this project are documented here. The format follows
 - The docstring of `telescopic.sample` describes each of its parameters, and that of
   `Estimate` its `level`.
 - Signatures in the API reference show the parameters' names and defaults, one per line
-  when long, and the types stay in the docstrings; returned matplotlib axes link to
-  matplotlib's documentation.
+  when long, and the types stay in the docstrings, which state the type of every value
+  that a public method or property returns. The types link to the documentation of
+  telescopic, Python, NumPy and matplotlib.
 - American spelling throughout the package, its tests and the site, with "Atchadé" spelled
-  one way; a codespell pre-commit hook checks new text.
+  one way; codespell checks it in `scripts/verify.sh`, CI's lint job and a pre-commit
+  hook.
 - Getting started writes the lag as $L$ in its equations, defines the pilots and a
   consistent estimate where it first uses them, and says how to turn on the tail check.
-- Theory opens with what it derives, defines the meeting time before the algorithm uses
-  it, and says what the conditions of unbiasedness ask in practice before stating them.
+- Theory opens with what it derives, writes the algorithm without the meeting time and
+  defines it after, and says what the conditions of unbiasedness ask in practice before
+  stating them.
 - The kernels guide defines its coupling terms before its table, and the diagnostics guide
   says what Hill's estimate and the Clopper-Pearson bound measure and when each warning
   is emitted; the docstring of `diagnostics.hill` gives the rule for ties.

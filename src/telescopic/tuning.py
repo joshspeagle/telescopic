@@ -77,15 +77,24 @@ class PilotRun:
 
     @cached_property
     def mean(self) -> FloatArray:
-        """The pooled mean, shape ``(d,)``."""
+        """The pooled mean.
+
+        Returns
+        -------
+        ndarray, shape (d,)
+        """
         mean: FloatArray = self.samples.reshape(-1, self.samples.shape[2]).mean(axis=0)
         return mean
 
     @cached_property
     def cov(self) -> FloatArray:
-        """The pooled covariance plus 1e-10 times each variance on its diagonal, ``(d, d)``.
+        """The pooled covariance plus 1e-10 times each variance on its diagonal.
 
         A coordinate of variance 0 gets 1e-10.
+
+        Returns
+        -------
+        ndarray, shape (d, d)
         """
         pooled = self.samples.reshape(-1, self.samples.shape[2])
         cov = np.atleast_2d(np.cov(pooled, rowvar=False))
@@ -97,7 +106,12 @@ class PilotRun:
 
     @cached_property
     def rhat(self) -> FloatArray:
-        """Gelman-Rubin :math:`\\hat R` of each coordinate, shape ``(d,)``."""
+        """Gelman-Rubin :math:`\\hat R` of each coordinate.
+
+        Returns
+        -------
+        ndarray, shape (d,)
+        """
         n = self.samples.shape[1]
         within = self.samples.var(axis=1, ddof=1).mean(axis=0)
         between = n * self.samples.mean(axis=1).var(axis=0, ddof=1)
@@ -106,7 +120,18 @@ class PilotRun:
         return rhat
 
     def report(self, max_weight_ratio: float | None = None) -> TuningReport:
-        """The :class:`TuningReport` of this run."""
+        """The report of this run.
+
+        Parameters
+        ----------
+        max_weight_ratio : float, optional
+            For an independence kernel, the largest weight :math:`\\pi/q` of the pilot's
+            draws relative to their median, which the report carries.
+
+        Returns
+        -------
+        TuningReport
+        """
         return TuningReport(
             self.mean, self.cov, self.acceptance, self.rhat, self.n_steps, max_weight_ratio
         )

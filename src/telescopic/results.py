@@ -201,7 +201,13 @@ class Result:
         return Estimate(value, error, (value - t * error, value + t * error), level, values)
 
     def mean(self) -> Estimate:
-        """The estimate of the mean of each coordinate, with shapes ``(d,)``."""
+        """The estimate of the mean of each coordinate.
+
+        Returns
+        -------
+        Estimate
+            With ``value`` and ``standard_error`` of shape ``(d,)``.
+        """
         return self.estimate(lambda x: x)
 
     def cov(self) -> FloatArray:
@@ -242,9 +248,13 @@ class Result:
         return unbiased_variance(first, second)
 
     def std(self) -> FloatArray:
-        r"""Standard deviations :math:`\sqrt{\max(0, \widehat{\mathrm{Var}})}`, shape ``(d,)``.
+        r"""Standard deviations :math:`\sqrt{\max(0, \widehat{\mathrm{Var}})}`.
 
         Consistent as :math:`R` grows, not unbiased.
+
+        Returns
+        -------
+        ndarray, shape (d,)
         """
         deviations: FloatArray = np.sqrt(np.maximum(0.0, self.var()))
         return deviations
@@ -558,12 +568,12 @@ class Result:
 
         Parameters
         ----------
-        axes : sequence of two matplotlib Axes, optional
+        axes : sequence of two Axes, optional
             By default, those of a new figure.
 
         Returns
         -------
-        list of two matplotlib Axes
+        list of two Axes
         """
         # Imported here: matplotlib is optional, and telescopic.plotting imports this module.
         from telescopic import plotting
@@ -575,12 +585,12 @@ class Result:
 
         Parameters
         ----------
-        ax : matplotlib Axes, optional
+        ax : Axes, optional
             By default, that of a new figure.
 
         Returns
         -------
-        matplotlib Axes
+        Axes
         """
         from telescopic import plotting
 
@@ -599,12 +609,12 @@ class Result:
         dims : int or sequence of int, optional
             Coordinates; all by default.
         bins : int
-        axes : sequence of matplotlib Axes, optional
+        axes : sequence of Axes, optional
             One per coordinate; by default, those of a new figure.
 
         Returns
         -------
-        list of matplotlib Axes
+        list of Axes
         """
         from telescopic import plotting
 
@@ -621,7 +631,7 @@ class Result:
 
         Returns
         -------
-        ndarray of matplotlib Axes
+        ndarray of Axes
         """
         from telescopic import plotting
 
@@ -700,7 +710,14 @@ class Summary:
     footer: dict[str, Any]
 
     def to_dict(self) -> dict[str, Any]:
-        """The summary as nested dictionaries of Python numbers."""
+        """The summary as nested dictionaries of Python numbers.
+
+        Returns
+        -------
+        dict
+            ``"parameters"``, a dictionary of each parameter's columns, and the entries of
+            the footer.
+        """
         parameters = {
             name: {column: float(values[i]) for column, values in self.table.items()}
             for i, name in enumerate(self.names)
@@ -708,7 +725,12 @@ class Summary:
         return {"parameters": parameters, **self.footer}
 
     def to_pandas(self) -> Any:
-        """The table as a ``pandas.DataFrame`` indexed by parameter name (needs pandas)."""
+        """The table as a data frame indexed by parameter name (needs pandas).
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
         try:
             import pandas as pd
         except ImportError as error:

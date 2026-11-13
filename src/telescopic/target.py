@@ -82,12 +82,22 @@ class Target:
 
     @property
     def has_grad(self) -> bool:
-        """Whether a gradient was given."""
+        """Whether a gradient was given.
+
+        Returns
+        -------
+        bool
+        """
         return self._grad is not None
 
     @property
     def has_log_prob(self) -> bool:
-        """Whether a log-density was given."""
+        """Whether a log-density was given.
+
+        Returns
+        -------
+        bool
+        """
         return self._log_prob is not None
 
     def log_prob(self, x: FloatArray) -> FloatArray:

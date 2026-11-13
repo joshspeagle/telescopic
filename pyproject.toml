@@ -55,6 +55,7 @@ test = [
 dev = [
     { include-group = "test" },
     "ruff==0.17.2",
+    "codespell==2.4.3",
     "mypy==2.4.0",
     # scipy ships no type information; scipy-stubs 1.18 needs Python 3.12.
     "scipy-stubs==1.18.1.1; python_version >= '3.12'",
@@ -119,11 +120,14 @@ extend-select = ["B", "C4", "I", "NPY", "PT", "RUF", "SIM", "UP"]
 known-first-party = ["references"]
 
 [tool.codespell]
-# American spelling, and common misspellings, outside the design records, notes and
-# research notes. The attributes Future.cancel(l)ed and ndarray.flags.write(e)able keep
-# their spelling; the brackets keep the pattern itself from matching.
+# American spelling, and common misspellings, in the tracked files (git ls-files) outside
+# the design records, notes and research notes; .codespell-dictionary.txt adds the
+# British forms the built-in dictionaries miss. The attributes Future.cancel(l)ed and
+# ndarray.flags.write(e)able keep their spelling; the brackets keep the pattern itself
+# from matching.
 builtin = "clear,rare,en-GB_to_en-US"
-skip = "./.git,./docs/design,./notes,./research_notes,./reports,*.svg,*.woff2,*.png,*.npz"
+dictionary = ".codespell-dictionary.txt,-"
+skip = "docs/design/*,notes/*,research_notes/*,reports/*,*.svg,*.woff2,*.png,*.npz"
 ignore-regex = "\\.(cancel[l]ed|writ[e]able)\\b"
 # A color of the identity, named in docs/_scripts/brand.py.
 ignore-words-list = "ochre"

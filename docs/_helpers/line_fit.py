@@ -6,8 +6,8 @@ import numpy as np
 def data() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """``x``, ``y`` and ``yerr``: 50 points of the line ``-0.9 x + 4.3`` with Gaussian errors.
 
-    Getting started and the README write this code out in full, and Getting started checks
-    that its data equal these.
+    Getting started and the README write this code out in full. Only Getting started
+    checks that its data equal these; nothing checks the README's copy.
     """
     rng = np.random.default_rng(0)
     x = np.sort(10 * rng.random(50))

@@ -64,7 +64,7 @@ class Settings(NamedTuple):
     store: bool = True
 
 
-# Spec section 6.2; seed, section 6.1; atoms, R-EST-6; index, section 6.5; evaluations,
+# Spec section 6.2; seed, section 6.1; atoms, R-EST-6; requested, section 6.5; evaluations,
 # R-EST-7 and R-INPUT-1.
 @dataclass
 class Replicates:
@@ -122,7 +122,12 @@ class Replicates:
 
     @property
     def stopped(self) -> FloatArray:
-        """The time each pair stopped, shape (R,): its meeting time, or the cap if censored."""
+        """The time each pair stopped: its meeting time, or the cap if censored.
+
+        Returns
+        -------
+        ndarray, shape (R,)
+        """
         cap = self.settings.max_iter
         stopped: FloatArray = np.minimum(self.meeting_time, np.inf if cap is None else cap)
         return stopped
@@ -130,10 +135,14 @@ class Replicates:
     # Spec R-EST-7.
     @property
     def cost(self) -> IntArray:
-        r"""Kernel applications, shape (R,), counting a coupled step before the meeting as two.
+        r"""Kernel applications, counting a coupled step before the meeting as two.
 
         X runs to :math:`\max(s, m)` and Y from :math:`L` to :math:`s`, with :math:`s` the
         time the pair stopped.
+
+        Returns
+        -------
+        ndarray of int, shape (R,)
         """
         stopped = self.stopped
         cost: IntArray = (stopped + np.maximum(stopped, self.settings.m)).astype(np.int64)

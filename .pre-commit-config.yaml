@@ -1,5 +1,5 @@
-# Ruff's checks of the CI lint job, on the same files; mypy runs in CI and in scripts/verify.sh.
-# codespell checks spelling as configured in pyproject.toml.
+# The checks of the CI lint job but mypy, which runs in CI and in scripts/verify.sh: ruff,
+# and codespell as configured in pyproject.toml.
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # The ruff pin of the dev group in pyproject.toml.
@@ -8,7 +8,7 @@ repos:
       - id: ruff-check
       - id: ruff-format
   - repo: https://github.com/codespell-project/codespell
+    # The codespell pin of the dev group in pyproject.toml.
     rev: v2.4.3
     hooks:
       - id: codespell
-        exclude: ^(docs/design|notes|research_notes|reports)/

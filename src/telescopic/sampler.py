@@ -144,7 +144,12 @@ class CoupledSampler:
 
     @property
     def settings(self) -> engine.Settings | None:
-        """The settings of the runs, fixed by the first; ``None`` before it."""
+        """The settings of the runs, fixed by the first; ``None`` before it.
+
+        Returns
+        -------
+        telescopic.engine.Settings or None
+        """
         return None if self._replicates is None else self._replicates.settings
 
     # Spec section 5.3.

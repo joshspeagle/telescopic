@@ -52,7 +52,12 @@ class Example:
 
     @property
     def ndim(self) -> int:
-        """The dimension ``d``."""
+        """The dimension ``d``.
+
+        Returns
+        -------
+        int
+        """
         return len(self.mean)
 
 

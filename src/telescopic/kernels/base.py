@@ -93,22 +93,42 @@ class Kernel(ABC):
 
     @property
     def needs_grad(self) -> bool:
-        """Whether the kernel evaluates the gradient of the log-density."""
+        """Whether the kernel evaluates the gradient of the log-density.
+
+        Returns
+        -------
+        bool
+        """
         return False
 
     @property
     def needs_log_prob(self) -> bool:
-        """Whether the kernel evaluates the log-density; Gibbs kernels do not."""
+        """Whether the kernel evaluates the log-density; Gibbs kernels do not.
+
+        Returns
+        -------
+        bool
+        """
         return True
 
     @property
     def is_tuned(self) -> bool:
-        """Whether every parameter is set, so the kernel can run."""
+        """Whether every parameter is set, so the kernel can run.
+
+        Returns
+        -------
+        bool
+        """
         return True
 
     @property
     def ndim(self) -> int | None:
-        """The dimension that the kernel's parameters fix, or ``None``."""
+        """The dimension that the kernel's parameters fix, or ``None``.
+
+        Returns
+        -------
+        int or None
+        """
         return None
 
     def check_target(self, target: Target) -> None:

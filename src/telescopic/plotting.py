@@ -49,7 +49,7 @@ def meeting_times(result: Result, axes: Sequence[Axes] | None = None) -> list[Ax
 
     Returns
     -------
-    list of two :class:`~matplotlib.axes.Axes`
+    list of two Axes
     """
     histogram, survival = (
         plt.subplots(1, 2, figsize=(9, 3.5))[1] if axes is None else _axes(axes, 2)
@@ -83,7 +83,7 @@ def tv_bound(result: Result, ax: Axes | None = None) -> Axes:
 
     Returns
     -------
-    :class:`~matplotlib.axes.Axes`
+    Axes
     """
     ax = plt.subplots(figsize=(5, 3.5))[1] if ax is None else ax
     # At most 4,000 times draw the step function, however long the tail of meeting times.
@@ -126,7 +126,7 @@ def marginals(
 
     Returns
     -------
-    list of :class:`~matplotlib.axes.Axes`
+    list of Axes
     """
     result._require(2)
     bins = integer("bins", bins, minimum=1)
@@ -163,7 +163,7 @@ def corner(result: Result, dims: int | Sequence[int] | None = None, bins: int = 
 
     Returns
     -------
-    ndarray of :class:`~matplotlib.axes.Axes`, shape (len(dims), len(dims))
+    ndarray of Axes, shape (len(dims), len(dims))
     """
     result._require(2)
     bins = integer("bins", bins, minimum=1)
@@ -191,6 +191,7 @@ def corner(result: Result, dims: int | Sequence[int] | None = None, bins: int = 
     return grid
 
 
+# Spec section 7.5.
 def paths(
     replicates: Replicates,
     dims: Sequence[int] = (0, 1),
@@ -202,7 +203,7 @@ def paths(
     They need the paths that :func:`telescopic.engine.run` keeps with
     ``keep_paths=True``. In one dimension they run against time, with Y shifted by the
     lag so that each pair meets at its meeting time; otherwise they are drawn in the
-    plane of ``dims`` (spec section 7.5).
+    plane of ``dims``.
 
     X is drawn in :data:`CHAIN_X` and Y in :data:`CHAIN_Y` until they meet; from the
     meeting time on, the path of X, now the pair's, is drawn in :data:`MET`. The colors

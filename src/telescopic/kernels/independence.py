@@ -41,14 +41,34 @@ class MultivariateT:
         self._log_det = 2.0 * np.log(np.diag(self._chol)).sum()
 
     def sample(self, draws: Draws) -> FloatArray:
-        """One draw per row of ``draws``, shape ``(n, d)``; uses ``d + df`` normals per row."""
+        """One draw per row of ``draws``; uses ``d + df`` normals per row.
+
+        Parameters
+        ----------
+        draws : Draws
+            The random numbers of ``n`` chains.
+
+        Returns
+        -------
+        ndarray, shape (n, d)
+        """
         z = draws.normal(len(self.mean))
         if self.df is not None:
             z = z / np.sqrt((draws.normal(self.df) ** 2).sum(axis=1) / self.df)[:, None]
         return self.mean + matvec(self._chol, z)
 
     def log_density(self, x: FloatArray) -> FloatArray:
-        """Normalized log-density at the rows of ``x``, shape ``(n,)``."""
+        """Normalized log-density at the rows of ``x``.
+
+        Parameters
+        ----------
+        x : ndarray, shape (n, d)
+            The points.
+
+        Returns
+        -------
+        ndarray, shape (n,)
+        """
         d = len(self.mean)
         centered = x - self.mean
         z = matvec(self._inverse, centered)

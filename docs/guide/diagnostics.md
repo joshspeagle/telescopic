@@ -318,6 +318,8 @@ and `"error"` turns warnings into exceptions. Under such a filter, `sample` or `
 raises at its first warning instead of returning its result:
 
 ```{code-cell} python
+:tags: [wrap-output]
+
 with warnings.catch_warnings():
     warnings.simplefilter("error", telescopic.ConvergenceWarning)
     try:
@@ -332,6 +334,8 @@ with warnings.catch_warnings():
 result in hand:
 
 ```{code-cell} python
+:tags: [wrap-output]
+
 try:
     short.check(strict=True)
 except RuntimeError as error:

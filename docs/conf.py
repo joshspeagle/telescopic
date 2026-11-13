@@ -54,6 +54,39 @@ numpydoc_show_class_members = False
 # docstrings give the types.
 python_maximum_signature_line_length = 88
 autodoc_typehints = "none"
+# numpydoc links the types of Parameters, Returns and Attributes: the names below, and
+# its own list of Python and NumPy names. Other words of a type stay plain text.
+numpydoc_xref_param_type = True
+numpydoc_xref_ignore = "all"
+numpydoc_xref_aliases = {
+    "Axes": "matplotlib.axes.Axes",
+    "CouplingReport": "telescopic.testing.CouplingReport",
+    "Draws": "telescopic.kernels.Draws",
+    "Estimate": "telescopic.Estimate",
+    "Example": "telescopic.examples.Example",
+    "Issue": "telescopic.diagnostics.Issue",
+    "Kernel": "telescopic.kernels.Kernel",
+    "PilotRun": "telescopic.tuning.PilotRun",
+    "Replicates": "telescopic.engine.Replicates",
+    "Result": "telescopic.Result",
+    "Settings": "telescopic.engine.Settings",
+    "SignedMeasure": "telescopic.SignedMeasure",
+    "State": "telescopic.kernels.State",
+    "Summary": "telescopic.Summary",
+    "Target": "telescopic.Target",
+    "TuningReport": "telescopic.tuning.TuningReport",
+    # A full name is linked only through an alias that names its role.
+    **{
+        name: f":class:`{name}`"
+        for name in (
+            "numpy.random.Generator",
+            "numpy.random.SeedSequence",
+            "scipy.sparse.csr_array",
+            "telescopic.engine.Replicates",
+            "telescopic.engine.Settings",
+        )
+    },
+}
 
 # Every cross-reference must resolve.
 nitpicky = True

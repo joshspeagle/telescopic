@@ -145,22 +145,62 @@ class Draws:
         self._lanes = lanes
 
     def normal(self, size: int) -> FloatArray:
-        """Standard normal draws, shape ``(n, size)``."""
+        """Standard normal draws, ``size`` per row.
+
+        Parameters
+        ----------
+        size : int
+            Draws per row.
+
+        Returns
+        -------
+        ndarray, shape (n, size)
+        """
         return self._streams._take(NORMAL, self._lanes, size)
 
     def uniform(self) -> FloatArray:
-        """Uniform draws on [0, 1), shape ``(n,)``."""
+        """Uniform draws on [0, 1), one per row.
+
+        Returns
+        -------
+        ndarray, shape (n,)
+        """
         return self._streams._take(UNIFORM, self._lanes, 1)[:, 0]
 
     def log_uniform(self) -> FloatArray:
-        """Logarithms of uniform draws on [0, 1), shape ``(n,)``; ``-inf`` for a draw of 0."""
+        """Logarithms of uniform draws on [0, 1), one per row; ``-inf`` for a draw of 0.
+
+        Returns
+        -------
+        ndarray, shape (n,)
+        """
         with np.errstate(divide="ignore"):
             return np.log(self.uniform())
 
     def generator(self, row: int) -> Generator:
-        """The generator of row ``row``, for draws that the buffers do not cover."""
+        """The generator of a row's stream, for draws that the buffers do not cover.
+
+        Parameters
+        ----------
+        row : int
+            The row, in ``[0, n)``.
+
+        Returns
+        -------
+        numpy.random.Generator
+        """
         return self._streams._generator(int(self._lanes[row]))
 
     def subset(self, rows: npt.ArrayLike) -> Draws:
-        """The draws of ``rows`` of this set; they share the rows' streams."""
+        """The draws of some rows of this set; they share the rows' streams.
+
+        Parameters
+        ----------
+        rows : array_like of int
+            The rows, in ``[0, n)``; row ``i`` of the result is row ``rows[i]`` of this set.
+
+        Returns
+        -------
+        Draws
+        """
         return Draws(self._streams, self._lanes[np.asarray(rows)])

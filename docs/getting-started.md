@@ -63,10 +63,15 @@ def log_prob(theta, x, y, yerr):
 ```{code-cell} python
 :tags: [remove-cell]
 
+import warnings
+
 # The pages that reuse the line fit load these data from docs/_helpers/line_fit.py.
 from line_fit import data
 
 assert all(map(np.array_equal, (x, y, yerr), data()))
+# Every kernel runs docs/notebook_startup.py, which prints a warning as its class and
+# message.
+assert warnings.formatwarning("m", UserWarning, "f.py", 1) == "UserWarning: m\n"
 ```
 
 The initial distribution should be wider than the posterior and cover all its modes,
@@ -90,9 +95,9 @@ lag and `m`. It then ran 100 replicates.
 ## Reading the summary
 
 The table has one row per parameter: the estimate of the posterior mean, which is
-unbiased, and its standard error, the standard deviation and the 16th, 50th and 84th
-percentiles, which are **consistent**: they converge to the posterior's values as the
-number of replicates grows, but are not unbiased at a fixed number. Below it are the
+unbiased, with its standard error, and the standard deviation and the 16th, 50th and
+84th percentiles, which are **consistent**: they converge to the posterior's values as
+the number of replicates grows, but are not unbiased at a fixed number. Below it are the
 run's diagnostics and the warnings that apply: [Results](guide/results.md#the-summary)
 defines each entry, and [Diagnostics and warnings](guide/diagnostics.md) says what each
 warning means.

@@ -88,17 +88,32 @@ class HMC(Mixture):
 
     @property
     def step_size(self) -> float | None:
-        """The leapfrog step size :math:`\\epsilon`."""
+        """The leapfrog step size :math:`\\epsilon`, or ``None`` while unset.
+
+        Returns
+        -------
+        float or None
+        """
         return self._leapfrog.step_size
 
     @property
     def n_steps(self) -> int | None:
-        """Leapfrog steps per trajectory, or ``None`` while the step size is unknown."""
+        """Leapfrog steps per trajectory, or ``None`` while the step size is unknown.
+
+        Returns
+        -------
+        int or None
+        """
         return self._leapfrog.n_steps
 
     @property
     def cov(self) -> FloatArray | None:
-        """:math:`\\Sigma`."""
+        """:math:`\\Sigma`, or ``None`` while unset.
+
+        Returns
+        -------
+        ndarray, shape (d, d), or None
+        """
         return self._leapfrog.cov
 
     @property
