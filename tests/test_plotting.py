@@ -109,6 +109,24 @@ def test_invalid_plot_arguments_raise_before_drawing(call, message):
     assert not any(ax.has_data() for ax in axes)
 
 
+ONE = telescopic.Result(
+    run(Target(gaussian_log_prob), RandomWalk(np.eye(2)), INIT, range(1), rng=2, k=1, m=5, lag=1)
+)
+
+
+@pytest.mark.parametrize("plot", ["plot_marginals", "plot_corner"])
+@pytest.mark.parametrize(
+    ("result", "bins", "message"),
+    [(RESULT, 0, "bins must be at least 1"), (ONE, 20, "at least 2 replicates")],
+)
+def test_histogram_plots_refuse_their_arguments_before_opening_a_figure(
+    plot, result, bins, message
+):
+    with pytest.raises(ValueError, match=message):
+        getattr(result, plot)(bins=bins)
+    assert plt.get_fignums() == []
+
+
 def test_paths_need_the_paths_of_the_engine():
     replicates = run(
         Target(gaussian_log_prob),

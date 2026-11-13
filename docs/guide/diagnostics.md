@@ -181,12 +181,19 @@ geometric meeting times, and at the kernel ([Kernels](kernels.md)).
 
 **Trigger:** the chains that tuned the kernel disagree: their Gelman-Rubin $\hat R$
 (`result.tuning.rhat`) exceeds $\sqrt 2$ in some coordinate, so their means spread more
-widely than the chains themselves. **Meaning:** the chains sit in different modes of the
-target, or have not converged. Several modes make the meeting times heavy-tailed, and
-pairs that never leave one mode miss the others. **Remedy:** an initial distribution
-that covers every mode ([Initial distributions](targets.md#choosing-one)). Chains that
-agree can still all sit in one mode, and the warning is then silent
-([Tuning](kernels.md#tuning)).
+widely than the chains themselves, or is NaN in some coordinate, where all four chains
+sat at one value; the warning names those coordinates. **Meaning:** an $\hat R$ above
+$\sqrt 2$ says the chains sit in different modes of the target, or have not converged.
+Several modes make the meeting times heavy-tailed, and pairs that never leave one mode
+miss the others. A NaN says the pilot never moved in that coordinate, so the tuned
+kernel's variance there is about $10^{-10}$ and its chains barely move in it either;
+this happens where float64 cannot resolve the target's scale at the coordinate's values,
+such as a scale of $10^3$ at $2^{70}$, where floats are $2^{18}$ apart. **Remedy:** for
+several modes, an initial distribution that covers every mode
+([Initial distributions](targets.md#choosing-one)); for a NaN, a target written in
+coordinates centered near 0, or the kernel's parameters given instead of tuned
+([Kernels](kernels.md)). Chains that agree can still all sit in one mode, and the
+warning is then silent ([Tuning](kernels.md#tuning)).
 
 ### Slow pairs (`slow`)
 

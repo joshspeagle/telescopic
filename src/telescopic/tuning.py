@@ -315,8 +315,8 @@ def choose_k(meeting_times: npt.ArrayLike, quantile: float = 0.99) -> int:
     Parameters
     ----------
     meeting_times : array_like, shape (R0,)
-        Pilot meeting times with lag 1; ``inf`` for a censored pair, which sorts above
-        every finite one.
+        Pilot meeting times with lag 1, positive integers; ``inf`` for a censored pair,
+        which sorts above every finite one.
     quantile : float
         The level :math:`\beta`, at most :math:`1 - 1/R_0` so that the quantile is not
         the sample maximum.

@@ -145,7 +145,7 @@ def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike)
     sequences by isotonic regression and clipped to [0, 1], and the quantile at level
     :math:`\beta` is the smallest value whose projected cumulative weight is at least
     :math:`\beta`; at a level that a cumulative weight equals exactly, rounding of the
-    sums decides between two neighbouring values. For non-negative weights this is the
+    sums decides between two neighboring values. For non-negative weights this is the
     inverted-CDF quantile. The
     result is consistent as the number of replicates grows, not unbiased (Jacob,
     O'Leary & Atchade 2020, Proposition 3.2).
@@ -153,8 +153,9 @@ def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike)
     Parameters
     ----------
     values : ndarray, shape (N,)
+        Finite values.
     weights : ndarray, shape (N,)
-        Signed weights, summing to 1.
+        Finite signed weights, summing to 1.
     q : array_like of float in [0, 1]
 
     Returns

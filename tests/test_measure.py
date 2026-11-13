@@ -24,9 +24,10 @@ def test_a_test_function_of_the_wrong_shape_raises(h):
         MEASURE.per_replicate(h)
 
 
-@pytest.mark.parametrize("cell", [[0, 1, 2, 0, 1], [0, 1, 0, -2, 1], [0, 1]])
-def test_masses_refuse_cells_outside_the_range(cell):
-    # A cell of n_cells or more went into the next replicate's row.
+@pytest.mark.parametrize("cell", [[0, 1, 2, 0, 1], [0, 1, 0, -2, 1], [0, 1], [0, 0.5, 1, 0, 1]])
+def test_masses_refuse_cells_outside_the_range_or_not_integers(cell):
+    # A cell of n_cells or more went into the next replicate's row, and a fractional one
+    # was truncated to the cell below.
     with pytest.raises(ValueError, match="cell must give each"):
         MEASURE.mass(np.array(cell), 2)
 

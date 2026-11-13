@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 from scipy import integrate, special, stats
@@ -196,11 +198,12 @@ def one_step_law(kernel, x):
 
 # In one dimension a Gibbs conditional does not depend on the state, and both chains get
 # the same draw, so one gap and one coupling cover Gibbs.
-@pytest.mark.parametrize("gap", [0.0, 0.1, 3.0])
-@pytest.mark.parametrize("name", [name for name in NAMES if "gibbs" not in name] + ["gibbs"])
+@pytest.mark.parametrize(
+    ("name", "gap"),
+    [(name, gap) for name in NAMES if "gibbs" not in name for gap in (0.0, 0.1, 3.0)]
+    + [("gibbs", 0.0)],
+)
 def test_each_chain_of_a_coupled_step_has_the_exact_one_step_law(name, gap):
-    if name == "gibbs" and gap != 0.0:
-        return
     kernel = kernels(np.eye(1))[name]
     n = 20_000
     x0, y0 = 0.4, 0.4 + gap
@@ -898,6 +901,19 @@ def test_crn_gibbs_couplings_refuse_an_invalid_covariance(cov, message):
         kernel.coupled_step(Target(None), x, y, random_draws(1, 43))
 
 
+def test_crn_gibbs_couplings_refuse_a_scalar_mean_for_a_block_of_several():
+    # A scalar mean was added to every coordinate of the block.
+    def given(point, block):
+        if block == 0:
+            return Normal(point[1], 1.0)
+        return SimpleNamespace(mean=0.0, cov=np.eye(2))
+
+    kernel = Gibbs(given, [[0], [1, 2]], coupling="crn")
+    x, y = gibbs_state([0.0, 1.0, 1.0]), gibbs_state([0.0, -1.0, -1.0])
+    with pytest.raises(ValueError, match=r"a conditional's mean must have shape \(2,\)"):
+        kernel.coupled_step(Target(None), x, y, random_draws(1, 44))
+
+
 @pytest.mark.parametrize("coupling", ["maximal", "crn"])
 def test_gibbs_couples_conditionals_with_array_parameters_as_scalar_ones(coupling):
     # A frozen SciPy normal located at x[[1 - b]] draws arrays of shape (1,), which both
@@ -1036,9 +1052,12 @@ def test_kernels_consume_the_draws_they_document(kernel, step, coupled):
             getattr(kernel, call)(TARGET, *args, short)
 
 
-def test_mixture_never_selects_trailing_zero_weight_components():
-    rw1 = RandomWalk(np.eye(1), scale=1.0)
-    rw2 = RandomWalk(np.eye(1), scale=2.0)
-    mix = Mixture([rw1, rw2], [1.0, 0.0])
-    draws = fixed_draws(normals=[np.zeros(4)], uniforms=[np.array([1.0, 0.5])])
-    np.testing.assert_array_equal(mix._choose(draws), [0])
+def test_a_mixture_never_applies_a_trailing_component_of_weight_zero():
+    # The cumulative weights of ten weights of 0.1 end at 1 - 2^-53, the largest uniform,
+    # which selected the eleventh component, of weight 0.
+    kernel = Mixture([Shift(float(i)) for i in range(11)], [0.1] * 10 + [0.0])
+    largest = np.nextafter(1.0, 0.0)
+    new, _ = kernel.step(
+        TARGET, State(np.zeros((1, 1)), np.zeros(1)), fixed_draws(uniforms=[[largest]])
+    )
+    assert new.x[0, 0] == 9.0
