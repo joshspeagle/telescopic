@@ -160,18 +160,12 @@ whose weights sum to 1. Some weights are negative, so estimates can fall outside
 ### 3.3 Guarantees and their limits (R-THEORY-1: the documentation must state them in these terms)
 
 **Guaranteed:**
-- **Unbiasedness:** $\mathbb E[H^{(L)}_{k:m}] = \pi(h)$ for every $0 \le k \le m$, $L \ge 1$ and every $\pi_0$ from which the chain converges, provided:
-  - the chain converges in the sense of JOA20 Assumption 2.1: $\mathbb E[h(X_t)] \to \pi(h)$ as $t \to \infty$, and $\sup_t \mathbb E|h(X_t)|^{2+\eta} < \infty$ for some $\eta > 0$ (DECISIONS #77);
-  - the coupling preserves both marginals;
-  - the pair stays together after meeting;
-  - the meeting time has enough moments.
+- **Unbiasedness:** $\mathbb E[H^{(L)}_{k:m}] = \pi(h)$ for every $0 \le k \le m$, $L \ge 1$ and every $\pi_0$ from which the chain converges, provided that the coupling preserves both marginals, the pair stays together after meeting, and one of three published sets of conditions holds (DECISIONS #77):
+  - JOA20 Prop. 3.1: the chain started from $\pi_0$ converges in the sense of their Assumption 2.1, $\mathbb E[h(X_t)] \to \pi(h)$ as $t \to \infty$ with $\sup_t \mathbb E|h(X_t)|^{2+\eta} < \infty$ for some $\eta > 0$, and $\tau$ has geometric tails;
+  - Middleton et al. 2020, Thm. 1: the same convergence assumption, and polynomial tails, $P(\tau > t) \le K t^{-\kappa}$ with $\kappa > 2(2/\eta + 1)$;
+  - Douc et al. 2022, Thm. 17: $P$ is $\pi$-irreducible, $\mathbb E_{\pi\otimes\pi}[\tau^\kappa] < \infty$ with $\kappa > 1$, $h \in L^p(\pi)$ with $p > \kappa/(\kappa-1)$, and $d\pi_0/d\pi \le M$, which replace the convergence assumption.
 
-  The moment conditions take any of three published forms:
-  - geometric tails of $\tau$ (JOA20 Prop. 3.1);
-  - polynomial tails (Middleton et al. 2020);
-  - $\mathbb E_{\pi\otimes\pi}[\tau^\kappa] < \infty$ with $\kappa > 1$, $h \in L^p(\pi)$ with $p > \kappa/(\kappa-1)$, and $d\pi_0/d\pi \le M$ (Douc et al., Thm. 17).
-
-  Under the last, the variance is finite if $\kappa > 2$ and $p > 2\kappa/(\kappa - 2)$. Only the last restricts $\pi_0$ explicitly, through $d\pi_0/d\pi \le M$. Meeting does not imply convergence: a random walk too narrow to cross a gap in the support meets on the side where it started.
+  Under the last, the variance is finite if $\kappa > 2$ and $p > 2\kappa/(\kappa - 2)$. A fast meeting does not show convergence. A kernel that cannot leave the region where it starts, such as a Gibbs sampler on two squares that share no coordinate value, meets there and estimates the expectation over that region alone, and the guarantee does not hold. A kernel that can leave only by a rare move, such as a random walk whose steps are much shorter than a gap in the support, can meet the conditions and be unbiased, but the replicates that carry the correction are too rare to occur in a run, so the estimate is confidently wrong at any practical number of replicates.
 - **Error bars:** with $R \ge 2$ independent replicates and finite variance, $\bar H \pm t_{R-1,\,1-\alpha/2}\,\hat\sigma/\sqrt R$, with the quantile of Student's t with $R - 1$ degrees of freedom, is an asymptotically valid interval as $R \to \infty$, and exact at every $R$ for normal replicates; the normal quantile undercovers at small $R$ (DECISIONS #78). The bounded work per replicate does not change this.
 - **Fixed $R$:** unbiasedness holds for a number of replicates fixed before any result is seen. Choosing $R$ after looking at results (for example, extending a run until the error bar is small) is optional stopping: the mean stays consistent and the large-$R$ intervals stay valid, but exact unbiasedness is lost.
 - **Total-variation bounds:** meeting times give upper bounds on $d_{TV}(\pi_t, \pi)$, where $\pi_t$ is the law of $X_t$ (§3.6).
