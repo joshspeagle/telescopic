@@ -47,7 +47,8 @@ Narrowed by the adversarial review, which ran this job function unchanged on fre
     (i102_review_g50_rule.out).
   * Its detection depends on the width of the initial distribution. On the criterion's
     target at s = 6: from N(0, 400 I) it detects 4 of 5 wrong runs at d = 10 and 10 of 10
-    at d = 32; from N(0, 1600 I), 0 of 6 at d = 10 and 1 of 8 at d = 32
+    at d = 32; from N(0, 1600 I), 0 of 6 at d = 10 and 1 of 8 at d = 32; from
+    N(0, 10000 I), 0 of 1 at d = 10
     (i102_review_family2.out, i102_review_family3.out). The probes are random walks of a
     fixed scale, and from a wider start they have not reached a mode after n_steps/8 steps.
   * At smaller separations and dimensions of the same family (d = 10 with s = 4 and 5,

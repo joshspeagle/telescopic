@@ -169,5 +169,5 @@ All notable changes to this project are documented here. The format follows
   mode.
 - The documentation states that an automatically tuned `Independence` proposal covers
   only the modes its tuning chains reached, so that a run on a target with well-separated
-  modes can meet within a few steps and be confidently wrong without any warning; the
+  modes can meet within a few tens of steps and be confidently wrong without any warning; the
   failure-modes tutorial runs such a case, with two checks that help.

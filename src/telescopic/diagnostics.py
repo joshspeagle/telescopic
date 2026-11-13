@@ -287,7 +287,7 @@ def tuning_disagreement(tuning: TuningReport | None) -> str | None:
     chains themselves: :math:`\hat R > \sqrt 2`, a sign of several modes or of chains
     that have not converged. Chains that agree do not show that the target has one mode:
     on a target with well-separated modes, the four chains, which share one covariance,
-    often settle in the same mode during their descent.
+    can settle in the same mode during their descent.
 
     Parameters
     ----------

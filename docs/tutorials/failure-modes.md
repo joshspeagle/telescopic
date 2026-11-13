@@ -278,8 +278,7 @@ and the run emits no warning. The tuning chains agree, and the Student-$t$ propo
 to them sits in the mode at $6e_1$. The four tuning chains share one proposal covariance;
 on this target they settle on one side of the origin during their descent, before they
 reach a mode, and the proposal fitted to their second halves covers that mode alone.
-Both chains of a pair receive the same proposal, accept it, and meet in that mode within
-a few steps. As with a random walk whose steps are much shorter than the gap between
+Both chains of a pair receive the same proposal, accept it, and meet in that mode. As with a random walk whose steps are much shorter than the gap between
 modes ([Theory](../theory.md#guarantees-and-their-limits)), the replicates that would
 correct the estimate are too rare to occur in a run.
 
@@ -329,16 +328,20 @@ holds most of the variance, which does not name the cause
 
 Two things help. Runs with different seeds disagree by far more than their error bars,
 so running more than one seed shows the failure whenever their tuning chains settle in
-different modes. And when the modes are known, from optimizations started at several
-points or from the model, an {class}`~telescopic.kernels.Independence` proposal given
-explicitly can cover them all. A Student-$t$ located at the target's mean, $-2.4e_1$,
-with the target's covariance as its scale matrix, is the proposal that tuning would fit
-to chains that visited both modes in proportion:
+different modes. They need not: on the same target with a second mode of standard
+deviation 0.3, the tuning chains of all 20 seeds tried settled in the wider mode, and
+every run estimated the weight 0.7 as 1, so agreement between seeds does not show that
+every mode was found. And when the modes are known, from optimizations started at
+several points or from the model, an {class}`~telescopic.kernels.Independence` proposal
+given explicitly can cover them all. It needs only where the modes are, not their
+weights. A Student-$t$ located at the midpoint of the two modes, the origin, whose scale
+matrix is the identity widened along $x_0$ by the square of half the distance between
+the modes, reaches both:
 
 ```{code-cell} python
 scale = np.eye(dimension)
-scale[0, 0] += 0.7 * 0.3 * 12**2  # the variance of x_0 under the mixture
-covering_rows = compare_seeds(MultivariateT(-0.4 * offset, scale))
+scale[0, 0] += offset[0] ** 2  # half the distance between the modes, squared
+covering_rows = compare_seeds(MultivariateT(np.zeros(dimension), scale))
 ```
 
 ```{code-cell} python

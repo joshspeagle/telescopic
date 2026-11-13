@@ -138,7 +138,7 @@ so telescopic also counts those, and the wall time.
   estimate is confidently wrong at any practical number of replicates
   ([When unbiased is not enough](tutorials/failure-modes.md)). An independence proposal
   tuned to one of two well-separated modes, mixed with such a random walk, is another
-  such kernel, whose pairs meet within a few steps
+  such kernel, whose pairs meet within a few tens of steps
   ([A tuned proposal that covers one mode](tutorials/failure-modes.md#a-tuned-proposal-that-covers-one-mode)).
 - **Error bars:** with $R \ge 2$ independent replicates and finite variance,
   $\bar H \pm t_{R-1,\,1-\alpha/2}\,\hat\sigma/\sqrt R$, with $t_{R-1,\,1-\alpha/2}$ the

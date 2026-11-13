@@ -186,7 +186,7 @@ target, or have not converged. Several modes make the meeting times heavy-tailed
 pairs that never leave one mode miss the others. **Remedy:** an initial distribution
 that covers every mode ([Initial distributions](targets.md#choosing-one)). Chains that
 agree do not show that the target has one mode. The four chains share one proposal
-covariance, and on a target with well-separated modes they often settle in the same mode
+covariance, and on a target with well-separated modes they can settle in the same mode
 during their descent; the kernel is then tuned to that mode alone, and the warning stays
 silent ([A tuned proposal that covers one mode](../tutorials/failure-modes.md#a-tuned-proposal-that-covers-one-mode)).
 
@@ -261,7 +261,10 @@ the tuning chains reached, and its pairs then meet quickly, so fast meeting says
 about a region the proposal does not cover.
 [When unbiased is not enough](../tutorials/failure-modes.md) works through such runs, and
 shows two checks: comparing runs with different seeds, whose tuning chains can settle in
-different modes, and giving the proposal explicitly when the modes are known.
+different modes, and giving the proposal explicitly when the modes are known. The tuning
+chains can also settle in the same mode on every seed, as they did on all 20 seeds tried
+when the second mode of the same target had standard deviation 0.3, so agreement between
+seeds does not show that every mode was found.
 
 ## Warning classes
 
