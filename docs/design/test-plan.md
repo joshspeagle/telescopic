@@ -34,7 +34,7 @@ Most estimator bugs cannot be caught statistically. In the census, an off-by-one
 ### 2.1 `tests/test_random.py` (R-EXEC-1, R-EXEC-2)
 
 - `root_seed` accepts `None`, an integer, a `SeedSequence` and a `Generator`. The same integer gives the same streams, and different namespaces give different streams.
-- `replicate_generator(root, ns, i)` equals the generator built from `SeedSequence(root.entropy, spawn_key=root.spawn_key + (ns, i))`.
+- `replicate_generator(root, ns, i)` equals the generator built from `SeedSequence(root.entropy, spawn_key=root.spawn_key + (T, ns, i))`, with the branch `T` of spec §6.1.
 - `Streams`/`Draws` (Hypothesis, over random sequences of requests from random subsets of lanes, with lanes reassigned in between): every row of every request equals the next numbers of its replicate's two child generators (§6.1), whatever the buffer width, the other lanes' requests and the order of lanes. `subset` keeps the row-to-lane mapping.
 - `fixed_draws` replays its arrays in order and raises once a row's numbers run out.
 
@@ -94,14 +94,14 @@ Each kernel ($\times$ each coupling it offers) gets the same suite, via a parame
    - a binomial test of the probability of staying;
    - a KS test of moved values against the normalised $q(x' \mid x)\,\alpha(x, x')$, by one-dimensional quadrature, in $d = 1$ only.
 
-   Moved values are accepted proposals, whose law is not Gaussian, and the stay probability in $d > 1$ is a $d$-dimensional integral. So for $d > 1$ each coupled marginal is compared with `step` from the same state by two-sample tests: a two-proportion test of the stay frequency, and KS tests of the moved values on random projections and on the norm, with a larger $n$ (design review D-R8). One-sample tests against the exact law are about 10× more sample-efficient than two-sample tests (census). These tests run with $n = 2\times10^4$ in the fast tier and $2\times10^5$ in the slow tier.
+   Moved values are accepted proposals, whose law is not Gaussian, and the stay probability in $d > 1$ is a $d$-dimensional integral. So for $d > 1$ each coupled marginal is compared with `step` from the same state by two-sample tests: a two-proportion test of the stay frequency, and KS tests of the moved values on random projections and on the norm, with a larger $n$ (design review D-R8). One-sample tests against the exact law are about 10× more sample-efficient than two-sample tests (census). These tests run with $n = 2\times10^4$ in the fast tier. A slow tier at $2\times10^5$ was struck (DECISIONS #124): the statistical audit (#84) compared coupled steps with `step` at up to $2\times10^6$ pairs, and the fast tier's size already sets its tolerances.
 3. **Faithfulness:** from equal states, 100 coupled steps keep the states bitwise equal, with equal log-densities and gradients.
 4. **Batch invariance (R-KER-6):** a step and a coupled step on a batch of 1 equal the same rows in batches of 2 and 64, bitwise, at $d \ge 5$ with a dense $\Sigma$.
 5. **Finite-state exactness** (in `tests/test_couplings.py`): `discrete_maximal` couples the rows of a transition matrix $P$ on 4 states, all 16 pairs of states in one batch. The empirical coupled transitions match the exact coupled transition matrix, computed independently in the test, whose marginals equal $P$'s rows and whose diagonal is absorbing.
 
 Kernel-specific tests:
 - **RWMH:**
-  - `"reflection"` meets more often than `"maximal"` at $d = 10$ (O'Leary 2021 Table 1 reference: about 30 vs 279 mean meeting time, checked loosely in the slow tier);
+  - struck (DECISIONS #124): the comparison of `"reflection"` and `"maximal"` meeting times at $d = 10$ (O'Leary 2021 Table 1: about 30 vs 279 mean meeting time) measures efficiency, not correctness, and belongs to the benchmark suite (#90);
   - draws per step as documented;
   - identical coupled proposals cost one evaluation of the target.
 - **MALA:** the acceptance ratio includes both proposal densities. Checked against a reference for a non-Gaussian target, where omitting the reverse term changes the answer.
@@ -189,7 +189,7 @@ Kernel-specific tests:
 
   `check(strict=True)` raises instead. None fires on a clean Gaussian run in a configuration whose computed false-alarm probability is below $10^{-3}$.
 
-### 2.9 `tests/test_tuning.py`, `tests/test_sampler.py`, `tests/test_api.py` (R-TUNE-*, R-API-*)
+### 2.9 `tests/test_tuning.py`, `tests/test_sampler.py` (R-TUNE-*, R-API-*)
 
 **Tuning**
 - **Adaptive Metropolis:**

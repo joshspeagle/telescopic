@@ -40,14 +40,33 @@ class State:
         return len(self.log_prob)
 
     def take(self, rows: Any) -> State:
-        """A copy of the chains in ``rows`` (an index, an index array, a mask or a slice)."""
+        """A copy of the chains in ``rows``.
+
+        Parameters
+        ----------
+        rows : array_like of int or bool, or slice
+            An index array, a mask of shape ``(n,)`` or a slice.
+
+        Returns
+        -------
+        State
+            The selected chains, with arrays of their own.
+        """
         rows = np.arange(len(self))[rows]
         return State(
             self.x[rows], self.log_prob[rows], None if self.grad is None else self.grad[rows]
         )
 
     def put(self, rows: Any, other: State) -> None:
-        """Overwrite the chains in ``rows`` with ``other``, in place."""
+        """Overwrite the chains in ``rows`` with ``other``, in place.
+
+        Parameters
+        ----------
+        rows : array_like of int or bool, or slice
+            An index array, a mask of shape ``(n,)`` or a slice.
+        other : State
+            One chain per selected row, with the fields of this state.
+        """
         self.x[rows] = other.x
         self.log_prob[rows] = other.log_prob
         if self.grad is not None:
@@ -190,6 +209,14 @@ class Kernel(ABC):
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         """One transition of each chain.
 
+        Parameters
+        ----------
+        target : Target
+        state : State
+            The chains, ``n`` of them.
+        draws : Draws
+            Random numbers for the ``n`` chains.
+
         Returns
         -------
         state : State
@@ -203,6 +230,14 @@ class Kernel(ABC):
         self, target: Target, state_x: State, state_y: State, draws: Draws
     ) -> tuple[State, State]:
         """One coupled transition of each pair.
+
+        Parameters
+        ----------
+        target : Target
+        state_x, state_y : State
+            The first and the second chains of the ``n`` pairs.
+        draws : Draws
+            Random numbers for the ``n`` pairs.
 
         Returns
         -------

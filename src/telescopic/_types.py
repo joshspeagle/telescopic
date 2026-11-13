@@ -7,11 +7,14 @@ import operator
 import reprlib
 from collections.abc import Sequence
 from decimal import Decimal
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 import numpy as np
 import numpy.typing as npt
 from numpy.random import Generator, SeedSequence
+
+if TYPE_CHECKING:
+    from telescopic._random import Draws
 
 FloatArray = npt.NDArray[np.float64]
 IntArray = npt.NDArray[np.int64]
@@ -30,6 +33,14 @@ class Distribution(Protocol):
     """
 
     def rvs(self, *, random_state: np.random.Generator) -> Any: ...
+
+
+class Proposal(Protocol):
+    """A proposal of the independence kernel, such as :class:`~telescopic.kernels.MultivariateT`."""
+
+    def sample(self, draws: Draws) -> FloatArray: ...
+
+    def log_density(self, x: FloatArray) -> FloatArray: ...
 
 
 def integer(
