@@ -28,7 +28,7 @@ names, and overstate costs. A finding survives only if you fail to break it.
    behavior.
 2. Try to refute: is the scenario reachable through the public API? Is the behavior
    documented or decided (`notes/DECISIONS.md`, `notes/QUESTIONS.md`, `notes/reviews/`,
-   the decision table of `docs/design/spec.md`)? Is the cost real and of the stated
+   the issues and their comments, the decision table of `docs/design/spec.md`)? Is the cost real and of the stated
    size? Would the proposed change break something, change numerical output, or cost
    more than it saves? For a simplification: is the code it calls dead or duplicated
    really so (search `src/`, `tests/`, `docs/`, `benchmarks/`)?
