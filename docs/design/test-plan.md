@@ -258,6 +258,7 @@ Kernel-specific tests:
 
 - The tutorials (MyST notebooks) execute in the docs CI job, each in under 2 minutes.
 - The README example is extracted and run by a test.
+- The version in `CITATION.cff` equals `telescopic.__version__` (DECISIONS #74).
 - `python -m build` produces a wheel and an sdist. A clean environment installs the wheel and imports it.
 
 ### 2.14 Benchmarks (non-gating)

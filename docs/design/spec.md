@@ -83,16 +83,16 @@ Ordinary MCMC starts a chain from $\pi_0$, discards a burn-in by eye or heuristi
 - **Documentation:** a theory page, a user guide, executed tutorials, and an API reference.
 
 **Should (v0.1 if time allows, otherwise v0.2):**
-- Budget mode with the Glynn–Heidelberger per-lane estimator (§3.7).
-- Checkpoint and resume to a file.
+- Budget mode with the Glynn–Heidelberger per-lane estimator (§3.7; deferred beyond v0.1, DECISIONS #22).
+- Checkpoint and resume to a file (deferred beyond v0.1, DECISIONS #76).
 - 1-Wasserstein bounds (§3.6).
-- Rank-normalised $\hat R$ and effective sample size across the replicates' X-chains; these are the atoms from $k$ to $m$ (deferred beyond v0.1, DECISIONS #38). Also a relative inefficiency against an autocorrelation-based MCMC baseline.
-- Export of the replicates' X-chains to ArviZ.
+- Rank-normalised $\hat R$ and effective sample size across the replicates' X-chains; these are the atoms from $k$ to $m$ (deferred beyond v0.1, DECISIONS #38). Also a relative inefficiency against an autocorrelation-based MCMC baseline (deferred beyond v0.1, DECISIONS #76).
+- Export of the replicates' X-chains to ArviZ (deferred beyond v0.1, DECISIONS #76).
 - Couplings:
-  - two-scale GCRN and GCRefl couplings for RWMH with gradients (Papp & Sherlock 2025);
-  - the kernel-maximal coupling $\bar P_C$ (O'Leary, Wang & Jacob 2021) for low-acceptance kernels.
-- HMC trajectory lengths chosen from pilot meeting times over a small grid (Heng & Jacob §5).
-- An unbiased asymptotic-variance report (Douc, Jacob, Lee & Vats).
+  - two-scale GCRN and GCRefl couplings for RWMH with gradients (Papp & Sherlock 2025; deferred beyond v0.1, DECISIONS #76);
+  - the kernel-maximal coupling $\bar P_C$ (O'Leary, Wang & Jacob 2021) for low-acceptance kernels (deferred beyond v0.1, DECISIONS #76).
+- HMC trajectory lengths chosen from pilot meeting times over a small grid (Heng & Jacob §5; deferred beyond v0.1, DECISIONS #76).
+- An unbiased asymptotic-variance report (Douc, Jacob, Lee & Vats; deferred beyond v0.1, DECISIONS #76).
 
 **Roadmap (v0.2 and later):**
 - A JAX backend: autodiff gradients and a persistent-lanes engine with in-loop refill on accelerators.
@@ -697,7 +697,7 @@ These targets are measured by `benchmarks/` and are not gating.
   - tests on Linux, macOS and Windows, with a job on the oldest supported stack;
   - a docs build;
   - a wheel and sdist build with a smoke test;
-  - the slow tier on manual dispatch.
+  - the slow tier on every push to `main` and on manual dispatch (DECISIONS #75).
 - **Repository files:** `CITATION.cff`, `CHANGELOG.md`, `CONTRIBUTING.md` (with the validation philosophy), `LICENSE`.
 
 ---
@@ -708,7 +708,8 @@ These targets are measured by `benchmarks/` and are not gating.
    - pure kernels over pytrees;
    - `fold_in(root, i)` streams;
    - a persistent-lanes `while_loop` with in-loop refill (never `vmap` over whole replicates: 2–11× waste);
-   - autodiff gradients.
+   - autodiff gradients;
+   - statistical, not bitwise, invariance to the lane layout (R-EXEC-2 holds bitwise only for the NumPy engine), since XLA does not promise that a row's bits are independent of its batch (DECISIONS #73).
 2. **Experiments under DECISIONS #1:**
    - coupled elliptical slice sampling with coupled pCN meeting steps (unpublished: met at $d \le 200$ in the census check);
    - coupled NUTS;
