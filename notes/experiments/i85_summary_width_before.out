@@ -1,0 +1,5 @@
+commit 5313efd of the package
+d = 2: 130 characters in the longest line:
+  cost per replicate: 392 kernel applications, 0.00117 s; relative cost 1.14; pairs meeting after k + lag 1.0% (at most 4.7% at 95%)
+d = 10: 131 characters in the longest line:
+  cost per replicate: 2346 kernel applications, 0.00566 s; relative cost 1.17; pairs meeting after k + lag 4.0% (at most 8.9% at 95%)

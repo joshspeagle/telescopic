@@ -49,17 +49,17 @@ replicates = engine.run(target, kernel, init, range(16), k=k, m=m, lag=1, rng=1,
 replicates.meeting_time
 ```
 
-{func}`telescopic.plotting.paths` draws the first pairs against time: $X$ solid and $Y$
-dashed, shifted right by the lag, so that a pair meets where its dashed line joins its
-solid one, marked with a dot. After a meeting only $X$ runs, until $m$. The MCMC average
-uses the shaded times, $k$ to $m$:
+{func}`telescopic.plotting.paths` draws the first pairs against time: $X$ solid in
+magenta and $Y$ dashed in teal, shifted right by the lag, so that a pair meets where its
+dashed line joins its solid one, marked with a dot. After a meeting only $X$ runs, until
+$m$, in the dark ink of met chains. The MCMC average uses the shaded times, $k$ to $m$:
 
 ```{code-cell} python
 n = 4
 ax = plotting.paths(replicates, n=n)
 meeting = replicates.meeting_time[:n].astype(int)
 position = np.array([replicates.paths[i][0][meeting[i], 0] for i in range(n)])
-ax.plot(meeting, position, "o", color="black")
+ax.plot(meeting, position, "o", color=plotting.MET)
 ax.axvspan(k, m, color="grey", alpha=0.15)
 ax.set(xlabel="$t$", ylabel="$X_t$ and $Y_{t-1}$");
 ```
@@ -98,12 +98,16 @@ print(
 The states $X_k, \dots, X_m$ weigh $1/(m - k + 1)$ each. For $t$ from $k + 1$ to
 $\tau - 1$, the correction adds weight at $X_t$ and removes the same weight at $Y_{t-1}$,
 so the weights sum to 1 and some are negative. The weights of this replicate, summed over
-equal atoms:
+equal atoms, positive in blue and negative in gold:
 
 ```{code-cell} python
 points, which = np.unique(atoms, return_inverse=True)
+summed = np.bincount(which, weights)
 fig, ax = plt.subplots(figsize=(5, 3))
-ax.stem(points, np.bincount(which, weights))
+for sign, color, label in ((summed > 0, "C0", "positive"), (summed < 0, "C1", "negative")):
+    ax.stem(points[sign], summed[sign], linefmt=color, markerfmt=color, basefmt="none", label=label)
+ax.axhline(0, color="grey", linewidth=0.8)
+ax.legend()
 ax.set(xlabel="atom", ylabel="weight");
 ```
 

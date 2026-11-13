@@ -140,7 +140,7 @@ def test_paths_need_the_paths_of_the_engine():
         keep_paths=True,
     )
     ax = plotting.paths(replicates)
-    assert len(ax.lines) == 6
+    assert [line.get_color() for line in ax.lines].count(plotting.CHAIN_Y) == 3
     with pytest.raises(ValueError, match="keep_paths=True"):
         plotting.paths(RESULT._replicates)
     with pytest.raises(ValueError, match="n must be at least 1"):
@@ -166,3 +166,53 @@ def test_paths_in_one_dimension_shift_y_by_the_lag():
     )
     x, y = plotting.paths(replicates).lines
     assert (x.get_xdata()[0], y.get_xdata()[0]) == (0, 3)
+
+
+# Four pairs from x = 5 in one dimension, which meet at t = 3, 2, 2 and 9, before m.
+PAIRS = run(
+    Target(gaussian_log_prob),
+    RandomWalk(np.eye(1)),
+    Normal([5.0], [[1.0]]),
+    range(4),
+    rng=1,
+    k=5,
+    m=20,
+    lag=1,
+    keep_paths=True,
+)
+
+
+def test_paths_time_axis_has_integer_ticks():
+    # The ticks were 0.0, 2.5, 5.0, ..., though time is an integer.
+    ticks = plotting.paths(PAIRS, n=4).get_xticks()
+    np.testing.assert_array_equal(ticks, np.round(ticks))
+
+
+def test_paths_turn_to_the_met_color_at_the_meeting_time():
+    lines = plotting.paths(PAIRS, n=4).lines
+    assert len(lines) == 12
+    for i in range(4):
+        x, y, met = lines[3 * i : 3 * i + 3]
+        tau = int(PAIRS.meeting_time[i])
+        x_path, y_path = PAIRS.paths[i]
+        assert (x.get_color(), y.get_color(), met.get_color()) == (
+            plotting.CHAIN_X,
+            plotting.CHAIN_Y,
+            plotting.MET,
+        )
+        np.testing.assert_array_equal(x.get_xdata(), np.arange(tau + 1))
+        np.testing.assert_array_equal(x.get_ydata(), x_path[: tau + 1, 0])
+        np.testing.assert_array_equal(y.get_xdata(), 1 + np.arange(tau))
+        np.testing.assert_array_equal(y.get_ydata(), y_path[:, 0])
+        np.testing.assert_array_equal(met.get_xdata(), np.arange(tau, PAIRS.settings.m + 1))
+        np.testing.assert_array_equal(met.get_ydata(), x_path[tau:, 0])
+
+
+def test_paths_keep_the_legend_entries_of_the_axes_they_are_given():
+    # The legend of the three lines replaced the caller's legend.
+    ax = plt.subplots()[1]
+    ax.axhline(0, label="target mean")
+    ax.legend()
+    plotting.paths(PAIRS, ax=ax)
+    labels = [text.get_text() for text in ax.get_legend().get_texts()]
+    assert labels == ["target mean", "$X$", "$Y$ (shifted by the lag)", "after the meeting"]

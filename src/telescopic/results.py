@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import functools
+import html
 import os
+import re
+import textwrap
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import IO, Any
@@ -27,6 +30,21 @@ from telescopic.estimators import unbiased_covariance, unbiased_variance, weight
 from telescopic.measure import SignedMeasure
 from telescopic.tuning import TuningReport
 from telescopic.warnings import ConvergenceWarning, warn
+
+# The summary's footer wraps at the width of a terminal, which a code output of the
+# documentation also holds at 1440 px (83 characters).
+_WRAP = textwrap.TextWrapper(
+    80, subsequent_indent="    ", break_long_words=False, break_on_hyphens=False
+)
+# A float in a kernel's repr: digits with a point or an exponent, not inside a name or a
+# dotted token such as a version, 3.10.12.
+_FLOAT = re.compile(r"(?<![\w.])\d+(?:\.\d*(?:[eE][-+]?\d+)?|[eE][-+]?\d+)(?![\w.])")
+
+
+def _four_figures(match: re.Match[str]) -> str:
+    # 4 significant figures, still written as a float (2.0 rather than 2).
+    text = f"{float(match[0]):.4g}"
+    return text if any(c in text for c in ".en") else text + ".0"
 
 
 @dataclass(frozen=True, eq=False)
@@ -682,6 +700,11 @@ class Result:
 class Summary:
     """Estimates per parameter and the diagnostics of a run, printable as a table.
 
+    ``repr`` gives the table, then the footer as lines of at most 80 characters (a word
+    longer than that keeps its line), with the kernel on a line of its own and its
+    floats to 4 significant figures. A notebook shows the summary as an HTML table and
+    the footer as a list, one warning per item.
+
     Attributes
     ----------
     names : list of str
@@ -716,39 +739,70 @@ class Summary:
         return pd.DataFrame(self.table, index=self.names)
 
     def __repr__(self) -> str:
-        width = max(len(name) for name in self.names)
-        header = f"{'':{width}}  " + "  ".join(f"{column:>14}" for column in self.table)
-        rows = [
-            f"{name:{width}}  "
-            + "  ".join(f"{float(values[i]):>14.6g}" for values in self.table.values())
+        rows = self._rows()
+        widths = [max(map(len, column)) for column in zip(*rows, strict=True)]
+        table = [
+            "  ".join([row[0].ljust(widths[0]), *map(str.rjust, row[1:], widths[1:])])
+            for row in rows
+        ]
+        footer = [wrapped for line in self._footer_lines() for wrapped in _WRAP.wrap(line)]
+        return "\n".join([*table, "", *footer])
+
+    def _repr_html_(self) -> str:
+        (_, *columns), *rows = [[html.escape(cell) for cell in row] for row in self._rows()]
+        head = "".join(f"<th>{column}</th>" for column in columns)
+        body = "".join(
+            f"<tr><th>{name}</th>" + "".join(f"<td>{cell}</td>" for cell in cells) + "</tr>"
+            for name, *cells in rows
+        )
+        items = "".join(f"<li>{html.escape(line)}</li>" for line in self._footer_lines())
+        return (
+            f'<div class="telescopic-summary"><table><thead><tr><th></th>{head}</tr></thead>'
+            f"<tbody>{body}</tbody></table><ul>{items}</ul></div>"
+        )
+
+    def _rows(self) -> list[list[str]]:
+        # The table's cells as text: the header, then a row per parameter.
+        return [["", *self.table]] + [
+            [name, *(f"{float(values[i]):.6g}" for values in self.table.values())]
             for i, name in enumerate(self.names)
         ]
+
+    def _footer_lines(self) -> list[str]:
         footer = self.footer
-        # The tail index needs 500 replicates.
-        tail = "" if np.isnan(footer["tail_index"]) else f"; tail index {footer['tail_index']:.3g}"
         # A quantile that falls on a censored pair is inf: beyond the cap.
         times = [
             f"> {footer['max_iter']}" if value == np.inf else f"{value:.4g}"
             for value in (footer[f"meeting_time_{q}"] for q in ("50", "90", "99", "max"))
         ]
+        # The kernel's own repr keeps every digit; the summary rounds its floats.
+        kernel = _FLOAT.sub(_four_figures, footer["kernel"])
         lines = [
             (
                 f"R = {footer['n_replicates']}, k = {footer['k']}, m = {footer['m']}, "
-                f"lag = {footer['lag']}, thin = {footer['thin']}; {footer['kernel']}"
+                f"lag = {footer['lag']}, thin = {footer['thin']}"
             ),
+            f"kernel: {kernel}",
             (
                 f"meeting times: median {times[0]}, 90% {times[1]}, 99% {times[2]}, max "
-                f"{times[3]}{tail}; censored {footer['censored']}"
+                f"{times[3]}; censored {footer['censored']}"
             ),
+        ]
+        # The tail index needs 500 replicates.
+        if not np.isnan(footer["tail_index"]):
+            lines.append(f"tail index of the meeting times: {footer['tail_index']:.3g}")
+        lines += [
             (
                 f"cost per replicate: {footer['mean_cost']:.4g} kernel applications, "
                 f"{footer['seconds_per_replicate']:.3g} s; relative cost "
-                f"{footer['relative_cost']:.3g}; pairs meeting after k + lag "
-                f"{footer['late_fraction']:.1%} (at most {footer['late_fraction_upper']:.1%} "
-                "at 95%)"
+                f"{footer['relative_cost']:.3g}"
             ),
             (
-                "largest share of one replicate in the variance of an estimate: "
+                f"pairs meeting after k + lag: {footer['late_fraction']:.1%} (at most "
+                f"{footer['late_fraction_upper']:.1%} at 95%)"
+            ),
+            (
+                "largest share of one replicate in a variance: "
                 f"{footer['variance_share']:.0%}, for {footer['variance_share_of']}"
             ),
         ]
@@ -757,5 +811,4 @@ class Summary:
                 "interrupted: the estimates are consistent but not exactly unbiased; run "
                 "the remaining replicates to restore unbiasedness"
             )
-        lines += [f"warning: {message}" for message in footer["warnings"]]
-        return "\n".join([header, *rows, "", *lines])
+        return lines + [f"warning: {message}" for message in footer["warnings"]]

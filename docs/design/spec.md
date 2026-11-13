@@ -544,7 +544,7 @@ Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 - (should; deferred beyond v0.1, DECISIONS #38) $\hat R$ across the replicates' X-chains;
 - warnings raised.
 
-**Output forms:** `repr` prints the table. It also converts with `to_dict()`, and with `to_pandas()` when pandas is installed.
+**Output forms:** `repr` prints the table, then the footer in lines wrapped at 80 characters, with the kernel on a line of its own and its floating-point parameters to 4 significant figures; `_repr_html_` renders the table as an HTML table and the footer as a list, one warning per item, for notebooks (DECISIONS #133, #134). It also converts with `to_dict()`, and with `to_pandas()` when pandas is installed.
 
 ### 7.4 Warnings (R-DIAG-2)
 
@@ -572,7 +572,7 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
 - **TV bound:** the bound against $t$ on a log scale, with $k$ marked.
 - **Marginals:** signed histograms with ±2 standard-error boxes. Negative bins are allowed, and the docstring explains them.
 - **Corner plot:** signed 2-D histograms. Telescopic never passes signed weights to `corner` or ArviZ, whose weighted quantiles assume non-negative weights.
-- **Paths:** the coupled paths of a few replicates, for teaching, available when the engine runs with `keep_paths=True`.
+- **Paths:** the coupled paths of a few replicates, for teaching, available when the engine runs with `keep_paths=True`. $X$ is drawn in the identity's magenta and $Y$ in its teal until they meet, and the pair in the ink of met chains from the meeting time on; the three colors are the constants `CHAIN_X`, `CHAIN_Y` and `MET` of `telescopic.plotting`, which the site's identity script writes. Pairs are told apart by position; a legend names the lines, and in one dimension the time axis has integer ticks (DECISIONS #135).
 
 ---
 
