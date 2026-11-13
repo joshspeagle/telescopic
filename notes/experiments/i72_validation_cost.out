@@ -1,0 +1,11 @@
+Model name:                              Intel(R) Xeon(R) Processor @ 2.10GHz
+telescopic 0.1.0.dev0, Python 3.13.18, NumPy 2.5.4, x86_64, 4 CPUs, OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1
+commit 6623397-dirty, against 6623397
+load average before: (3.53, 3.12, 3.22)
+Target.log_prob, pointwise, n = 4         : new/old median 0.903, quartiles 0.849 to 0.953
+Target.log_prob, pointwise, n = 512       : new/old median 1.003, quartiles 0.990 to 1.020
+Target.log_prob, vectorized, n = 512      : new/old median 1.001, quartiles 0.957 to 1.051
+adaptive_metropolis, d = 2, 2000 steps    : new/old median 1.054, quartiles 1.040 to 1.076
+adaptive_metropolis, d = 30, 2000 steps   : new/old median 1.024, quartiles 0.967 to 1.068
+Gibbs crn coupled_step, n = 512           : new/old median 1.030, quartiles 1.013 to 1.046
+load average after: (3.34, 3.12, 3.22)
