@@ -231,12 +231,16 @@ class Result:
         ----------
         q : float or array_like of float in [0, 1]
         h : callable, optional
-            Maps points of shape ``(n, d)``, a read-only array, to values of shape ``(n,)``
-            or ``(n, p)``, whose quantiles are taken in place of the coordinates'.
+            As in :meth:`estimate`; its quantiles are taken in place of the coordinates'.
 
         Returns
         -------
         ndarray, shape ``q.shape + (d,)``, or with ``h``, ``q.shape`` or ``q.shape + (p,)``
+
+        Notes
+        -----
+        Cost: one sort of the atoms per column, after merging consecutive equal atoms, and
+        with ``h``, one call of ``h`` on the merged atoms.
         """
         self._require(1)
         # Rejections repeat atoms; merging consecutive equal rows first shortens every sort
@@ -245,8 +249,7 @@ class Result:
         first = np.concatenate([[True], np.any(atoms[1:] != atoms[:-1], axis=1)]).nonzero()[0]
         weights = np.add.reduceat(self.measure.weights, first) / self.n_replicates
         values = atoms[first] if h is None else values_of(h, atoms[first])
-        columns = [weighted_quantile(c, weights, q) for c in values.reshape(len(first), -1).T]
-        quantiles: FloatArray = np.stack(columns, axis=-1).reshape(np.shape(q) + values.shape[1:])
+        quantiles: FloatArray = np.apply_along_axis(weighted_quantile, 0, values, weights, q)
         return quantiles
 
     def credible_interval(

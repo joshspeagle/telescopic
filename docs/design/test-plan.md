@@ -157,8 +157,9 @@ Kernel-specific tests:
 
 - **Pooled estimates:** `estimate(h)` equals the mean of `measure.per_replicate(h)`, with standard error `std/√R` and a Student-$t$ interval with $R - 1$ degrees of freedom at the requested level. Vector-valued `h` works.
 - **Moments:** `mean`, `cov`, `var` and `std` follow §3.4. `cov` is symmetric.
-- **Quantiles:** `quantile` and `credible_interval` use the isotonic rule.
+- **Quantiles:** `quantile` and `credible_interval` use the isotonic rule. With `h`, they equal `weighted_quantile` of `h` at the atoms with the pooled weights divided by $R$, with signed weights, for scalar and vector `h` and a scalar `q`.
 - **Histograms:** `histogram` returns masses, standard errors and edges.
+- **Repr:** `repr(result)` is the one line of stored fields of §7.1, and echoing it leaves the diagnostics uncomputed.
 - **Summary:** `summary()` contains the fields of §7.3 and converts with `to_dict()`. `to_pandas()` is skipped without pandas.
 - **Merging:** `merge` rejects different configurations and overlapping indices, and its output equals one run over the union of indices.
 - **Censored replicates** are excluded from estimates and from $R$, and listed with meeting time `inf`.

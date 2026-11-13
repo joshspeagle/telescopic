@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numbers
 import operator
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Any, Protocol
 
 import numpy as np
@@ -136,7 +136,7 @@ def read_only(array: npt.NDArray[Any]) -> npt.NDArray[Any]:
     return view
 
 
-def values_of(h: Any, points: FloatArray) -> FloatArray:
+def values_of(h: Callable[[FloatArray], npt.ArrayLike], points: FloatArray) -> FloatArray:
     # h at points of shape (n, d), a read-only view since an h that wrote to its input
     # would change every later estimate, checked to give shape (n,) or (n, p).
     values = np.asarray(h(read_only(points)), dtype=np.float64)

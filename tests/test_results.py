@@ -123,7 +123,9 @@ def test_quantile_of_h_equals_weighted_quantile_recipe():
     levels = [0.137, 0.503, 0.911]
     expected = weighted_quantile(product, weights, levels)
     np.testing.assert_array_equal(RESULT.quantile(levels, lambda x: x[:, 0] * x[:, 1]), expected)
-    assert RESULT.quantile(0.503, lambda x: x[:, 0] * x[:, 1]) == expected[1]
+    one_level = RESULT.quantile(0.503, lambda x: x[:, 0] * x[:, 1])
+    assert one_level.shape == ()
+    assert one_level == expected[1]
     # Values of shape (n, p) give a column per value, as the coordinates do.
     both = RESULT.quantile(levels, lambda x: np.column_stack([x[:, 0] * x[:, 1], x[:, 0]]))
     np.testing.assert_array_equal(both, np.column_stack([expected, RESULT.quantile(levels)[:, 0]]))
@@ -140,8 +142,9 @@ def test_quantiles_keep_apart_atoms_that_share_some_coordinates():
 @pytest.mark.parametrize(
     ("dims", "limits"), [(0, (-2.0, 3.0)), ([1, 0], [(-3.0, 2.0), (-2.0, 3.0)])]
 )
-def test_histogram_bins_average_each_replicates_signed_mass_in_half_open_bins(dims, limits):
-    # Half-open but for the last bin along each coordinate, which is closed.
+def test_histogram_bins_average_each_replicates_signed_mass_closing_only_the_last_bin(
+    dims, limits
+):
     masses, errors, edges = RESULT.histogram(dims, bins=7, range=limits)
     if np.ndim(dims) == 0:
         dims, edges, limits = [dims], [edges], [limits]

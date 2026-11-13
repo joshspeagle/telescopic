@@ -125,11 +125,11 @@ result.credible_interval(0.9)
 ```
 
 Both take a function `h`, as `estimate` does, for the quantiles of a quantity derived
-from the coordinates: `h` maps points of shape `(n, d)` to values of shape `(n,)` or
-`(n, p)`, and the quantiles are those of its values at the atoms, with each atom's
-weight divided by $R$ (the quantiles of {func}`telescopic.estimators.weighted_quantile`),
-of shape `(len(q),)` or `(len(q), p)`. The sum $x_0 + x_1$ is Gaussian, with a variance
-equal to the sum of the entries of the covariance matrix:
+from the coordinates: those of its values at the atoms, with each atom's weight divided
+by $R$ (the quantiles of {func}`telescopic.estimators.weighted_quantile`). They have
+shape `()` or `(p,)` for one level and `(len(q),)` or `(len(q), p)` for several, and the
+credible interval has shape `(2,)` or `(2, p)`. The sum $x_0 + x_1$ is Gaussian, with a
+variance equal to the sum of the entries of the covariance matrix:
 
 ```{code-cell} python
 levels = [0.05, 0.5, 0.95]
@@ -144,11 +144,11 @@ levels = [0.05, 0.5, 0.95]
 {meth}`telescopic.Result.histogram` returns the mass of each bin, its standard error and
 the edges of the bins. The mass of a bin is the average over replicates of their signed
 mass in it. The bins are half-open, $[a, b)$, except the last, which is closed, as in
-`numpy.histogram`, so an atom on the upper edge of `range` is counted. It is unbiased for a `range` fixed before the
-run, and it can be negative where few atoms fall and the negative weights of the bias
-corrections outweigh the others. By default the bins span the atoms, so the masses sum to
-1, and the two outer bins, whose edges the atoms set, are biased by a term of order
-$1/R$:
+`numpy.histogram`, so an atom on the upper edge of `range` is counted. It is unbiased
+for a `range` fixed before the run, and it can be negative where few atoms fall and the
+negative weights of the bias corrections outweigh the others. By default the bins span
+the atoms, so the masses sum to 1, and the two outer bins, whose edges the atoms set,
+are biased by a term of order $1/R$:
 
 ```{code-cell} python
 masses, errors, edges = result.histogram(0, bins=10)

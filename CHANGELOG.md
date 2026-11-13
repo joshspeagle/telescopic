@@ -123,12 +123,15 @@ All notable changes to this project are documented here. The format follows
   raise a `ValueError` or `TypeError` that names the cause; MALA's coupled step no
   longer warns when its drift overflows.
 - Changes to `Result` ruled before the first release: the last bin of a histogram is
-  closed, as in `numpy.histogram`, so an atom on the upper edge of `range` is counted;
-  the TV bound and its value at `k` count a censored pair as meeting at its cap plus 1,
-  since its chains were compared at the cap, which raises the bound by up to 1 at some
-  times of runs with censored pairs; `Result.interval` is renamed
-  `Result.credible_interval`, with no alias, and `Estimate.interval` is an array of
-  shape `(2,)` or `(2, p)`, lower ends first, instead of a tuple of two arrays;
+  closed, as in `numpy.histogram`, so an atom on the upper edge of `range` is counted,
+  and the last edge of the default range is no longer nudged up; the TV bound and its
+  value at `k` count a censored pair as meeting at its cap plus 1, since its chains were
+  compared at the cap, which raises the bound by $1/R$ per censored pair at each
+  $t \le$ cap $- L$ where $L$ divides cap $- L - t$, and
+  `telescopic.diagnostics.tv_bound` asks for a censored pair as its cap plus 1;
+  `Result.interval` is renamed `Result.credible_interval`, with no alias, and
+  `Estimate.interval` is an array of shape `(2,)` or `(2, p)`, lower ends first,
+  instead of a tuple of two arrays;
   `Result.quantile` and `Result.credible_interval` take a function `h`, as `estimate`
   does, for the quantiles of a derived quantity; a `Result` prints as one line of its
   settings, such as `Result(R=100, d=2, k=63, m=630, lag=63, censored=0,
