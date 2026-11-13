@@ -3,6 +3,7 @@ import pytest
 
 from references import gaussian_log_prob, synthetic
 from telescopic.diagnostics import (
+    _lagged_tail,
     hill,
     issues,
     slow_pair_threshold,
@@ -26,6 +27,36 @@ def test_the_tv_bound_sums_the_survival_function_at_lagged_times():
         t = np.arange(0, 80)
         expected = [sum(np.mean(tau > s + j * lag) for j in range(1, 200)) for s in t]
         np.testing.assert_allclose(tv_bound(tau, lag, t), np.minimum(1, expected), atol=1e-12)
+
+
+@pytest.mark.parametrize("lag", [1, 3])
+def test_the_tv_bound_from_the_exact_meeting_law_exceeds_the_exact_tv(lag):
+    # A 3-state chain from state 0, coupled by the maximal coupling of discrete_maximal:
+    # common moves from min(P_i, P_j), else independent moves from the residuals. The
+    # pair (X_s, Y_{s-L}) starts from the law of X_L times that of Y_0 and evolves by the
+    # coupled matrix, absorbed on the diagonal, which gives P(tau > s) exactly.
+    P = np.array([[0.5, 0.4, 0.1], [0.2, 0.5, 0.3], [0.1, 0.3, 0.6]])
+    coupled = np.zeros((3, 3, 3, 3))
+    for i, j in np.ndindex(3, 3):
+        common = np.minimum(P[i], P[j])
+        coupled[i, j] = np.diag(common)
+        if i != j:
+            coupled[i, j] += np.outer(P[i] - common, P[j] - common) / (1 - common.sum())
+    coupled = coupled.reshape(9, 9)
+    start = np.eye(3)[0]
+    apart = ~np.eye(3, dtype=bool).ravel()
+    pair = np.outer(start @ np.linalg.matrix_power(P, lag), start).ravel()
+    survival = np.ones(lag + 300)
+    for s in range(lag, len(survival)):
+        survival[s] = pair[apart].sum()
+        pair = pair @ coupled
+    eigenvalues, eigenvectors = np.linalg.eig(P.T)
+    pi = np.real(eigenvectors[:, np.argmax(np.real(eigenvalues))])
+    pi /= pi.sum()
+    t = np.arange(21)
+    tv = [0.5 * np.abs(start @ np.linalg.matrix_power(P, u) - pi).sum() for u in t]
+    # From t = 16 the two agree within 3e-16, the rounding that the tolerance allows for.
+    assert np.all(_lagged_tail(survival, lag, t) >= np.array(tv) - 1e-12)
 
 
 def test_the_w1_bound_sums_the_distances_at_lagged_times():
