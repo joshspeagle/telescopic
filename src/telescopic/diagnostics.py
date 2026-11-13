@@ -284,7 +284,9 @@ def tuning_disagreement(tuning: TuningReport | None) -> str | None:
     r"""The warning about tuning chains that disagree (spec section 5.3), or ``None``.
 
     The chains disagree when, in some coordinate, their means spread more widely than the
-    chains themselves: :math:`\hat R > \sqrt 2`, a sign of several modes.
+    chains themselves: :math:`\hat R > \sqrt 2`, a sign of several modes. An
+    :math:`\hat R` of NaN, where all four chains sat at one value of a coordinate, counts
+    as disagreement too, since the pilot did not explore that coordinate.
 
     Parameters
     ----------
@@ -295,7 +297,7 @@ def tuning_disagreement(tuning: TuningReport | None) -> str | None:
     -------
     str or None
     """
-    if tuning is None or not np.max(tuning.rhat) > np.sqrt(2):
+    if tuning is None or np.all(tuning.rhat <= np.sqrt(2)):
         return None
     return (
         f"the tuning chains disagree (R-hat up to {np.max(tuning.rhat):.2f}): the target "

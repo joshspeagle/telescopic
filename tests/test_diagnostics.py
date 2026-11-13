@@ -6,6 +6,7 @@ from telescopic.diagnostics import (
     hill,
     issues,
     slow_pair_threshold,
+    tuning_disagreement,
     tv_bound,
     variance_share,
     w1_bound,
@@ -106,6 +107,14 @@ def test_tuning_chains_disagree_when_their_means_spread_wider_than_the_chains():
 
     assert issues(result(np.array([1.0, 1.41]))) == []
     assert [issue.kind for issue in issues(result(np.array([1.0, 1.42])))] == ["tuning"]
+
+
+def test_tuning_chains_disagree_where_an_r_hat_is_nan():
+    # NaN, where all four chains sat at one value of a coordinate, made the largest R-hat
+    # NaN, which passed the check and hid a disagreement in another coordinate.
+    for rhat in ([np.nan, 1.0], [np.nan, 3.0]):
+        report = TuningReport(np.zeros(2), np.eye(2), np.full(4, 0.23), np.array(rhat), 100)
+        assert tuning_disagreement(report).startswith("the tuning chains disagree (R-hat up to")
 
 
 def test_no_warning_fires_on_a_clean_gaussian_run():

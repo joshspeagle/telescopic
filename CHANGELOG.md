@@ -164,4 +164,6 @@ All notable changes to this project are documented here. The format follows
   rounding left the cumulative weights below 1. `Gibbs(coupling="crn")` refuses a
   conditional whose `mean` is not a vector of its block's size, where a scalar was added
   to every coordinate. `Result.merge` takes the kernel, initial distribution, tuning
-  report and pilot meeting times of the other result where the first has none.
+  report and pilot meeting times of the other result where the first has none. The
+  warning about disagreeing tuning chains also fires where an R-hat is NaN, which hid a
+  disagreement in another coordinate.

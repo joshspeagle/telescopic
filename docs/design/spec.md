@@ -353,7 +353,7 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 - **Covariance:** pooled over the second halves of the chains, plus $10^{-10}$ times each coordinate's variance on the diagonal, or $10^{-10}$ for a coordinate of variance 0. The pilot's own factorisations add $10^{-12}$ times each variance (DECISIONS #47).
 - **Scale:** $2.38/\sqrt d$, `RandomWalk`'s default (DECISIONS #7).
 - **Divergence:** where the target is flat in some direction, the scales can grow until the running sum of the covariance overflows, as it also does for a proper target whose scales are near the float64 limit (about $10^{153}$); the pilot then raises `ValueError` saying that the tuning chains diverged and the target may be improper or its scales near that limit (DECISIONS #112).
-- **Report:** the pilot acceptance rates and $\hat R$ per coordinate. A `ConvergenceWarning` when the chains disagree: $\hat R > \sqrt 2$ in some coordinate, where the chain means spread more widely than the chains themselves, a sign of several modes (DECISIONS #6).
+- **Report:** the pilot acceptance rates and $\hat R$ per coordinate. A `ConvergenceWarning` when the chains disagree: $\hat R > \sqrt 2$ in some coordinate, where the chain means spread more widely than the chains themselves, a sign of several modes (DECISIONS #6), or $\hat R$ is NaN in some coordinate, where all four chains sat at one value, so the pilot did not explore it (DECISIONS #122).
 
 ### 5.4 MALA (R-KER-MALA)
 

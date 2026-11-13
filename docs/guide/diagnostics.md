@@ -181,8 +181,10 @@ geometric meeting times, and at the kernel ([Kernels](kernels.md)).
 
 **Trigger:** the chains that tuned the kernel disagree: their Gelman-Rubin $\hat R$
 (`result.tuning.rhat`) exceeds $\sqrt 2$ in some coordinate, so their means spread more
-widely than the chains themselves. **Meaning:** the target may have several modes, which
-make the meeting times heavy-tailed, and pairs that never leave one mode miss the others.
+widely than the chains themselves, or is NaN in some coordinate, where all four chains
+sat at one value. **Meaning:** the target may have several modes, which make the meeting
+times heavy-tailed, and pairs that never leave one mode miss the others; a NaN means the
+pilot did not explore that coordinate at all.
 **Remedy:** an initial distribution that covers every mode
 ([Initial distributions](targets.md#choosing-one)).
 
