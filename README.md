@@ -64,12 +64,13 @@ wider than the posterior, but not by orders of magnitude
 
 ## What it guarantees
 
-Each replicate's estimate is unbiased for any burn-in, lag, run length and initial
-distribution, provided the coupling keeps each chain's law, the chains stay together
-once they meet, and the meeting time has enough moments. With finite variance, the error
-bars are valid as the number of replicates grows. Coupling does not make the chains mix
-faster, and a run whose initial distribution misses a mode can be confidently wrong. The
-[theory page](docs/theory.md) states the conditions and the limits.
+Each replicate's estimate is unbiased for any burn-in, lag and run length, and every
+initial distribution from which the chain converges, provided the coupling keeps each
+chain's law, the chains stay together once they meet, and the meeting time has enough
+moments. With finite variance, the error bars are valid as the number of replicates
+grows. Coupling does not make the chains mix faster, and a run whose initial
+distribution misses a mode can be confidently wrong. The [theory page](docs/theory.md)
+states the conditions and the limits.
 
 ## Citing
 

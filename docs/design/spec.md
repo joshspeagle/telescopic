@@ -160,7 +160,8 @@ whose weights sum to 1. Some weights are negative, so estimates can fall outside
 ### 3.3 Guarantees and their limits (R-THEORY-1: the documentation must state them in these terms)
 
 **Guaranteed:**
-- **Unbiasedness:** $\mathbb E[H^{(L)}_{k:m}] = \pi(h)$ for every $0 \le k \le m$, $L \ge 1$ and $\pi_0$, provided:
+- **Unbiasedness:** $\mathbb E[H^{(L)}_{k:m}] = \pi(h)$ for every $0 \le k \le m$, $L \ge 1$ and every $\pi_0$ from which the chain converges, provided:
+  - the chain converges in the sense of JOA20 Assumption 2.1: $\mathbb E[h(X_t)] \to \pi(h)$ as $t \to \infty$, and $\sup_t \mathbb E|h(X_t)|^{2+\eta} < \infty$ for some $\eta > 0$ (DECISIONS #77);
   - the coupling preserves both marginals;
   - the pair stays together after meeting;
   - the meeting time has enough moments.
@@ -170,7 +171,7 @@ whose weights sum to 1. Some weights are negative, so estimates can fall outside
   - polynomial tails (Middleton et al. 2020);
   - $\mathbb E_{\pi\otimes\pi}[\tau^\kappa] < \infty$ with $\kappa > 1$, $h \in L^p(\pi)$ with $p > \kappa/(\kappa-1)$, and $d\pi_0/d\pi \le M$ (Douc et al., Thm. 17).
 
-  Under the last, the variance is finite if $\kappa > 2$ and $p > 2\kappa/(\kappa - 2)$.
+  Under the last, the variance is finite if $\kappa > 2$ and $p > 2\kappa/(\kappa - 2)$. Only the last restricts $\pi_0$ explicitly, through $d\pi_0/d\pi \le M$. Meeting does not imply convergence: a random walk too narrow to cross a gap in the support meets on the side where it started.
 - **Error bars:** with $R \ge 2$ independent replicates and finite variance, $\bar H \pm t_{R-1,\,1-\alpha/2}\,\hat\sigma/\sqrt R$, with the quantile of Student's t with $R - 1$ degrees of freedom, is an asymptotically valid interval as $R \to \infty$, and exact at every $R$ for normal replicates; the normal quantile undercovers at small $R$ (DECISIONS #78). The bounded work per replicate does not change this.
 - **Fixed $R$:** unbiasedness holds for a number of replicates fixed before any result is seen. Choosing $R$ after looking at results (for example, extending a run until the error bar is small) is optional stopping: the mean stays consistent and the large-$R$ intervals stay valid, but exact unbiasedness is lost.
 - **Total-variation bounds:** meeting times give upper bounds on $d_{TV}(\pi_t, \pi)$, where $\pi_t$ is the law of $X_t$ (§3.6).
