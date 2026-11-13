@@ -22,19 +22,18 @@ processes), `pandas` (summaries as data frames) and `all`.
 ## What a run does
 
 A run is a set of independent **replicates**. Each replicate is a pair of Markov chains,
-$X$ and $Y$, started from two independent draws of an initial distribution. $X$ first
-takes `lag` steps alone; then the two take coupled steps, which leave each an ordinary
-MCMC chain but make them likely to land on the same point. They **meet** when
-$X_t = Y_{t - \mathrm{lag}}$, and move together afterwards. The replicate's estimate is
-the average of $X$ from step `k`, the burn-in, to step `m`, plus a correction made of the
-differences between the chains before they met, which removes the bias that the burn-in
-leaves. The estimate is a **signed measure**: points with weights that sum to 1, some of
-them negative.
+$X$ and $Y$, started from two independent draws of an initial distribution. $X$ runs
+ahead of $Y$ by the lag $L$ (the argument `lag`): it first takes $L$ steps alone; then
+the two take coupled steps, which leave each an ordinary MCMC chain but make them likely
+to land on the same point. They **meet** when $X_t = Y_{t-L}$, and move together
+afterwards. The replicate's estimate is the average of $X$ from step $k$, the burn-in
+(the argument `k`), to step $m$ (`m`), plus a correction made of the differences between
+the chains before they met, which removes the bias that the burn-in leaves. The estimate
+is a **signed measure**: points with weights that sum to 1, some of them negative.
 
 The average of the replicates' estimates is **unbiased**: its expectation is the
-posterior expectation, whatever `k`, `m` and the lag, from every initial distribution
-from which the chain converges, and its error bar is valid as the number of replicates
-grows. A **consistent** estimate only converges as the number of replicates grows.
+posterior expectation, whatever $k$, $m$ and $L$, from every initial distribution from
+which the chain converges, and its error bar is valid as the number of replicates grows.
 [How it works](tutorials/how-it-works.md) shows a pair meeting, and [Theory](theory.md)
 derives the estimator and states the conditions.
 
@@ -75,18 +74,22 @@ result = telescopic.sample(
 result.summary()
 ```
 
-`sample` tuned a random-walk kernel on pilot chains, chose `k`, the lag and `m` from the
-meeting times of 100 pilot pairs, and ran 100 replicates.
+Before the replicates, `sample` ran two short pilots: four adaptive chains, which tuned
+the proposal of a random-walk kernel, and 100 pairs, whose meeting times chose `k`, the
+lag and `m`. It then ran 100 replicates.
 
 ## Reading the summary
 
 The table has one row per parameter: the estimate of the posterior mean, which is
 unbiased, and its standard error, the standard deviation and the 16th, 50th and 84th
-percentiles, which are consistent. Below it are the run's diagnostics and the warnings
-that apply: [Results](guide/results.md#the-summary) defines each entry, and
-[Diagnostics and warnings](guide/diagnostics.md) says what each warning means.
+percentiles, which are **consistent**: they converge to the posterior's values as the
+number of replicates grows, but are not unbiased at a fixed number. Below it are the
+run's diagnostics and the warnings that apply: [Results](guide/results.md#the-summary)
+defines each entry, and [Diagnostics and warnings](guide/diagnostics.md) says what each
+warning means.
 
-The default of 100 replicates is too few for one of the checks behind the warnings
+The check for heavy-tailed meeting times needs at least 500 replicates, so it is off at
+the default of 100: pass `n_replicates=500` to `sample` to turn it on
 ([How many replicates](guide/settings.md#how-many-replicates)).
 
 ## Any function, after the run
