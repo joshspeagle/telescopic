@@ -62,6 +62,7 @@ Most estimator bugs cannot be caught statistically. In the census, an off-by-one
 **Discrete maximal**
 - The joint frequencies of the outputs match the exact joint table (diagonal $\min(p_i, q_i)$, off-diagonal the product of the normalised residuals times $\mathrm{TV}$), computed independently in the test, by a chi-square test.
 - Log-space inputs with very peaked probabilities do not underflow.
+- A uniform of 0 never draws a category of zero weight.
 
 ### 2.3 `tests/test_target.py`, `tests/test_initial.py` (R-INPUT-1, R-INPUT-2)
 
