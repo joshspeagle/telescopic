@@ -430,3 +430,67 @@ def test_a_names_length_mismatch_names_the_initial_dimension():
     # the wrong dimension.
     with pytest.raises(ValueError, match="draws points of dimension 1, but names gives 2"):
         CoupledSampler(log_prob, Normal([0.0], [1.0]), names=["p", "lam"])
+
+
+def scaled_gaussian(scale):
+    def log_prob(x):
+        return -0.5 * np.sum((x / scale) ** 2, axis=-1)
+
+    return log_prob, lambda x: -x / scale**2, Normal(np.zeros(3), np.full(3, (2 * scale) ** 2))
+
+
+@pytest.mark.parametrize("scale", [1e-8, 1e-4, 1.0, 1e4, 1e8])
+def test_a_correct_gradient_passes_the_check_at_every_scale(scale):
+    log_prob, grad, initial = scaled_gaussian(scale)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", InputWarning)
+        CoupledSampler(log_prob, initial, grad=grad, vectorize=True, kernel="mala", rng=1)
+
+
+def test_the_gradient_check_skips_points_and_steps_of_zero_density():
+    # The rows at -1 have zero density; from the row at 1e-6, steps of about 1e-5 in the
+    # first coordinate reach zero density.
+    def log_prob(x):
+        return -0.5 * x @ x if x[0] > 0 else -np.inf
+
+    init = Empirical([[-1.0, 0.0], [1e-6, 0.5], [-1.0, 1.0]])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", InputWarning)
+        CoupledSampler(log_prob, init, grad=lambda x: -x, kernel="mala", rng=1)
+
+
+@pytest.mark.parametrize(
+    ("grad", "coordinates"),
+    [(lambda x: x, r"\[0, 1, 2\]"), (lambda x: -x * [1.0, -1.0, 1.0], r"\[1\]")],
+    ids=["wrong sign", "one coordinate"],
+)
+def test_a_wrong_gradient_warns_at_construction(grad, coordinates):
+    log_prob, _, initial = scaled_gaussian(1.0)
+    with pytest.warns(InputWarning, match=f"grad disagrees .* in coordinates {coordinates}"):
+        CoupledSampler(log_prob, initial, grad=grad, vectorize=True, kernel="mala", rng=1)
+
+
+def test_the_gradient_check_can_be_turned_off():
+    log_prob, _, initial = scaled_gaussian(1.0)
+    CoupledSampler(
+        log_prob, initial, grad=lambda x: x, vectorize=True, kernel="mala", check_grad=False
+    )
+
+
+def test_the_gradient_check_changes_no_result():
+    # It draws its points from a stream of its own, so the runs' streams are untouched.
+    log_prob, grad, initial = scaled_gaussian(1.0)
+    first, second = (
+        CoupledSampler(
+            log_prob,
+            initial,
+            grad=grad,
+            vectorize=True,
+            kernel=MALA(step_size=0.5, cov=np.eye(3)),
+            check_grad=check_grad,
+            rng=2,
+        ).run(5, k=30)
+        for check_grad in (True, False)
+    )
+    np.testing.assert_array_equal(first.meeting_times, second.meeting_times)
+    np.testing.assert_array_equal(first.measure.atoms, second.measure.atoms)

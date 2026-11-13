@@ -206,3 +206,8 @@ All notable changes to this project are documented here. The format follows
   figures; `telescopic.engine.stored_bytes` computes the stored size.
 - `progress=True` also shows the progress of tuning: the steps of the adaptive pilot
   chains and, for MALA and HMC, of the step size's dual averaging.
+- `CoupledSampler` and `sample` check a gradient that the kernel needs against central
+  differences of the log-density at 3 draws of the initial distribution, at a cost of
+  $3(4d + 1)$ evaluations of the log-density and 3 of the gradient, and emit an
+  `InputWarning` naming the point and the coordinates where they disagree; the check
+  changes no result, and `check_grad=False` skips it.
