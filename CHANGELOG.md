@@ -211,3 +211,7 @@ All notable changes to this project are documented here. The format follows
   per item. Its text keeps the lines below the table within 80 characters, with the
   kernel on a line of its own and its floating-point parameters to 4 significant
   figures, and sizes each column of the table to its entries.
+- `plotting.paths` draws $X$ in magenta and $Y$ in teal, the documentation's chain
+  colors, and a pair in the dark ink of met chains from its meeting time on; the colors
+  are `plotting.CHAIN_X`, `CHAIN_Y` and `MET`. A legend says which line is which, and in
+  one dimension the time axis has integer ticks.
