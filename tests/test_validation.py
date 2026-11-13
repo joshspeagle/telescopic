@@ -100,3 +100,30 @@ def test_flags_that_are_not_bool_raise_naming_the_flag(name, call):
     # progress="no" drew a progress bar, strict="no" raised, and store="no" was stored.
     with pytest.raises(TypeError, match=f"^{name} must be True or False"):
         call()
+
+
+@pytest.mark.parametrize(
+    ("kernels", "given"),
+    [([RandomWalk], "the class RandomWalk"), (["rw", "rw"], "str"), ([1, 2], "int")],
+)
+def test_mixture_refuses_components_that_are_not_kernel_instances(kernels, given):
+    # The class was accepted and failed at first use; a string raised AttributeError.
+    with pytest.raises(TypeError, match=f"kernels\\[0\\] must be a Kernel instance, not {given}"):
+        Mixture(kernels, np.ones(len(kernels)))
+
+
+def test_check_coupling_refuses_a_target_that_is_not_a_target():
+    with pytest.raises(TypeError, match="target must be a Target instance, not function"):
+        testing.check_coupling(KERNEL, log_prob, [0.0], [1.0])
+    with pytest.raises(TypeError, match="kernel must be a Kernel instance, not function"):
+        testing.check_coupling(log_prob, TARGET, [0.0], [1.0])
+
+
+def test_engine_run_and_tune_refuse_a_callable_target():
+    # Both raised AttributeError, on n_log_prob and has_log_prob.
+    with pytest.raises(TypeError, match="target must be a Target instance, not function"):
+        engine.run(log_prob, KERNEL, INIT, [0], k=0, m=0, lag=1)
+    with pytest.raises(TypeError, match="kernel must be a Kernel instance, not str"):
+        engine.run(TARGET, "rwmh", INIT, [0], k=0, m=0, lag=1)
+    with pytest.raises(TypeError, match="target must be a Target instance, not function"):
+        RandomWalk().tune(log_prob, INIT, 0)

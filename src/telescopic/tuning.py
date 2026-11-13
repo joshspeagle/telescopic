@@ -12,7 +12,7 @@ import numpy.typing as npt
 
 from telescopic._linalg import matvec
 from telescopic._random import TUNING, Streams, replicate_generator, root_seed
-from telescopic._types import FloatArray, Seed, integer, integral, real, real_array
+from telescopic._types import FloatArray, Seed, instance, integer, integral, real, real_array
 from telescopic.initial import as_initial, draw
 from telescopic.target import Target
 
@@ -156,6 +156,7 @@ def adaptive_metropolis(
     Cholesky factorisations: beyond 20 dimensions the chains refactor the covariance and
     keep their states every :math:`\lceil d/20\rceil` steps, or fewer for a short pilot.
     """
+    instance("target", target, Target)
     if n_steps is not None:
         # The second half of each chain needs two states for R-hat.
         n_steps = integer("n_steps", n_steps, "an integer or None", minimum=3)

@@ -21,6 +21,7 @@ from telescopic._types import (
     Seed,
     averaging,
     flag,
+    instance,
     integer,
     real_array,
 )
@@ -227,6 +228,8 @@ def run(
     (8d + 16)` bytes, and the :math:`\tau - L` distances of each replicate 24 bytes each
     (spec R-EXEC-7).
     """
+    instance("target", target, Target)
+    instance("kernel", kernel, Kernel)
     settings = check_settings(Settings(k, m, lag, thin, max_iter, flag("store", store)))
     keep_paths = flag("keep_paths", keep_paths)
     lanes = integer("lanes", lanes, minimum=1)

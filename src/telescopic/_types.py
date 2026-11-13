@@ -56,6 +56,15 @@ def flag(name: str, value: Any) -> bool:
     return bool(value)
 
 
+def instance(name: str, value: Any, kind: type) -> None:
+    # A telescopic object, such as a Target or a Kernel, checked where it is first passed:
+    # a function, a string or a class instead failed later, on an attribute (DECISIONS
+    # #106).
+    if not isinstance(value, kind):
+        given = f"the class {value.__name__}" if isinstance(value, type) else type(value).__name__
+        raise TypeError(f"{name} must be a {kind.__name__} instance, not {given}")
+
+
 def real(
     name: str, value: Any, low: float = -np.inf, high: float = np.inf, *, closed: bool = False
 ) -> float:

@@ -122,4 +122,6 @@ All notable changes to this project are documented here. The format follows
   the expected form, where NumPy's message named neither; `as_initial` raises its own
   `TypeError` for a ragged `init`. A flag that is not `True` or `False` (`vectorize`,
   `progress`, `strict`, `store`, `keep_paths`), and an `args` that is not a tuple or a
-  list, raise `TypeError` naming the argument.
+  list, raise `TypeError` naming the argument, and so do a target or a kernel that is
+  not a `Target` or `Kernel` instance, such as a bare log-density passed to
+  `engine.run` or a kernel class in a `Mixture`.

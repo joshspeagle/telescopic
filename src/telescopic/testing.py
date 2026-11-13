@@ -11,7 +11,7 @@ from numpy.random import Generator
 from scipy import stats
 
 from telescopic._random import Draws, Streams, root_seed
-from telescopic._types import FloatArray, Seed, integer, real, real_array
+from telescopic._types import FloatArray, Seed, instance, integer, real, real_array
 from telescopic.kernels.base import Kernel, State, evaluate
 from telescopic.target import Target
 
@@ -114,6 +114,8 @@ def check_coupling(
     Costs one coupled step and two steps of ``n`` chains, and an evaluation of the target
     at each of their ``4n`` new positions.
     """
+    instance("kernel", kernel, Kernel)
+    instance("target", target, Target)
     x = real_array("x", x, "real numbers of shape (d,)")
     y = real_array("y", y, "real numbers of shape (d,)")
     if x.ndim != 1 or x.shape != y.shape:

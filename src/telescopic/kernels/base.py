@@ -13,7 +13,7 @@ import numpy.typing as npt
 
 from telescopic._linalg import covariance
 from telescopic._random import Draws
-from telescopic._types import BoolArray, FloatArray, Seed, real
+from telescopic._types import BoolArray, FloatArray, Seed, instance, real
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport, adaptive_metropolis, dual_averaging
 
@@ -94,10 +94,13 @@ class Kernel(ABC):
     def check_target(self, target: Target) -> None:
         """Raise ``ValueError`` if ``target`` lacks a function that the kernel evaluates.
 
+        A ``target`` that is not a :class:`~telescopic.Target` raises ``TypeError``.
+
         Parameters
         ----------
         target : Target
         """
+        instance("target", target, Target)
         if self.needs_log_prob and not target.has_log_prob:
             raise ValueError(f"{self!r} needs a log-density; log_prob=None is for Gibbs kernels")
         if self.needs_grad and not target.has_grad:
