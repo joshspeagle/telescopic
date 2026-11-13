@@ -8,7 +8,8 @@ on:
 # A new push to a branch cancels its older run.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # A run on main is never cancelled, so that the slow job reports on every merge.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
@@ -103,8 +104,9 @@ jobs:
           "$RUNNER_TEMP/clean/bin/python" -I -c "import telescopic; print(telescopic.__version__)"
 
   slow:
-    # Runs only when started by hand: -m "" lifts the -m "not slow" of pyproject.toml.
-    if: github.event_name == 'workflow_dispatch'
+    # Runs on every push to main and when started by hand, never on pull requests.
+    # -m "" lifts the -m "not slow" of pyproject.toml.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
