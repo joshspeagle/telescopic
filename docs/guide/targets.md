@@ -18,7 +18,14 @@ of {func}`telescopic.sample` are passed on to it: `args` is a tuple or a list, s
 of shape `(n, d)` and returns shape `(n,)`, so that a step of many chains costs one call
 instead of one per point. An output whose shape differs from the expected one only by
 axes of length 1, such as the shape `()` that SciPy's `multivariate_normal.logpdf`
-returns for a batch of one point, is reshaped; any other shape raises `ValueError`.
+returns for a batch of one point, is reshaped; any other shape raises `ValueError`, as
+does an output that is not numbers, such as `None` or emcee's `(log_prob, blobs)` tuple:
+quantities derived from the parameters are computed after the run, with
+{meth}`telescopic.Result.estimate`. A complex output whose imaginary part is exactly 0,
+as complex-step derivatives give, counts as its real part; any other complex output
+raises. telescopic computes in float64: a function that returns float32 values, as JAX
+does unless `jax.config.update("jax_enable_x64", True)` is called first, rounds the
+target, so it emits an `InputWarning`.
 
 ```{code-cell} python
 import numpy as np

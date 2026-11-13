@@ -130,3 +130,8 @@ All notable changes to this project are documented here. The format follows
   `unbiased_variance` and `unbiased_covariance` of a scalar raise `ValueError`.
   `CoupledSampler.meeting_times` refuses `max_iter=None`, so the pilot is always capped,
   and `slow_pair_threshold` checks that `lag` is at least 1 and `m` at least 0.
+- A target function's output that is not numbers, such as `None` or a string, at one
+  point among good ones raises `ValueError` naming the function and the point; an emcee
+  `(log_prob, blobs)` tuple is told that derived quantities come from `Result.estimate`.
+  A complex output with an imaginary part of exactly 0 is its real part, and any other
+  complex output raises; float32 outputs, as JAX's default, emit an `InputWarning`.

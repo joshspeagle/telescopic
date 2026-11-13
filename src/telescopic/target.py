@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import reprlib
 from collections.abc import Callable, Mapping
 from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 
 from telescopic._types import FloatArray, flag, log_densities, read_only
+from telescopic.warnings import InputWarning, warn
 
 
 class Target:
@@ -75,6 +78,7 @@ class Target:
         self.n_log_prob = 0
         self.n_grad = 0
         self.n_grad_zeroed = 0
+        self._warned_precision = False
 
     @property
     def has_grad(self) -> bool:
@@ -138,30 +142,93 @@ class Target:
         view = read_only(x)
         if self.vectorize:
             values = function(view, *self.args, **self.kwargs)
-            returned_none = values is None
         else:
             values = [function(row, *self.args, **self.kwargs) for row in view]
-            returned_none = False
-        # A copy, so that a function that reuses its own array cannot alias states.
-        out = np.array(values, dtype=np.float64)
-        # NumPy reads None as NaN, and the error would then blame the value.
-        if not self.vectorize and np.isnan(out).any():
-            returned_none = any(value is None for value in values)
         expected = (len(x), *event)
+        try:
+            # A copy, so that a function that reuses its own array cannot alias states.
+            out = np.array(values)
+        except ValueError:  # rows of different shapes
+            out = None
         # Axes of length 1 change neither the values nor their order, so a shape that
         # differs only by them is reshaped, as SciPy's logpdf of one point, shape ().
-        if returned_none or _without_ones(out.shape) != _without_ones(expected):
-            name = getattr(function, "__name__", "the target function")
-            per_point = "a float" if not event else f"shape {event}"
-            if returned_none:
+        if (
+            out is None
+            or out.dtype.kind not in "biufc"
+            or _without_ones(out.shape) != _without_ones(expected)
+        ):
+            raise self._invalid(function, values, x, event)
+        out = out.reshape(expected)
+        return out if out.dtype == np.float64 else self._float64(function, out, x)
+
+    def _float64(
+        self, function: Callable[..., Any], out: npt.NDArray[Any], x: FloatArray
+    ) -> FloatArray:
+        # A complex output with an imaginary part of exactly 0, as complex-step code gives,
+        # is its real part (DECISIONS #109). Floats narrower than float64, as JAX
+        # returns without 64-bit mode, round the target, so they warn once (#110).
+        name = _name(function)
+        if out.dtype.kind == "c":
+            rows = np.nonzero(out.imag)[0]
+            if len(rows):
                 raise ValueError(
-                    f"{name} returned None; it must return {per_point} for each point"
+                    f"{name} returned {out[rows[0]].tolist()} at x = {x[rows[0]].tolist()}: "
+                    "it must return real numbers, not complex ones with a non-zero "
+                    "imaginary part"
                 )
-            raise ValueError(
-                f"{name} returned shape {out.shape} for {len(x)} points; expected "
-                f"{expected}, that is {per_point} for each point"
+            out = out.real
+        if out.dtype.kind == "f" and out.dtype.itemsize < 8 and not self._warned_precision:
+            self._warned_precision = True
+            warn(
+                f"{name} returned {out.dtype} values: the chains target the density "
+                f"rounded to {out.dtype} precision; with JAX, enable 64-bit mode with "
+                "jax.config.update('jax_enable_x64', True)",
+                InputWarning,
             )
-        return out.reshape(expected)
+        return out.astype(np.float64)
+
+    def _invalid(
+        self, function: Callable[..., Any], values: Any, x: FloatArray, event: tuple[int, ...]
+    ) -> ValueError:
+        # The error for an output that is not real numbers of the expected shape: point by
+        # point, at the first point where it went wrong.
+        name = _name(function)
+        per_point = "a float" if not event else f"shape {event}"
+        if self.vectorize:
+            row, value = None, values
+        else:
+            shapes = [_form(value)[1] for value in values]
+            row = next(
+                row
+                for row, shape in enumerate(shapes)
+                if shape is None
+                or _without_ones(shape) != _without_ones(event)
+                or shape != shapes[0]
+            )
+            value = values[row]
+        text = _form(value)[0]
+        where = f"for {len(x)} points" if row is None else f"at x = {x[row].tolist()}"
+        message = f"{name} returned {text} {where}; it must return {per_point} for each point"
+        if isinstance(value, tuple) and not event:  # emcee's (log-density, blobs)
+            message += ", and derived quantities are computed after the run with Result.estimate"
+        return ValueError(message)
+
+
+def _name(function: Callable[..., Any]) -> str:
+    return getattr(function, "__name__", "the target function")
+
+
+def _form(value: Any) -> tuple[str, tuple[int, ...] | None]:
+    # How a returned value reads in an error, and its shape if it is numbers.
+    if value is None:
+        return "None", None
+    try:
+        array = np.asarray(value)
+    except ValueError:
+        return "a ragged sequence", None
+    if array.dtype.kind not in "biufc":
+        return reprlib.repr(value), None
+    return f"shape {array.shape}", array.shape
 
 
 def _without_ones(shape: tuple[int, ...]) -> list[int]:

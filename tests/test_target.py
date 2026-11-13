@@ -6,6 +6,7 @@ import pytest
 from telescopic.kernels import MALA
 from telescopic.target import Target
 from telescopic.testing import random_draws
+from telescopic.warnings import InputWarning
 
 
 def gaussian(x, scale=1.0):
@@ -123,7 +124,7 @@ def test_a_target_without_gradient_refuses_gradient_requests():
 
 
 def test_a_wrong_output_shape_raises():
-    with pytest.raises(ValueError, match="expected"):
+    with pytest.raises(ValueError, match=r"returned shape \(3,\) for 2 points"):
         Target(lambda x: np.zeros(3), vectorize=True).log_prob(np.zeros((2, 1)))
 
 
@@ -186,3 +187,69 @@ def test_a_target_without_a_log_density_gives_zero_and_takes_no_gradient():
     assert not target.has_log_prob
     with pytest.raises(ValueError, match="grad needs log_prob"):
         Target(None, grad=lambda x: -x)
+
+
+@pytest.mark.parametrize(("bad", "returned"), [(None, "None"), (np.zeros(1), r"shape \(1,\)")])
+def test_a_pointwise_grad_returning_none_at_one_point_names_grad_and_the_point(bad, returned):
+    # One bad row among good ones raised NumPy's "inhomogeneous shape" ValueError, which
+    # named neither grad nor the point.
+    def grad(x):
+        return bad if x[0] > 0 else -x
+
+    target = Target(gaussian, grad)
+    with pytest.raises(ValueError, match=f"grad returned {returned} at x = \\[1.0, 0.0\\]"):
+        target.log_prob_and_grad(np.array([[-1.0, 0.0], [1.0, 0.0]]))
+
+
+@pytest.mark.parametrize(
+    ("output", "returned"),
+    [([[0.0], [0.0, 1.0]], "a ragged sequence"), (np.array(["a", "b"]), "array")],
+)
+def test_a_vectorized_output_that_is_not_numbers_is_named(output, returned):
+    with pytest.raises(ValueError, match=f"<lambda> returned {returned}.* for 2 points"):
+        Target(lambda x: output, vectorize=True).log_prob(np.zeros((2, 1)))
+
+
+def test_a_log_prob_returning_emcee_blobs_is_told_where_derived_quantities_go():
+    with pytest.raises(ValueError, match=r"computed after the run with Result\.estimate"):
+        Target(lambda x: (gaussian(x), x[0])).log_prob(np.zeros((2, 1)))
+
+
+@pytest.mark.parametrize("vectorize", [False, True])
+def test_a_complex_grad_with_an_imaginary_part_raises_naming_grad(vectorize):
+    # It was cast to its real part with only a ComplexWarning.
+    def grad(x):
+        return -x + 1j * (x > 0)
+
+    target = Target(gaussian, grad, vectorize=vectorize)
+    with pytest.raises(ValueError, match=r"grad returned \[\(-1\+1j\)\] at x = \[1.0\]"):
+        target.log_prob_and_grad(np.array([[-1.0], [1.0]]))
+
+
+@pytest.mark.parametrize("vectorize", [False, True])
+def test_a_complex_output_with_a_zero_imaginary_part_is_its_real_part(vectorize):
+    # A complex log_prob raised TypeError, and a complex grad warned (ComplexWarning).
+    def log_prob(x):
+        return gaussian(x) + 0j
+
+    def grad(x):
+        return -x + 0j
+
+    x = np.array([[1.0], [2.0]])
+    values, gradients = Target(log_prob, grad, vectorize=vectorize).log_prob_and_grad(x)
+    np.testing.assert_array_equal(values, [-0.5, -2.0])
+    np.testing.assert_array_equal(gradients, -x)
+    assert gradients.dtype == np.float64
+
+
+def test_a_float32_log_prob_warns_once():
+    # float32 values, as JAX returns by default, were accepted silently.
+    target = Target(lambda x: np.float32(gaussian(x)))
+    with pytest.warns(InputWarning, match="<lambda> returned float32 values"):
+        target.log_prob(np.ones((2, 1)))
+    assert target.log_prob(np.ones((1, 1))).dtype == np.float64  # filterwarnings = error
+
+
+def test_an_integer_log_prob_does_not_warn():
+    values = Target(lambda x: 0).log_prob(np.ones((2, 1)))  # filterwarnings = error
+    assert values.dtype == np.float64
