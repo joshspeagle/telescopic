@@ -159,3 +159,7 @@ All notable changes to this project are documented here. The format follows
 - The package ships a `py.typed` marker, so type checkers such as mypy and pyright read
   its annotations, and its metadata lists the supported Python versions (3.11 to 3.15),
   that it runs on any operating system, that it is typed, and a link to its issues.
+- An `Independence` chain at a point where the target and the proposal both have zero
+  density, such as a start outside the support of a bounded proposal, accepts any
+  proposal of finite density, as the other Metropolis kernels do; it rejected every
+  proposal, with a NumPy `RuntimeWarning`.
