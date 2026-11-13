@@ -49,10 +49,10 @@ replicates = engine.run(target, kernel, init, range(16), k=k, m=m, lag=1, rng=1,
 replicates.meeting_time
 ```
 
-{func}`telescopic.plotting.paths` draws the first pairs against time: $X$ solid and $Y$
-dashed, shifted right by the lag, so that a pair meets where its dashed line joins its
-solid one, marked with a dot. After a meeting only $X$ runs, until $m$. The MCMC average
-uses the shaded times, $k$ to $m$:
+{func}`telescopic.plotting.paths` draws the first pairs against time: $X$ solid in
+magenta and $Y$ dashed in teal, shifted right by the lag, so that a pair meets where its
+dashed line joins its solid one, marked with a dot. After a meeting only $X$ runs, until
+$m$, in the dark ink of met chains. The MCMC average uses the shaded times, $k$ to $m$:
 
 ```{code-cell} python
 ---
@@ -60,19 +60,19 @@ mystnb:
   image:
     alt: >-
       Four pairs of paths falling from about 5 toward 0 against t; each dashed
-      path joins its solid one at a black dot, and the times from k to m are
-      shaded.
+      teal path joins its solid magenta one at a dot, after which one dark line
+      continues, and the times from k to m are shaded.
   figure:
     caption: >-
-      The paths of the first four pairs against $t$: $X_t$ solid and $Y_{t-1}$
-      dashed, a dot where each pair meets, and the times $k$ to $m$ that the MCMC
-      average uses shaded.
+      The paths of the first four pairs against $t$: $X_t$ solid in magenta and
+      $Y_{t-1}$ dashed in teal, a dot where each pair meets, the pair in dark ink
+      afterwards, and the times $k$ to $m$ that the MCMC average uses shaded.
 ---
 n = 4
 ax = plotting.paths(replicates, n=n)
 meeting = replicates.meeting_time[:n].astype(int)
 position = np.array([replicates.paths[i][0][meeting[i], 0] for i in range(n)])
-ax.plot(meeting, position, "o", color="black")
+ax.plot(meeting, position, "o", color=plotting.MET)
 ax.axvspan(k, m, color="gray", alpha=0.15)
 ax.set(xlabel="$t$", ylabel="$X_t$ and $Y_{t-1}$");
 ```
@@ -111,23 +111,28 @@ print(
 The states $X_k, \dots, X_m$ weigh $1/(m - k + 1)$ each. For $t$ from $k + 1$ to
 $\tau - 1$, the correction adds weight at $X_t$ and removes the same weight at $Y_{t-1}$,
 so the weights sum to 1 and some are negative. The weights of this replicate, summed over
-equal atoms:
+equal atoms, positive in blue and negative in gold:
 
 ```{code-cell} python
 ---
 mystnb:
   image:
     alt: >-
-      Vertical stems at the atoms of one replicate, most above zero and some
-      below.
+      Vertical stems at the atoms of one replicate, most above zero in blue and
+      some below in gold.
   figure:
     caption: >-
-      The weights of one replicate's atoms, summed over equal atoms: they sum to
-      1, and the bias correction makes some of them negative.
+      The weights of one replicate's atoms, summed over equal atoms, positive in
+      blue and negative in gold: they sum to 1, and the bias correction makes some
+      of them negative.
 ---
 points, which = np.unique(atoms, return_inverse=True)
+summed = np.bincount(which, weights)
 fig, ax = plt.subplots(figsize=(5, 3))
-ax.stem(points, np.bincount(which, weights))
+for sign, color, label in ((summed > 0, "C0", "positive"), (summed < 0, "C1", "negative")):
+    ax.stem(points[sign], summed[sign], linefmt=color, markerfmt=color, basefmt="none", label=label)
+ax.axhline(0, color="gray", linewidth=0.8)
+ax.legend()
 ax.set(xlabel="atom", ylabel="weight");
 ```
 

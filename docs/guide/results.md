@@ -211,9 +211,10 @@ to them with their weights either.
 
 ## The summary
 
-{meth}`telescopic.Result.summary` returns a {class}`telescopic.Summary`. It prints a table
+{meth}`telescopic.Result.summary` returns a {class}`telescopic.Summary`. It shows a table
 with one row per parameter, then the settings and diagnostics of the run and the warnings
-that apply:
+that apply, one per line. A notebook shows it in HTML, as here; `print` gives it as text,
+whose lines below the table are wrapped at 80 characters:
 
 ```{code-cell} python
 summary = result.summary()
@@ -232,7 +233,9 @@ The columns of the table:
 
 The lines below it:
 
-- $R$, the settings `k`, `m`, `lag` and `thin` ([Settings](settings.md)), and the kernel;
+- $R$, the settings `k`, `m`, `lag` and `thin` ([Settings](settings.md)), and the kernel,
+  whose floating-point parameters show to 4 significant figures (`summary.footer` keeps
+  every digit);
 - the median, the 90% and 99% quantiles and the maximum of the meeting times of every
   pair, where censored pairs sort above every pair that met, and a quantile that falls
   on one shows as `>` and the cap, such as `> 12` for `max_iter=12`; from 500

@@ -241,6 +241,13 @@ div.cell_output img {
   background: var(--t-figure-ground); border-radius: var(--small-radius);
 }
 div.cell_output table { font-size: 0.86rem; }
+/* The summary of a run in HTML (telescopic.Summary): a table of numbers, then its footer. */
+.telescopic-summary table { border-collapse: collapse; font: var(--t-type-code); font-variant-numeric: tabular-nums; }
+.telescopic-summary :is(th, td) { padding: 3px 10px; text-align: right; border-bottom: 1px solid var(--t-line); }
+.telescopic-summary thead th { color: var(--t-muted); border-bottom-color: var(--t-muted); }
+.telescopic-summary tbody th { text-align: left; }
+.telescopic-summary ul { margin: 10px 0 0; padding-left: 1.2rem; font: var(--t-type-caption); }
+.telescopic-summary li { margin: 0.15rem 0; }
 figure img { background: var(--t-figure-ground); }
 
 /* ---------------------------------------------------------------- admonitions */

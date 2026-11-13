@@ -175,7 +175,9 @@ set by MathJax, not by these faces, and other scripts fall back to the system fo
 
 1. **The two chain colors mean the two chains.** Magenta is $X$ and teal is $Y$, in every
    figure, and they mean nothing else. A figure whose series are not the two chains uses
-   the plot colors above.
+   the plot colors above. The package's own plots take the chain colors and `met` from
+   the constants `CHAIN_X`, `CHAIN_Y` and `MET` of `telescopic.plotting`, which
+   `brand.py` writes from the light values of `cx`, `cy` and `met`.
 2. **A line turns `met` once the chains have met.** After the meeting time a pair is one
    chain, drawn in the ink of met chains.
 3. **Uncertainty is drawn.** An estimate is shown with its error bar or band, never as a
