@@ -60,6 +60,25 @@ def test_an_estimate_from_one_replicate_raises_instead_of_an_undefined_interval(
         gaussian_result(1).estimate(lambda x: x)
 
 
+@pytest.mark.parametrize(
+    ("meeting_times", "method", "needed"),
+    [
+        ([2, -1], lambda result: result.mean(), 2),
+        ([2, -1], lambda result: result.cov(), 2),
+        ([2, -1], lambda result: result.var(), 2),
+        ([-1, -1], lambda result: result.quantile(0.5), 1),
+    ],
+    ids=["mean", "cov", "var", "quantile"],
+)
+def test_estimates_from_too_few_replicates_that_met_raise(meeting_times, method, needed):
+    # Censored pairs do not count: without the check, cov and var raised the estimator's
+    # message and quantile an IndexError.
+    result = synthetic(meeting_times, np.ones((2, 2)), max_iter=8)
+    message = f"at least {needed} replicates that met, not {needed - 1}"
+    with pytest.raises(ValueError, match=message):
+        method(result)
+
+
 def test_the_covariance_combines_first_and_second_moments_coordinate_by_coordinate():
     first = RESULT.measure.per_replicate(lambda x: x)
     second = np.array(

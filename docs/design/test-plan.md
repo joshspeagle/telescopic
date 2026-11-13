@@ -165,7 +165,7 @@ Kernel-specific tests:
 - **Histograms:** `histogram` returns masses, standard errors and edges.
 - **Summary:** `summary()` contains the fields of §7.3 and converts with `to_dict()`. `to_pandas()` is skipped without pandas.
 - **Merging:** `merge` rejects different configurations and overlapping indices, and its output equals one run over the union of indices.
-- **Censored replicates** are excluded from estimates and from $R$, and listed with meeting time `inf`; `var`, `std` and `quantile` divide by the $R$ replicates that met.
+- **Censored replicates** are excluded from estimates and from $R$, and listed with meeting time `inf`; `var`, `std` and `quantile` divide by the $R$ replicates that met. An estimate that needs more replicates that met than the run has raises, censored pairs not counted: 2 for `mean`, `cov` and `var`, 1 for `quantile`.
 - **Output shapes:** an `h` whose output is not `(n,)` or `(n, p)` raises.
 - **Interrupted results** say in `summary()` that their estimates are consistent, not exactly unbiased.
 
