@@ -80,9 +80,10 @@ def test_each_warning_fires_on_a_result_built_to_trigger_it(
 
 
 @pytest.mark.parametrize("met", [9, 0], ids=["some met", "none met"])
-def test_a_pair_censored_after_the_slow_threshold_is_slow(met):
-    # Where no pair met, the largest meeting time was nan, and max(nan, max_iter) nan.
-    found = issues(synthetic([2] * met + [-1] * 3, np.zeros(met), max_iter=20_000))
+def test_a_pair_censored_at_the_slow_threshold_is_slow(met):
+    # Its chains were compared at the cap, 10^4, so it was unmet there. Where no pair
+    # met, the largest meeting time was nan, and max(nan, max_iter) nan.
+    found = issues(synthetic([2] * met + [-1] * 3, np.zeros(met), max_iter=10_000))
     assert {"censored", "slow"} <= {issue.kind for issue in found}
 
 

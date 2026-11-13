@@ -133,3 +133,5 @@ All notable changes to this project are documented here. The format follows
   does, for the quantiles of a derived quantity; a `Result` prints as one line of its
   settings, such as `Result(R=100, d=2, k=63, m=630, lag=63, censored=0,
   interrupted=False)`.
+- A pair censored at a `max_iter` equal to the slow-pair threshold now raises the
+  slow-pair warning, since its chains were compared, unmet, at the threshold.

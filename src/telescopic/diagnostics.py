@@ -252,7 +252,7 @@ def issues(result: Result) -> list[Issue]:
     if disagreement:
         found.append(Issue("tuning", disagreement))
     threshold = slow_pair_threshold(result.lag, result.m)
-    if np.max(result._stopped) > threshold:
+    if np.max(result._earliest_meeting) > threshold:
         found.append(
             Issue(
                 "slow",
