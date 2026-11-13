@@ -31,16 +31,17 @@ def close_figures():
     plt.close("all")
 
 
-def test_the_survival_curve_counts_censored_pairs_up_to_the_cap():
+def test_the_survival_curve_ends_at_the_censored_fraction():
+    # Censored pairs counted as meeting at the cap, so the curve dropped to 0 there.
     histogram, survival = RESULT.plot_meeting_times()
     shifted = RESULT.meeting_times - RESULT.lag
     assert sum(patch.get_height() for patch in histogram.patches) == RESULT.n_replicates
     assert histogram.patches[0].get_x() == np.min(shifted)
     t, above = survival.lines[0].get_data()
-    cap = RESULT.max_iter - RESULT.lag
     assert RESULT.n_censored > 0
-    assert t[-1] == cap
-    np.testing.assert_allclose(above, [np.mean(np.minimum(shifted, cap) > s) for s in t])
+    assert t[-1] == RESULT.max_iter - RESULT.lag
+    assert above[-1] == RESULT.n_censored / len(shifted)
+    np.testing.assert_allclose(above, [np.mean(shifted > s) for s in t])
     assert survival.get_yscale() == "log"
 
 

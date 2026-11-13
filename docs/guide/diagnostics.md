@@ -33,7 +33,8 @@ and `result.index` its replicate index.
 
 {meth}`telescopic.Result.plot_meeting_times` draws a histogram of $\tau - L$ and its
 survival function on a log scale, where a straight tail means geometric meeting times. A
-censored pair counts in the survival function up to its cap, and not in the histogram.
+censored pair counts in the survival function at every time up to its cap, where the
+curve ends at the fraction of pairs censored, and not in the histogram.
 
 ```{code-cell} python
 result.plot_meeting_times();
