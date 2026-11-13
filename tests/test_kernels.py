@@ -308,7 +308,14 @@ def test_random_walk_rejects_invalid_parameters(kwargs, message):
 
 @pytest.mark.parametrize(
     ("weights", "message"),
-    [([np.nan, 1.0], "finite, non-negative"), ([0.0, 0.0], "not all zero"), ([1.0], "per kernel")],
+    [
+        ([np.nan, 1.0], "finite, non-negative"),
+        ([0.0, 0.0], "not all zero"),
+        ([1.0], "per kernel"),
+        # Their sums overflow, which normalized them to zeros, or are NaN, which warned.
+        ([1e308, 1e308], "with a finite sum"),
+        ([np.inf, -np.inf], "finite, non-negative"),
+    ],
 )
 def test_mixture_rejects_invalid_weights(weights, message):
     with pytest.raises(ValueError, match=message):
@@ -318,6 +325,17 @@ def test_mixture_rejects_invalid_weights(weights, message):
 def test_mixture_refuses_components_of_different_dimensions():
     with pytest.raises(ValueError, match="different dimensions"):
         Mixture([RandomWalk(np.eye(1)), RandomWalk(np.eye(2))], [0.5, 0.5])
+
+
+def test_a_tuned_mixture_with_components_of_different_dimensions_raises():
+    # Tuning sets the random walk's dimension, which the constructor could not compare.
+    mixture = Mixture(
+        [RandomWalk(), Independence(MultivariateT(np.zeros(1), np.eye(1)))], [0.5, 0.5]
+    )
+    tuned, _ = mixture.tune(TARGET, np.random.default_rng(0).standard_normal((100, 2)), rng=0)
+    message = "component 1 of the mixture: the kernel works in 1 dimensions, but the initial"
+    with pytest.raises(ValueError, match=message):
+        tuned.init_state(TARGET, np.zeros((3, 2)))
 
 
 class StandardNormal:
@@ -357,6 +375,33 @@ def test_independence_takes_a_proposal_whose_mean_is_a_method():
 def test_independence_refuses_a_proposal_without_sample_and_log_density():
     with pytest.raises(TypeError, match="proposal must have sample"):
         Independence(stats.multivariate_normal(np.zeros(2)))
+
+
+class NaNAboveOne(MultivariateT):
+    """A proposal whose log-density is NaN where the first coordinate exceeds 1."""
+
+    def log_density(self, x):
+        return np.where(x[:, 0] > 1, np.nan, super().log_density(x))
+
+
+@pytest.mark.parametrize("coupled", [False, True])
+def test_independence_raises_on_a_nan_proposal_log_density(coupled):
+    # Every move to such a point was rejected, which sampled the target restricted to
+    # the rest of the space. Of 20 draws from N(0, 4), none is above 1 with probability
+    # 0.69^20 < 0.001.
+    kernel = Independence(NaNAboveOne([0.0], [[4.0]], df=None))
+    start = kernel.init_state(TARGET, np.zeros((20, 1)))
+    states = (start, start.take(slice(None))) if coupled else (start,)
+    step = kernel.coupled_step if coupled else kernel.step
+    with pytest.raises(ValueError, match=r"proposal log_density returned nan at x = \["):
+        step(TARGET, *states, random_draws(20, 0))
+
+
+def test_state_put_raises_when_the_new_states_lack_gradients():
+    # NumPy wrote None as NaN gradients, and a mixture's MALA component then stuck.
+    states = state([[0.0], [1.0]], grad=True)
+    with pytest.raises(ValueError, match="without gradients for states that carry them"):
+        states.put([1], state([[2.0]]))
 
 
 @pytest.mark.parametrize(
@@ -443,6 +488,17 @@ def test_mala_step_matches_the_reference_with_both_proposal_densities(u):
     np.testing.assert_allclose(new.x[0], expected, atol=1e-12)
     np.testing.assert_allclose(new.grad[0], banana_grad(expected), atol=1e-12)
     np.testing.assert_allclose(acceptance[0], alpha, atol=1e-12)
+
+
+def test_mala_coupled_step_with_an_overflowing_drift_emits_no_warning_and_keeps_the_states():
+    # A step size of 1e300 makes the drift infinite; the warning was an error under
+    # the filter of the test suite, and reached users of sample(). This test relies on
+    # that filter (filterwarnings = error in pyproject.toml) to catch it.
+    kernel = MALA(1e300, cov=[[1.0]])
+    x, y = state([[1.0], [2.0]], grad=True), state([[-1.0], [3.0]], grad=True)
+    new_x, new_y = kernel.coupled_step(TARGET, x, y, random_draws(2, 0))
+    np.testing.assert_array_equal(new_x.x, x.x)
+    np.testing.assert_array_equal(new_y.x, y.x)
 
 
 @pytest.mark.parametrize("gap", [2.0, 0.05, 0.0])
@@ -636,6 +692,18 @@ def test_crn_gibbs_couplings_need_a_multivariate_normal_for_a_block_of_several()
     x, y = gibbs_state([0.0, 0.0, 1.0]), gibbs_state([0.0, 0.0, -1.0])
     with pytest.raises(TypeError, match="blocks of one coordinate"):
         kernel.coupled_step(Target(None), x, y, fixed_draws(uniforms=[[0.5, 0.5]]))
+
+
+def test_crn_refuses_conditionals_whose_mean_and_cov_are_methods():
+    # A frozen dirichlet has mean() and cov(), which failed inside with a TypeError that
+    # named neither the coupling nor the block.
+    def given(point, block):
+        return stats.dirichlet([1.0, 2.0]) if block == 0 else Normal(0.0, 1.0)
+
+    kernel = Gibbs(given, [[0, 1], [2]], coupling="crn")
+    x, y = gibbs_state([0.3, 0.7, 1.0]), gibbs_state([0.3, 0.7, -1.0])
+    with pytest.raises(TypeError, match="mean and cov are values, not methods"):
+        kernel.coupled_step(Target(None), x, y, random_draws(1, 0))
 
 
 def test_crn_gibbs_couplings_use_common_numbers_for_pairs_closer_than_underflow():

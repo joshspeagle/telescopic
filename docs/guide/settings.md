@@ -171,7 +171,8 @@ Every evaluation belongs to the run, and no pilot ran.
 
 ## How many replicates
 
-- {func}`telescopic.sample` runs 100 by default. The standard errors fall as
+- {func}`telescopic.sample` runs 100 by default, and at least 2, since the estimates and
+  their standard errors need two replicates that met. The standard errors fall as
   $1/\sqrt R$, and the error bars are valid as $R$ grows
   ([Theory](../theory.md#guarantees-and-their-limits)).
 - The estimates are exactly unbiased for a number of replicates fixed before the run.

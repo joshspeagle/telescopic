@@ -119,6 +119,8 @@ class Result:
         tuning: TuningReport | None = None,
         pilot: FloatArray | None = None,
     ) -> None:
+        if not len(replicates.index):
+            raise ValueError("replicates must hold at least one replicate, not none")
         met = np.isfinite(replicates.meeting_time)
         self.n_replicates = int(met.sum())
         self.n_censored = len(met) - self.n_replicates
@@ -346,7 +348,9 @@ class Result:
         Returns
         -------
         dict
-            ``meeting_time`` quantiles (50, 90, 99) and maximum; ``tail_index``,
+            ``meeting_time`` quantiles (50, 90, 99) and maximum over every pair, ``inf``
+            where one falls on a censored pair, which sorts above every meeting time;
+            ``tail_index``,
             :func:`~telescopic.diagnostics.hill` of :math:`\\tau - L + 1` with
             ``n_tail`` :math:`= \\lfloor R/10 \\rfloor`, ``nan`` below 500 replicates;
             ``censored``; ``late_fraction``, the fraction of pairs with
@@ -364,10 +368,11 @@ class Result:
     @functools.cached_property
     def _diagnostics(self) -> dict[str, Any]:
         # Computed once: each run's warnings, the summary and check all read it.
-        met = self.meeting_times[np.isfinite(self.meeting_times)]
-        quantiles = np.quantile(met, [0.5, 0.9, 0.99]) if len(met) else np.full(3, np.nan)
+        # Over every pair, censored ones (inf) above the others, as in the pilot of k.
+        quantiles = np.quantile(self.meeting_times, [0.5, 0.9, 0.99, 1], method="inverted_cdf")
         tail_index = np.nan
         if self.n_replicates >= 500:
+            met = self.meeting_times[np.isfinite(self.meeting_times)]
             tail_index = diagnostics.hill(met - self.lag + 1, self.n_replicates // 10)
         n_late = int(np.sum(self.meeting_times - self.lag > self.k))
         n_total = len(self.meeting_times)
@@ -393,7 +398,7 @@ class Result:
             "meeting_time_50": float(quantiles[0]),
             "meeting_time_90": float(quantiles[1]),
             "meeting_time_99": float(quantiles[2]),
-            "meeting_time_max": float(np.max(met)) if len(met) else np.nan,
+            "meeting_time_max": float(quantiles[3]),
             "tail_index": tail_index,
             "censored": self.n_censored,
             "late_fraction": n_late / n_total,
@@ -429,6 +434,7 @@ class Result:
             "m": self.m,
             "lag": self.lag,
             "thin": self.thin,
+            "max_iter": self.max_iter,
             "kernel": str(self.kernel),
             **self.diagnostics(),
             "interrupted": self.interrupted,
@@ -662,15 +668,19 @@ class Summary:
         footer = self.footer
         # The tail index needs 500 replicates.
         tail = "" if np.isnan(footer["tail_index"]) else f"; tail index {footer['tail_index']:.3g}"
+        # A quantile that falls on a censored pair is inf: beyond the cap.
+        times = [
+            f"> {footer['max_iter']}" if value == np.inf else f"{value:.4g}"
+            for value in (footer[f"meeting_time_{q}"] for q in ("50", "90", "99", "max"))
+        ]
         lines = [
             (
                 f"R = {footer['n_replicates']}, k = {footer['k']}, m = {footer['m']}, "
                 f"lag = {footer['lag']}, thin = {footer['thin']}; {footer['kernel']}"
             ),
             (
-                f"meeting times: median {footer['meeting_time_50']:.4g}, 90% "
-                f"{footer['meeting_time_90']:.4g}, 99% {footer['meeting_time_99']:.4g}, max "
-                f"{footer['meeting_time_max']:.4g}{tail}; censored {footer['censored']}"
+                f"meeting times: median {times[0]}, 90% {times[1]}, 99% {times[2]}, max "
+                f"{times[3]}{tail}; censored {footer['censored']}"
             ),
             (
                 f"cost per replicate: {footer['mean_cost']:.4g} kernel applications, "

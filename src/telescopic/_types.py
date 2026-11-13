@@ -96,6 +96,16 @@ def vector(name: str, values: npt.ArrayLike, ndim: int | None = None) -> FloatAr
     return array
 
 
+def log_densities(name: str, values: FloatArray, x: FloatArray) -> FloatArray:
+    # values, the log-densities that name returned at the rows of x, unless one is NaN or
+    # +inf, which raise ValueError with the first such point (spec R-INPUT-1). One
+    # reduction finds them, since they make the maximum fail the test.
+    if not np.max(values, initial=-np.inf) < np.inf:
+        row = int(np.argmax(np.isnan(values) | (values == np.inf)))
+        raise ValueError(f"{name} returned {values[row]} at x = {x[row].tolist()}")
+    return values
+
+
 def averaging(k: Any, m: Any, thin: Any) -> tuple[int, int, int]:
     # The settings of the averaging set S: 0 <= k <= m and thin >= 1, as ints.
     k, m = integer("k", k, minimum=0), integer("m", m, minimum=0)

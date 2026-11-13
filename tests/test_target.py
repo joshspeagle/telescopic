@@ -3,7 +3,9 @@ import math
 import numpy as np
 import pytest
 
+from telescopic.kernels import MALA
 from telescopic.target import Target
+from telescopic.testing import random_draws
 
 
 def gaussian(x, scale=1.0):
@@ -116,6 +118,53 @@ def test_a_target_without_gradient_refuses_gradient_requests():
 def test_a_wrong_output_shape_raises():
     with pytest.raises(ValueError, match="expected"):
         Target(lambda x: np.zeros(3), vectorize=True).log_prob(np.zeros((2, 1)))
+
+
+def test_a_vectorized_log_prob_that_squeezes_one_point_is_accepted():
+    # SciPy's multivariate_normal.logpdf returns shape () for one point, which stopped
+    # every run at the first batch of one row.
+    target = Target(lambda x: np.squeeze(gaussian(x)), vectorize=True)
+    values = target.log_prob(np.ones((1, 2)))
+    assert values.shape == (1,)
+    assert values[0] == -1.0
+
+
+def test_a_log_prob_that_returns_one_element_arrays_point_by_point_is_accepted():
+    values = Target(lambda x: np.array([gaussian(x)])).log_prob(np.ones((3, 2)))
+    np.testing.assert_array_equal(values, [-1.0, -1.0, -1.0])
+
+
+def test_a_gradient_of_the_wrong_shape_still_raises():
+    target = Target(gaussian, grad=lambda x: -x.T, vectorize=True)
+    with pytest.raises(ValueError, match=r"returned shape \(2, 3\) for 3 points"):
+        target.log_prob_and_grad(np.ones((3, 2)))
+
+
+@pytest.mark.parametrize("buffered", ["log_prob", "grad"])
+def test_a_target_function_that_reuses_its_buffer_does_not_alias_states(buffered):
+    # The start states aliased the buffer, so the next evaluation, at the proposals,
+    # overwrote them, and a MALA step kept the proposals' values on rejected rows.
+    buffers = {}
+
+    def reusing(function):
+        def wrapped(x):
+            values = function(x)
+            out = buffers.setdefault((function, values.shape), np.empty(values.shape))
+            out[...] = values
+            return out
+
+        return wrapped
+
+    functions = {"log_prob": gaussian, "grad": np.negative}
+    functions[buffered] = reusing(functions[buffered])
+    target = Target(functions["log_prob"], functions["grad"], vectorize=True)
+    n = 2000
+    kernel = MALA(1.6, cov=[[1.0]])
+    start = kernel.init_state(target, np.random.default_rng(0).standard_normal((n, 1)))
+    new, _ = kernel.step(target, start, random_draws(n, 0))
+    for states in (start, new):
+        np.testing.assert_array_equal(states.log_prob, gaussian(states.x))
+        np.testing.assert_array_equal(states.grad, -states.x)
 
 
 @pytest.mark.parametrize(("log_prob", "grad"), [(1.0, None), (gaussian, 1.0)])

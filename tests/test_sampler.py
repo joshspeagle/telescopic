@@ -170,6 +170,15 @@ def test_invalid_arguments_raise_before_any_run(call, message):
         call()
 
 
+def test_sample_refuses_fewer_than_two_replicates():
+    # One replicate was tuned and run, and its result could give no estimate.
+    def never(x):
+        raise AssertionError("sample() did work before checking n_replicates")
+
+    with pytest.raises(ValueError, match="n_replicates must be at least 2, not 1"):
+        sample(never, INIT, 1)
+
+
 def test_unknown_kernel_names_are_listed():
     with pytest.raises(ValueError, match="'auto', 'rwmh', 'mala', 'hmc', 'independence'"):
         CoupledSampler(log_prob, INIT, kernel="nuts")

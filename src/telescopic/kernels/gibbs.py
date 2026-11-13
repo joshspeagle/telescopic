@@ -34,6 +34,8 @@ class Gibbs(Kernel):
       and ``cov``, whatever its type, and common standard normals go through a square
       root of each ``cov``, a matrix of the block's size that may be singular. A
       conditional with ``mean`` and ``cov`` that is not normal would get the wrong law;
+      one whose ``mean`` and ``cov`` are methods, as a frozen SciPy ``dirichlet``'s are,
+      raises ``TypeError``;
     - ``"two-scale"``: common random numbers for pairs farther apart than ``threshold``
       at the start of the sweep, the maximal coupling for the others (Biswas, Bhattacharya,
       Jacob & Johndrow 2022).
@@ -214,12 +216,17 @@ def _common(p: list[Any], q: list[Any], draws: Draws, size: int) -> tuple[Any, .
         u = np.maximum(draws.uniform(), np.finfo(np.float64).tiny)
         # Each ppf gives a scalar, or an array for array parameters.
         return tuple([c.ppf(value) for c, value in zip(side, u, strict=True)] for side in (p, q))
+    # Values, not methods: a frozen SciPy dirichlet has mean() and cov().
     if not all(
-        hasattr(conditional, "mean") and hasattr(conditional, "cov") for conditional in p + q
+        hasattr(conditional, "mean")
+        and hasattr(conditional, "cov")
+        and not callable(conditional.mean)
+        and not callable(conditional.cov)
+        for conditional in p + q
     ):
         raise TypeError(
             "coupling='crn' needs conditionals with ppf for blocks of one coordinate, or "
-            "multivariate normal ones with mean and cov"
+            "multivariate normal ones whose mean and cov are values, not methods"
         )
     z = draws.normal(size)
     return tuple(

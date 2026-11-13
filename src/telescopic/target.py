@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 
-from telescopic._types import FloatArray, read_only
+from telescopic._types import FloatArray, log_densities, read_only
 
 
 class Target:
@@ -35,9 +35,12 @@ class Target:
     Notes
     -----
     The functions receive read-only arrays: a function that modifies its input raises
-    instead of corrupting the chains. The counters ``n_log_prob`` and ``n_grad`` count
-    evaluations point by point, and ``n_grad_zeroed`` the gradients taken as 0 because
-    they were not finite where the log-density is.
+    instead of corrupting the chains. Their outputs are copied, so a function may reuse
+    its output array, and an output whose shape differs from the expected one only by
+    axes of length 1, as SciPy's ``logpdf`` of one point, is reshaped. The counters
+    ``n_log_prob`` and ``n_grad`` count evaluations point by point, and
+    ``n_grad_zeroed`` the gradients taken as 0 because they were not finite where the
+    log-density is.
     """
 
     def __init__(
@@ -82,11 +85,7 @@ class Target:
             return np.zeros(len(x))
         values = self._call(self._log_prob, x, ())
         self.n_log_prob += len(x)
-        # One reduction finds NaN or +inf, which make the maximum fail the test.
-        if not np.max(values, initial=-np.inf) < np.inf:
-            row = int(np.argmax(np.isnan(values) | (values == np.inf)))
-            raise ValueError(f"log_prob returned {values[row]} at x = {x[row].tolist()}")
-        return values
+        return log_densities("log_prob", values, x)
 
     def log_prob_and_grad(
         self, x: FloatArray, *, start: bool = False
@@ -122,8 +121,6 @@ class Target:
                     "where log_prob is finite: chains cannot start there; compute grad in "
                     "log space, as with scipy.special.logsumexp, or start them elsewhere"
                 )
-            # A copy: a vectorized grad may return its own array.
-            gradients = gradients.copy()
             gradients[bad] = 0.0
             self.n_grad_zeroed += int(bad.sum())
         return values, gradients
@@ -138,11 +135,15 @@ class Target:
         else:
             values = [function(row, *self.args, **self.kwargs) for row in view]
             returned_none = False
-        out = np.asarray(values, dtype=np.float64)
+        # A copy, so that a function that reuses its own array cannot alias states.
+        out = np.array(values, dtype=np.float64)
         # NumPy reads None as NaN, and the error would then blame the value.
         if not self.vectorize and np.isnan(out).any():
             returned_none = any(value is None for value in values)
-        if returned_none or out.shape != (len(x), *event):
+        expected = (len(x), *event)
+        # Axes of length 1 change neither the values nor their order, so a shape that
+        # differs only by them is reshaped, as SciPy's logpdf of one point, shape ().
+        if returned_none or _without_ones(out.shape) != _without_ones(expected):
             name = getattr(function, "__name__", "the target function")
             per_point = "a float" if not event else f"shape {event}"
             if returned_none:
@@ -151,6 +152,10 @@ class Target:
                 )
             raise ValueError(
                 f"{name} returned shape {out.shape} for {len(x)} points; expected "
-                f"{(len(x), *event)}, that is {per_point} for each point"
+                f"{expected}, that is {per_point} for each point"
             )
-        return out
+        return out.reshape(expected)
+
+
+def _without_ones(shape: tuple[int, ...]) -> list[int]:
+    return [size for size in shape if size != 1]

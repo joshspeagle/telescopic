@@ -230,8 +230,10 @@ The columns of the table:
 The lines below it:
 
 - $R$, the settings `k`, `m`, `lag` and `thin` ([Settings](settings.md)), and the kernel;
-- the median, the 90% and 99% quantiles and the maximum of the meeting times of the
-  pairs that met; from 500 replicates, their tail index
+- the median, the 90% and 99% quantiles and the maximum of the meeting times of every
+  pair, where censored pairs sort above every pair that met, and a quantile that falls
+  on one shows as `>` and the cap, such as `> 12` for `max_iter=12`; from 500
+  replicates, the tail index of those that met
   ([`tail`](diagnostics.md#heavy-tailed-meeting-times-tail)); and the number of censored
   pairs ([`censored`](diagnostics.md#censored-pairs-censored));
 - the mean cost of a replicate in kernel applications and in seconds, and the relative

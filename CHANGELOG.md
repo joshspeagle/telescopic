@@ -100,3 +100,20 @@ All notable changes to this project are documented here. The format follows
   corrects the meaning of the relative cost and the source of HMC's target acceptance
   rate, and describes `discrete_maximal` as serving kernels on finite state spaces, not
   a built-in kernel.
+- Fixes of run-time defects: a vectorized log-density that returns shape `()` for one
+  point, as SciPy's `multivariate_normal.logpdf` does, or any output that differs from
+  the expected shape only by axes of length 1, is accepted; `Target` copies what its
+  functions return, so one that reuses its output array no longer corrupts states; an
+  `Independence` proposal whose `log_density` is NaN or `+inf` raises with the point
+  instead of biasing the chain; the meeting-time quantiles of `Result.diagnostics()` and
+  the summary cover every pair, `inf` (printed `> max_iter`) where one falls on a
+  censored pair, and are observed meeting times (the inverted empirical CDF), so they
+  change for runs without censoring too: the 90% quantile of meeting times 1 to 100 is
+  90, not 90.1, and the median of an even number of pairs is the lower middle value;
+  the summary's footer has `max_iter`; the survival curve of the meeting times ends at
+  the fraction of pairs censored; `sample()` refuses fewer than 2 replicates before
+  tuning; a `Result` with no replicates, Mixture weights whose sum overflows, a tuned
+  mixture whose components differ in dimension, a kernel that drops its states'
+  gradients, and `coupling="crn"` with conditionals whose `mean` and `cov` are methods
+  raise a `ValueError` or `TypeError` that names the cause; MALA's coupled step no
+  longer warns when its drift overflows.

@@ -230,6 +230,24 @@ def test_a_result_needs_the_signed_measures_of_its_replicates():
         Result(replicates)
 
 
+def test_a_result_with_no_replicates_raises_at_construction():
+    # diagnostics() and check() divided by zero, and tv_bound() reduced an empty array.
+    with pytest.raises(ValueError, match="at least one replicate"):
+        synthetic([], [])
+
+
+def test_meeting_time_quantiles_sort_censored_pairs_above_the_cap():
+    # 4 of 10 pairs censored: the median is the 5th smallest meeting time, and the 90%
+    # and 99% quantiles and the maximum fall on censored pairs. Over the pairs that met,
+    # the median was 3.5 and the others at most 6.
+    result = synthetic([1, 2, 3, 4, 5, 6, -1, -1, -1, -1], np.arange(6.0), max_iter=8)
+    values = result.diagnostics()
+    assert values["meeting_time_50"] == 5
+    for key in ("meeting_time_90", "meeting_time_99", "meeting_time_max"):
+        assert values[key] == np.inf
+    assert "median 5, 90% > 8, 99% > 8, max > 8; censored 4" in repr(result.summary())
+
+
 def test_censored_pairs_need_the_cap_of_their_run():
     tau = RESULT._replicates.meeting_time.copy()
     tau[0] = np.inf

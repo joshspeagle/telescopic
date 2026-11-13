@@ -1,0 +1,11 @@
+commit 964c198, Python 3.13.18, x86_64, EXTRA_QUEUED_CALLS = 1
+ProcessPoolExecutor(3), 24 chunks of 1.0 s
+stop at 0.5 s: running [0, 1, 2]; started after the stop [3]; returned at 2.0 s, 1.0 s after the running chunks ended
+stop at 1.5 s: running [3, 4, 5]; started after the stop [6, 7]; returned at 3.0 s, 1.0 s after the running chunks ended
+stop at 2.5 s: running [6, 7, 8]; started after the stop [9, 10, 11, 12]; returned at 5.0 s, 2.0 s after the running chunks ended
+stop at 0.5 s: running [0, 1, 2]; started after the stop [3]; returned at 2.0 s, 1.0 s after the running chunks ended
+stop at 1.5 s: running [3, 4, 5]; started after the stop [6, 7, 8]; returned at 3.0 s, 1.0 s after the running chunks ended
+stop at 2.5 s: running [6, 7, 8]; started after the stop [9, 10, 11, 12]; returned at 5.0 s, 2.0 s after the running chunks ended
+stop at 0.5 s: running [0, 1, 2]; started after the stop [3]; returned at 2.0 s, 1.0 s after the running chunks ended
+stop at 1.5 s: running [3, 4, 5]; started after the stop [6, 7, 8, 9]; returned at 4.0 s, 2.0 s after the running chunks ended
+stop at 2.5 s: running [6, 7, 8]; started after the stop [9, 10, 11, 12]; returned at 5.0 s, 2.0 s after the running chunks ended
