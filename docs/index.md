@@ -10,10 +10,11 @@ kernelspec:
 :::{container} lede
 **Unbiased Markov chain Monte Carlo from pairs of coupled chains.**
 
-telescopic runs pairs of Markov chains that share their random numbers until the two
-chains meet, and turns each pair into an exactly unbiased estimate of expectations under
-the target. Averages over independent pairs have error bars that are valid as the number
-of pairs grows, not as the chains grow.
+telescopic runs pairs of Markov chains under a coupling that makes the two chains meet,
+and turns each pair into an unbiased estimate of expectations under the target. Averages
+over independent pairs have error bars that are valid as the number of pairs grows, not
+as the chains grow. [Theory](theory.md#guarantees-and-their-limits) states the conditions
+and the limits.
 :::
 
 ```{hero}

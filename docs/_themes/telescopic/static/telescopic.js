@@ -14,6 +14,7 @@
       button.setAttribute("aria-label", isDark() ? "Switch to the light theme" : "Switch to the dark theme");
     }
     label();
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", label);
     button.addEventListener("click", function () {
       var next = isDark() ? "light" : "dark";
       root.dataset.theme = next;
@@ -24,16 +25,20 @@
 
   /* Menu: below the width at which the sections leave the top bar. */
   var menu = document.querySelector("[data-menu]"), nav = document.getElementById("sidebar");
-  if (menu && nav) {
-    menu.addEventListener("click", function () {
-      var open = nav.classList.toggle("open");
-      menu.setAttribute("aria-expanded", open ? "true" : "false");
-      menu.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
-    });
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && nav.classList.contains("open")) { menu.click(); menu.focus(); }
-    });
-  }
+  menu.addEventListener("click", function () {
+    var open = nav.classList.toggle("open");
+    menu.setAttribute("aria-expanded", open ? "true" : "false");
+    menu.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+    /* the open menu covers the page, so the keyboard must not reach what lies behind it */
+    document.querySelectorAll("main, .foot").forEach(function (e) { e.inert = open; });
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && nav.classList.contains("open")) { menu.click(); menu.focus(); }
+  });
+  /* a window widened past the menu's breakpoint hides the button but would keep the page inert */
+  addEventListener("resize", function () {
+    if (nav.classList.contains("open") && !menu.offsetParent) menu.click();
+  });
 
   /* On this page: mark the last section whose heading has passed under the top bar. */
   var links = Array.from(document.querySelectorAll(".toc > ul > li > ul > li > a")), shown = -1;
@@ -77,16 +82,18 @@
   }
 })();
 
-/* Once sphinx-copybutton has added its buttons, name them; once MathJax has typeset, let
-   the keyboard reach every block that scrolls sideways. */
+/* Let the keyboard reach every block that scrolls sideways: now, whenever the article's
+   width changes, and once MathJax has typeset, which can take seconds on a page with much
+   math. Once sphinx-copybutton has added its buttons, name them. */
+function reach() {
+  document.querySelectorAll("main div.highlight, main div.math, main mjx-container[display='true'], " +
+    "main table.docutils, main dl.py > dt, div.cell_output .output pre, div.cell_output .output.text_html")
+    .forEach(function (el) {
+      if (el.scrollWidth > el.clientWidth && !el.hasAttribute("tabindex")) el.setAttribute("tabindex", "0");
+    });
+}
+new ResizeObserver(reach).observe(document.querySelector("main"));
 addEventListener("load", function () {
   document.querySelectorAll("button.copybtn").forEach(function (b) { b.setAttribute("aria-label", "Copy code"); });
-  var typeset = window.MathJax && MathJax.startup ? MathJax.startup.promise : Promise.resolve();
-  typeset.then(function () {
-    document.querySelectorAll("main div.highlight, main div.math, main mjx-container[display='true'], " +
-      "main table.docutils, main dl.py > dt, div.cell_output .output pre, div.cell_output .output.text_html")
-      .forEach(function (el) {
-        if (el.scrollWidth > el.clientWidth && !el.hasAttribute("tabindex")) el.setAttribute("tabindex", "0");
-      });
-  });
+  if (window.MathJax && MathJax.startup) MathJax.startup.promise.then(reach);
 });

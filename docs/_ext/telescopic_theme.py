@@ -5,7 +5,8 @@
 * A page with two or more sections gets the "On this page" outline.
 * A page whose front matter says ``layout: home`` uses ``home.html``.
 * ``{hero}`` inlines the landing page's coupled pair (``_themes/telescopic/hero.svg``,
-  written by ``_scripts/brand.py``) as a figure, with the directive's content as caption.
+  written by ``_scripts/brand.py``) as a figure, with its one paragraph of content as
+  caption. A page has at most one hero, since the drawing carries fixed ids.
 """
 
 from __future__ import annotations
@@ -31,13 +32,15 @@ class Hero(SphinxDirective):
         self.env.note_dependency(str(HERO))
         caption = nodes.Element()
         self.state.nested_parse(self.content, self.content_offset, caption)
+        if len(caption) != 1 or not isinstance(caption[0], nodes.paragraph):
+            raise self.error("the hero directive expects one paragraph, its caption, as content")
         figure = nodes.figure(classes=["hero"])
         figure += nodes.raw("", HERO.read_text(encoding="utf-8"), format="html")
         figure += nodes.caption("", "", *caption[0].children)
         return [figure]
 
 
-def _sections(app: Sphinx, env: BuildEnvironment) -> None:
+def _sections(app: Sphinx, env: BuildEnvironment) -> set[str]:
     root = env.get_doctree(app.config.root_doc)
     sections = []
     for toctree in root.findall(addnodes.toctree):
@@ -50,7 +53,11 @@ def _sections(app: Sphinx, env: BuildEnvironment) -> None:
             sections.append({"caption": toctree["caption"], "pages": pages})
     if not sections:
         logger.warning("the root document has no captioned toctree, so the top bar is empty")
+    # Every page carries the navigation, so a change to it rewrites every page, not only
+    # those that were read again.
+    changed = sections != getattr(env, "telescopic_sections", None)
     env.telescopic_sections = sections
+    return set(env.found_docs) if changed else set()
 
 
 def _page_context(

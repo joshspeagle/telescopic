@@ -13,10 +13,11 @@
     {{ super() }}
 {%- endblock %}
 
+{#- Both lockups load lazily, so the browser fetches only the one its theme shows. #}
 {%- macro lockup(height) %}
 <a class="brand" href="{{ pathto(root_doc) }}">
-  <img class="for-light" src="{{ pathto('_static/brand/lockup-light.svg', 1) }}" alt="telescopic home" height="{{ height }}">
-  <img class="for-dark" src="{{ pathto('_static/brand/lockup-dark.svg', 1) }}" alt="telescopic home" height="{{ height }}">
+  <img class="for-light" src="{{ pathto('_static/brand/lockup-light.svg', 1) }}" alt="telescopic home" height="{{ height }}" loading="lazy">
+  <img class="for-dark" src="{{ pathto('_static/brand/lockup-dark.svg', 1) }}" alt="telescopic home" height="{{ height }}" loading="lazy">
 </a>
 {%- endmacro %}
 
@@ -66,7 +67,7 @@
 {%- block content %}
 <div class="docs">
   {{ section_nav(false) }}
-  <main class="article" id="main">
+  <main class="article" id="main" role="main">
     {% block body %}{% endblock %}
     {%- if prev or next %}
     <nav class="pager" aria-label="Previous and next page">

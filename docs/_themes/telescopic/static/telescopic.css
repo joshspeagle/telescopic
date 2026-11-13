@@ -27,11 +27,11 @@ body {
 }
 a { color: var(--t-accent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
 a:hover { text-decoration-thickness: 2px; }
-:focus-visible { outline: var(--t-focus) solid var(--t-accent); outline-offset: 2px; }
+:focus-visible, button.copybtn:focus-visible { outline: var(--t-focus) solid var(--t-accent); outline-offset: 2px; }
 img, svg { max-width: 100%; height: auto; }
 hr { border: 0; border-top: 1px solid var(--t-line); margin: 2rem 0; }
 ::selection { background: color-mix(in srgb, var(--t-accent) 24%, transparent); }
-strong, b { font-weight: 600; }
+strong { font-weight: 600; }
 
 .skip {
   position: absolute; left: 12px; top: -60px; z-index: 50; padding: 8px 12px;
@@ -58,7 +58,7 @@ strong, b { font-weight: 600; }
   display: flex; align-items: center; gap: 28px; padding: 0 var(--gutter-r) 0 var(--gutter-l);
 }
 .brand { display: flex; align-items: center; flex: none; }
-.brand img { height: 30px; width: auto; vertical-align: middle; }
+.brand img { height: 30px; vertical-align: middle; }
 .mainnav { display: flex; gap: 4px; min-width: 0; }
 .mainnav a {
   color: var(--t-muted); text-decoration: none; white-space: nowrap;
@@ -97,7 +97,7 @@ strong, b { font-weight: 600; }
   position: sticky; top: calc(var(--bar-h) + 28px); align-self: start;
   max-height: calc(100vh - var(--bar-h) - 56px); overflow-y: auto;
 }
-.side { font: var(--t-type-caption); font-size: 0.92rem; }
+.side { font: var(--t-type-caption); }
 .side-caption, .toc-caption {
   font: var(--t-type-label); letter-spacing: var(--t-tracking-label); text-transform: uppercase;
   color: var(--t-muted); margin: 0 0 10px;
@@ -113,7 +113,7 @@ strong, b { font-weight: 600; }
 .side li a[aria-current] { color: var(--t-ink); font-weight: 600; border-left-color: var(--t-met); }
 .side a:focus-visible, .toc a:focus-visible { outline-offset: -2px; }
 
-.toc { font: var(--t-type-caption); font-size: 0.86rem; }
+.toc { font: var(--t-type-caption); }
 .toc ul { list-style: none; margin: 0; padding: 0; }
 .toc > ul > li > a { display: none; } /* the page title */
 .toc ul ul ul { padding-left: 12px; }
@@ -156,8 +156,8 @@ strong, b { font-weight: 600; }
 .article li > p { margin: 0.2rem 0; }
 .article dl:not([class*="py"]):not(.field-list) > dt { font-weight: 600; }
 .article dl:not([class*="py"]) > dd { margin-left: 1.4rem; }
-a.headerlink { visibility: hidden; color: var(--t-muted); text-decoration: none; padding-left: 6px; }
-:is(h1, h2, h3, h4, dt):hover > a.headerlink, a.headerlink:focus-visible { visibility: visible; }
+a.headerlink { color: var(--t-muted); text-decoration: none; padding-left: 6px; }
+a.headerlink:focus-visible { visibility: visible; } /* basic.css shows it on hover */
 blockquote { margin: 1rem 0; padding: 0 0 0 1rem; border-left: var(--t-rule) solid var(--t-line); color: var(--t-muted); }
 
 code, kbd, pre { font-family: var(--t-font-mono); }
@@ -166,21 +166,19 @@ code, kbd, pre { font-family: var(--t-font-mono); }
   overflow-wrap: anywhere;
 }
 :not(pre) > code span.pre { white-space: normal; } /* basic.css sets nowrap, which defeats the wrap */
-a code.literal { color: inherit; }
 a code { background: none; padding: 0; }
 code.xref { font-weight: 400; }
 /* tables scroll sideways, so their cells keep words whole */
 table.docutils code { overflow-wrap: break-word; }
-.toc code { background: none; padding: 0; font-size: 0.9em; overflow-wrap: anywhere; }
+.toc code { font-size: 0.9em; }
 
 /* ---------------------------------------------------------------- code */
 div.highlight {
-  position: relative; margin: 1rem 0; overflow-x: auto;
+  margin: 1rem 0; overflow-x: auto;
   background: var(--t-surface); border: 1px solid var(--t-line); border-radius: var(--t-radius);
 }
 div.highlight pre {
-  margin: 0; padding: 13px 16px; background: transparent; border: 0; overflow: visible;
-  font: var(--t-type-code); color: var(--t-ink);
+  padding: 13px 16px; overflow: visible; font: var(--t-type-code);
 }
 /* Pygments token classes start with their category: k keyword, s string, m number,
    c comment. The chain colors are not syntax colors. */
@@ -193,16 +191,21 @@ div.highlight pre {
 .highlight .hll { background: color-mix(in srgb, var(--t-accent) 12%, transparent); }
 
 button.copybtn {
-  position: absolute; top: 7px; right: 7px; width: auto; height: auto; padding: 2px 9px;
+  top: 7px; right: 7px; width: auto; height: auto; padding: 4px 9px;
   border: 1px solid var(--t-muted); border-radius: var(--small-radius);
   background: var(--t-bg); color: var(--t-ink); font: 0.76rem var(--t-font-text);
-  opacity: 0; transition: opacity 0.15s; cursor: pointer;
+  transition: opacity 0.15s; cursor: pointer;
 }
 div.highlight:hover button.copybtn, button.copybtn:focus-visible { opacity: 1; }
+/* copybutton.css greys the button on hover and press, which hides ink in the dark theme */
+div.highlight button.copybtn:is(:hover, :active) { background: var(--t-surface); }
 button.copybtn svg { display: none; }
-button.copybtn::after { content: "Copy"; }
-button.copybtn.success::after { content: "Copied"; }
-.o-tooltip--left::after { display: none; }
+/* sphinx-copybutton draws its label as a tooltip beside the button; draw it inside */
+button.copybtn.o-tooltip--left::after {
+  position: static; opacity: 1; visibility: visible; transform: none; transition: none;
+  padding: 0; font-size: inherit; background: none; color: inherit; content: "Copy";
+}
+button.copybtn.success.o-tooltip--left::after { content: "Copied"; }
 @media (hover: none) { button.copybtn { opacity: 1; } }
 
 /* ---------------------------------------------------------------- notebook cells (MyST-NB) */
@@ -215,7 +218,7 @@ button.copybtn.success::after { content: "Copied"; }
   --mystnb-traceback-border-color: var(--t-line);
 }
 div.cell { margin: 1.3rem 0; }
-div.cell div.cell_input { margin: 0; border: 0; background: none; }
+div.cell div.cell_input { border: 0; background: none; }
 div.cell_input div.highlight { margin: 0; }
 div.cell div.cell_output { margin: 0; padding: 0; border: 0; }
 div.cell_output div.highlight { margin: 0; padding: 0; border: 0; background: transparent; border-radius: 0; }
@@ -224,15 +227,11 @@ div.cell div.cell_output .output {
   border-radius: 0 0 var(--t-radius) var(--t-radius);
 }
 div.cell:has(.cell_output .output) div.cell_input div.highlight { border-radius: var(--t-radius) var(--t-radius) 0 0; }
-div.cell_output .output pre {
-  margin: 0; padding: 11px 16px; border: 0; background: transparent;
-  font: var(--t-type-code); color: var(--t-ink); white-space: pre; overflow-x: auto;
-}
+div.cell_output .output pre { padding: 11px 16px; overflow-x: auto; }
 div.cell div.cell_output .output.stderr, div.cell div.cell_output .output.traceback {
   border-left: var(--t-rule) solid var(--t-ochre);
 }
 div.cell_output .output.text_html { padding: 11px 16px; overflow-x: auto; }
-div.cell_output .output + .output { border-radius: 0 0 var(--t-radius) var(--t-radius); }
 /* Plots are drawn on the light figure ground (brand.py); in the dark theme they sit on a
    light panel. */
 div.cell_output img {
@@ -259,21 +258,21 @@ div.admonition:is(.warning, .caution, .attention, .danger, .error) { --accent: v
 
 /* ---------------------------------------------------------------- tables, maths, figures */
 table.docutils {
-  display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; border: 0;
+  display: block; max-width: 100%; overflow-x: auto;
   margin: 1.3rem 0; font-size: 0.93rem;
 }
 table.docutils th, table.docutils td {
-  padding: 8px 12px; border: 0; border-bottom: 1px solid var(--t-line); text-align: left; vertical-align: top;
+  padding: 8px 12px; border-bottom: 1px solid var(--t-line); text-align: left; vertical-align: top;
 }
 table.docutils thead th {
   font: var(--t-type-label); letter-spacing: var(--t-tracking-label); text-transform: uppercase;
-  color: var(--t-muted); border-bottom: 1px solid var(--t-muted); background: none;
+  color: var(--t-muted); border-bottom: 1px solid var(--t-muted);
 }
 table.docutils td p, table.docutils th p { margin: 0; }
 table caption { caption-side: top; text-align: left; color: var(--t-muted); font: var(--t-type-caption); padding-bottom: 6px; }
 div.math, mjx-container[display="true"] { overflow-x: auto; overflow-y: hidden; }
 span.eqno { float: right; color: var(--t-muted); }
-figure, div.figure { margin: 1.6rem 0; }
+figure { margin: 1.6rem 0; }
 figcaption, .article p.caption { margin-top: 8px; font: var(--t-type-caption); color: var(--t-muted); text-align: left; }
 figcaption p { margin: 0; }
 
@@ -283,23 +282,20 @@ dl.py > dt {
   font: var(--t-type-code); background: var(--t-surface); border-left: var(--t-rule) solid var(--t-ink);
   border-radius: 0 var(--small-radius) var(--small-radius) 0; padding: 9px 14px; overflow-x: auto;
 }
-dl.py > dt .sig-name { font-weight: 600; color: var(--t-ink); }
+dl.py > dt .sig-name { font-weight: 600; }
 dl.py > dt .sig-prename, dl.py > dt .property { color: var(--t-muted); }
-dl.py > dt .sig-param { font-style: normal; }
 dl.py > dt a { text-decoration: none; }
 dl.py > dt a:hover { text-decoration: underline; }
 dl.py > dt em { font-style: normal; }
 dl.py > dd { margin: 10px 0 0 18px; }
 dl.py dl.py > dt { background: transparent; border-left: 0; border-top: 1px solid var(--t-line); border-radius: 0; padding: 8px 0; }
-dl.field-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; margin: 1rem 0; }
+dl.field-list { grid-template-columns: minmax(0, 1fr); gap: 4px; margin: 1rem 0; }
 dl.field-list > dt {
   font: var(--t-type-label); letter-spacing: var(--t-tracking-label); text-transform: uppercase;
-  color: var(--t-muted); background: none; padding: 0; margin-top: 10px;
+  color: var(--t-muted); padding: 0; margin-top: 10px;
 }
 dl.field-list > dt .colon { display: none; }
-dl.field-list > dd { margin: 0; }
-dl.field-list > dd > dl > dt { font-weight: 400; }
-dl.field-list > dd > dl > dt strong { font-family: var(--t-font-mono); font-weight: 600; }
+dl.field-list > dd > dl > dt strong { font-family: var(--t-font-mono); }
 dl.field-list > dd > dl > dt .classifier { color: var(--t-muted); }
 
 /* ---------------------------------------------------------------- footnotes and search */
@@ -309,7 +305,7 @@ aside.footnote > span, aside.citation > span { float: left; padding-right: 6px; 
 #search-results ul.search li { padding: 12px 0; border-bottom: 1px solid var(--t-line); }
 #search-results ul.search li p.context { color: var(--t-muted); font-size: 0.92rem; margin: 4px 0 0; }
 #search-results .search-summary { color: var(--t-muted); }
-span.highlighted { background: color-mix(in srgb, var(--t-accent) 22%, transparent); border-radius: 2px; }
+span.highlighted { background: color-mix(in srgb, var(--t-accent) 12%, transparent); border-radius: 2px; }
 main form input[type="text"] {
   font: inherit; padding: 7px 10px; border: 1px solid var(--t-muted); border-radius: var(--small-radius);
   background: var(--t-bg); color: var(--t-ink);
@@ -356,13 +352,12 @@ main form input[type="submit"] {
 .home .routes { grid-area: routes; margin: 14px 0 18px; }
 .home .routes ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
 .home .routes li {
-  position: relative; margin: 0; padding: 14px 18px 15px; background: var(--t-surface);
+  position: relative; padding: 14px 18px 15px; background: var(--t-surface);
   border-top: var(--t-rule) solid var(--t-ink); border-radius: 0 0 var(--t-radius) var(--t-radius);
 }
-.home .routes li > p { margin: 0; font: var(--t-type-caption); font-size: 0.95rem; color: var(--t-ink); }
+.home .routes li > p { margin: 0; font: var(--t-type-caption); }
 .home .routes li > p:first-child { margin-bottom: 4px; }
 .home .routes li a { color: var(--t-ink); text-decoration: none; font: var(--t-type-minor); letter-spacing: var(--t-tracking-minor); }
-.home .routes li a strong { font-weight: inherit; }
 /* the whole card is the link's target */
 .home .routes li a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
 .home .routes li:hover { background: color-mix(in srgb, var(--t-accent) 9%, var(--t-surface)); }
@@ -374,11 +369,12 @@ main form input[type="submit"] {
 /* the hero: the coupled pair, drawn once telescopic.js adds `moving`; complete before
    JavaScript and under reduced motion */
 figure.hero { position: relative; }
-.hero-pair { display: block; width: 100%; height: auto; overflow: visible; }
+.hero-pair { display: block; width: 100%; overflow: visible; }
 .hero-lens { fill: var(--t-ink); fill-opacity: 0.07; stroke: var(--t-ink); stroke-width: 3; stroke-linejoin: round; }
 .hero-x { stroke: var(--t-cx); mix-blend-mode: var(--t-blend); }
 .hero-y { stroke: var(--t-cy); mix-blend-mode: var(--t-blend); }
 .hero-met { stroke: var(--t-met); }
+.hero-x, .hero-y, .hero-met { stroke-width: 3.5; }
 .hero-ring { fill: var(--t-bg); stroke: var(--t-met); stroke-width: 3; }
 .hero-label { fill: var(--t-muted); font: 17px var(--t-font-mono); }
 .hero-tick { stroke: var(--t-muted); stroke-width: 1.5; stroke-dasharray: 3 5; }
@@ -409,8 +405,8 @@ figure.hero { position: relative; }
 }
 @media (min-width: 901px) and (max-width: 1080px) {
   .home-page .home-menu.open {
-    display: block; position: fixed; inset: var(--bar-h) 0 0 0; z-index: 25; overflow-y: auto;
-    background: var(--t-bg); padding: 20px var(--gutter-r) 20px var(--gutter-l);
+    display: block; position: fixed; inset: var(--bar-h) 0 0 0; max-height: none; z-index: 25; overflow-y: auto;
+    align-self: stretch; background: var(--t-bg); padding: 20px var(--gutter-r) 20px var(--gutter-l);
   }
 }
 @media (max-width: 900px) {
@@ -420,7 +416,7 @@ figure.hero { position: relative; }
   .side, .home-menu {
     display: none; position: fixed; inset: var(--bar-h) 0 0 0; max-height: none; z-index: 25;
     align-self: stretch; background: var(--t-bg); padding: 20px var(--gutter-r) 20px var(--gutter-l);
-    overflow-y: auto; border-top: 1px solid var(--t-line);
+    border-top: 1px solid var(--t-line);
   }
   .side.open, .home-menu.open { display: block; }
   .side-caption { font-size: 0.8rem; }
@@ -435,7 +431,8 @@ figure.hero { position: relative; }
 }
 @media (max-width: 560px) {
   .brand img { height: 26px; }
-  .searchbar { width: 40px; height: 40px; padding: 0; justify-content: center; border: 0; }
+  .searchbar { height: 40px; padding: 0; justify-content: center; border: 0; }
+  .searchbar label { width: 40px; height: 40px; place-items: center; }
   .searchbar input { position: absolute; width: 1px; height: 1px; opacity: 0; }
   .searchbar:focus-within {
     position: absolute; left: 12px; right: 12px; width: auto; z-index: 2;
@@ -444,15 +441,20 @@ figure.hero { position: relative; }
   .searchbar:focus-within input { position: static; width: 100%; height: auto; opacity: 1; }
   .pager { grid-template-columns: 1fr; }
   .pager .nx { text-align: left; }
-  .home .routes ul { grid-template-columns: minmax(0, 1fr); }
   .hero-label { font-size: 26px; } /* about 14 px on a phone */
+  table.genindextable, table.genindextable :is(tbody, tr, td) { display: block; }
+  table.genindextable td { min-width: 100%; } /* outranks the cells' inline width of 33% */
 }
+/* the footer links to the repository too */
+@media (max-width: 360px) { .bar-right > a.iconbtn { display: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero button { display: none; }
   *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
 @media print {
-  .topbar, .side, .toc, .pager, .foot, .skip, .home-menu { display: none !important; }
+  .topbar, .side, .toc, .pager, .foot, .skip, .home-menu, .hero button { display: none !important; }
   .docs { display: block; padding: 0; }
+  .hero-reveal { animation: none !important; }
+  div.highlight, div.cell_output .output { overflow: visible; }
+  div.highlight pre, div.cell_output .output pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 }
