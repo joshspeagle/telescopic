@@ -1,4 +1,4 @@
-"""Tuning on pilot runs: adaptive Metropolis chains, and the choice of k, m and the lag."""
+"""Tuning on pilot runs: adaptive Metropolis chains, and the choice of k."""
 
 from __future__ import annotations
 
