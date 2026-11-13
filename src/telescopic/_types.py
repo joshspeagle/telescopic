@@ -6,6 +6,7 @@ import numbers
 import operator
 import reprlib
 from collections.abc import Sequence
+from decimal import Decimal
 from typing import Any, Protocol
 
 import numpy as np
@@ -115,12 +116,34 @@ def real_array(
     # the argument, with NumPy's error chained when it raised one (DECISIONS #103).
     cause = None
     try:
-        array = np.array(values, ndmin=ndmin, order="C")
+        array = real_objects(np.array(values, ndmin=ndmin, order="C"))
     except (TypeError, ValueError) as error:
         cause = error
     if cause is not None or array.dtype.kind not in "iuf":
-        raise TypeError(f"{name} must be {expected}, not {reprlib.repr(values)}") from cause
+        raise TypeError(f"{name} must be {expected}, not {shown(values)}") from cause
     return array if dtype is None else array.astype(dtype, copy=False)
+
+
+def real_objects(array: npt.NDArray[Any]) -> npt.NDArray[Any]:
+    # An object array whose elements are all real numbers, such as Fractions, Decimals or
+    # an object column of pandas, as floats, which NumPy's float conversion gave; any
+    # other array unchanged, so that None stays an object rather than NaN.
+    if array.dtype.kind == "O" and all(
+        isinstance(value, numbers.Real | Decimal) and not isinstance(value, bool)
+        for value in array.flat
+    ):
+        return array.astype(np.float64)
+    return array
+
+
+def shown(values: Any) -> str:
+    # values in one line of an error message: a pandas object or a matrix prints on several.
+    if values is None or np.isscalar(values) or isinstance(values, list | tuple | np.ndarray):
+        return " ".join(reprlib.repr(values).split())
+    dtype = getattr(values, "dtype", None)
+    return f"an object of type {type(values).__name__}" + (
+        "" if dtype is None else f" with dtype {dtype}"
+    )
 
 
 def vector(name: str, values: npt.ArrayLike, ndim: int | None = None) -> FloatArray:

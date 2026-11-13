@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import reprlib
 from collections.abc import Callable, Mapping
 from typing import Any
 
 import numpy as np
 import numpy.typing as npt
 
-from telescopic._types import FloatArray, flag, log_densities, read_only
+from telescopic._types import FloatArray, flag, log_densities, read_only, real_objects, shown
 from telescopic.warnings import InputWarning, warn
 
 
@@ -152,12 +151,8 @@ class Target:
             out = None
         # Axes of length 1 change neither the values nor their order, so a shape that
         # differs only by them is reshaped, as SciPy's logpdf of one point, shape ().
-        if (
-            out is None
-            or out.dtype.kind not in "biufc"
-            or _without_ones(out.shape) != _without_ones(expected)
-        ):
-            raise self._invalid(function, values, x, event)
+        if out is None or not _fits(out, expected):
+            out = self._converted(function, values, x, event)
         out = out.reshape(expected)
         return out if out.dtype == np.float64 else self._float64(function, out, x)
 
@@ -167,7 +162,7 @@ class Target:
         # A complex output with an imaginary part of exactly 0, as complex-step code gives,
         # is its real part (DECISIONS #109). Floats narrower than float64, as JAX
         # returns without 64-bit mode, round the target, so they warn once (#110).
-        name = _name(function)
+        name, returned = _name(function), out.dtype
         if out.dtype.kind == "c":
             rows = np.nonzero(out.imag)[0]
             if len(rows):
@@ -180,35 +175,55 @@ class Target:
         if out.dtype.kind == "f" and out.dtype.itemsize < 8 and not self._warned_precision:
             self._warned_precision = True
             warn(
-                f"{name} returned {out.dtype} values: the chains target the density "
+                f"{name} returned {returned} values: the chains target the density "
                 f"rounded to {out.dtype} precision; with JAX, enable 64-bit mode with "
                 "jax.config.update('jax_enable_x64', True)",
                 InputWarning,
             )
         return out.astype(np.float64)
 
-    def _invalid(
+    def _converted(
         self, function: Callable[..., Any], values: Any, x: FloatArray, event: tuple[int, ...]
-    ) -> ValueError:
-        # The error for an output that is not real numbers of the expected shape: point by
-        # point, at the first point where it went wrong.
-        name = _name(function)
-        per_point = "a float" if not event else f"shape {event}"
+    ) -> npt.NDArray[Any]:
+        # The outputs that NumPy could not stack as numbers of the expected shape, point by
+        # point: each must be real numbers of shape event up to axes of length 1, as from a
+        # function that returns a float on one branch and SciPy's logpdf of shape (1,) on
+        # another. Otherwise the error names the first point where it went wrong.
         if self.vectorize:
-            row, value = None, values
+            out = _array(values)
+            if out is None or not _fits(out, (len(x), *event)):
+                raise self._invalid(function, values, None, x, event)
+            return out
+        arrays = []
+        for row, value in enumerate(values):
+            array = _array(value)
+            if array is None or not _fits(array, event):
+                raise self._invalid(function, value, row, x, event)
+            arrays.append(array.reshape(event))
+        return np.array(arrays)
+
+    def _invalid(
+        self,
+        function: Callable[..., Any],
+        value: Any,
+        row: int | None,
+        x: FloatArray,
+        event: tuple[int, ...],
+    ) -> ValueError:
+        array = _array(value)
+        if value is None:
+            text = "None"
+        elif array is None:
+            text = "a ragged sequence"
+        elif array.dtype.kind not in "biufc":
+            text = shown(value)
         else:
-            shapes = [_form(value)[1] for value in values]
-            row = next(
-                row
-                for row, shape in enumerate(shapes)
-                if shape is None
-                or _without_ones(shape) != _without_ones(event)
-                or shape != shapes[0]
-            )
-            value = values[row]
-        text = _form(value)[0]
+            text = f"shape {array.shape}"
         where = f"for {len(x)} points" if row is None else f"at x = {x[row].tolist()}"
-        message = f"{name} returned {text} {where}; it must return {per_point} for each point"
+        per_point = "a float" if not event else f"shape {event}"
+        message = (
+            f"{_name(function)} returned {text} {where}; it must return {per_point} for each point"
+        )
         if isinstance(value, tuple) and not event:  # emcee's (log-density, blobs)
             message += ", and derived quantities are computed after the run with Result.estimate"
         return ValueError(message)
@@ -218,17 +233,17 @@ def _name(function: Callable[..., Any]) -> str:
     return getattr(function, "__name__", "the target function")
 
 
-def _form(value: Any) -> tuple[str, tuple[int, ...] | None]:
-    # How a returned value reads in an error, and its shape if it is numbers.
-    if value is None:
-        return "None", None
+def _array(value: Any) -> npt.NDArray[Any] | None:
+    # value as an array, with real numbers held as objects converted, or None if ragged.
     try:
-        array = np.asarray(value)
+        return real_objects(np.asarray(value))
     except ValueError:
-        return "a ragged sequence", None
-    if array.dtype.kind not in "biufc":
-        return reprlib.repr(value), None
-    return f"shape {array.shape}", array.shape
+        return None
+
+
+def _fits(array: npt.NDArray[Any], shape: tuple[int, ...]) -> bool:
+    # Whether array holds numbers of shape, up to axes of length 1.
+    return array.dtype.kind in "biufc" and _without_ones(array.shape) == _without_ones(shape)
 
 
 def _without_ones(shape: tuple[int, ...]) -> list[int]:

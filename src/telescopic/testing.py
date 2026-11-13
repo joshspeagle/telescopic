@@ -115,7 +115,6 @@ def check_coupling(
     at each of their ``4n`` new positions.
     """
     instance("kernel", kernel, Kernel)
-    instance("target", target, Target)
     x = real_array("x", x, "real numbers of shape (d,)")
     y = real_array("y", y, "real numbers of shape (d,)")
     if x.ndim != 1 or x.shape != y.shape:

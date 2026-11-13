@@ -207,8 +207,9 @@ def adaptive_metropolis(
                 if not np.isfinite(total).all():
                     raise ValueError(
                         "the tuning chains diverged (their covariance is not finite): the "
-                        "target may be improper; check that log_prob decreases in every "
-                        "direction, or give the kernel's parameters"
+                        "target may be improper, or its scales near the float64 limit; check "
+                        "that log_prob decreases in every direction, or give the kernel's "
+                        "parameters"
                     )
             # A ridge of 1e-12 times each coordinate's variance, which keeps the
             # factorisation independent of the coordinates' scales.

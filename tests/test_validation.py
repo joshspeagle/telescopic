@@ -1,3 +1,6 @@
+from decimal import Decimal
+from fractions import Fraction
+
 import numpy as np
 import pytest
 
@@ -37,6 +40,9 @@ def run_engine(**options):
         ("cov", lambda: initial.Normal(0.0, "abc")),
         ("mean", lambda: initial.Normal(1j, 1.0)),
         ("mean", lambda: initial.Normal(None, 1.0)),
+        ("mean", lambda: initial.Normal("1.5", 1.0)),
+        ("mean", lambda: initial.Normal(np.array([True, False]), 1.0)),
+        ("mean", lambda: initial.Normal([0.0, None], 1.0)),
         ("low", lambda: initial.Uniform(["a"], [1.0])),
         ("points", lambda: initial.Empirical([[1, 2], [3]])),
         (
@@ -68,6 +74,29 @@ def test_array_arguments_that_numpy_cannot_convert_raise_naming_the_argument(nam
     # complex number raised TypeError and a string ValueError, and None became NaN.
     with pytest.raises(TypeError, match=f"^{name} must be "):
         call()
+
+
+@pytest.mark.parametrize(
+    "mean",
+    [
+        [Fraction(1, 2), Fraction(3, 2)],
+        [Decimal("0.5"), Decimal("1.5")],
+        np.array([0.5, 1.5], dtype=object),  # as an object column of pandas gives
+    ],
+)
+def test_real_numbers_held_as_objects_are_array_arguments(mean):
+    # NumPy's float conversion took them, and the dtype test refused them.
+    np.testing.assert_array_equal(initial.Normal(mean, [1.0, 1.0]).mean, [0.5, 1.5])
+
+
+def test_an_array_argument_error_stays_on_one_line_for_pandas_objects():
+    # The Series printed over several lines inside the message.
+    pd = pytest.importorskip("pandas")
+    with pytest.raises(TypeError) as raised:
+        initial.Normal(pd.Series(["a", "b"], dtype=object), 1.0)
+    assert str(raised.value) == (
+        "mean must be real numbers of shape (d,), not an object of type Series with dtype object"
+    )
 
 
 def test_a_ragged_array_argument_chains_numpy_error():
@@ -127,3 +156,5 @@ def test_engine_run_and_tune_refuse_a_callable_target():
         engine.run(TARGET, "rwmh", INIT, [0], k=0, m=0, lag=1)
     with pytest.raises(TypeError, match="target must be a Target instance, not function"):
         RandomWalk().tune(log_prob, INIT, 0)
+    with pytest.raises(TypeError, match="target must be a Target instance, not function"):
+        tuning.adaptive_metropolis(log_prob, INIT, 0)

@@ -293,6 +293,15 @@ def test_a_flat_target_raises_that_the_tuning_chains_diverged():
         RandomWalk().tune(Target(lambda x: 0.0), Normal(np.zeros(2), 4 * np.eye(2)), 1)
 
 
+def test_a_target_with_scales_near_the_float64_limit_raises_naming_that_cause():
+    # The running sum of squares overflows on a proper target too, and the message named
+    # only an improper one.
+    scale = 1e153
+    target = Target(lambda x: -0.5 * np.sum((x / scale) ** 2, axis=-1), vectorize=True)
+    with pytest.raises(ValueError, match="or its scales near the float64 limit"):
+        RandomWalk().tune(target, Normal(np.zeros(2), scale**2 * np.eye(2)), 1)
+
+
 @pytest.mark.parametrize("kernel", [MALA(), HMC()])
 def test_tuning_does_not_raise_at_a_pilot_state_with_a_nan_gradient(kernel):
     # Dual averaging started its chains with init_state at the pilot's last states, so a

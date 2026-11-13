@@ -22,7 +22,8 @@ class SignedMeasure:
     Each replicate's weights sum to 1. Some are negative, so an estimate can fall outside
     the range of :math:`h`.
 
-    The arrays are checked at construction and stored as read-only views, without a copy.
+    The arrays are checked at construction and stored as read-only views, without a copy:
+    the attributes cannot be written to, but the arrays passed in still can.
 
     Attributes
     ----------
@@ -39,11 +40,17 @@ class SignedMeasure:
     n_replicates: int
 
     def __post_init__(self) -> None:
-        # Checked in one O(N) pass and stored read-only, without a copy: the sums cached
-        # for per_replicate would go stale if the arrays changed (DECISIONS #107).
+        # Checked in one O(N) pass and stored as read-only views, without a copy: the sums
+        # cached for per_replicate would go stale if the arrays changed through these
+        # attributes (DECISIONS #107).
         n_replicates = integer("n_replicates", self.n_replicates, minimum=0)
         atoms, weights = np.asarray(self.atoms), np.asarray(self.weights)
         replicate = np.asarray(self.replicate)
+        for name, array in (("atoms", atoms), ("weights", weights)):
+            if array.dtype.kind not in "iuf":
+                raise TypeError(
+                    f"{name} must be real numbers, not an array of dtype {array.dtype}"
+                )
         if atoms.ndim != 2:
             raise ValueError(f"atoms must have shape (N, d), not {atoms.shape}")
         if weights.shape != (len(atoms),):
@@ -58,13 +65,9 @@ class SignedMeasure:
                 f"replicate must give each of the {len(atoms)} atoms an integer from 0 to "
                 f"n_replicates - 1 = {n_replicates - 1}"
             )
-        fields = {
-            "atoms": atoms,
-            "weights": weights,
-            "replicate": replicate.astype(np.int64, copy=False),
-        }
-        for name, value in fields.items():
-            object.__setattr__(self, name, read_only(value))
+        index = replicate.astype(np.int64, copy=False)
+        for name, stored in (("atoms", atoms), ("weights", weights), ("replicate", index)):
+            object.__setattr__(self, name, read_only(stored))
         object.__setattr__(self, "n_replicates", n_replicates)
 
     def per_replicate(self, h: Callable[[FloatArray], npt.ArrayLike]) -> FloatArray:

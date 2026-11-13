@@ -71,6 +71,19 @@ def test_signed_measure_refuses_arrays_of_the_wrong_shape(atoms, weights, messag
         SignedMeasure(atoms, weights, np.array([0, 1, 1]), 2)
 
 
+@pytest.mark.parametrize(
+    ("atoms", "weights", "name"),
+    [
+        (np.array([["a"], ["b"], ["c"]]), np.ones(3), "atoms"),
+        (np.ones((3, 1)), np.array(["a", "b", "c"]), "weights"),
+    ],
+)
+def test_signed_measure_refuses_arrays_that_are_not_real_numbers(atoms, weights, name):
+    # A string array was stored.
+    with pytest.raises(TypeError, match=f"^{name} must be real numbers, not an array of dtype"):
+        SignedMeasure(atoms, weights, np.array([0, 1, 1]), 2)
+
+
 def test_signed_measure_arrays_are_read_only():
     # Weights changed after one per_replicate call changed cov() but not per_replicate(),
     # whose sums were cached.
