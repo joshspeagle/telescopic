@@ -119,6 +119,19 @@ The interval now covers the truth, but it is far wider than the range of a proba
 The meeting times show why:
 
 ```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      Two survival curves of the meeting times on logarithmic axes: the curve from
+      N(10, 1) ends before 100 steps, and the curve from N(10, 10 squared) reaches
+      beyond 10,000.
+  figure:
+    caption: >-
+      The survival functions of the meeting times from $\mathcal N(10, 1)$ and
+      from $\mathcal N(10, 10^2)$, on log-log axes: from the wider start, the
+      slowest pairs take more than $10^4$ steps to meet.
+---
 fig, ax = plt.subplots(figsize=(5, 3.5))
 for label, result in (("$N(10, 1)$", narrow), ("$N(10, 10^2)$", wide)):
     tau = np.sort(result.meeting_times)

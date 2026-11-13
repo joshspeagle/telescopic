@@ -79,6 +79,7 @@ All notable changes to this project are documented here. The format follows
   learning path, with the failure modes last, and the pager is their only "next" link.
 - Warnings on the executed pages print as their class and message, without the path of
   the notebook's temporary file, and wrap within the column.
+- Every figure on the executed pages has alternative text and a caption.
 - Fixes from an audit of the whole package: a number argument of the wrong type raises
   `TypeError`, and one out of bounds `ValueError`, naming the argument; `names` must be
   distinct strings, one per coordinate; `Kernel.check_ndim` checks a kernel's dimension;

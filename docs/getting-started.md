@@ -109,6 +109,17 @@ initial distribution is close to the posterior. The estimates do not rely on it,
 the correction removes what remains at `k`:
 
 ```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      A line on a logarithmic scale that falls from 1 as t grows, with a dashed
+      vertical line at k.
+  figure:
+    caption: >-
+      The estimated upper bound on the total variation distance between the law of
+      $X_t$ and the posterior, against $t$, with the burn-in $k$ dashed.
+---
 result.plot_tv_bound();
 ```
 

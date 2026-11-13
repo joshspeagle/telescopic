@@ -55,6 +55,19 @@ solid one, marked with a dot. After a meeting only $X$ runs, until $m$. The MCMC
 uses the shaded times, $k$ to $m$:
 
 ```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      Four pairs of paths falling from about 5 toward 0 against t; each dashed
+      path joins its solid one at a black dot, and the times from k to m are
+      shaded.
+  figure:
+    caption: >-
+      The paths of the first four pairs against $t$: $X_t$ solid and $Y_{t-1}$
+      dashed, a dot where each pair meets, and the times $k$ to $m$ that the MCMC
+      average uses shaded.
+---
 n = 4
 ax = plotting.paths(replicates, n=n)
 meeting = replicates.meeting_time[:n].astype(int)
@@ -101,6 +114,17 @@ so the weights sum to 1 and some are negative. The weights of this replicate, su
 equal atoms:
 
 ```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      Vertical stems at the atoms of one replicate, most above zero and some
+      below.
+  figure:
+    caption: >-
+      The weights of one replicate's atoms, summed over equal atoms: they sum to
+      1, and the bias correction makes some of them negative.
+---
 points, which = np.unique(atoms, return_inverse=True)
 fig, ax = plt.subplots(figsize=(5, 3))
 ax.stem(points, np.bincount(which, weights))

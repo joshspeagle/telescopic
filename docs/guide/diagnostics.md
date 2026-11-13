@@ -37,6 +37,17 @@ censored pair counts in the survival function at every time up to its cap, where
 curve ends at the fraction of pairs censored, and not in the histogram.
 
 ```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      Left, a histogram of tau minus L over the pairs; right, the fraction of
+      pairs with tau minus L above t, on a logarithmic scale, falling with t.
+  figure:
+    caption: >-
+      The meeting times of the run, less the lag: their histogram (left) and their
+      survival function $P(\tau - L > t)$ on a log scale (right).
+---
 result.plot_meeting_times();
 ```
 
@@ -57,6 +68,17 @@ result.tv_bound([0, result.k // 2, result.k])
 {meth}`telescopic.Result.plot_tv_bound` draws it on a log scale, with `k` marked:
 
 ```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      A line on a logarithmic scale that falls from 1 as t grows, with a dashed
+      vertical line at k.
+  figure:
+    caption: >-
+      The estimated upper bound on the total variation distance between the law of
+      $X_t$ and the target, against $t$, with $k$ dashed.
+---
 result.plot_tv_bound();
 ```
 
