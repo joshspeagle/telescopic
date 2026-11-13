@@ -6,8 +6,11 @@ Rhee (2014) and Jacob, O'Leary & Atchadé (2020).
 
 ## Start here
 
-- Read `notes/PLAN.md` (current position), the last entries of `notes/LOG.md` and the
-  open items of `notes/QUESTIONS.md`.
+- Read the tracking issue of the current phase on GitHub, now #65 (the tune-up; this
+  line is updated when a new phase opens its issue): the State table in its body is the
+  current position, and its last log comments say what the latest sessions did. Then
+  read the open items of `notes/QUESTIONS.md`. `notes/PLAN.md` and `notes/LOG.md` are
+  the closed record of the first draft (#1).
 - The requirement is `docs/design/spec.md`. Tests follow `docs/design/test-plan.md`, and
   the order of work follows `docs/design/implementation-plan.md`.
 - A change to the package or to the documentation follows `.claude/rules/docs-upkeep.md`.
@@ -22,7 +25,7 @@ Rhee (2014) and Jacob, O'Leary & Atchadé (2020).
 | `docs/` | the Sphinx site in MyST Markdown; `docs/tutorials/` are executed notebooks; `docs/design/` holds the spec and the plans |
 | `benchmarks/` | timing and efficiency scripts, run by hand |
 | `scripts/` | `verify.sh`, the gate that runs what CI runs |
-| `notes/` | plan, log, decisions, questions, experiments and review reports; not part of the site |
+| `notes/` | decisions, questions and experiments; the closed plan, log, review reports and checkpoint of the first draft; `review/`, Josh's review of it; not part of the site |
 | `research_notes/`, `reports/` | the landscape census behind the design |
 | `.claude/rules/` | rules scoped to paths, mirrored in `.agents/rules/` for other agent platforms |
 | `.agents/briefs/` | the briefs of each agent role and the formats of their outputs |
@@ -47,7 +50,7 @@ Rhee (2014) and Jacob, O'Leary & Atchadé (2020).
   developed as an experiment in `notes/experiments/`, with its evidence, and enters the
   public API only after Josh has seen that evidence (DECISIONS #1, #69).
 - A decision is a choice that another competent developer could make differently and
-  that affects behaviour, the public API, a number, a tolerance, a dependency or the
+  that affects behavior, the public API, a number, a tolerance, a dependency or the
   process. Record it with its reason and alternatives: in the spec's decision table
   while the spec is being written, in `notes/DECISIONS.md` afterwards. Never choose
   silently.
@@ -59,8 +62,8 @@ Rhee (2014) and Jacob, O'Leary & Atchadé (2020).
 ## Changes
 
 Each change is one reviewed unit: an issue, a branch and a pull request (DECISIONS #58,
-#68). A milestone of the implementation plan is such a unit, with its report in
-`notes/reviews/`.
+#68). A milestone of the implementation plan is such a unit. A change's record is its
+issue and its pull request, whose description holds its checks, decisions and reviews.
 
 1. Open or choose the issue. It states the scope, the reason and the acceptance
    criteria. Branch `<issue>-<slug>` from `main`, and open a draft pull request that
@@ -74,8 +77,8 @@ Each change is one reviewed unit: an issue, a branch and a pull request (DECISIO
 4. Adversarial review, only for a significant departure from the spec. One independent
    agent tries to refute it; it gets the diff, the decision and the spec, not the
    author's reasoning. A refuted decision is changed, or the objection is answered in
-   the record. A departure that changes a statistical result gets three reviewers and
-   stands only if two uphold it.
+   the pull request. A departure that changes a statistical result gets three reviewers
+   and stands only if two uphold it.
 5. A simplification pass, then a code review, on the pull request's diff, by agents that
    did not write it, at the size the table sets. A change to numerics or the public API
    takes the next size. The simplification pass looks for reuse, simpler forms,
@@ -83,8 +86,8 @@ Each change is one reviewed unit: an issue, a branch and a pull request (DECISIO
    correctness and compliance lenses of `.agents/briefs/review.md`. On Claude Code
    these are `/simplify` and `/code-review`, which take the level named in the table;
    without subagents, make each a separate pass that starts from the diff alone.
-   Fix each valid finding, answer the rest in the pull request or the milestone's
-   report, and run step 3 again after the fixes.
+   Fix each valid finding, answer the rest in the pull request, and run step 3 again
+   after the fixes.
 
    | Lines added plus removed | Simplification | Code review |
    |---|---|---|
@@ -94,9 +97,13 @@ Each change is one reviewed unit: an issue, a branch and a pull request (DECISIO
 
 6. Update the documentation that the change touches (`.claude/rules/docs-upkeep.md`).
 7. Push, and watch CI on the pull request without waiting on it; fix a failing job at
-   its cause. Mark the pull request ready when the gate and CI pass. Josh merges it,
-   with a merge commit, and CI on `main` is checked after the merge.
-8. Add a log entry, and update `notes/PLAN.md` when a milestone or an epic moves.
+   its cause. Mark the pull request ready when the gate, CI and the reviews of step 5
+   pass, and then merge it, with a merge commit, and check CI on `main` afterwards. A
+   change that fundamentally alters functionality or the public API is not merged until
+   Josh has reviewed it: say so in its pull request and ask him (DECISIONS #97).
+8. Add a dated log comment for the session to the phase's tracking issue: what was done,
+   found and ruled, with issue, pull request and commit numbers, and update its State
+   table when an epic moves. Without GitHub access, end the reply with that text.
 
 A fix of at most 10 lines to prose, a comment or configuration that changes no behavior
 needs no issue.
@@ -146,7 +153,7 @@ needs no issue.
 - Write a test only when it catches a plausible bug in this code that no other test
   catches. Test contracts, invariants, agreement with exact references, and regressions:
   each bug fix adds a test that fails without it. Do not test NumPy's or SciPy's
-  behaviour.
+  behavior.
 - Every coupling is tested for its marginals, against the uncoupled kernel from fixed
   states, and for faithfulness. Every estimator is tested for unbiasedness on a target
   with known expectations.
@@ -154,7 +161,7 @@ needs no issue.
   trying seeds until a test passes.
 - Mark a test `slow` when it needs many replicates for its tolerance or takes more than
   5 s.
-- Name a test as a sentence that states the behaviour: `test_met_chains_stay_equal`.
+- Name a test as a sentence that states the behavior: `test_met_chains_stay_equal`.
 
 ## Documentation
 
@@ -164,7 +171,8 @@ needs no issue.
   is not obvious. Private code has no docstring; a comment explains only a non-obvious
   why, such as a numerical subtlety or the paper equation it implements.
 - Docs state only what the code does now, except `docs/design/`. Each fact has one home.
-  Why a change was made goes in its commit and in `notes/`.
+  Why a change was made goes in its commit and its pull request, and a decision in
+  `notes/DECISIONS.md`.
 - Tutorials are MyST notebooks executed when the docs build; each runs in under
   2 minutes.
 
@@ -192,8 +200,13 @@ and the path of a review and of a research direction.
   surveys and checks that a search settles. The strongest tier is for derivations,
   adversarial review of statistical claims and synthesis across findings; name each
   such use in the task's tracking issue (DECISIONS #70).
-- The record is GitHub and `notes/`: a tracking issue for each phase with its epics and
-  sub-issues, `notes/PLAN.md`, `notes/LOG.md`. What lives only in a session is lost.
+- The record is GitHub and `notes/`. On GitHub: a tracking issue for each phase, whose
+  body holds the current position, what is next and the rulings by reference (date and
+  issue numbers), with a log comment for each session that names the agents run and
+  what each returned in a line; its epics and sub-issues; each ruling as a comment on
+  the issue ruled on; a review's report as a comment on its epic, or on its issue when
+  it has none; and each change's pull request. In `notes/`: `DECISIONS.md`,
+  `QUESTIONS.md` and `experiments/`. What lives only in a session is lost.
 
 ## Writing
 
