@@ -16,7 +16,7 @@ All notable changes to this project are documented here. The format follows
   coupling with the bounded-variance `eta` option, and the maximal coupling of discrete
   distributions (`telescopic.couplings`); `telescopic.testing.fixed_draws` to inject
   random numbers in tests, and `telescopic.testing.random_draws` for fresh ones.
-- `Target` with a batched interface over scalar or vectorised log-densities and gradients;
+- `Target` with a batched interface over scalar or vectorized log-densities and gradients;
   initial distributions `Normal`, `Uniform`, `Empirical` and `as_initial`.
 - Kernels with their couplings: `RandomWalk` (reflection-maximal or maximal proposals),
   `Independence` with a `MultivariateT` proposal, and `Mixture`. A row's transition does

@@ -21,7 +21,7 @@ from myst_nb import glue
 
 ## A Gaussian in 50 dimensions
 
-{func}`telescopic.examples.gaussian` gives a Gaussian whose neighbouring coordinates have
+{func}`telescopic.examples.gaussian` gives a Gaussian whose neighboring coordinates have
 correlation 0.9, with its log-density, its gradient and the initial distribution
 $\mathcal N(0, 4I)$. Its functions take batches of points, hence `vectorize=True`. The
 three kernels run with the same seed, so their pairs start from the same points. The
