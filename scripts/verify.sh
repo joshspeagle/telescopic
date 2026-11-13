@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # The gate: the commands of CI's lint and test jobs, run on this checkout's sources.
 #   scripts/verify.sh [--cov] [--docs] [--slow]
-# --cov adds the coverage floor of CI's coverage job, --docs the strict documentation
-# build, and --slow the slow tests. CI installs the package; this runs it from src/.
+# --cov adds the coverage floor of CI's coverage job, --docs the checks of the site's
+# identity and the strict documentation build, and --slow the slow tests. CI installs the
+# package; this runs it from src/.
 # Set PYTHON to an interpreter that has the dev group (and the docs group for --docs)
 # when that is not the first python on PATH.
 set -euo pipefail
@@ -33,5 +34,7 @@ export PYTHONPATH="src${PYTHONPATH:+:$PYTHONPATH}"
 "$python" -m mypy
 "$python" -m pytest -q -ra $cov "${marker[@]}"
 if $docs; then
+  "$python" docs/_scripts/brand.py --check
+  "$python" docs/_scripts/hero_pair.py --check
   "$python" -m sphinx -W --keep-going docs docs/_build/html
 fi
