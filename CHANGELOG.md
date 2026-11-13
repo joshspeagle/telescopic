@@ -121,4 +121,6 @@ All notable changes to this project are documented here. The format follows
   closed, as in `numpy.histogram`, so an atom on the upper edge of `range` is counted;
   the TV bound and its value at `k` count a censored pair as meeting at its cap plus 1,
   since its chains were compared at the cap, which raises the bound by up to 1 at some
-  times of runs with censored pairs.
+  times of runs with censored pairs; `Result.interval` is renamed
+  `Result.credible_interval`, with no alias, and `Estimate.interval` is an array of
+  shape `(2,)` or `(2, p)`, lower ends first, instead of a tuple of two arrays.

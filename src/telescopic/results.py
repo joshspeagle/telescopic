@@ -31,11 +31,11 @@ class Estimate:
         The mean :math:`\bar H` of the replicates' estimates.
     standard_error : ndarray, shape () or (p,)
         Their sample standard deviation divided by :math:`\sqrt R`.
-    interval : tuple of two ndarrays
-        :math:`\bar H \mp t_{R-1}\,\hat\sigma/\sqrt R`, with :math:`t_{R-1}` the
-        quantile of ``(1 + level) / 2`` of Student's t with :math:`R - 1` degrees of
-        freedom; valid as :math:`R` grows when the variance is finite, and exact at every
-        :math:`R \ge 2` for normal replicates.
+    interval : ndarray, shape (2,) or (2, p)
+        The confidence interval :math:`\bar H \mp t_{R-1}\,\hat\sigma/\sqrt R`, lower end
+        first, with :math:`t_{R-1}` the quantile of ``(1 + level) / 2`` of Student's t
+        with :math:`R - 1` degrees of freedom; valid as :math:`R` grows when the variance
+        is finite, and exact at every :math:`R \ge 2` for normal replicates.
     level : float
     replicates : ndarray, shape (R,) or (R, p)
         The replicates' estimates :math:`\hat\pi_r(h)`.
@@ -43,7 +43,7 @@ class Estimate:
 
     value: FloatArray
     standard_error: FloatArray
-    interval: tuple[FloatArray, FloatArray]
+    interval: FloatArray
     level: float
     replicates: FloatArray
 
@@ -177,7 +177,8 @@ class Result:
         value, error = values.mean(axis=0), np.asarray(stats.sem(values, axis=0))
         # Student's t, not the normal quantile, whose intervals undercover at small R.
         t = stats.t.ppf((1 + level) / 2, self.n_replicates - 1)
-        return Estimate(value, error, (value - t * error, value + t * error), level, values)
+        interval = np.stack([value - t * error, value + t * error])
+        return Estimate(value, error, interval, level, values)
 
     def mean(self) -> Estimate:
         """The estimate of the mean of each coordinate, with shapes ``(d,)``."""
@@ -234,8 +235,8 @@ class Result:
         quantiles: FloatArray = np.stack(columns, axis=-1)
         return quantiles
 
-    def interval(self, mass: float = 0.68) -> FloatArray:
-        """The central interval holding ``mass`` of each marginal of the target.
+    def credible_interval(self, mass: float = 0.68) -> FloatArray:
+        """The central credible interval holding ``mass`` of each marginal of the target.
 
         Parameters
         ----------

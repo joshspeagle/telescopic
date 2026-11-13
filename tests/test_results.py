@@ -51,6 +51,8 @@ def test_an_estimate_averages_the_replicates_with_a_student_t_interval(result):
     half_width = stats.t.ppf(0.95, len(values) - 1) * error
     np.testing.assert_array_equal(estimate.value, values.mean(axis=0))
     np.testing.assert_allclose(estimate.standard_error, error, rtol=1e-12)
+    # One array, lower ends first, as the credible interval of the result.
+    assert estimate.interval.shape == (2, 2)
     np.testing.assert_allclose(estimate.interval[0], estimate.value - half_width, rtol=1e-12)
     np.testing.assert_allclose(estimate.interval[1], estimate.value + half_width, rtol=1e-12)
 
@@ -98,7 +100,7 @@ def test_without_bias_corrections_quantiles_are_those_of_the_pooled_draws():
         expected = np.quantile(atoms, levels, method="inverted_cdf")
         np.testing.assert_array_equal(result.quantile(levels)[:, dim], expected)
         central = np.quantile(atoms, [(1 - 0.555) / 2, (1 + 0.555) / 2], method="inverted_cdf")
-        np.testing.assert_array_equal(result.interval(0.555)[:, dim], central)
+        np.testing.assert_array_equal(result.credible_interval(0.555)[:, dim], central)
 
 
 def test_quantiles_keep_apart_atoms_that_share_some_coordinates():

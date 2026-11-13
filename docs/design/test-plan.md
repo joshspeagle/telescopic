@@ -157,7 +157,7 @@ Kernel-specific tests:
 
 - **Pooled estimates:** `estimate(h)` equals the mean of `measure.per_replicate(h)`, with standard error `std/√R` and a Student-$t$ interval with $R - 1$ degrees of freedom at the requested level. Vector-valued `h` works.
 - **Moments:** `mean`, `cov`, `var` and `std` follow §3.4. `cov` is symmetric.
-- **Quantiles:** `quantile` and `interval` use the isotonic rule.
+- **Quantiles:** `quantile` and `credible_interval` use the isotonic rule.
 - **Histograms:** `histogram` returns masses, standard errors and edges.
 - **Summary:** `summary()` contains the fields of §7.3 and converts with `to_dict()`. `to_pandas()` is skipped without pandas.
 - **Merging:** `merge` rejects different configurations and overlapping indices, and its output equals one run over the union of indices.

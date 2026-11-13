@@ -505,7 +505,7 @@ Methods:
 - **Estimates:**
   - `estimate(h, level=0.95)` returns an `Estimate`. `h` maps `(n, d)` to `(n,)` or `(n, p)`; any other output shape raises `ValueError`;
   - `mean()`, `cov()`, `var()`, `std()` follow §3.4.
-- **Quantiles and histograms:** `quantile(q)`, `interval(mass=0.68)` (the central interval holding that mass of $\pi$; `level` is reserved for confidence levels) and `histogram(dims, bins=20, range=None)`, of one coordinate or a joint histogram of several, with standard errors (DECISIONS #30).
+- **Quantiles and histograms:** `quantile(q)`, `credible_interval(mass=0.68)` (the central credible interval holding that mass of $\pi$, an array of shape `(2, d)`; `level` is reserved for confidence levels, and the name keeps it apart from the confidence interval of an `Estimate`, DECISIONS #100) and `histogram(dims, bins=20, range=None)`, of one coordinate or a joint histogram of several, with standard errors (DECISIONS #30).
 - **Diagnostics:** `tv_bound(t=None)`, `w1_bound(t=None)` (should), and `diagnostics()` (a dict).
 - **Reporting:** `summary()` returns a `Summary` table (DECISIONS #40). `check(strict=False)` emits the warnings of §7.4, or raises if strict.
 - **Plots:** `plot_meeting_times(axes=None)`, `plot_tv_bound(ax=None)`, `plot_marginals(dims=None, bins=20, axes=None)` and `plot_corner(dims=None, bins=20)` (signed 2-D histograms); the first three draw on given axes (DECISIONS #30).
@@ -522,7 +522,7 @@ Methods:
 
 Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 
-**`Estimate`** is frozen. It holds `value`, `standard_error`, `interval` (low, high), `level` and `replicates` (the per-replicate values), and prints as value ± standard error.
+**`Estimate`** is frozen. It holds `value`, `standard_error`, `interval` (the confidence interval, an array of shape `(2, ...)`, lower ends first, DECISIONS #100), `level` and `replicates` (the per-replicate values), and prints as value ± standard error.
 
 ### 7.3 Summary (R-OUT-3)
 

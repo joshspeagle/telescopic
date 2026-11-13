@@ -56,9 +56,10 @@ A few of the pairs met after `k + lag`, so a few replicates carry bias correctio
 {meth}`telescopic.Result.estimate` estimates $\pi(h)$ for a function `h` that maps
 points of shape `(n, d)`, a read-only array, to values of shape `(n,)` or `(n, p)`; any
 other shape raises `ValueError`. It returns an {class}`telescopic.Estimate`: the mean of
-the replicates' estimates (`value`), its `standard_error`, an `interval` at `level`
-(0.95 by default) and the replicates' estimates (`replicates`). The interval is the
-value plus or minus the standard error times the quantile of Student's t with $R - 1$
+the replicates' estimates (`value`), its `standard_error`, a confidence `interval` at
+`level` (0.95 by default), an array of shape `(2,)` or `(2, p)` with the lower ends
+first, and the replicates' estimates (`replicates`). The interval is the value plus or
+minus the standard error times the quantile of Student's t with $R - 1$
 degrees of freedom ([Theory](../theory.md#guarantees-and-their-limits)). It needs at least 2 replicates; with 1,
 `estimate` raises `ValueError`. Here $E[x_0 x_1]$ is the covariance, 0.9:
 
@@ -104,9 +105,11 @@ result.std()
 
 {meth}`telescopic.Result.quantile` returns quantiles of each coordinate under the pooled
 signed measures of the replicates, shape `(d,)` for one level and `(len(q), d)` for
-several. {meth}`telescopic.Result.interval` returns the central interval that holds a
-given `mass` of each marginal (0.68 by default): the quantiles at $(1 - \mathrm{mass})/2$
-and $(1 + \mathrm{mass})/2$, shape `(2, d)`. Both are consistent as $R$ grows, not
+several. {meth}`telescopic.Result.credible_interval` returns the central credible
+interval that holds a given `mass` of each marginal (0.68 by default): the quantiles at
+$(1 - \mathrm{mass})/2$ and $(1 + \mathrm{mass})/2$, shape `(2, d)`. It describes the
+spread of the target, where the `interval` of an estimate is a confidence interval for
+an expectation. Quantiles and credible intervals are consistent as $R$ grows, not
 unbiased, and come without standard errors; the method is on the
 [theory page](../theory.md#estimates-from-many-replicates).
 
@@ -115,10 +118,10 @@ result.quantile([0.05, 0.5, 0.95]), stats.norm.ppf([0.05, 0.5, 0.95])
 ```
 
 ```{code-cell} python
-result.interval(0.9)
+result.credible_interval(0.9)
 ```
 
-`quantile` and `interval` take the coordinates of the target only. For a quantity
+`quantile` and `credible_interval` take the coordinates of the target only. For a quantity
 derived from them, apply {func}`telescopic.estimators.weighted_quantile` to its values at
 the atoms, with each atom's weight divided by $R$. On a coordinate, this gives what
 `quantile` gives:
