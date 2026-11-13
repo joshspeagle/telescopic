@@ -359,8 +359,9 @@ class Result:
             one-sided 95% Clopper-Pearson upper bound, which stays informative when the
             fraction is 0; ``tv_bound_at_k``; ``variance_share``, the largest share of one
             replicate in the sample variance of the estimate of a coordinate's mean or
-            variance, and ``variance_share_of``, that estimate, ``nan`` and ``None``
-            below 2 replicates; ``mean_cost``, ``seconds_per_replicate`` and
+            variance, ``variance_share_of``, that estimate, and
+            ``variance_share_replicate``, the index of that replicate, ``nan``, ``None``
+            and ``None`` below 2 replicates; ``mean_cost``, ``seconds_per_replicate`` and
             ``relative_cost``, the mean cost over :math:`m - k + 1` (spec R-TUNE-4).
         """
         return dict(self._diagnostics)
@@ -381,18 +382,24 @@ class Result:
         # diagnostics.tv_bound's survival function takes memory up to the largest time.
         excess = np.ceil((self._stopped - self.lag - self.k) / self.lag)
         tv_at_k = min(1.0, float(np.maximum(0, excess).mean()))
-        share, share_of = np.nan, None
+        share, share_of, share_replicate = np.nan, None, None
         if self.n_replicates >= 2:
             # The second moments about the atoms' mean, which the variances use: about 0,
             # far from it, they would vary with the means and hide their own spread.
             centred, first = self._centred()
             # Squared in place: the centred atoms are not read again.
             second = self.measure.per_replicate(lambda _: np.square(centred, out=centred))
-            shares = diagnostics.variance_share(np.concatenate([first, second], axis=1))
+            values = np.concatenate([first, second], axis=1)
+            shares = diagnostics.variance_share(values)
             worst = int(np.argmax(shares))
             moment = "mean" if worst < self.ndim else "variance"
             share = float(shares[worst])
             share_of = f"the {moment} of {self.names[worst % self.ndim]}"
+            # The row of the largest squared deviation, which holds the share, among the
+            # replicates that met.
+            column = values[:, worst]
+            row = int(np.argmax(np.abs(column - column.mean())))
+            share_replicate = int(self.index[np.isfinite(self.meeting_times)][row])
         mean_cost = float(self.costs.mean())
         return {
             "meeting_time_50": float(quantiles[0]),
@@ -406,6 +413,7 @@ class Result:
             "tv_bound_at_k": tv_at_k,
             "variance_share": share,
             "variance_share_of": share_of,
+            "variance_share_replicate": share_replicate,
             "mean_cost": mean_cost,
             "seconds_per_replicate": self.wall_time / len(self.index),
             "relative_cost": mean_cost / (self.m - self.k + 1),

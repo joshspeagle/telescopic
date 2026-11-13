@@ -62,7 +62,7 @@ def test_the_tv_bound_refuses_censored_pairs_given_as_infinite():
     [
         ([3, -1, 4], [0.0, 0.0, 1.0], {"max_iter": 50}, "reached max_iter = 50"),
         ([2] * 70 + [9] * 30, np.arange(100.0), {"k": 5}, "30% of the pairs met after"),
-        ([2] * 100, [0.0] * 99 + [100.0], {}, "one replicate holds 99%"),
+        ([2] * 100, [0.0] * 99 + [100.0], {}, "replicate 99 holds 99%"),
         (
             np.random.default_rng(4).pareto(1.0, size=500).astype(int) + 2,
             np.random.default_rng(5).standard_normal(500),
@@ -187,6 +187,16 @@ def test_the_variance_share_names_the_moment_and_coordinate_that_hold_it(column)
         found = synthetic([2] * 100, values, k=5).diagnostics()
         assert found["variance_share_of"] == f"the variance of x{column}"
         assert found["variance_share"] == pytest.approx(0.99)
+
+
+def test_the_variance_share_names_the_replicate_that_holds_it():
+    # Replicate 3 is the outlier; the censored pair 0 shifts the rows of the replicates
+    # that met by one, so a row would read 2.
+    values = np.r_[0.0, np.repeat([1.0, -1.0], [50, 49])]
+    values = np.insert(values, 3, 30.0)
+    result = synthetic([-1] + [2] * 100, values, k=5, max_iter=50)
+    assert result.diagnostics()["variance_share_replicate"] == 3
+    assert any(issue.message.startswith("replicate 3 holds") for issue in issues(result))
 
 
 def test_the_tail_index_is_that_of_tau_minus_the_lag_from_500_replicates():

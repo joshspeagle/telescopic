@@ -235,7 +235,8 @@ def issues(result: Result) -> list[Issue]:
         found.append(
             Issue(
                 "variance",
-                f"one replicate holds {values['variance_share']:.0%} of the variance of "
+                f"replicate {values['variance_share_replicate']} holds "
+                f"{values['variance_share']:.0%} of the variance of "
                 f"{values['variance_share_of']}: heavy tails or rare excursions make the "
                 "error bars unreliable; check the initial distribution, and look for a mode "
                 "that the other replicates missed",

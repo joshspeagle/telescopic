@@ -91,8 +91,8 @@ values = result.diagnostics()
 assert set(values) == {
     "meeting_time_50", "meeting_time_90", "meeting_time_99", "meeting_time_max",
     "censored", "tail_index", "late_fraction", "late_fraction_upper", "tv_bound_at_k",
-    "variance_share", "variance_share_of", "mean_cost", "seconds_per_replicate",
-    "relative_cost",
+    "variance_share", "variance_share_of", "variance_share_replicate", "mean_cost",
+    "seconds_per_replicate", "relative_cost",
 }
 assert result.lag == result.k
 assert abs(values["late_fraction"] - values["tv_bound_at_k"]) < 0.01
@@ -108,9 +108,10 @@ assert abs(values["late_fraction"] - values["tv_bound_at_k"]) < 0.01
   `k + lag`, censored ones included, and its one-sided 95% Clopper-Pearson upper bound,
   which stays informative when the fraction is 0. The fraction is the leading term of
   `tv_bound_at_k`, the TV bound at $k$, and with `lag = k` the two are close.
-- `variance_share` and `variance_share_of`: the largest share of one replicate in the
-  variance of the estimate of a coordinate's mean or variance, and that estimate, such as
-  `"the variance of x1"`; `nan` and `None` below 2 replicates
+- `variance_share`, `variance_share_of` and `variance_share_replicate`: the largest share
+  of one replicate in the variance of the estimate of a coordinate's mean or variance,
+  that estimate, such as `"the variance of x1"`, and the index of that replicate; `nan`,
+  `None` and `None` below 2 replicates
   ([`variance`](#one-replicate-dominating-the-variance-variance)).
 - `mean_cost`, `seconds_per_replicate` and `relative_cost`: the cost of a replicate
   ([Settings](settings.md#cost)).
@@ -150,14 +151,16 @@ which make the variance high. **Remedy:** a new sampler with a larger `k`
 
 **Trigger:** with at least 100 replicates, one replicate holds more than half of the
 sample variance of the estimate of some coordinate's mean or variance.
-`result.diagnostics()` reports the largest share as `variance_share`, and the estimate
-that holds it as `variance_share_of`, whether or not the warning fires. **Meaning:**
+`result.diagnostics()` reports the largest share as `variance_share`, the estimate that
+holds it as `variance_share_of`, and the index of the replicate that holds it, which
+the warning names, as `variance_share_replicate`, whether or not the warning fires.
+**Meaning:**
 heavy tails or rare excursions make the error bars unreliable. A replicate whose chain is
 still on its way to the target at `k` does this, as from a start far wider than the
 target ([Initial distributions](targets.md#choosing-one)), and so does a replicate that
-found a mode that the others missed. **Remedy:** find the replicate in the `replicates`
-of the estimate, check the initial distribution, and look for a mode the other
-replicates missed. The warning looks at the first two moments of each coordinate only;
+found a mode that the others missed. **Remedy:** check the initial distribution, and
+look for a mode that the other replicates missed, starting with the one named; its row
+in the `replicates` of an estimate is its position among the replicates that met. The warning looks at the first two moments of each coordinate only;
 {func}`telescopic.diagnostics.variance_share` applied to `result.estimate(h).replicates`
 checks a function of your own.
 
