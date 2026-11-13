@@ -153,8 +153,9 @@ def averaging(k: Any, m: Any, thin: Any) -> tuple[int, int, int]:
     return k, m, integer("thin", thin, minimum=1)
 
 
-def parameter_names(names: Sequence[str] | None, ndim: int) -> list[str]:
-    # Distinct names of the ndim coordinates; x0, x1, ... by default.
+def parameter_names(names: Sequence[str] | None, ndim: int, points: str) -> list[str]:
+    # Distinct names of the ndim coordinates of the points that points describes, such as
+    # "the atoms are points", which a length error blames; x0, x1, ... by default.
     if names is None:
         return [f"x{i}" for i in range(ndim)]
     # Listed first, so that an iterator is read once; a string would list its letters.
@@ -162,7 +163,7 @@ def parameter_names(names: Sequence[str] | None, ndim: int) -> list[str]:
     if listed is None or not all(isinstance(name, str) for name in listed):
         raise TypeError(f"names must be a sequence of strings, not {names!r}")
     if len(listed) != ndim:
-        raise ValueError(f"names must have {ndim} entries, not {len(listed)}")
+        raise ValueError(f"{points} of dimension {ndim}, but names gives {len(listed)}")
     if len(set(listed)) != ndim:
         raise ValueError(f"names must be distinct, not {listed}")
     return listed

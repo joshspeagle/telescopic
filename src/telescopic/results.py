@@ -131,7 +131,7 @@ class Result:
         if self.n_censored and replicates.settings.max_iter is None:
             raise ValueError("replicates with censored pairs need the max_iter of their run")
         self.ndim = replicates.atoms.shape[1]
-        self.names = parameter_names(names, self.ndim)
+        self.names = parameter_names(names, self.ndim, "the atoms are points")
         self.index = replicates.index
         self.meeting_times = replicates.meeting_time
         self.costs = replicates.cost

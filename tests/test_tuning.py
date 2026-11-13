@@ -284,3 +284,10 @@ def test_choose_k_refuses_a_quantile_on_a_censored_pair():
     tau = np.concatenate([np.arange(1, 99), [np.inf, np.inf]])
     with pytest.raises(ValueError, match="never met within their cap"):
         choose_k(tau)
+
+
+def test_a_flat_target_raises_that_the_tuning_chains_diverged():
+    # The covariance overflowed with six RuntimeWarnings, which filterwarnings = error
+    # turns into errors, and RandomWalk then raised "cov must be finite".
+    with pytest.raises(ValueError, match="the tuning chains diverged"):
+        RandomWalk().tune(Target(lambda x: 0.0), Normal(np.zeros(2), 4 * np.eye(2)), 1)

@@ -135,3 +135,7 @@ All notable changes to this project are documented here. The format follows
   `(log_prob, blobs)` tuple is told that derived quantities come from `Result.estimate`.
   A complex output with an imaginary part of exactly 0 is its real part, and any other
   complex output raises; float32 outputs, as JAX's default, emit an `InputWarning`.
+- When `names` and the initial distribution differ in dimension, the error names the
+  dimension the initial distribution draws; tuning chains that diverge on a target
+  flat in some direction raise an error that says so, instead of NumPy's overflow
+  warnings and "cov must be finite".

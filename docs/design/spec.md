@@ -267,7 +267,7 @@ The documentation recommends a $\pi_0$ that is overdispersed relative to $\pi$ a
 
 ### 4.3 Parameter names
 
-`names` (a sequence of `d` strings) labels summaries and plots. The log-density still receives arrays.
+`names` (a sequence of `d` strings) labels summaries and plots. The log-density still receives arrays. Since `d` comes from a draw of the initial distribution, a `names` of another length raises `ValueError` saying the dimension the initial distribution draws; there is no `ndim` argument (DECISIONS #111).
 
 ---
 
@@ -352,6 +352,7 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 - **Pilot:** 4 adaptive Metropolis chains from $\pi_0$, each running $\max(2000, 200d, 10d^2)$ steps; beyond 20 dimensions they refactor the covariance and keep their states every $\lceil d/20\rceil$ steps (DECISIONS #34). Each chain adapts its own global scale by Robbins–Monro steps of size $(t+1)^{-0.6}$ toward acceptance 0.234 (Andrieu & Thoms 2008). The chains share one proposal covariance: the running mean and covariance, with step $1/(t+1)$, of all their states, started from the variances of 100 draws from $\pi_0$ (Haario et al. 2001; pooled as in Craiu, Rosenthal & Yang 2009; DECISIONS #7).
 - **Covariance:** pooled over the second halves of the chains, plus $10^{-10}$ times each coordinate's variance on the diagonal, or $10^{-10}$ for a coordinate of variance 0. The pilot's own factorisations add $10^{-12}$ times each variance (DECISIONS #47).
 - **Scale:** $2.38/\sqrt d$, `RandomWalk`'s default (DECISIONS #7).
+- **Divergence:** where the target is flat in some direction, the scales can grow until the pooled covariance overflows; the pilot then raises `ValueError` saying that the tuning chains diverged and the target may be improper (DECISIONS #112).
 - **Report:** the pilot acceptance rates and $\hat R$ per coordinate. A `ConvergenceWarning` when the chains disagree: $\hat R > \sqrt 2$ in some coordinate, where the chain means spread more widely than the chains themselves, a sign of several modes (DECISIONS #6).
 
 ### 5.4 MALA (R-KER-MALA)

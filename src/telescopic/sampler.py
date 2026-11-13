@@ -134,7 +134,9 @@ class CoupledSampler:
         # the names are checked now rather than after tuning.
         self.ndim = len(draw(self.initial, replicate_generator(self.seed, MAIN, 0)))
         self.kernel.check_ndim(self.ndim)
-        self.names = None if names is None else parameter_names(names, self.ndim)
+        # The dimension comes from a draw, so a length error blames the initial distribution.
+        draws = "the initial distribution draws points"
+        self.names = None if names is None else parameter_names(names, self.ndim, draws)
         self.tuning: TuningReport | None = None
         self.pilot: FloatArray | None = None
         self._replicates: engine.Replicates | None = None

@@ -200,7 +200,16 @@ def adaptive_metropolis(
         if step % stride == 0:
             if step:
                 block = deltas.reshape(-1, d)
-                total += block.T @ block / N_CHAINS
+                with np.errstate(over="ignore", invalid="ignore"):
+                    total += block.T @ block / N_CHAINS
+                # Where the target is flat, the scales grow until the covariance overflows,
+                # and RandomWalk would blame its cov (DECISIONS #112).
+                if not np.isfinite(total).all():
+                    raise ValueError(
+                        "the tuning chains diverged (their covariance is not finite): the "
+                        "target may be improper; check that log_prob decreases in every "
+                        "direction, or give the kernel's parameters"
+                    )
             # A ridge of 1e-12 times each coordinate's variance, which keeps the
             # factorisation independent of the coordinates' scales.
             chol = np.linalg.cholesky(total / (step + 1) * ridge)
