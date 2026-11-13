@@ -19,13 +19,59 @@ pre-commit install      # ruff lint and format on every commit
 ```bash
 scripts/verify.sh              # lint, format check, type check and the fast tests
 scripts/verify.sh --cov        # with the coverage floor that CI enforces
-scripts/verify.sh --docs       # also the strict documentation build, which runs the tutorials
+scripts/verify.sh --docs       # also the identity checks and the strict documentation build
 scripts/verify.sh --slow       # also the slow statistical tests
 python benchmarks/run.py       # timings against spec section 10, on an idle machine
 ```
 
 The script runs the commands of CI's lint and test jobs on the checkout's sources. The
 fast tests finish in under 2 minutes and treat warnings as errors.
+
+## Documentation
+
+The site is built with Sphinx from `docs/`, in its own theme. Every build executes the
+tutorials, and a failing cell fails it:
+
+```bash
+scripts/verify.sh --docs                              # the checks, then the strict build
+sphinx-build -W --keep-going docs docs/_build/html    # the strict build alone
+```
+
+The environment variable `TELESCOPIC_DOCS_EXECUTE` sets how the build runs the notebooks.
+`force`, the default and what CI uses, runs every notebook. `cache` reuses the outputs
+of a notebook whose cells have not changed since it last ran, so after a change to the
+package or to the plot style it can show old outputs. `off` runs nothing: pages show
+their code without outputs, and numbers glued from cells are missing, so build without
+`-W`. Use `cache` or `off` only for work on prose or styling, and check the result with a
+full build:
+
+```bash
+TELESCOPIC_DOCS_EXECUTE=cache sphinx-build docs docs/_build/html
+```
+
+The colors, fonts, sizes, marks and plot style come from one script,
+`docs/_scripts/brand.py`, which writes the theme's tokens, the marks, the lockups, the
+favicon, the landing page's hero, `docs/matplotlibrc` and the tables of
+`docs/design/brand.md`. Edit the values there and run it; CI runs it with `--check`,
+which names any file that is stale:
+
+```bash
+python docs/_scripts/brand.py            # writes the identity's files
+python docs/_scripts/brand.py --check    # fails if a written file is stale
+python docs/_scripts/fetch_fonts.py      # after a change to brand.FONTS: the woff2 files
+python docs/_scripts/hero_pair.py        # after a change to the package moves the hero's pair
+```
+
+The hero is one coupled pair run by telescopic; `hero_pair.py --check`, which CI also
+runs, fails when the package no longer produces the saved pair.
+
+The design records are read in the repository and are not built into the site:
+[`docs/design/`](https://github.com/joshspeagle/telescopic/tree/main/docs/design) holds
+the specification, the test plan, the implementation plan and the design of the site's
+identity, and
+[`research_notes/`](https://github.com/joshspeagle/telescopic/tree/main/research_notes)
+and [`reports/`](https://github.com/joshspeagle/telescopic/tree/main/reports) hold the
+census of published methods and software behind the design.
 
 ## Validation philosophy
 

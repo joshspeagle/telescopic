@@ -137,6 +137,6 @@ replicates on several processes.
 
 ## Next
 
-The [tutorials](tutorials/index.md) work through examples, starting with
-[How it works](tutorials/how-it-works.md). The [user guide](guide/index.md) covers each
-part of the package, and the [theory](theory.md) states what the estimators guarantee.
+The tutorials work through examples, starting with
+[How it works](tutorials/how-it-works.md). The how-to guides, starting with
+[Targets and initial distributions](guide/targets.md), cover each part of the package, and the [theory](theory.md) states what the estimators guarantee.

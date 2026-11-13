@@ -225,7 +225,7 @@ These add to the rules of `CLAUDE.md`.
 
 ## 5. Documentation plan
 
-- **Toolchain:** Sphinx, MyST-NB (MyST Markdown notebooks executed at every build, DECISIONS #42), numpydoc, furo and sphinx-copybutton.
+- **Toolchain:** Sphinx, MyST-NB (MyST Markdown notebooks executed at every build in CI and by default, DECISIONS #42 and #81), numpydoc, sphinx-copybutton and the project's own theme (DECISIONS #79).
 - **Tutorials:** each runs in under 2 minutes on a laptop CPU.
 - **Pages:**
   1. *Getting started*: install, the README example expanded, and what the summary means.
@@ -248,7 +248,7 @@ These add to the rules of `CLAUDE.md`.
      6. Parallel runs and compute budgets.
      7. When unbiased is not enough: multimodal targets and heavy tails, with the warnings they raise.
   5. *API reference* (autodoc).
-  6. *Design notes*: the spec, the plans and the landscape report.
+  6. *Design records*: the spec, the plans and the landscape report, kept in the repository and not built (DECISIONS #80).
   7. *Changelog, contributing, citing.*
 
 ## 6. CI (GitHub Actions)

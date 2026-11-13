@@ -1,0 +1,9 @@
+{#- The landing page: the body full width, with no sidebar or outline; on a phone the menu lists the sections. #}
+{%- extends "layout.html" %}
+{%- block body_tag %}<body class="home-page">{% endblock %}
+{%- block content %}
+{{ section_nav(true) }}
+<main class="home" id="main">
+  {{ body }}
+</main>
+{%- endblock %}

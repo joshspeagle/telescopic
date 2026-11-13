@@ -34,7 +34,8 @@ the same pull request. The documentation states only what the code does now.
 
 Paths in the table are relative to `docs/`, except `README.md`, `CONTRIBUTING.md` and
 `pyproject.toml`. When a page moves or a module is added, change this table in the same
-pull request.
+pull request. The site's sections are the captioned toctrees of `docs/index.md`: a new
+page is listed in one of them.
 
 ## Before merging
 
@@ -54,5 +55,10 @@ pull request.
    no em dashes and no machine-specific paths. Outside `docs/design/`, they do not cite
    `notes/`, decision numbers or the specification's requirement numbers, which are
    internal.
-7. **Build.** `scripts/verify.sh --docs` passes: the build runs the tutorials, treats
+7. **Identity.** A change to a color, a font, a size or the mark is made in
+   `docs/_scripts/brand.py`, which is then run; `brand.py --check` passes. A change to
+   the engine, the random streams or the random-walk kernel that changes the landing
+   page's coupled pair fails `docs/_scripts/hero_pair.py --check`: run the script and
+   commit the new `hero_pair.json`, then `brand.py`.
+8. **Build.** `scripts/verify.sh --docs` passes: the build runs the tutorials, treats
    warnings as errors and checks every cross-reference.
