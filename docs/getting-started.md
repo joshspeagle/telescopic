@@ -60,6 +60,15 @@ def log_prob(theta, x, y, yerr):
     return -0.5 * np.sum(((y - slope * x - intercept) / yerr) ** 2)
 ```
 
+```{code-cell} python
+:tags: [remove-cell]
+
+# The pages that reuse the line fit load these data from docs/_helpers/line_fit.py.
+from line_fit import data
+
+assert all(map(np.array_equal, (x, y, yerr), data()))
+```
+
 The initial distribution should be wider than the posterior and cover all its modes,
 but not wider by orders of magnitude
 ([Initial distributions](guide/targets.md#choosing-one)). A Gaussian ten times wider

@@ -84,8 +84,16 @@ one, and compares other settings with the recipe's.
 ## A slow log-density
 
 When the log-density is slow, its evaluations set the time of a run. A counter added to
-the log-density of the line fit of [Getting started](../getting-started.md#a-first-run)
-counts them in each step:
+the log-density of the line fit of [Getting started](../getting-started.md#a-first-run),
+on its data `x`, `y` and `yerr`, counts them in each step:
+
+```{code-cell} python
+:tags: [remove-cell]
+
+from line_fit import data
+
+x, y, yerr = data()
+```
 
 ```{code-cell} python
 import numpy as np
@@ -93,10 +101,6 @@ from scipy import optimize
 
 import telescopic
 
-rng = np.random.default_rng(0)
-x = np.sort(10 * rng.random(50))
-yerr = 0.1 + 0.5 * rng.random(50)
-y = -0.9 * x + 4.3 + yerr * rng.normal(size=50)
 calls = 0
 
 

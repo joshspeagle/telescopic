@@ -13,6 +13,10 @@ sys.path.insert(0, str(DOCS / "_ext"))
 os.environ["MATPLOTLIBRC"] = str(DOCS / "matplotlibrc")
 # The kernels run this file before the first cell, as IPython runs PYTHONSTARTUP.
 os.environ["PYTHONSTARTUP"] = str(DOCS / "notebook_startup.py")
+# The modules that pages import to share code, such as the data of the line fit.
+os.environ["PYTHONPATH"] = os.pathsep.join(
+    filter(None, (str(DOCS / "_helpers"), os.environ.get("PYTHONPATH")))
+)
 
 project = "telescopic"
 author = "Joshua S. Speagle"

@@ -14,16 +14,20 @@ exactly, and both samplers' estimates can be checked against it.
 ```{code-cell} python
 :tags: [remove-cell]
 
+from line_fit import data
 from myst_nb import glue
+
+x, y, yerr = data()
 ```
 
 ## The data and the exact posterior
 
 A line fit like that of emcee's tutorial, without its underestimated errors: 50 points
-from the line $y = -0.9x + 4.3$, with Gaussian errors whose standard deviations, between
-0.1 and 0.6, are known. The log-density is the log-likelihood, so the prior is flat. It takes one point of shape `(2,)`, or a
-batch of shape `(n, 2)` as both samplers pass with `vectorize=True`. `Counted` wraps it
-to count the points at which a sampler evaluates it:
+`x`, `y` from the line $y = -0.9x + 4.3$, with Gaussian errors whose standard deviations
+`yerr`, between 0.1 and 0.6, are known; [Getting started](../getting-started.md#a-first-run)
+draws them. The log-density is the log-likelihood, so the prior is flat. It takes one
+point of shape `(2,)`, or a batch of shape `(n, 2)` as both samplers pass with
+`vectorize=True`. `Counted` wraps it to count the points at which a sampler evaluates it:
 
 ```{code-cell} python
 import emcee
@@ -31,11 +35,6 @@ import numpy as np
 from scipy import optimize
 
 import telescopic
-
-rng = np.random.default_rng(0)
-x = np.sort(10 * rng.random(50))
-yerr = 0.1 + 0.5 * rng.random(50)
-y = -0.9 * x + 4.3 + yerr * rng.normal(size=50)
 
 
 def log_prob(theta, x, y, yerr):
@@ -99,7 +98,7 @@ random state when it makes its sampler, so seeding that state fixes the run:
 ```{code-cell} python
 n_walkers = 32
 n_steps = for_telescopic.points // n_walkers - 1  # emcee also evaluates the start
-start = fit.x + 1e-4 * rng.normal(size=(n_walkers, 2))
+start = fit.x + 1e-4 * np.random.default_rng(1).normal(size=(n_walkers, 2))
 for_emcee = Counted()
 np.random.seed(42)
 ensemble = emcee.EnsembleSampler(n_walkers, 2, for_emcee, args=(x, y, yerr), vectorize=True)
