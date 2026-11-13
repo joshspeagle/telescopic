@@ -90,3 +90,17 @@ All notable changes to this project are documented here. The format follows
   ignores Ctrl-C, or whose handler Python did not set, keeps its handler; the tuning
   pilot takes a third less time at d = 100, Gibbs sweeps less, and joint histograms take
   memory in proportion to the atoms (`SignedMeasure.mass` is sparse).
+- Fixes of run-time defects: a vectorized log-density that returns shape `()` for one
+  point, as SciPy's `multivariate_normal.logpdf` does, or any output that differs from
+  the expected shape only by axes of length 1, is accepted; `Target` copies what its
+  functions return, so one that reuses its output array no longer corrupts states; an
+  `Independence` proposal whose `log_density` is NaN or `+inf` raises with the point
+  instead of biasing the chain; the meeting-time quantiles of `Result.diagnostics()` and
+  the summary cover every pair, `inf` (printed `> max_iter`) where one falls on a
+  censored pair, and the summary's footer has `max_iter`; the survival curve of the
+  meeting times ends at the fraction of pairs censored; `sample()` refuses fewer than 2
+  replicates before tuning; a `Result` with no replicates, Mixture weights whose sum
+  overflows, a tuned mixture whose components differ in dimension, a kernel that drops
+  its states' gradients, and `coupling="crn"` with conditionals whose `mean` and `cov`
+  are methods raise a `ValueError` or `TypeError` that names the cause; MALA's coupled
+  step no longer warns when its drift overflows.

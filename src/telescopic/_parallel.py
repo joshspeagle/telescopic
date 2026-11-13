@@ -123,8 +123,9 @@ def opened(pool: Any) -> Iterator[Any]:
 def execute(job: Job, indices: IntArray, pool: Any, monitor: Monitor) -> engine.Replicates:
     # The job on sorted indices, here or on an opened pool. Here the monitor sees every
     # iteration; on a pool, the finished replicates after each chunk and every POLL
-    # seconds. Once it returns true, no chunk starts but the first, and telescopic's
-    # workers start no new replicate (spec sections 6.4 and 6.5).
+    # seconds. Once it returns true, telescopic's workers start no new replicate and run
+    # no chunk that starts afterwards but the first; a user's executor starts no chunk it
+    # can still cancel (spec sections 6.4 and 6.5).
     if pool is None:
         return job(indices, monitor=monitor)
     start = time.perf_counter()
@@ -164,9 +165,12 @@ def _gather(
 ) -> list[engine.Replicates]:
     # Every chunk is submitted at once, in index order. Once the monitor asks to stop,
     # the chunks not started are cancelled, except the first, so that a run returns a
-    # replicate, as the engine's first fill does. Ctrl-C also kills the idle workers of a
-    # user's process pool that does not ignore it, and the pool then fails every chunk
-    # left, after any finished one. After a stop those chunks count as not run; with none
+    # replicate, as the engine's first fill does. A process pool has already moved one
+    # chunk beyond its running ones to its call queue, where cancel() fails: the stop
+    # event makes it run nothing on telescopic's workers, but on a user's pool, which has
+    # none, it runs all its replicates. Ctrl-C also kills the idle workers of a user's
+    # process pool that does not ignore it, and the pool then fails every chunk left,
+    # after any finished one. After a stop those chunks count as not run; with none
     # finished, the pool's error stands, as there is no result to return.
     done: queue.SimpleQueue[Future[engine.Replicates | None]] = queue.SimpleQueue()
     futures = [executor.submit(task, piece, first=i == 0) for i, piece in enumerate(pieces)]
