@@ -170,8 +170,3 @@ are unbiased for any burn-in `k` ([Theory](../theory.md#guarantees-and-their-lim
 is valid as the number of replicates grows, provided their variance is finite, and it
 needs no judgement of convergence: the meeting times bound the distance from
 stationarity instead ([Getting started](../getting-started.md)).
-
-## Next
-
-[Choosing k, m and the lag](choosing-settings.md) shows how {func}`telescopic.sample`
-chooses `k`, `m` and the lag, and what other settings cost.

@@ -161,9 +161,3 @@ assert rows[k, "full"][1] < rows[1, "full"][1]
 The MCMC average is many error bars from 0 with either lag, since the lag does not change
 the law of $X$. The full estimator is within two error bars of 0 with both lags, and its
 error bar is smaller with $L = k$.
-
-## Next
-
-[Choosing k, m and the lag](choosing-settings.md) shows how {func}`telescopic.sample`
-chooses $k$, $m$ and the lag, and how the lag changes the bound on the distance to
-stationarity.

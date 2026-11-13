@@ -66,11 +66,11 @@ getting-started
 :caption: Tutorials
 
 tutorials/how-it-works
-tutorials/failure-modes
 tutorials/beside-emcee
 tutorials/choosing-settings
 tutorials/gradients
 tutorials/gibbs
+tutorials/failure-modes
 ```
 
 ```{toctree}
