@@ -1,0 +1,4 @@
+commit 2c73025; x86_64, 4 CPUs; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=unset, MKL_NUM_THREADS=unset; Python 3.13.18, numpy 2.5.4, scipy 1.18.1
+normal proposal, mean number of steps a chain stays: 51 at x = 5, 1,671 at x = 6, 150,197 at x = 7
+normal proposal, unbounded weights: 200 runs of 1000 replicates; median estimate 0.970; z < -2 in 72.5% of the runs, z > 2 in 0.0%; 142 runs raised no warning, of which 135 have z < -2
+Student-t proposal, bounded weights: 200 runs of 1000 replicates; median estimate 0.999; z < -2 in 1.5% of the runs, z > 2 in 1.0%; 200 runs raised no warning, of which 3 have z < -2
