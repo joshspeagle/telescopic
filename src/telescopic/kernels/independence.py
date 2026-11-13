@@ -111,6 +111,13 @@ class Independence(Kernel):
     A step and a coupled step use what the proposal's ``sample`` uses (``d + df``
     normals for :class:`MultivariateT`, ``d`` with ``df=None``) and 1 uniform.
 
+    The proposal must be positive wherever the target is. Chains never move to where
+    :math:`q` is 0, so a proposal that misses part of the target's support never reaches
+    that part, and the estimates are biased from any start, without a warning: on
+    :math:`\mathcal N(0, 1)` with a proposal uniform on :math:`(-2, 2)`, 500 replicates
+    estimate :math:`E[x^2] = 1` as 0.778 with a standard error of 0.0093. A chain started
+    where the target is positive and the proposal is 0 rejects every proposal.
+
     Meeting times are geometric only when the weights :math:`\pi/q` are bounded; a
     proposal with lighter tails than the target gives heavy-tailed meeting times.
 

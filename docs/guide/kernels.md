@@ -262,6 +262,15 @@ mass, such as a draw clipped onto the edge of an open support.
   ([A tuned proposal that covers one mode](../tutorials/failure-modes.md#a-tuned-proposal-that-covers-one-mode)).
   When the modes are known, give `proposal` explicitly so that it covers them all.
 
+The proposal must be positive wherever the target is. Chains never move to where $q$ is
+0, so a proposal that misses part of the target's support never reaches that part, and
+the estimates are biased from any start, without a warning. On $\mathcal N(0, 1)$ with
+a proposal uniform on $(-2, 2)$, 500 replicates started in $(-1, 1)$ estimate
+$E[x^2] = 1$ as 0.778 with a standard error of 0.0093, which is the value 0.774 of
+$\mathcal N(0, 1)$ restricted to $(-2, 2)$. A chain started where the target is
+positive and the proposal is 0 rejects every proposal: started at 3, the same run
+reports $E[x] = 3$ with a standard error of 0.
+
 The meeting times have geometric tails only when the weights $\pi/q$ are bounded, so the
 proposal needs tails at least as heavy as the target's.
 

@@ -192,3 +192,7 @@ All notable changes to this project are documented here. The format follows
 - The Student-$t$ log-density of `MultivariateT` is finite, without a NumPy warning, at
   points whose squared distance from the mean overflows float64, beyond about 1.34e154
   scale units; it was `-inf` there.
+- The documentation states that an `Independence` proposal must be positive wherever the
+  target is: chains never reach the part of the target's support that the proposal
+  misses, so the estimates are biased without a warning, and a chain started where the
+  proposal is 0 and the target is not never moves.
