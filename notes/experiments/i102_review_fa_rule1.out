@@ -1,0 +1,462 @@
+gauss d=10 cond=1e+06 wide         |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.058 | stat    -0.0 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.029 | stat    -1.3 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.048 | stat    -1.4 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.032 | stat    -1.0 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.142 | stat    -1.0 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.043 | stat    -0.5 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.057 | stat    -0.4 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.048 | stat    -1.1 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.059 | stat    -0.8 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.030 | stat    -0.5 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.098 | stat    -0.8 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.072 | stat     0.0 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.046 | stat    -0.0 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.047 | stat    -0.7 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.054 | stat    -0.2 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.046 | stat    -1.1 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.119 | stat    -1.2 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.075 | stat    -0.3 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.075 | stat    -0.8 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 wide         |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.038 | stat    -1.0 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.014 | stat    -0.8 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.009 | stat    -0.1 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.025 | stat    -1.1 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.030 | stat    -0.4 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.055 | stat    -0.9 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.146 | stat     0.1 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.023 | stat    -0.3 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.037 | stat    -0.3 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.052 | stat    -1.8 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.080 | stat    -0.1 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.076 | stat    -0.8 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.098 | stat    -1.3 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.048 | stat     0.1 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.074 | stat    -0.4 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.023 | stat    -0.3 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.050 | stat    -1.5 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.041 | stat    -0.4 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.057 | stat    -1.6 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.164 | stat    -0.7 | fires 0 | 0s run skipped
+gauss d=10 cond=1e+06 tight        |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.049 | stat    -0.6 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 wide         |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.095 | stat     0.9 | fires 0 | 1s run skipped
+gauss d=20 cond=10000 wide         |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.106 | stat    -2.6 | fires 0 | 1s run skipped
+gauss d=20 cond=10000 wide         |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.051 | stat    -0.1 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 wide         |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.080 | stat    -2.4 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 wide         |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.066 | stat     0.7 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 wide         |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.070 | stat    -2.6 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 wide         |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.063 | stat    -0.3 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 wide         |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.026 | stat    -0.6 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 wide         |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.064 | stat    -1.1 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 wide         |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.082 | stat    -0.6 | fires 0 | 1s run skipped
+gauss d=20 cond=10000 wide         |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.084 | stat    -0.7 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 wide         |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.111 | stat    -0.7 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 wide         |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.038 | stat    -1.8 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 wide         |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.068 | stat     0.8 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 wide         |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.121 | stat    -0.9 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 wide         |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.141 | stat    -2.6 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 wide         |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.098 | stat     0.9 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 wide         |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.031 | stat    -0.5 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 wide         |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.094 | stat    -0.4 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 wide         |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.046 | stat     3.1 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.250 | stat    -0.1 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.085 | stat     3.7 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.050 | stat     2.0 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.064 | stat     1.1 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.081 | stat    -1.4 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.074 | stat    10.4 | fires 1 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.088 | stat     4.3 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.138 | stat     0.4 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.118 | stat    -3.4 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.067 | stat     2.3 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.060 | stat     3.2 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.076 | stat     3.2 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.090 | stat     0.0 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.149 | stat    -1.7 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.078 | stat     9.7 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.151 | stat     3.2 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.128 | stat    15.0 | fires 1 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.167 | stat     2.5 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.048 | stat    -2.8 | fires 0 | 0s run skipped
+gauss d=20 cond=10000 tight        |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.134 | stat    10.8 | fires 1 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  2.271 | stat -6213.3 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.433 | stat -10819.8 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  2.426 | stat -7861.7 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.427 | stat -5325.6 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  2.529 | stat -5145.6 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.730 | stat -4696.8 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.219 | stat -16796.5 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.854 | stat -8696.7 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  2.209 | stat -4244.7 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  2.339 | stat -8250.0 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.629 | stat -10455.2 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  2.234 | stat -10896.6 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.985 | stat -12097.7 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.261 | stat -6679.2 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  2.214 | stat -12556.4 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.187 | stat -6307.2 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.336 | stat -7217.7 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  3.660 | stat -1324.4 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  2.032 | stat -4023.5 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 wide            |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.521 | stat -6973.1 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.014 | stat    -0.0 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.010 | stat    -1.1 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.031 | stat    -0.6 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.052 | stat    -0.8 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.045 | stat    -0.6 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.043 | stat    -0.4 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.056 | stat    -1.0 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.013 | stat    -0.6 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.012 | stat    -0.7 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.041 | stat     0.1 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.068 | stat    -1.1 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.072 | stat    -1.0 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.049 | stat    -0.9 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.059 | stat    -0.2 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.004 | stat    -1.2 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.051 | stat    -0.4 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.028 | stat    -1.6 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.060 | stat    -0.8 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.029 | stat    -0.5 | fires 0 | 0s run skipped
+corr d=10 rho=0.99 tight           |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.012 | stat    -0.8 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  6.069 | stat -141185.3 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  3.835 | stat -214483.2 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat 12.468 | stat -137244.4 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  6.854 | stat -120004.4 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  7.308 | stat -111640.4 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  5.957 | stat -124483.0 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  4.119 | stat -279786.1 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  9.071 | stat -146327.0 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat 10.394 | stat -109090.5 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  9.445 | stat -159759.5 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  6.935 | stat -178885.3 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat 10.054 | stat -207825.4 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  9.761 | stat -212145.3 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  4.258 | stat -130314.7 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  4.116 | stat -204680.4 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  4.254 | stat -124399.6 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat 10.559 | stat -147584.6 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  8.112 | stat -50274.3 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  8.705 | stat -114020.2 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 wide           |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  3.301 | stat -136510.6 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.094 | stat    -1.2 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.027 | stat    -0.7 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.008 | stat    -1.8 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.039 | stat    -1.0 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.119 | stat    -0.9 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.108 | stat    -1.1 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.061 | stat    -0.5 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.011 | stat    -1.4 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.007 | stat    -0.4 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.066 | stat    -1.0 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.092 | stat     0.1 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.014 | stat    -0.9 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.074 | stat    -0.4 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.002 | stat    -1.1 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.013 | stat    -0.3 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.050 | stat    -0.5 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.000 | stat     0.3 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.019 | stat    -0.8 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.006 | stat    -0.2 | fires 0 | 0s run skipped
+corr d=10 rho=0.999 tight          |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.016 | stat    -0.7 | fires 0 | 0s run skipped
+corr d=30 rho=0.99 wide            |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.378 | stat -34192.7 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.743 | stat -38689.4 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.462 | stat -45077.9 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.817 | stat -44123.9 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.545 | stat -25537.4 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.692 | stat -31870.0 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  2.083 | stat -33059.4 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.192 | stat -22305.7 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.480 | stat -21843.1 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.824 | stat -42771.8 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.264 | stat -30383.1 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.612 | stat -40996.5 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.195 | stat -26752.0 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.364 | stat -26639.4 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.736 | stat -21024.5 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.588 | stat -57434.3 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.984 | stat -56390.9 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.609 | stat -34739.9 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.970 | stat -45295.3 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 wide            |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.566 | stat -27165.3 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.007 | stat    -2.3 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.032 | stat     0.4 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.168 | stat    -1.0 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.014 | stat    -0.3 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.022 | stat    -0.9 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.016 | stat     0.0 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.051 | stat    -1.5 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.011 | stat    -0.1 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.029 | stat    -1.1 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.021 | stat    -0.4 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.039 | stat    -1.1 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.028 | stat    -0.0 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.046 | stat    -0.7 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.039 | stat     0.0 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.032 | stat    -1.7 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.083 | stat    -0.7 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.044 | stat    -1.3 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.015 | stat    -0.9 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.025 | stat    -2.9 | fires 0 | 1s run skipped
+corr d=30 rho=0.99 tight           |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.147 | stat    -0.5 | fires 0 | 1s run skipped
+student3 d=10 wide                 |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.036 | stat     2.4 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.094 | stat     3.3 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.042 | stat     2.1 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.057 | stat     2.3 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.080 | stat    -0.9 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.031 | stat     0.8 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.106 | stat    -5.2 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.065 | stat     0.8 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.056 | stat    -0.2 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.111 | stat    -2.4 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.048 | stat    -0.9 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.053 | stat     1.4 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.050 | stat     1.7 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.061 | stat    -1.1 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.047 | stat    -3.0 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.056 | stat    -0.5 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.090 | stat    -2.8 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.091 | stat    -0.9 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.090 | stat     2.0 | fires 0 | 0s run skipped
+student3 d=10 wide                 |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.061 | stat    -3.1 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.055 | stat     1.1 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.061 | stat     1.2 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.031 | stat     0.2 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.039 | stat     2.1 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.053 | stat     1.7 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.043 | stat     1.1 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.038 | stat     2.0 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.026 | stat     0.9 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.020 | stat     1.4 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.036 | stat     1.7 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.065 | stat     1.6 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.079 | stat     1.4 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.059 | stat     1.5 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.047 | stat     1.3 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.059 | stat     2.1 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.037 | stat     2.8 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.069 | stat     1.5 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.048 | stat     1.2 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.028 | stat     4.5 | fires 0 | 0s run skipped
+student3 d=10 tight                |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.051 | stat    -0.1 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.002 | stat    -0.1 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.008 | stat    -0.1 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.004 | stat    -0.1 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.003 | stat    -0.0 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.006 | stat    -0.0 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.003 | stat    -0.1 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.015 | stat     0.0 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.008 | stat    -0.1 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.008 | stat    -0.3 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.004 | stat    -0.2 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.018 | stat    -0.0 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.002 | stat    -0.2 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.004 | stat    -0.0 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.001 | stat    -0.1 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.007 | stat    -0.0 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.006 | stat    -0.2 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.002 | stat    -0.2 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.001 | stat    -0.1 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.011 | stat     1.7 | fires 0 | 0s run skipped
+student3 d=2 wide                  |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.010 | stat    -0.1 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.003 | stat    -0.1 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.004 | stat    -0.0 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.006 | stat    -0.3 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.003 | stat    -0.0 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.005 | stat    -0.0 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.004 | stat    -0.1 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.018 | stat    -0.0 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.005 | stat    -0.2 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.014 | stat    -0.0 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.007 | stat    -0.1 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.020 | stat    -0.0 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.005 | stat    -0.0 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.001 | stat    -0.0 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.002 | stat    -0.1 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.010 | stat    -0.2 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.011 | stat    -0.1 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.002 | stat    -0.0 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.003 | stat    -0.3 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.004 | stat    -0.0 | fires 0 | 0s run skipped
+student3 d=2 tight                 |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.012 | stat    -0.0 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.085 | stat    -0.9 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.110 | stat     2.2 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.049 | stat     2.9 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.061 | stat     1.1 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.037 | stat    -0.0 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.026 | stat     1.2 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.043 | stat    -3.6 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.069 | stat    -1.6 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.052 | stat     2.0 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.082 | stat     0.4 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.032 | stat     0.3 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.061 | stat    -1.6 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.030 | stat    -1.6 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.037 | stat    -3.4 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.049 | stat    -2.7 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.031 | stat     2.7 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.045 | stat    -0.5 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.049 | stat     3.5 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.066 | stat     3.6 | fires 0 | 0s run skipped
+student2.5 d=10 wide               |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.050 | stat    -3.7 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.057 | stat     2.2 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.075 | stat     3.2 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.035 | stat    -0.2 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.038 | stat     2.0 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.078 | stat     2.8 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.057 | stat    -0.1 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.032 | stat     1.1 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.044 | stat     0.4 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.040 | stat     2.5 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.063 | stat     2.7 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.075 | stat     2.2 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.029 | stat     3.3 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.050 | stat     0.8 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.036 | stat     0.6 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.044 | stat     2.0 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.070 | stat     1.9 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.052 | stat     1.8 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.023 | stat     2.4 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.036 | stat     1.7 | fires 0 | 0s run skipped
+student2.5 d=10 tight              |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.044 | stat     2.3 | fires 0 | 0s run skipped
+student4 d=30 wide                 |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.061 | stat     0.7 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.054 | stat     1.7 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.032 | stat     1.1 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.033 | stat     0.2 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.035 | stat     1.2 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.058 | stat    -1.6 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.063 | stat    -0.1 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.050 | stat    -0.3 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.081 | stat    -1.9 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.065 | stat    -0.2 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.031 | stat     1.7 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.057 | stat    -0.6 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.063 | stat     0.2 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.052 | stat    -1.0 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.046 | stat     2.0 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.070 | stat    -1.6 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.091 | stat     2.4 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.060 | stat     2.8 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.054 | stat     1.1 | fires 0 | 1s run skipped
+student4 d=30 wide                 |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.083 | stat     0.1 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.032 | stat    -3.0 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.022 | stat    -4.4 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.027 | stat    -3.1 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.036 | stat    -1.0 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.032 | stat    -4.8 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.029 | stat    -2.5 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.041 | stat    -2.6 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.037 | stat    -1.6 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.059 | stat    -2.4 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.030 | stat    -4.3 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.038 | stat    -3.1 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.067 | stat    -1.4 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.041 | stat    -4.8 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.033 | stat    -4.2 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.020 | stat    -2.7 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.022 | stat    -1.8 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.037 | stat    -2.5 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.037 | stat    -2.9 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.022 | stat    -3.8 | fires 0 | 1s run skipped
+student4 d=30 tight                |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.033 | stat    -2.7 | fires 0 | 1s run skipped
+loggamma.5 d=2 wide                |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.003 | stat    -0.5 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.003 | stat    -0.3 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.019 | stat    -0.0 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.008 | stat    -0.1 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.008 | stat    -0.1 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.008 | stat    -0.3 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.007 | stat    -0.6 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.009 | stat    -0.5 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.010 | stat    -0.4 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.001 | stat    -0.2 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.019 | stat    -0.4 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.003 | stat    -0.2 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.011 | stat    -0.4 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.003 | stat    -0.6 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.003 | stat    -0.6 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.014 | stat    -0.8 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.011 | stat    -0.6 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.004 | stat    -0.2 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.008 | stat    -1.0 | fires 0 | 0s run skipped
+loggamma.5 d=2 wide                |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.011 | stat    -0.5 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.003 | stat    -0.0 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.014 | stat    -0.4 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.006 | stat    -0.1 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.005 | stat    -0.4 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.007 | stat    -0.5 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.011 | stat    -0.7 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.015 | stat    -0.1 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.006 | stat    -0.4 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.011 | stat    -0.7 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.013 | stat    -0.0 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.006 | stat    -0.3 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.002 | stat    -0.9 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.004 | stat    -0.1 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.006 | stat    -0.6 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.003 | stat    -0.3 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.007 | stat    -0.0 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.011 | stat    -0.5 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.013 | stat    -1.1 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.005 | stat    -0.6 | fires 0 | 0s run skipped
+loggamma.5 d=2 N(0,I)              |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.011 | stat    -1.1 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.103 | stat     4.2 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.117 | stat     4.6 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.071 | stat     6.2 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.088 | stat    -2.0 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.146 | stat     3.4 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.086 | stat     2.3 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.152 | stat     1.9 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.119 | stat     3.8 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.061 | stat     0.4 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.070 | stat     2.3 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.138 | stat     2.7 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.068 | stat     3.8 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.110 | stat     3.5 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.124 | stat     5.8 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.062 | stat     0.1 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.079 | stat     9.2 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.189 | stat     5.4 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.076 | stat    -0.3 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.088 | stat     0.5 | fires 0 | 0s run skipped
+loggamma.5 d=10 wide               |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.054 | stat     0.5 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2000 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.074 | stat     0.1 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2001 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.082 | stat    -0.3 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2002 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.040 | stat     4.0 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2003 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.058 | stat     4.3 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2004 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.090 | stat     0.8 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2005 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.054 | stat    -0.8 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2006 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.089 | stat    -1.4 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2007 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.080 | stat    -3.1 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2008 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.069 | stat    -1.6 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2009 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.077 | stat    -3.6 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2010 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.121 | stat    -0.7 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2011 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.082 | stat     0.3 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2012 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.111 | stat    -2.7 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2013 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.055 | stat    -0.9 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2014 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.118 | stat    -2.6 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2015 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.086 | stat     0.7 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2016 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.119 | stat    -2.1 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2017 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.118 | stat    -2.4 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2018 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.082 | stat     3.1 | fires 0 | 0s run skipped
+loggamma.5 d=10 N(0,I)             |  2019 | k     -1 tau      nan thin -1 |      nan     nan z       nan wrong 0 | rhat  1.055 | stat    -4.1 | fires 0 | 0s run skipped
+SUMMARY gauss d=10 cond=1e+06 wide: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -1.4/-0.8/0.0
+SUMMARY gauss d=10 cond=1e+06 tight: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -1.8/-0.5/0.1
+SUMMARY gauss d=20 cond=10000 wide: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -2.6/-0.6/3.1
+SUMMARY gauss d=20 cond=10000 tight: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 3/20; R-hat warns 0; stat>10 3; stat min/med/max -3.4/2.4/15.0
+SUMMARY corr d=10 rho=0.99 wide: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 16; stat>10 0; stat min/med/max -16796.5/-7095.4/-1324.4
+SUMMARY corr d=10 rho=0.99 tight: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -1.6/-0.7/0.1
+SUMMARY corr d=10 rho=0.999 wide: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 20; stat>10 0; stat min/med/max -279786.1/-139214.8/-50274.3
+SUMMARY corr d=10 rho=0.999 tight: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -1.8/-0.7/0.3
+SUMMARY corr d=30 rho=0.99 wide: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 15; stat>10 0; stat min/med/max -57434.3/-33626.0/-21024.5
+SUMMARY corr d=30 rho=0.99 tight: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -2.9/-0.8/0.4
+SUMMARY student3 d=10 wide: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -5.2/-0.3/3.3
+SUMMARY student3 d=10 tight: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -0.1/1.4/4.5
+SUMMARY student3 d=2 wide: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -0.3/-0.1/1.7
+SUMMARY student3 d=2 tight: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -0.3/-0.0/-0.0
+SUMMARY student2.5 d=10 wide: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -3.7/0.1/3.6
+SUMMARY student2.5 d=10 tight: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -0.2/2.0/3.3
+SUMMARY student4 d=30 wide: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -1.9/0.2/2.8
+SUMMARY student4 d=30 tight: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -4.8/-2.8/-1.0
+SUMMARY loggamma.5 d=2 wide: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -1.0/-0.4/-0.0
+SUMMARY loggamma.5 d=2 N(0,I): runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -1.1/-0.4/-0.0
+SUMMARY loggamma.5 d=10 wide: runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -2.0/3.0/9.2
+SUMMARY loggamma.5 d=10 N(0,I): runs 20, wrong 0, right 0, raised/timed out/rule-only 20; fires on wrong 0/0; fires on right 0/0; fires overall 0/20; R-hat warns 0; stat>10 0; stat min/med/max -4.1/-0.8/4.3

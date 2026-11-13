@@ -1,0 +1,2 @@
+ex pumps default                   |  2002 | k   2133 tau     8663 thin  3 |   0.0703  0.0001 z      1.78 wrong 0 | rhat  1.373 | stat    12.5 | fires 1 | 28s  | warn: 0 
+ex pumps default                   |  2015 | k   1006 tau     6061 thin  2 |   0.0703  0.0001 z      1.58 wrong 0 | rhat  1.368 | stat    13.6 | fires 1 | 15s  | warn: 1 41% of the pairs met after k + lag, so k

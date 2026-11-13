@@ -1,0 +1,18 @@
+0 chain means x0: [-6.02 -6.15 -5.65 -5.85] rhat0 1.02 pooled mean0 -5.92 var0 1.14
+   log w at modes: [ 6.2 29.7]  pilot log w median 9.0 max 10.8
+   initial draws: max log w -25.1, max log pi -62.9; pilot log pi median -5.0
+1 chain means x0: [5.7  6.14 5.56 6.12] rhat0 1.04 pooled mean0 5.88 var0 1.19
+   log w at modes: [30.3  5.2]  pilot log w median 8.1 max 9.8
+   initial draws: max log w -6.5, max log pi -32.7; pilot log pi median -5.8
+2 chain means x0: [5.99 6.13 6.08 5.94] rhat0 1.00 pooled mean0 6.03 var0 0.87
+   log w at modes: [32.7  5.2]  pilot log w median 8.2 max 10.3
+   initial draws: max log w -40.6, max log pi -71.7; pilot log pi median -5.7
+3 chain means x0: [6.06 5.67 5.95 5.98] rhat0 1.01 pooled mean0 5.92 var0 0.96
+   log w at modes: [32.   5.3]  pilot log w median 8.2 max 10.0
+   initial draws: max log w -28.2, max log pi -58.9; pilot log pi median -6.0
+4 chain means x0: [5.99 6.01 5.88 6.19] rhat0 1.01 pooled mean0 6.02 var0 0.76
+   log w at modes: [33.8  4.8]  pilot log w median 8.0 max 9.9
+   initial draws: max log w -15.1, max log pi -45.7; pilot log pi median -5.6
+5 chain means x0: [-6.22 -5.74 -6.07 -5.77] rhat0 1.03 pooled mean0 -5.95 var0 0.94
+   log w at modes: [ 6.  31.3]  pilot log w median 9.0 max 11.3
+   initial draws: max log w -20.2, max log pi -56.3; pilot log pi median -4.9

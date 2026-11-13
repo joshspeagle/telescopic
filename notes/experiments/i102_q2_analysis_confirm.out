@@ -1,0 +1,63 @@
+tag confirm: 520 runs; criterion detection set: 62 wrong runs of 80; all detection cells: 62 wrong of 80; false-alarm set: 440 right runs of 440
+false-alarm cells with a wrong estimate (excluded from the false-alarm set): none
+
+per cell: runs wrong, |z| median, pilot ends on q-side +1 (right mode) count, existing R-hat warning fires, median pilot evals, median run evals, median k, max meeting time
+  bimodal d=10 s=6               wrong 10/20 (raised 0), |z| median     474.3, q right 11, R-hat warn  8, pilot    8004, run    261876, k    37, thinned 0, tau max 603222
+  bimodal d=10 s=12              wrong 14/20 (raised 0), |z| median    6906.7, q right 11, R-hat warn  6, pilot    8004, run    143372, k    32, thinned 0, tau max   1687
+  bimodal d=32 s=6               wrong 19/20 (raised 0), |z| median       inf, q right 13, R-hat warn  1, pilot   40964, run    299099, k    60, thinned 0, tau max   1412
+  bimodal d=32 s=12              wrong 19/20 (raised 0), |z| median 283795891263702048.0, q right 14, R-hat warn  1, pilot   40964, run    224788, k    42, thinned 1, tau max  14468
+notes/experiments/i102_q2_analysis.py:104: RuntimeWarning: All-NaN slice encountered
+  f"{np.nanmedian([abs(r['z']) for r in c_rows]):9.1f}, q right {sum(r['q_side'] > 0 for r in c_rows):2d}, "
+  ex gaussian default            wrong  0/20 (raised 0), |z| median       nan, q right  9, R-hat warn  0, pilot    8004, run      8004, k    -1, thinned 0, tau max    nan
+  ex gaussian tight              wrong  0/20 (raised 0), |z| median       nan, q right  8, R-hat warn  0, pilot    8004, run      8004, k    -1, thinned 0, tau max    nan
+  ex banana default              wrong  0/20 (raised 0), |z| median       nan, q right 20, R-hat warn  0, pilot    8004, run      8004, k    -1, thinned 0, tau max    nan
+  ex banana tight                wrong  0/20 (raised 0), |z| median       nan, q right 20, R-hat warn  0, pilot    8004, run      8004, k    -1, thinned 0, tau max    nan
+  ex mixture default             wrong  0/20 (raised 0), |z| median       nan, q right 13, R-hat warn  0, pilot    8004, run      8004, k    -1, thinned 0, tau max    nan
+  ex mixture tight               wrong  0/20 (raised 0), |z| median       nan, q right 11, R-hat warn  0, pilot    8004, run      8004, k    -1, thinned 0, tau max    nan
+  ex pumps default               wrong  0/20 (raised 0), |z| median       nan, q right 20, R-hat warn 15, pilot    8804, run      8804, k    -1, thinned 0, tau max    nan
+  ex pumps tight                 wrong  0/20 (raised 0), |z| median       nan, q right 20, R-hat warn  0, pilot    8804, run      8804, k    -1, thinned 0, tau max    nan
+  gauss d=2 cond=1 wide          wrong  0/20 (raised 0), |z| median       nan, q right  7, R-hat warn  0, pilot    8004, run      8004, k    -1, thinned 0, tau max    nan
+  gauss d=2 cond=1 tight         wrong  0/20 (raised 0), |z| median       nan, q right  8, R-hat warn  0, pilot    8004, run      8004, k    -1, thinned 0, tau max    nan
+  gauss d=2 cond=100 wide        wrong  0/20 (raised 0), |z| median       nan, q right 11, R-hat warn  0, pilot    8004, run      8004, k    -1, thinned 0, tau max    nan
+  gauss d=2 cond=100 tight       wrong  0/20 (raised 0), |z| median       nan, q right  6, R-hat warn  0, pilot    8004, run      8004, k    -1, thinned 0, tau max    nan
+  gauss d=10 cond=1 wide         wrong  0/20 (raised 0), |z| median       nan, q right 11, R-hat warn  0, pilot    8004, run      8004, k    -1, thinned 0, tau max    nan
+  gauss d=10 cond=1 tight        wrong  0/20 (raised 0), |z| median       nan, q right  8, R-hat warn  0, pilot    8004, run      8004, k    -1, thinned 0, tau max    nan
+  gauss d=10 cond=100 wide       wrong  0/20 (raised 0), |z| median       nan, q right 13, R-hat warn  0, pilot    8004, run      8004, k    -1, thinned 0, tau max    nan
+  gauss d=10 cond=100 tight      wrong  0/20 (raised 0), |z| median       nan, q right 10, R-hat warn  0, pilot    8004, run      8004, k    -1, thinned 0, tau max    nan
+  gauss d=50 cond=1 wide         wrong  0/20 (raised 0), |z| median       nan, q right  6, R-hat warn  0, pilot  100004, run    100004, k    -1, thinned 0, tau max    nan
+  gauss d=50 cond=1 tight        wrong  0/20 (raised 0), |z| median       nan, q right 10, R-hat warn  0, pilot  100004, run    100004, k    -1, thinned 0, tau max    nan
+  gauss d=50 cond=100 wide       wrong  0/20 (raised 0), |z| median       nan, q right  7, R-hat warn  0, pilot  100004, run    100004, k    -1, thinned 0, tau max    nan
+  gauss d=50 cond=100 tight      wrong  0/20 (raised 0), |z| median       nan, q right  7, R-hat warn  0, pilot  100004, run    100004, k    -1, thinned 0, tau max    nan
+  student4 d=10 wide             wrong  0/20 (raised 0), |z| median       nan, q right  8, R-hat warn  0, pilot    8004, run      8004, k    -1, thinned 0, tau max    nan
+  student4 d=10 tight            wrong  0/20 (raised 0), |z| median       nan, q right  9, R-hat warn  0, pilot    8004, run      8004, k    -1, thinned 0, tau max    nan
+
+FIXED SETTING R1 end m=8 n=n_steps/8 c=12.0: detection 62/62 [0.94, 1.00], false alarms 2/440 [0.00, 0.02], cost at most 0.250 of the pilot
+
+setting R1 end, m=8, n=n_steps/8, c=12.0: per cell
+  cell | runs wrong | fires on wrong | fires on right | probe chains on q's other side at n (mean) | cost/pilot cost/run
+  bimodal d=10 s=6               | 10/20 | 10/10 [0.69, 1.00] | 2/10 [0.03, 0.56]  |  3.95 | 0.250 0.0078
+  bimodal d=10 s=12              | 14/20 | 14/14 [0.77, 1.00] | 0/6 [0.00, 0.46]   |  3.70 | 0.250 0.0140
+  bimodal d=32 s=6               | 19/20 | 19/19 [0.82, 1.00] | 0/1 [0.00, 0.97]   |  3.80 | 0.250 0.0344
+  bimodal d=32 s=12              | 19/20 | 19/19 [0.82, 1.00] | 0/1 [0.00, 0.97]   |  3.75 | 0.250 0.0456
+  ex gaussian default            |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.80 | 0.250 0.2499
+  ex gaussian tight              |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.00 | 0.250 0.2499
+  ex banana default              |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  1.60 | 0.250 0.2499
+  ex banana tight                |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  0.55 | 0.250 0.2499
+  ex mixture default             |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.85 | 0.250 0.2499
+  ex mixture tight               |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.90 | 0.250 0.2499
+  ex pumps default               |  0/20 | n=0                | 2/20 [0.01, 0.32]  |  0.00 | 0.250 0.2499
+  ex pumps tight                 |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  0.00 | 0.250 0.2499
+  gauss d=2 cond=1 wide          |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.05 | 0.250 0.2499
+  gauss d=2 cond=1 tight         |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.00 | 0.250 0.2499
+  gauss d=2 cond=100 wide        |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.15 | 0.250 0.2499
+  gauss d=2 cond=100 tight       |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.85 | 0.250 0.2499
+  gauss d=10 cond=1 wide         |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.70 | 0.250 0.2499
+  gauss d=10 cond=1 tight        |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.60 | 0.250 0.2499
+  gauss d=10 cond=100 wide       |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.60 | 0.250 0.2499
+  gauss d=10 cond=100 tight      |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.05 | 0.250 0.2499
+  gauss d=50 cond=1 wide         |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.25 | 0.250 0.2500
+  gauss d=50 cond=1 tight        |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.00 | 0.250 0.2500
+  gauss d=50 cond=100 wide       |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.05 | 0.250 0.2500
+  gauss d=50 cond=100 tight      |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  4.60 | 0.250 0.2500
+  student4 d=10 wide             |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.90 | 0.250 0.2499
+  student4 d=10 tight            |  0/20 | n=0                | 0/20 [0.00, 0.17]  |  3.45 | 0.250 0.2499
