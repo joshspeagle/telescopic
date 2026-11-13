@@ -238,15 +238,18 @@ result.summary()
 state, and accepts when
 $\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]$. The weight $\pi/q$
 is 0 wherever $\pi$ is 0, even where $q$ is 0 too, so a chain at zero density accepts
-any proposal of finite density, as the random walk does.
+any proposal of finite density, as the random walk does. A proposal where $q$ is 0 is
+rejected, even where $\pi$ is not: `sample` drew a point that `log_density` gives no
+mass, such as a draw clipped onto the edge of an open support.
 
 - The coupled step gives both chains the same proposal and the same uniform, so a pair
   meets when both accept. It is a maximal coupling of the kernel (O'Leary, Wang & Jacob
   2021).
 - `proposal` is a {class}`telescopic.kernels.MultivariateT`, a Student-$t$ with location
   `mean`, scale matrix `cov` and `df` degrees of freedom, a positive integer (`df=None`
-  gives a Gaussian). A proposal of your own whose `log_density` returns NaN or `+inf`
-  raises `ValueError` with the point.
+  gives a Gaussian). A proposal of your own has `sample(draws)` and `log_density(x)`,
+  the normalized density of what `sample` draws, positive wherever `sample` can land; a
+  `log_density` that returns NaN or `+inf` raises `ValueError` with the point.
 - `tune` sets a Student-$t$ with 5 degrees of freedom, located at the pilot's mean, with
   the pilot's covariance as scale matrix. The report's `max_weight_ratio` is the largest
   weight $\pi/q$ among the pilot's states, relative to their median; a large value
@@ -259,8 +262,37 @@ any proposal of finite density, as the random walk does.
   ([A tuned proposal that covers one mode](../tutorials/failure-modes.md#a-tuned-proposal-that-covers-one-mode)).
   When the modes are known, give `proposal` explicitly so that it covers them all.
 
+The proposal must be positive wherever the target is. The kernel never moves a chain to
+where $q$ is 0, so, used alone, a proposal that misses part of the target's support
+never reaches that part, and the estimates are biased from any start, without a
+warning. On $\mathcal N(0, 1)$ with
+a proposal uniform on $(-2, 2)$, 500 replicates started in $(-1, 1)$ estimate
+$E[x^2] = 1$ as 0.778 with a standard error of 0.0093, which agrees within its error
+with the value 0.774 of $\mathcal N(0, 1)$ restricted to $(-2, 2)$. A chain started
+where the target is positive and the proposal is 0 rejects every proposal: started at
+3, the same run reports $E[x] = 3$ with a standard error of 0. Inside a
+{class}`telescopic.kernels.Mixture` with a kernel that reaches the rest of the support,
+chains do arrive at such points: the independence component rejects every proposal from
+there, which is the rule that keeps the target invariant, and the other kernel moves
+them on.
+
 The meeting times have geometric tails only when the weights $\pi/q$ are bounded, so the
-proposal needs tails at least as heavy as the target's.
+proposal needs tails at least as heavy as the target's. With unbounded weights the
+sampler is not geometrically ergodic (Mengersen & Tweedie 1996): a chain that reaches a
+point of weight $w$, for $\pi$ and $q$ normalized, stays there for $w$ steps or more on
+average. The replicates that carry the bias correction for the region where $\pi/q$ is
+large are then too rare to occur in a run, and the variance of the estimates can be
+infinite. A run usually gives that region too little mass, with error bars that are too
+small and often without a warning.
+
+On the target Exp(1), whose mean is 1, with a normal proposal $\mathcal N(1, 1)$
+floored at 0, a chain stays for 51 steps on average at $x = 5$ and for 1,671 at
+$x = 6$. Of 200 runs of 1,000 replicates started in $(0, 2)$, the median estimate of
+the mean was 0.970, 72.5% of the estimates were more than two standard errors below 1
+and none was that far above, and 142 runs raised no warning, 135 of them with an
+estimate that low. With a Student-$t$ proposal with 3 degrees of freedom in place of the
+normal, whose weights are bounded, the median was 0.999 and 1.5% of the estimates were
+that low.
 
 ## Gibbs
 

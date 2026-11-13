@@ -1,0 +1,4 @@
+commit 2c73025; P(|x| >= 2) under N(0, 1): 0.0455
+seed 0: P(|x| >= 2) Estimate(0.0447988 ± 0.0015, R=2000); E[x^2] Estimate(0.997571 ± 0.009, R=2000); warnings []
+seed 1: P(|x| >= 2) Estimate(0.047274 ± 0.0017, R=2000); E[x^2] Estimate(1.01435 ± 0.01, R=2000); warnings []
+seed 2: P(|x| >= 2) Estimate(0.0428273 ± 0.0017, R=2000); E[x^2] Estimate(0.982087 ± 0.011, R=2000); warnings []
