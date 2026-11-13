@@ -204,3 +204,5 @@ All notable changes to this project are documented here. The format follows
 - The memory warning compares the estimated peak of a run and its first estimates, about
   three times the stored atoms and distances, with its threshold of 1 GB, and states both
   figures; `telescopic.engine.stored_bytes` computes the stored size.
+- `progress=True` also shows the progress of tuning: the steps of the adaptive pilot
+  chains and, for MALA and HMC, of the step size's dual averaging.

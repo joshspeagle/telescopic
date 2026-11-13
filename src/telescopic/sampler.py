@@ -11,7 +11,7 @@ import numpy as np
 
 from telescopic import diagnostics, engine
 from telescopic._parallel import Interrupt, check_pool, execute, opened
-from telescopic._progress import Progress
+from telescopic._progress import Progress, tuning
 from telescopic._random import MAIN, PILOT, namespace_seed, replicate_generator, root_seed
 from telescopic._types import FloatArray, IntArray, Seed, flag, integer, parameter_names
 from telescopic.initial import as_initial, draw
@@ -87,8 +87,8 @@ class CoupledSampler:
         Ctrl-C ignored. With a log-density evaluated point by point, no replicate
         depends on the pool (spec sections 6.1 and 6.4).
     progress : bool
-        Show the progress of the pilot and of each run: a tqdm bar when tqdm is
-        installed, lines on stderr otherwise.
+        Show the progress of tuning, of the pilot and of each run: a tqdm bar when
+        tqdm is installed, lines on stderr otherwise.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
         The root of every random stream (spec section 6.1).
 
@@ -162,8 +162,12 @@ class CoupledSampler:
         TuningReport or None
             ``None`` when the kernel had nothing to tune.
         """
+        return self._tune(self.progress)
+
+    def _tune(self, progress: bool) -> TuningReport | None:
         if not self.kernel.is_tuned:
-            self.kernel, self.tuning = self.kernel.tune(self.target, self.initial, self.seed)
+            with tuning(progress):
+                self.kernel, self.tuning = self.kernel.tune(self.target, self.initial, self.seed)
             disagreement = diagnostics.tuning_disagreement(self.tuning)
             if disagreement:
                 warn(disagreement, ConvergenceWarning)
@@ -200,7 +204,7 @@ class CoupledSampler:
     def _meeting_times(
         self, n: int, settings: engine.Settings, pool: Any, progress: bool
     ) -> FloatArray:
-        self.tune()
+        self._tune(progress)
         start = 0 if self.pilot is None else len(self.pilot)
         indices = np.arange(start, start + n)
         replicates = self._run(PILOT, indices, settings, pool, progress)
@@ -245,8 +249,8 @@ class CoupledSampler:
             Censor pairs still unmet at this time. ``None`` runs every pair until it
             meets on the first call, and keeps the first call's cap on later ones.
         progress : bool, optional
-            Show the progress of the run and of the pilot it runs; ``None`` takes the
-            sampler's setting.
+            Show the progress of the run and of the tuning and the pilot it runs;
+            ``None`` takes the sampler's setting.
 
         Returns
         -------
@@ -377,7 +381,7 @@ class CoupledSampler:
     def _configure(self, given: dict[str, int], pool: Any, progress: bool) -> engine.Settings:
         # The first run's settings, which tune the kernel and, for an automatic k, complete
         # the pilot to 100 pairs: meeting_times can leave fewer.
-        self.tune()
+        self._tune(progress)
         if "k" not in given:
             done = 0 if self.pilot is None else len(self.pilot)
             if done < PILOT_REPLICATES:

@@ -18,7 +18,7 @@ from references import assert_same_replicates, gaussian_log_prob
 from telescopic import _parallel, _progress, engine
 from telescopic._parallel import Interrupt, execute, opened
 from telescopic.initial import Normal
-from telescopic.kernels import RandomWalk, State
+from telescopic.kernels import MALA, RandomWalk, State
 from telescopic.results import Result
 from telescopic.target import Target
 from telescopic.warnings import ConvergenceWarning
@@ -468,3 +468,20 @@ def test_pools_beyond_the_platforms_limit_raise(monkeypatch):
     monkeypatch.setattr(_parallel, "MAX_PROCESSES", 61)
     with pytest.raises(ValueError, match="pool must be from 1 to 61 processes"):
         telescopic.CoupledSampler(gaussian_log_prob, INIT, pool=62)
+
+
+@pytest.mark.parametrize(
+    ("kernel", "phases"),
+    [(RandomWalk(), ["tuning"]), (MALA(), ["tuning", "tuning the step size"])],
+    ids=["rwmh", "mala"],
+)
+def test_tuning_reports_progress(kernel, phases, monkeypatch, capsys):
+    monkeypatch.setitem(sys.modules, "tqdm", None)
+    monkeypatch.setattr(_progress, "INTERVAL", np.inf)  # one line per phase, as it ends
+    sampler = telescopic.CoupledSampler(
+        gaussian_log_prob, INIT, grad=lambda x: -x, kernel=kernel, progress=True, rng=8
+    )
+    sampler.tune()
+    lines = capsys.readouterr().err.splitlines()
+    assert [line.split(": ")[1] for line in lines] == phases
+    assert all(" steps finished in " in line for line in lines)
