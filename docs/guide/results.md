@@ -292,6 +292,9 @@ merged.n_replicates
 ```
 
 The merged result is `interrupted` if a replicate requested in either run ran in neither.
+It keeps the names of the result whose `merge` was called, and its kernel, initial
+distribution, tuning report and pilot meeting times, each taken from the other result
+where this one has none.
 
 ## Saving and loading
 

@@ -163,4 +163,5 @@ All notable changes to this project are documented here. The format follows
   applies a component of weight 0, which the largest uniforms could select where
   rounding left the cumulative weights below 1. `Gibbs(coupling="crn")` refuses a
   conditional whose `mean` is not a vector of its block's size, where a scalar was added
-  to every coordinate.
+  to every coordinate. `Result.merge` takes the kernel, initial distribution, tuning
+  report and pilot meeting times of the other result where the first has none.
