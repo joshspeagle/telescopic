@@ -190,6 +190,23 @@ All notable changes to this project are documented here. The format follows
 - The documentation states that the default range of `Result.histogram` biases every
   bin, and that `CouplingReport.passed()` fails a correct coupling with probability up
   to about 4 `alpha`.
+- An `Independence` proposal drawn where the proposal's own `log_density` is `-inf`,
+  such as a draw clipped onto the edge of an open support, is rejected; it was accepted
+  and its chain never left it. The documentation states that `log_density` is the
+  normalized density of what `sample` draws, positive wherever `sample` can land.
+- The Student-$t$ log-density of `MultivariateT` is finite, without a NumPy warning, at
+  points whose squared distance from the mean overflows float64, beyond about 1.34e154
+  scale units; it was `-inf` there. This holds for scale matrices above about 1e-307 and
+  a finite offset `x - mean`: for a smaller scale matrix the value stays `-inf`, and
+  where the offset itself overflows it stays NaN, each with a NumPy warning.
+- The documentation states that an `Independence` proposal must be positive wherever the
+  target is: used alone, the kernel never reaches the part of the target's support that
+  the proposal misses, so the estimates are biased without a warning, and a chain
+  started where the proposal is 0 and the target is not never moves.
+- The documentation states what an `Independence` proposal with lighter tails than the
+  target does: with unbounded weights $\pi/q$, a run usually gives too little mass to
+  the region where the weights are large, with error bars that are too small and often
+  without a warning; the kernels guide has a measured example.
 - Changes to `Result` ruled before the first release: the last bin of a histogram is
   closed, as in `numpy.histogram`, so an atom on the upper edge of `range` is counted,
   and the last edge of the default range is no longer nudged up; the TV bound and its

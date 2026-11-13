@@ -50,19 +50,34 @@ class MultivariateT:
     def log_density(self, x: FloatArray) -> FloatArray:
         """Normalized log-density at the rows of ``x``, shape ``(n,)``."""
         d = len(self.mean)
-        z = matvec(self._inverse, x - self.mean)
-        squared = (z**2).sum(axis=1)
+        centered = x - self.mean
+        z = matvec(self._inverse, centered)
         log_density: FloatArray
         if self.df is None:
-            log_density = -0.5 * (squared + self._log_det + d * math.log(2 * math.pi))
-        else:
-            nu = self.df
-            log_density = (
-                gammaln((nu + d) / 2)
-                - gammaln(nu / 2)
-                - 0.5 * (d * math.log(nu * math.pi) + self._log_det)
-                - 0.5 * (nu + d) * np.log1p(squared / nu)
-            )
+            log_density = -0.5 * ((z**2).sum(axis=1) + self._log_det + d * math.log(2 * math.pi))
+            return log_density
+        nu = self.df
+        # A squared distance beyond the float64 range is inf, or NaN where whitening
+        # overflows to inf - inf, but the log-density is finite there. The sum of the
+        # squared distances is finite only if each is.
+        with np.errstate(over="ignore"):
+            squared = (z**2).sum(axis=1)
+            near = math.isfinite(squared.sum())
+        log_kernel = np.log1p(squared / nu)
+        if not near:
+            # log1p(s / nu) = log s - log nu to within nu / s < 1e-307, and log s is
+            # computed from the rows scaled by their largest coordinate. A row that is
+            # not finite keeps its value.
+            far = ~np.isfinite(squared) & np.isfinite(centered).all(axis=1)
+            scale = np.abs(centered[far]).max(axis=1)
+            whitened = matvec(self._inverse, centered[far] / scale[:, None])
+            log_kernel[far] = 2 * np.log(scale) + np.log((whitened**2).sum(axis=1)) - math.log(nu)
+        log_density = (
+            gammaln((nu + d) / 2)
+            - gammaln(nu / 2)
+            - 0.5 * (d * math.log(nu * math.pi) + self._log_det)
+            - 0.5 * (nu + d) * log_kernel
+        )
         return log_density
 
     def __repr__(self) -> str:
@@ -76,15 +91,18 @@ class Independence(Kernel):
     :math:`\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]`. The weight
     :math:`\pi/q` is 0 wherever :math:`\pi` is 0, even where :math:`q` is 0 too, so a chain
     at zero density accepts any proposal of finite density, as random-walk Metropolis
-    does. The coupled step shares the proposal and :math:`u` between the chains, which is
-    a maximal kernel coupling (O'Leary, Wang & Jacob 2021): a pair meets when both chains
-    accept.
+    does. A proposal where :math:`q` is 0 is rejected, even where :math:`\pi` is not:
+    ``sample`` drew a point that ``log_density`` gives no mass, such as a draw clipped onto
+    the edge of an open support. The coupled step shares the proposal and :math:`u`
+    between the chains, which is a maximal kernel coupling (O'Leary, Wang & Jacob 2021):
+    a pair meets when both chains accept.
 
     Parameters
     ----------
     proposal : object, optional
-        Any object with ``sample(draws)`` and ``log_density(x)``, where a NaN or ``+inf``
-        log-density raises ``ValueError`` with the point; its ``mean``, if it has one that
+        Any object with ``sample(draws)`` and ``log_density(x)``, the normalized density of
+        what ``sample`` draws, positive wherever ``sample`` can land. A NaN or ``+inf``
+        log-density raises ``ValueError`` with the point. Its ``mean``, if it has one that
         is not a method, fixes the dimension. ``None`` leaves the kernel untuned:
         :meth:`~telescopic.kernels.Kernel.tune` fits a Student-:math:`t_5` located at the
         mean of adaptive Metropolis pilot chains, with their covariance as its scale
@@ -96,8 +114,16 @@ class Independence(Kernel):
     A step and a coupled step use what the proposal's ``sample`` uses (``d + df``
     normals for :class:`MultivariateT`, ``d`` with ``df=None``) and 1 uniform.
 
+    The proposal must be positive wherever the target is. The kernel never moves a chain
+    to where :math:`q` is 0, so, used alone, a proposal that misses part of the target's
+    support never reaches that part, and the estimates are biased from any start, without
+    a warning. A chain at a point where the target is positive and the proposal is 0
+    rejects every proposal.
+
     Meeting times are geometric only when the weights :math:`\pi/q` are bounded; a
-    proposal with lighter tails than the target gives heavy-tailed meeting times.
+    proposal with lighter tails than the target gives heavy-tailed meeting times. A run
+    then usually gives too little mass to the region where :math:`\pi/q` is large, with
+    error bars that are too small and often without a warning.
 
     A tuned proposal covers only the modes that the pilot chains reached. On a target with
     well-separated modes, the chains can settle in one mode, and pairs then meet quickly
@@ -161,15 +187,20 @@ class Independence(Kernel):
         return f"Independence(proposal={self.proposal!r})"
 
 
-def _log_weights(q: Proposal, *states: State) -> list[FloatArray]:
-    # log pi - log q at each state's positions, from one call of q.log_density, whose rows
-    # do not depend on each other (spec R-KER-6). A NaN log q would make every move to its
-    # point a rejection, and so bias the chain without an error.
-    x = np.concatenate([state.x for state in states])
-    log_q = np.split(log_densities("proposal log_density", q.log_density(x), x), len(states))
-    # Where log pi = -inf the weight is -inf even where log q = -inf too: -inf - -inf
+def _log_weights(q: Proposal, proposal: State, *states: State) -> list[FloatArray]:
+    # log pi - log q at the proposal's positions, then at each state's, from one call of
+    # q.log_density, whose rows do not depend on each other (spec R-KER-6). A NaN log q
+    # would make every move to its point a rejection, and so bias the chain without an
+    # error.
+    x = np.concatenate([proposal.x, *(state.x for state in states)])
+    log_q = np.split(log_densities("proposal log_density", q.log_density(x), x), 1 + len(states))
+    # A proposal where log q = -inf has weight -inf, so it is rejected: sample drew a point
+    # that log_density gives no mass, such as a draw clipped onto the edge of an open
+    # support, and a weight of +inf would accept it and never leave it.
+    new = proposal.log_prob - np.where(log_q[0] == -np.inf, np.inf, log_q[0])
+    # Where log pi = -inf a state's weight is -inf even where log q = -inf too: -inf - -inf
     # would be NaN, which rejects every proposal, so such a chain would never move.
-    return [
+    return [new] + [
         state.log_prob - np.where(state.log_prob == -np.inf, 0.0, part)
-        for state, part in zip(states, log_q, strict=True)
+        for state, part in zip(states, log_q[1:], strict=True)
     ]
