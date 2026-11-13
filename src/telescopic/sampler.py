@@ -245,8 +245,11 @@ class CoupledSampler:
         Returns
         -------
         Result
-            Unbiased for an ``n_replicates`` fixed in advance; extending a run after
-            looking at it keeps consistency, not exact unbiasedness (spec section 3.3).
+            Unbiased for an ``n_replicates`` fixed in advance, unless ``max_iter``
+            censors a pair, which biases it and warns (spec section 6.3), or a Ctrl-C
+            interrupts the run, which leaves it consistent and flagged ``interrupted``
+            (spec section 6.5); extending a run after looking at it keeps consistency,
+            not exact unbiasedness (spec section 3.3).
         """
         n_replicates = integer("n_replicates", n_replicates, minimum=1)
         given = self._check(k, m, lag, thin, max_iter)
@@ -445,7 +448,10 @@ def sample(
     Returns
     -------
     Result
-        Its estimates are unbiased; it warns about the conditions of spec section 7.4.
+        Its estimates are unbiased unless ``max_iter`` censors a pair, which biases them
+        and warns (spec section 6.3), or a Ctrl-C interrupts the run, which leaves them
+        consistent and flags the result ``interrupted`` (spec section 6.5). It warns
+        about the conditions of spec section 7.4.
     """
     # Checked before tuning: the estimates and the summary need 2 replicates that met.
     integer("n_replicates", n_replicates, minimum=2)

@@ -185,3 +185,6 @@ All notable changes to this project are documented here. The format follows
   only the modes its tuning chains reached, so a run on well-separated modes can be
   confidently wrong without a warning; the failure-modes tutorial shows such a run and
   two checks that help.
+- The docstrings of `sample()` and `CoupledSampler.run` say that their estimates are
+  unbiased unless `max_iter` censors a pair, which biases them, or a Ctrl-C interrupts
+  the run, which leaves them consistent.
