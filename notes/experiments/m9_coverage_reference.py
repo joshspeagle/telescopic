@@ -1,16 +1,20 @@
-"""Reference coverage of the 95% interval at R = 200 on the exact AR(1) chain (M9).
+"""Reference coverage of the 95% interval at R = 200 and R = 5 on the exact AR(1) chain (M9).
 
 The design review's estimator (notes/reviews/scripts/design-review/check_coverage.py),
 written apart from the package, with 10,000 intervals instead of 1,000. The AR(1) kernel
 x' = rho x + sqrt(1 - rho^2) xi (rho = 0.9) leaves N(0, 1) invariant; pairs are coupled by
 the reflection-maximal coupling of N(rho x, s^2) and N(rho y, s^2). Recipe values
 k = L = 38, m = 380 (from a lag-1 pilot of 2,000 meeting times in the design review).
-h(x) = x (truth 0) and x^2 (truth 1). The slow test asserts the stationary start's coverage;
-the far start's documents the heavy-tail caveat (test plan 2.12).
+h(x) = x (truth 0) and x^2 (truth 1). The intervals take Student's t quantile with R - 1
+degrees of freedom (issue #84; the normal quantile before it). The slow test asserts the
+stationary start's coverage at R = 200; the far start's documents the heavy-tail caveat
+(test plan 2.12). The same replicates, cut into intervals of R = 5, give the coverage at
+small R, with the normal quantile for comparison.
 Run: python notes/experiments/m9_coverage_reference.py
 """
 
 import numpy as np
+from scipy import stats
 
 RHO, S = 0.9, np.sqrt(1 - 0.81)
 K = LAG = 38
@@ -61,11 +65,19 @@ for label, mu0, sd0 in (
     ("far N(3, 1), recorded, not asserted", 3.0, 1.0),
 ):
     h1, h2 = run(rng, R * INTERVALS, mu0, sd0)
-    print(f"{label}: k = L = {K}, m = {M}, {INTERVALS} intervals of R = {R}")
+    print(f"{label}: k = L = {K}, m = {M}, {R * INTERVALS} replicates")
     for name, values, truth in (("x", h1, 0.0), ("x^2", h2, 1.0)):
-        blocks = values.reshape(INTERVALS, R)
-        estimate = blocks.mean(axis=1)
-        error = blocks.std(axis=1, ddof=1) / np.sqrt(R)
-        coverage = np.mean(np.abs(estimate - truth) <= 1.959964 * error)
-        se = np.sqrt(coverage * (1 - coverage) / INTERVALS)
-        print(f"  h = {name:3s}: coverage {coverage:.4f} (binomial se {se:.4f})")
+        for size, quantile, law in (
+            (R, stats.t.ppf(0.975, R - 1), "t"),
+            (5, stats.t.ppf(0.975, 4), "t"),
+            (5, stats.norm.ppf(0.975), "normal"),
+        ):
+            blocks = values.reshape(-1, size)
+            estimate = blocks.mean(axis=1)
+            error = blocks.std(axis=1, ddof=1) / np.sqrt(size)
+            coverage = np.mean(np.abs(estimate - truth) <= quantile * error)
+            se = np.sqrt(coverage * (1 - coverage) / len(blocks))
+            print(
+                f"  h = {name:3s}, R = {size:3d}, {law:6s}: coverage {coverage:.4f} "
+                f"(binomial se {se:.4f}, {len(blocks)} intervals)"
+            )

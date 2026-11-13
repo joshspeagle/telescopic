@@ -200,9 +200,9 @@ for name, init in inits.items():
 
 ## Choosing one
 
-The estimates are unbiased for any initial distribution
-([Theory](../theory.md#guarantees-and-their-limits)), but the choice sets their variance
-and the cost, and decides whether the chains find every mode.
+The estimates are unbiased for every initial distribution from which the chain
+converges ([Theory](../theory.md#guarantees-and-their-limits)), but the choice sets their
+variance and the cost, and decides whether the chains find every mode.
 
 - **Cover every mode.** If every pair starts near one mode and the kernel rarely crosses
   to another, every pair meets in that mode, and the estimates and their error bars
@@ -231,5 +231,5 @@ and the cost, and decides whether the chains find every mode.
 - **Inside the support.** A replicate that starts where the target density is zero emits
   an {class}`~telescopic.warnings.InputWarning`, and its chains stay there until they
   accept a proposal of finite density.
-- **The last state of an ensemble** keeps the estimates unbiased, but covers only the
-  modes that the ensemble found.
+- **The last state of an ensemble** keeps the estimates unbiased when the chain
+  converges from it, but covers only the modes that the ensemble found.

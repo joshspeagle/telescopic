@@ -53,12 +53,14 @@ A few of the pairs met after `k + lag`, so a few replicates carry bias correctio
 
 ## Expectations
 
-{meth}`telescopic.Result.estimate` estimates $\pi(h)$ for a function `h` that maps points
-of shape `(n, d)`, a read-only array, to values of shape `(n,)` or `(n, p)`; any other
-shape raises `ValueError`. It returns an {class}`telescopic.Estimate`: the mean of the replicates'
-estimates (`value`), its `standard_error`, a normal `interval` at `level` (0.95 by
-default) and the replicates' estimates (`replicates`). Here $E[x_0 x_1]$ is the
-covariance, 0.9:
+{meth}`telescopic.Result.estimate` estimates $\pi(h)$ for a function `h` that maps
+points of shape `(n, d)`, a read-only array, to values of shape `(n,)` or `(n, p)`; any
+other shape raises `ValueError`. It returns an {class}`telescopic.Estimate`: the mean of
+the replicates' estimates (`value`), its `standard_error`, an `interval` at `level`
+(0.95 by default) and the replicates' estimates (`replicates`). The interval is the
+value plus or minus the standard error times the quantile of Student's t with $R - 1$
+degrees of freedom ([Theory](../theory.md#guarantees-and-their-limits)). It needs at least 2 replicates; with 1,
+`estimate` raises `ValueError`. Here $E[x_0 x_1]$ is the covariance, 0.9:
 
 ```{code-cell} python
 product = result.estimate(lambda x: x[:, 0] * x[:, 1])

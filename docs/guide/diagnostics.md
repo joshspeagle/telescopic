@@ -228,7 +228,7 @@ log-densities, and the first two targets `sample()`'s default settings:
   warning in 100 runs at $R = 100$ and 50 runs at $R = 500$.
 - The banana ({func}`telescopic.examples.banana`) from $U[-5, 5]^2$: at $R = 100$, the
   variance warning in 37 of 200 runs, whose 95% intervals of $E[x_0^2]$ covered the truth
-  in 89% of them against 96% in the other runs; at $R = 500$, the variance warning in 4
+  in 95% of them against 97% in the other runs; at $R = 500$, the variance warning in 4
   of 50 runs and the tail warning in 14.
 - The bimodal mixture of Jacob, O'Leary & Atchadé (2020, §5.1),
   {func}`telescopic.examples.mixture`, from $\mathcal N(10, 1)$, with a random walk of

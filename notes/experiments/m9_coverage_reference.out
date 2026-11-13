@@ -1,9 +1,21 @@
-stationary N(0, 1): k = L = 38, m = 380, 10000 intervals of R = 200
-  h = x  : coverage 0.9509 (binomial se 0.0022)
-  h = x^2: coverage 0.9489 (binomial se 0.0022)
-near-stationary N(1, 1): k = L = 38, m = 380, 10000 intervals of R = 200
-  h = x  : coverage 0.9480 (binomial se 0.0022)
-  h = x^2: coverage 0.9477 (binomial se 0.0022)
-far N(3, 1), recorded, not asserted: k = L = 38, m = 380, 10000 intervals of R = 200
-  h = x  : coverage 0.9512 (binomial se 0.0022)
-  h = x^2: coverage 0.9479 (binomial se 0.0022)
+stationary N(0, 1): k = L = 38, m = 380, 2000000 replicates
+  h = x  , R = 200, t     : coverage 0.9521 (binomial se 0.0021, 10000 intervals)
+  h = x  , R =   5, t     : coverage 0.9500 (binomial se 0.0003, 400000 intervals)
+  h = x  , R =   5, normal: coverage 0.8780 (binomial se 0.0005, 400000 intervals)
+  h = x^2, R = 200, t     : coverage 0.9500 (binomial se 0.0022, 10000 intervals)
+  h = x^2, R =   5, t     : coverage 0.9424 (binomial se 0.0004, 400000 intervals)
+  h = x^2, R =   5, normal: coverage 0.8699 (binomial se 0.0005, 400000 intervals)
+near-stationary N(1, 1): k = L = 38, m = 380, 2000000 replicates
+  h = x  , R = 200, t     : coverage 0.9496 (binomial se 0.0022, 10000 intervals)
+  h = x  , R =   5, t     : coverage 0.9498 (binomial se 0.0003, 400000 intervals)
+  h = x  , R =   5, normal: coverage 0.8784 (binomial se 0.0005, 400000 intervals)
+  h = x^2, R = 200, t     : coverage 0.9493 (binomial se 0.0022, 10000 intervals)
+  h = x^2, R =   5, t     : coverage 0.9417 (binomial se 0.0004, 400000 intervals)
+  h = x^2, R =   5, normal: coverage 0.8699 (binomial se 0.0005, 400000 intervals)
+far N(3, 1), recorded, not asserted: k = L = 38, m = 380, 2000000 replicates
+  h = x  , R = 200, t     : coverage 0.9531 (binomial se 0.0021, 10000 intervals)
+  h = x  , R =   5, t     : coverage 0.9507 (binomial se 0.0003, 400000 intervals)
+  h = x  , R =   5, normal: coverage 0.8789 (binomial se 0.0005, 400000 intervals)
+  h = x^2, R = 200, t     : coverage 0.9495 (binomial se 0.0022, 10000 intervals)
+  h = x^2, R =   5, t     : coverage 0.9420 (binomial se 0.0004, 400000 intervals)
+  h = x^2, R =   5, normal: coverage 0.8692 (binomial se 0.0005, 400000 intervals)

@@ -93,8 +93,9 @@ that has met. To run on a pool of processes, the kernel must be picklable
 
 ## Coupling primitives
 
-{mod}`telescopic.couplings` holds the couplings that the built-in kernels use. Each
-works on a batch, and on rows where the two draws coincide it returns a copy.
+{mod}`telescopic.couplings` holds the couplings of the built-in kernels, and
+`discrete_maximal` for kernels on finite state spaces. Each works on a batch, and on
+rows where the two draws coincide it returns a copy.
 
 - {func}`telescopic.couplings.reflection_maximal` couples $\mathcal N(\mu_x, CC^\top)$
   and $\mathcal N(\mu_y, CC^\top)$, given $C$ and $C^{-1}$, with $d$ normals and 1

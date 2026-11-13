@@ -706,6 +706,26 @@ def test_crn_refuses_conditionals_whose_mean_and_cov_are_methods():
         kernel.coupled_step(Target(None), x, y, random_draws(1, 0))
 
 
+def test_crn_gibbs_couplings_use_common_numbers_for_pairs_closer_than_underflow():
+    # The distance between the rows, 1e-170, squares to 0.
+    class NoDensity(Normal):
+        def logpdf(self, value):
+            raise AssertionError("the maximal coupling was used")
+
+    kernel = Gibbs(lambda x, b: NoDensity(0.5 * x[1 - b], 1.0), [[0], [1]], coupling="crn")
+    x, y, u = [0.3, 1e-170], [0.3, 0.0], 0.7
+    new_x, new_y = kernel.coupled_step(
+        Target(None),
+        gibbs_state(x),
+        gibbs_state(y),
+        fixed_draws(uniforms=[[u]], generators=[np.random.default_rng(0)]),
+    )
+    # The first coordinates agree after the first block, so the second takes one draw.
+    for start, new in ((x, new_x), (y, new_y)):
+        assert new.x[0, 0] == Normal(0.5 * start[1], 1.0).ppf(u)
+    np.testing.assert_array_equal(new_x.x, new_y.x)
+
+
 def test_crn_gibbs_couplings_map_a_uniform_of_zero_to_a_finite_point():
     kernel = Gibbs(conditional, [[0], [1]], coupling="crn")
     new_x, new_y = kernel.coupled_step(

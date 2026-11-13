@@ -39,15 +39,25 @@ def gaussian_result(n=40, **options):
 RESULT = gaussian_result()
 
 
-def test_an_estimate_averages_the_replicates_with_a_normal_interval():
-    estimate = RESULT.estimate(lambda x: x**2, level=0.9)
-    values = RESULT.measure.per_replicate(lambda x: x**2)
+@pytest.mark.parametrize(
+    "result",
+    [gaussian_result(2), gaussian_result(30, k=3, m=3, lag=1, max_iter=4)],
+    ids=["two replicates", "some censored"],
+)
+def test_an_estimate_averages_the_replicates_with_a_student_t_interval(result):
+    estimate = result.estimate(lambda x: x**2, level=0.9)
+    values = result.measure.per_replicate(lambda x: x**2)
     error = values.std(axis=0, ddof=1) / np.sqrt(len(values))
+    half_width = stats.t.ppf(0.95, len(values) - 1) * error
     np.testing.assert_array_equal(estimate.value, values.mean(axis=0))
     np.testing.assert_allclose(estimate.standard_error, error, rtol=1e-12)
-    np.testing.assert_allclose(
-        estimate.interval[1] - estimate.value, stats.norm.ppf(0.95) * error, rtol=1e-12
-    )
+    np.testing.assert_allclose(estimate.interval[0], estimate.value - half_width, rtol=1e-12)
+    np.testing.assert_allclose(estimate.interval[1], estimate.value + half_width, rtol=1e-12)
+
+
+def test_an_estimate_from_one_replicate_raises_instead_of_an_undefined_interval():
+    with pytest.raises(ValueError, match="at least 2 replicates that met, not 1"):
+        gaussian_result(1).estimate(lambda x: x)
 
 
 def test_the_covariance_combines_first_and_second_moments_coordinate_by_coordinate():

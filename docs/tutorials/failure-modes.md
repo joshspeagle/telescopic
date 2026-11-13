@@ -6,13 +6,13 @@ kernelspec:
 
 # When unbiased is not enough
 
-The estimates are unbiased whatever the initial distribution and the settings
-([Theory](../theory.md#guarantees-and-their-limits)), yet a run can miss the truth by many
-times its error bar, or cover it with an error bar too wide to use. This page runs such
-cases and shows what telescopic reports for each. A run's warnings appear under its
-cell; [Diagnostics and warnings](../guide/diagnostics.md) explains each one, and
-[Initial distributions](../guide/targets.md#choosing-one) gives the advice on choosing
-one.
+The estimates are unbiased for any settings and every initial distribution from which
+the chain converges ([Theory](../theory.md#guarantees-and-their-limits)), yet a run can
+miss the truth by many times its error bar, or cover it with an error bar too wide to
+use. This page runs such cases and shows what telescopic reports for each. A run's
+warnings appear under its cell; [Diagnostics and warnings](../guide/diagnostics.md)
+explains each one, and [Initial distributions](../guide/targets.md#choosing-one) gives
+the advice on choosing one.
 
 ```{code-cell} python
 import matplotlib.pyplot as plt
