@@ -1,9 +1,10 @@
 # Theory
 
-telescopic estimates target expectations from pairs of coupled Markov chains using telescoping sums.
-The code and its docstrings use this notation. The methods are those of Glynn & Rhee
-(2014) and Jacob, O'Leary & Atchadé (2020, JOA20), with the lag of Biswas, Jacob &
-Vanetti (2019, BJV19) and the tuning rules of Atchadé & Jacob (2024, AJ24).
+This page derives the estimators that telescopic computes from pairs of coupled Markov
+chains, states what they guarantee, and gives the rules that choose their settings. The
+methods are those of Glynn & Rhee (2014) and Jacob, O'Leary & Atchadé (2020, JOA20),
+with the lag of Biswas, Jacob & Vanetti (2019, BJV19) and the tuning rules of Atchadé &
+Jacob (2024, AJ24). The code and its docstrings use the notation that the page defines.
 
 ## Coupled chains
 
@@ -24,13 +25,15 @@ With a lag $L \ge 1$, a replicate runs one pair of chains:
 
 1. Draw $X_0$ and $Y_0$ from $\pi_0$ independently.
 2. Draw $X_t \sim P(X_{t-1}, \cdot)$ for $t = 1, \dots, L$.
-3. While $t < \max(\tau, m)$: before the meeting, draw
-   $(X_{t+1}, Y_{t+1-L}) \sim \bar P\big((X_t, Y_{t-L}), \cdot\big)$; after it, draw
-   $X_{t+1} \sim P(X_t, \cdot)$ and set $Y_{t+1-L} = X_{t+1}$.
+3. Until $t$ reaches the run length $m$ with the chains equal: while
+   $X_t \ne Y_{t-L}$, draw
+   $(X_{t+1}, Y_{t+1-L}) \sim \bar P\big((X_t, Y_{t-L}), \cdot\big)$; once
+   $X_t = Y_{t-L}$, draw $X_{t+1} \sim P(X_t, \cdot)$ and set $Y_{t+1-L} = X_{t+1}$.
 
-The **meeting time** is $\tau = \inf\{t \ge L : X_t = Y_{t-L}\}$. Equality is exact:
-telescopic compares the coordinates with `==` and never uses a tolerance. After the
-meeting it simulates $X$ alone, so $X_t = Y_{t-L}$ for every $t \ge \tau$.
+The **meeting time** is $\tau = \inf\{t \ge L : X_t = Y_{t-L}\}$, so step 3 ends at
+$t = \max(\tau, m)$. Equality is exact: telescopic compares the coordinates with `==`
+and never uses a tolerance. After the meeting it simulates $X$ alone, so
+$X_t = Y_{t-L}$ for every $t \ge \tau$.
 
 Each chain on its own is an ordinary Markov chain with kernel $P$ started from $\pi_0$, so
 $X_t$ and $Y_t$ both have the law $\pi_t$.
@@ -116,7 +119,12 @@ so telescopic also counts those, and the wall time.
 - **Unbiasedness:** $\mathbb E[H^{(L)}_{k:m}] = \pi(h)$ for every $0 \le k \le m$,
   $L \ge 1$ and every $\pi_0$ from which the chain converges, provided that the coupling
   preserves both marginals, the pair stays together after meeting, and one of three
-  published sets of conditions holds:
+  published sets of conditions holds. In practice they ask for meeting times with light
+  tails and for an $h$ with enough moments under the chain. A run checks the first from
+  500 replicates, for a tail that shows up in it: `result.diagnostics()["tail_index"]`
+  estimates the tail index and the `tail` warning fires below 2
+  ([Diagnostics and warnings](guide/diagnostics.md#heavy-tailed-meeting-times-tail)).
+  The precise conditions are:
   - JOA20, Prop. 3.1: the chain started from $\pi_0$ converges in the sense of their
     Assumption 2.1, $\mathbb E[h(X_t)] \to \pi(h)$ as $t \to \infty$ with
     $\sup_t \mathbb E|h(X_t)|^{2+\eta} < \infty$ for some $\eta > 0$, and $\tau$ has

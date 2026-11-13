@@ -91,6 +91,8 @@ All notable changes to this project are documented here. The format follows
   one way; a codespell pre-commit hook checks new text.
 - Getting started writes the lag as $L$ in its equations, defines the pilots and a
   consistent estimate where it first uses them, and says how to turn on the tail check.
+- Theory opens with what it derives, defines the meeting time before the algorithm uses
+  it, and says what the conditions of unbiasedness ask in practice before stating them.
 - Fixes from an audit of the whole package: a number argument of the wrong type raises
   `TypeError`, and one out of bounds `ValueError`, naming the argument; `names` must be
   distinct strings, one per coordinate; `Kernel.check_ndim` checks a kernel's dimension;
