@@ -220,6 +220,12 @@ def test_a_result_needs_the_signed_measures_of_its_replicates():
         Result(replicates)
 
 
+def test_a_result_with_no_replicates_raises_at_construction():
+    # diagnostics() and check() divided by zero, and tv_bound() reduced an empty array.
+    with pytest.raises(ValueError, match="at least one replicate"):
+        synthetic([], [])
+
+
 def test_censored_pairs_need_the_cap_of_their_run():
     tau = RESULT._replicates.meeting_time.copy()
     tau[0] = np.inf

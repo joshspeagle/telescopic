@@ -118,6 +118,8 @@ class Result:
         tuning: TuningReport | None = None,
         pilot: FloatArray | None = None,
     ) -> None:
+        if not len(replicates.index):
+            raise ValueError("replicates must hold at least one replicate, not none")
         met = np.isfinite(replicates.meeting_time)
         self.n_replicates = int(met.sum())
         self.n_censored = len(met) - self.n_replicates
