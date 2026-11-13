@@ -46,6 +46,13 @@ class Stale(RandomWalk):
         return new_x, State(new_y.x, new_x.log_prob)
 
 
+class SlightlyStale(RandomWalk):
+    # Y's log-density is off by one part in a million, far beyond rounding.
+    def coupled_step(self, target, state_x, state_y, draws):
+        new_x, new_y = super().coupled_step(target, state_x, state_y, draws)
+        return new_x, State(new_y.x, new_y.log_prob * (1 + 1e-6))
+
+
 class StaleGradient(MALA):
     # Y carries X's gradient.
     def coupled_step(self, target, state_x, state_y, draws):
@@ -109,11 +116,12 @@ def test_check_coupling_flags_a_coupling_that_recomputes_y_where_the_chains_meet
     ("kernel", "target", "y"),
     [
         (Stale(COV), TARGET, [0.3, -0.1]),
+        (SlightlyStale(COV), TARGET, [0.3, -0.1]),
         (StaleGradient(0.8, cov=COV), TARGET, [0.3, -0.1]),
         # Y stays at a point of zero density, with X's finite log-density.
         (Stale(0.01 * np.eye(2)), Target(positive_first, vectorize=True), [-3.0, 0.0]),
     ],
-    ids=["log-density", "gradient", "zero-density"],
+    ids=["log-density", "log-density off by 1e-6", "gradient", "zero-density"],
 )
 def test_check_coupling_flags_a_stale_cache(kernel, target, y):
     report = check_coupling(kernel, target, [0.1, 0.2], y, n=2_000, rng=5)
