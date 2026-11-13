@@ -187,7 +187,8 @@ pairs that never leave one mode miss the others. **Remedy:** an initial distribu
 that covers every mode ([Initial distributions](targets.md#choosing-one)). Chains that
 agree do not show that the target has one mode. The four chains share one proposal
 covariance, and on a target with well-separated modes they often settle in the same mode
-during their descent.
+during their descent; the kernel is then tuned to that mode alone, and the warning stays
+silent ([A tuned proposal that covers one mode](../tutorials/failure-modes.md#a-tuned-proposal-that-covers-one-mode)).
 
 ### Slow pairs (`slow`)
 
@@ -239,14 +240,28 @@ log-densities, and the first two targets `sample()`'s default settings:
   of $P(x > 3)$ missed the truth in 33 of 50 runs, none of which warned. The 17 runs whose
   replicates found the other mode raised the variance warning, and their intervals
   covered the truth.
+- The mixture $0.7\,\mathcal N(-6e_1, I) + 0.3\,\mathcal N(6e_1, I)$ in 10 and 32
+  dimensions, from $\mathcal N(0, 100I)$, with
+  `kernel=Mixture([RandomWalk(), Independence()], [0.8, 0.2])` tuned automatically and
+  $R = 400$: the estimate of $P(x_0 < 0)$ lay more than 5 standard errors from 0.7 in 14
+  of 20 runs in 10 dimensions and 18 of 20 in 32. Over these runs, the same target with
+  modes 24 apart and two more sets of seeds, the tuning warning fired on none of the 191
+  runs whose estimate was wrong; it fired only on runs whose estimate was right.
 
 ## A run that never left one mode
 
-The last case shows the limit of every diagnostic here: a run whose pairs all met in one
-mode cannot be detected from its own output, since nothing in its meeting times or
+The last two cases show the limit of every diagnostic here: a run whose pairs all met in
+one mode cannot be detected from its own output, since nothing in its meeting times or
 estimates shows the mode that no replicate visited. The remedy is an initial
-distribution that covers every mode ([Initial distributions](targets.md#choosing-one)).
-[When unbiased is not enough](../tutorials/failure-modes.md) works through such runs.
+distribution that covers every mode ([Initial distributions](targets.md#choosing-one)),
+and a kernel that reaches every mode from it. A start that covers every mode is not
+enough when the kernel was tuned to one: an automatically tuned
+{class}`~telescopic.kernels.Independence` component proposes only within the modes that
+the tuning chains reached, and its pairs then meet quickly, so fast meeting says nothing
+about a region the proposal does not cover.
+[When unbiased is not enough](../tutorials/failure-modes.md) works through such runs, and
+shows two checks: comparing runs with different seeds, whose tuning chains can settle in
+different modes, and giving the proposal explicitly when the modes are known.
 
 ## Warning classes
 

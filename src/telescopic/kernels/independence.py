@@ -95,6 +95,11 @@ class Independence(Kernel):
 
     Meeting times are geometric only when the weights :math:`\pi/q` are bounded; a
     proposal with lighter tails than the target gives heavy-tailed meeting times.
+
+    A tuned proposal covers only the modes that the pilot chains reached. On a target with
+    well-separated modes, the chains often settle in one mode, and pairs then meet quickly
+    in it: the estimates can be confidently wrong, and the pilot's agreeing chains raise
+    no warning. Give ``proposal`` explicitly to cover modes that are known.
     """
 
     def __init__(self, proposal: MultivariateT | None = None) -> None:

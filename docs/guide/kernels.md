@@ -46,7 +46,15 @@ Gaussian.
 ## Tuning
 
 Parameters left as `None` are tuned from four adaptive Metropolis chains, the tuning
-pilot ([Settings](settings.md)); parameters given are kept.
+pilot ([Settings](settings.md)); parameters given are kept. The four chains share one
+proposal covariance. On a target with well-separated modes they often settle in the same
+mode during their descent, before they reach it, and the tuned parameters then describe
+that mode alone: on the two-mode target of
+[A tuned proposal that covers one mode](../tutorials/failure-modes.md#a-tuned-proposal-that-covers-one-mode),
+all four chains ended in one mode in 15 of 20 runs in 10 dimensions and 18 of 20 in 32.
+Their $\hat R$ then stays near 1, so the warning about disagreeing tuning chains
+([Diagnostics and warnings](diagnostics.md#disagreeing-tuning-chains-tuning)) stays
+silent.
 {meth}`telescopic.kernels.Kernel.tune` returns a tuned copy and the pilot's report. The
 sampler calls it once, before anything else runs, and keeps the tuned kernel:
 
@@ -240,6 +248,12 @@ $\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]$.
   the pilot's covariance as scale matrix. The report's `max_weight_ratio` is the largest
   weight $\pi/q$ among the pilot's states, relative to their median; a large value
   announces heavy-tailed meeting times.
+- A tuned proposal covers only the modes that the tuning chains reached. On a target with
+  well-separated modes, both chains of a pair then accept proposals in that mode and
+  meet within a few steps, and the estimates can be confidently wrong, in some runs
+  without any warning: fast meeting says nothing about a region the proposal does not cover
+  ([A tuned proposal that covers one mode](../tutorials/failure-modes.md#a-tuned-proposal-that-covers-one-mode)).
+  When the modes are known, give `proposal` explicitly so that it covers them all.
 
 The meeting times have geometric tails only when the weights $\pi/q$ are bounded, so the
 proposal needs tails at least as heavy as the target's.

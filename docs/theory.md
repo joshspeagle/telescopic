@@ -136,7 +136,10 @@ so telescopic also counts those, and the wall time.
   are much shorter than a gap in the support, can meet the conditions and be unbiased, but
   the replicates that carry the correction are too rare to occur in a run, so the
   estimate is confidently wrong at any practical number of replicates
-  ([When unbiased is not enough](tutorials/failure-modes.md)).
+  ([When unbiased is not enough](tutorials/failure-modes.md)). An independence proposal
+  tuned to one of two well-separated modes, mixed with such a random walk, is another
+  such kernel, whose pairs meet within a few steps
+  ([A tuned proposal that covers one mode](tutorials/failure-modes.md#a-tuned-proposal-that-covers-one-mode)).
 - **Error bars:** with $R \ge 2$ independent replicates and finite variance,
   $\bar H \pm t_{R-1,\,1-\alpha/2}\,\hat\sigma/\sqrt R$, with $t_{R-1,\,1-\alpha/2}$ the
   $1 - \alpha/2$ quantile of Student's t with $R - 1$ degrees of freedom, is an

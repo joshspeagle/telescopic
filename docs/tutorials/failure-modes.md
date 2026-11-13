@@ -15,12 +15,14 @@ explains each one, and [Initial distributions](../guide/targets.md#choosing-one)
 the advice on choosing one.
 
 ```{code-cell} python
+import warnings
+
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy import optimize, stats
+from scipy import optimize, special, stats
 
 import telescopic
-from telescopic.kernels import RandomWalk
+from telescopic.kernels import Independence, Mixture, MultivariateT, RandomWalk
 
 np.set_printoptions(precision=3)
 ```
@@ -216,6 +218,139 @@ between them, such as this tuned random walk, or a
 modes ([Kernels and couplings](../guide/kernels.md)). With a kernel that cannot cross,
 the start decides which modes the pairs see.
 
+### A tuned proposal that covers one mode
+
+A {class}`~telescopic.kernels.Mixture` whose
+{class}`~telescopic.kernels.Independence` component is left to tuning reaches only the
+modes that its tuned proposal covers. The target is
+$0.7\,\mathcal N(-6e_1, I) + 0.3\,\mathcal N(6e_1, I)$ in 10 dimensions, two modes 12
+apart, and the start $\mathcal N(0, 100I)$ covers both. The test function is the
+indicator of $x_0 < 0$, whose expectation is 0.7, the weight of the mode at $-6e_1$:
+
+```{code-cell} python
+dimension = 10
+offset = np.zeros(dimension)
+offset[0] = 6.0
+log_weights = np.log([0.7, 0.3])
+
+
+def two_modes(x):
+    distances = np.array(
+        [np.sum((x + offset) ** 2, axis=1), np.sum((x - offset) ** 2, axis=1)]
+    )
+    return special.logsumexp(log_weights[:, None] - 0.5 * distances, axis=0)
+
+
+def left_mode(x):
+    return (x[:, 0] < 0).astype(float)
+
+
+cover = telescopic.initial.Normal(np.zeros(dimension), 100 * np.eye(dimension))
+
+
+def mixture_run(seed, proposal=None):
+    kernel = Mixture([RandomWalk(), Independence(proposal)], [0.8, 0.2])
+    return telescopic.sample(two_modes, cover, 400, vectorize=True, kernel=kernel, rng=seed)
+
+
+one_mode = mixture_run(3)
+print(one_mode.estimate(left_mode))
+print(f"largest R-hat of the tuning chains: {one_mode.tuning.rhat.max():.3f}")
+print(f"location of the proposal along x_0: {one_mode.kernel.kernels[1].proposal.mean[0]:.2f}")
+print(f"slowest pair: {one_mode.meeting_times.max():.0f} steps")
+telescopic.diagnostics.issues(one_mode)
+```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claims of the next paragraph.
+assert one_mode.estimate(left_mode).value < 0.01
+assert one_mode.estimate(left_mode).standard_error < 0.01
+assert not telescopic.diagnostics.issues(one_mode)
+assert one_mode.tuning.rhat.max() < np.sqrt(2)
+assert abs(one_mode.kernel.kernels[1].proposal.mean[0] - 6) < 0.5
+assert one_mode.meeting_times.max() < 200
+```
+
+The estimate is 0, with an error bar of 0, every pair met within about a hundred steps,
+and the run emits no warning. The tuning chains agree, and the Student-$t$ proposal fitted
+to them sits in the mode at $6e_1$. The four tuning chains share one proposal covariance;
+on this target they settle on one side of the origin during their descent, before they
+reach a mode, and the proposal fitted to their second halves covers that mode alone.
+Both chains of a pair receive the same proposal, accept it, and meet in that mode within
+a few steps. As with a random walk whose steps are much shorter than the gap between
+modes ([Theory](../theory.md#guarantees-and-their-limits)), the replicates that would
+correct the estimate are too rare to occur in a run.
+
+Runs with ten seeds, each with its warnings counted:
+
+```{code-cell} python
+def compare_seeds(proposal=None):
+    rows = []
+    for seed in range(10):
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            result = mixture_run(seed, proposal)
+        estimate = result.estimate(left_mode)
+        wrong = abs(estimate.value - 0.7) > 5 * estimate.standard_error
+        disagree = result.tuning.rhat.max() > np.sqrt(2)
+        variance_only = all("of the variance" in str(w.message) for w in caught)
+        rows.append((wrong, disagree, len(caught), variance_only))
+        print(
+            f"seed {seed}: {estimate}, more than 5 standard errors from 0.7: {wrong}, "
+            f"tuning chains disagree: {disagree}, warnings: {len(caught)}"
+        )
+    return np.array(rows)
+
+
+tuned_rows = compare_seeds()
+```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claims of the next paragraph.
+wrong, disagree, warned, variance_only = tuned_rows.T.astype(bool)
+assert wrong.sum() >= 8
+assert not np.any(wrong & disagree)
+assert disagree.any()
+assert np.any(wrong & ~warned)
+assert np.all(variance_only[wrong])
+```
+
+Most runs estimate the weight 0.7 as 0 or 1, depending on the mode that the tuning
+chains found, each with a small error bar. The tuning chains disagree only in a run whose
+estimate is right: there they split between the modes, and the proposal fitted to them
+spans both. Agreeing tuning chains do not show that the run found every mode. Some of the
+wrong runs emit no warning at all, and the others only the warning that one replicate
+holds most of the variance, which does not name the cause
+([Diagnostics and warnings](../guide/diagnostics.md#measured-rates)).
+
+Two things help. Runs with different seeds disagree by far more than their error bars,
+so running more than one seed shows the failure whenever their tuning chains settle in
+different modes. And when the modes are known, from optimizations started at several
+points or from the model, an {class}`~telescopic.kernels.Independence` proposal given
+explicitly can cover them all. A Student-$t$ located at the target's mean, $-2.4e_1$,
+with the target's covariance as its scale matrix, is the proposal that tuning would fit
+to chains that visited both modes in proportion:
+
+```{code-cell} python
+scale = np.eye(dimension)
+scale[0, 0] += 0.7 * 0.3 * 12**2  # the variance of x_0 under the mixture
+covering_rows = compare_seeds(MultivariateT(-0.4 * offset, scale))
+```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claims of the next paragraph.
+assert not covering_rows[:, 0].astype(bool).any()
+```
+
+Every estimate now lies within 5 standard errors of 0.7. Such a proposal covers only the
+modes it is given: a mode that no optimization found stays as invisible as before.
+
 ## A start far wider than the target
 
 The line fit of [Getting started](../getting-started.md), with the log-density of the
@@ -347,6 +482,7 @@ assert np.all(widened_spread.standard_error < 0.05 * exact_var)
 The run emits no warning, no replicate dominates, and the standard deviations and
 variances agree with the exact ones, with small error bars.
 
-Each run above printed its warnings as it ended, or, for a slow pair, as it happened.
+Each run above printed its warnings as it ended, or, for a slow pair, as it happened,
+except the runs of `compare_seeds`, which counted them.
 [Diagnostics and warnings](../guide/diagnostics.md) shows how to read them from a result
 and how to turn them into errors.

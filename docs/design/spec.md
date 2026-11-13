@@ -397,7 +397,7 @@ The documentation says that settings optimal for HMC alone can fail to contract 
 - **Acceptance:** accept when $\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]$.
 - **Coupling:** both chains share the proposal $x'$ and $u$, so they meet when both accept. This is already a maximal kernel coupling (O'Leary, Wang & Jacob 2021).
 - **Default proposal:** a multivariate Student-$t$ with 5 degrees of freedom, located at the RWMH pilot's mean, with the pilot's covariance as its scale matrix, so its covariance is $5/3$ of the pilot's (D-25). The tuning report gives the largest importance-weight ratio $\pi/q$ seen in the pilot, relative to the median.
-- **Documented caveats:** meeting times are geometric only for bounded importance weights. A poor proposal gives heavy-tailed meeting times.
+- **Documented caveats:** meeting times are geometric only for bounded importance weights. A poor proposal gives heavy-tailed meeting times. A tuned proposal covers only the modes that the pilot chains reached: on a target with well-separated modes, pairs then meet within a few steps in one mode, and the estimates can be confidently wrong without any warning. No check at run time detects this; the documentation says so, with runs from several seeds and an explicit proposal as what helps (DECISIONS #117).
 
 ### 5.7 Gibbs (R-KER-GIBBS)
 
@@ -562,6 +562,7 @@ Rates measured at M11, on the first two targets with `sample()`'s defaults and o
 - `examples.gaussian(10)`: no warning in 100 runs at $R = 100$ and 50 at $R = 500$.
 - The banana from $U[-5, 5]^2$: at $R = 100$, the variance warning in 37 of 200 runs, where the 95% intervals of $E[x_0^2]$ covered at 0.95 against 0.97 elsewhere (0.89 against 0.96 with the normal quantile, before DECISIONS #78); at $R = 500$, the variance warning in 4 of 50 runs and the tail warning in 14.
 - JOA20's bimodal target from $\mathcal N(10, 1)$ at $R = 1000$: 33 of 50 intervals of $P(x > 3)$ missed the truth, none with a warning; the 17 runs whose replicates found the other mode raised the variance warning and covered.
+- $0.7\,\mathcal N(-6e_1, I) + 0.3\,\mathcal N(6e_1, I)$ in 10 and 32 dimensions from $\mathcal N(0, 100I)$, with `Mixture([RandomWalk(), Independence()], [0.8, 0.2])` tuned automatically and $R = 400$ (measured for issue #102, `notes/experiments/i102_q2_analysis_main.out`): $P(x_0 < 0)$ more than 5 standard errors from 0.7 in 14 of 20 runs at $d = 10$ and 18 of 20 at $d = 32$; over these, modes 24 apart and two more sets of seeds, the tuning warning fired on none of the 191 wrong runs (`i102_q2_pooled.out`, `i102_q3_confirm.out`).
 
 The documentation explains each, with the failure cases of JOA20 §5.1, and says that a run that never left one mode cannot be detected from its own output at moderate $R$ (design review D-R9).
 
