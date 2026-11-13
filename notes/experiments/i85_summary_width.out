@@ -1,0 +1,5 @@
+commit 41c8a08 of the package
+d = 2: 75 characters in the longest line:
+  cost per replicate: 392 kernel applications, 0.000758 s; relative cost 1.14
+d = 10: 76 characters in the longest line:
+             mean  standard_error       std        q16           q50       q84

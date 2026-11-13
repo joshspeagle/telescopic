@@ -1,17 +1,19 @@
 import itertools
 import sys
 from dataclasses import replace
+from xml.etree import ElementTree
 
 import numpy as np
 import pytest
 from scipy import stats
 
 from references import gaussian_log_prob, synthetic
+from telescopic import examples, sample
 from telescopic.diagnostics import w1_bound
 from telescopic.engine import run
 from telescopic.estimators import unbiased_covariance, unbiased_variance
 from telescopic.initial import Normal
-from telescopic.kernels import RandomWalk
+from telescopic.kernels import Independence, RandomWalk
 from telescopic.results import Result
 from telescopic.target import Target
 from telescopic.warnings import ConvergenceWarning
@@ -194,6 +196,69 @@ def test_the_summary_reports_every_parameter_and_the_run():
     assert as_dict["parameters"]["a"]["mean"] == RESULT.mean().value[0]
     assert as_dict["n_replicates"] == 40
     assert "meeting times: median" in repr(summary)
+
+
+def test_summary_repr_html_holds_every_column():
+    summary = RESULT.summary()
+    page = ElementTree.fromstring(summary._repr_html_())
+    header, *rows = page.iter("tr")
+    assert [cell.text for cell in header] == [None, *summary.table]
+    for i, (row, name) in enumerate(zip(rows, summary.names, strict=True)):
+        values = [f"{column[i]:.6g}" for column in summary.table.values()]
+        assert [cell.text for cell in row] == [name, *values]
+    items = [item.text for item in page.iter("li")]
+    assert items == summary._footer_lines()
+    assert any(item.startswith("meeting times: median") for item in items)
+
+
+def test_summary_repr_html_escapes_the_names():
+    summary = Result(RESULT._replicates, names=["<b>", "a&b"]).summary()
+    text = summary._repr_html_()
+    assert "<b>" not in text
+    page = ElementTree.fromstring(text)
+    assert [row[0].text for row in list(page.iter("tr"))[1:]] == ["<b>", "a&b"]
+
+
+@pytest.mark.parametrize("d", [2, 10])
+def test_summary_of_the_default_runs_fits_in_80_characters(d):
+    # The issue's two-dimensional run printed a line of 130 characters, past the 83 that
+    # a code output of the documentation holds at 1440 px. At d = 2 and 10 the longest
+    # lines are now 75 and 76 characters (notes/experiments/i85_summary_width.py).
+    example = examples.gaussian(d)
+    result = sample(example.log_prob, example.initial, vectorize=True, rng=0)
+    assert max(len(line) for line in repr(result.summary()).splitlines()) <= 80
+
+
+def test_summary_prints_the_kernel_on_its_own_line_to_4_significant_figures():
+    kernel = RandomWalk(np.eye(2), scale=2.3812345678)
+    lines = repr(Result(RESULT._replicates, kernel=kernel).summary()).splitlines()
+    assert "kernel: RandomWalk(cov=<2x2>, scale=2.381, coupling='reflection')" in lines
+    assert "scale=2.3812345678" in repr(kernel)
+
+
+def test_summary_rounds_floats_but_not_dotted_tokens_in_the_kernel():
+    # A version in a proposal's repr printed as '3.1.12', and 123456.7 as 123500.0.
+    class Fitted:
+        def sample(self, draws):
+            raise NotImplementedError
+
+        def log_density(self, x):
+            raise NotImplementedError
+
+        def __repr__(self):
+            return "Fitted(version='3.10.12', scale=123456.7, shift=0.8989355)"
+
+    summary = Result(RESULT._replicates, kernel=Independence(Fitted())).summary()
+    expected = "Independence(proposal=Fitted(version='3.10.12', scale=1.235e+05, shift=0.8989))"
+    assert f"kernel: {expected}" in summary._footer_lines()
+
+
+def test_the_summary_prints_the_tail_index_on_its_own_line_from_500_replicates():
+    tau = np.random.default_rng(8).geometric(0.1, size=500) + 1
+    result = synthetic(tau, np.zeros(500))
+    line = f"tail index of the meeting times: {result.diagnostics()['tail_index']:.3g}"
+    assert line in repr(result.summary()).splitlines()
+    assert "tail index" not in repr(synthetic(tau[:499], np.zeros(499)).summary())
 
 
 def test_the_summary_converts_to_pandas():
