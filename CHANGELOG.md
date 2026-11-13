@@ -185,3 +185,5 @@ All notable changes to this project are documented here. The format follows
   only the modes its tuning chains reached, so a run on well-separated modes can be
   confidently wrong without a warning; the failure-modes tutorial shows such a run and
   two checks that help.
+- `Independence`'s `proposal` is typed as any object with `sample` and `log_density`,
+  as it already behaved, so type checkers accept a custom proposal.
