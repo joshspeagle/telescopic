@@ -130,7 +130,7 @@ def hill(values: npt.ArrayLike, n_tail: int) -> float:
     Parameters
     ----------
     values : array_like, shape (n,)
-        Positive values.
+        Positive, finite values.
     n_tail : int
         The number :math:`k` of upper order statistics, :math:`1 \le k < n`.
 
@@ -284,7 +284,9 @@ def tuning_disagreement(tuning: TuningReport | None) -> str | None:
     r"""The warning about tuning chains that disagree (spec section 5.3), or ``None``.
 
     The chains disagree when, in some coordinate, their means spread more widely than the
-    chains themselves: :math:`\hat R > \sqrt 2`, a sign of several modes.
+    chains themselves: :math:`\hat R > \sqrt 2`, a sign of several modes. The warning
+    also names the coordinates whose :math:`\hat R` is NaN, where all four chains sat at
+    one value, so the pilot never moved in them.
 
     Parameters
     ----------
@@ -295,11 +297,23 @@ def tuning_disagreement(tuning: TuningReport | None) -> str | None:
     -------
     str or None
     """
-    if tuning is None or not np.max(tuning.rhat) > np.sqrt(2):
+    if tuning is None or np.all(tuning.rhat <= np.sqrt(2)):
         return None
-    return (
-        f"the tuning chains disagree (R-hat up to {np.max(tuning.rhat):.2f}): the target "
-        "may have several modes, which make meeting times heavy-tailed, and pairs that "
-        "never leave one mode miss the others; use an initial distribution that covers "
-        "every mode"
-    )
+    nan = np.isnan(tuning.rhat)
+    largest = np.max(tuning.rhat, where=~nan, initial=0.0)
+    parts = []
+    if largest > np.sqrt(2):
+        parts.append(
+            f"the tuning chains disagree (R-hat up to {largest:.2f}): the target "
+            "may have several modes, which make meeting times heavy-tailed, and pairs that "
+            "never leave one mode miss the others; use an initial distribution that covers "
+            "every mode"
+        )
+    if nan.any():
+        parts.append(
+            f"the tuning chains never moved in coordinates {np.flatnonzero(nan).tolist()} "
+            "(R-hat NaN), so the tuned kernel barely moves in them either: check that "
+            "float64 resolves the target's scale at their values, or give the kernel's "
+            "parameters"
+        )
+    return "; and ".join(parts)

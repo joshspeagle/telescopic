@@ -171,3 +171,16 @@ def test_check_coupling_rejects_invalid_arguments(x, y, n, error, message):
 def test_random_draws_need_a_positive_integer_number_of_rows(n_rows, error):
     with pytest.raises(error, match="n_rows must be"):
         random_draws(n_rows)
+
+
+@pytest.mark.parametrize(
+    ("rng", "error", "message"),
+    [
+        ([1, 2], TypeError, "rng must be None, an integer"),
+        (True, TypeError, "rng must be None, an integer"),
+        (-1, ValueError, "rng must be a non-negative integer"),
+    ],
+)
+def test_random_draws_take_the_seeds_that_a_run_takes(rng, error, message):
+    with pytest.raises(error, match=message):
+        random_draws(2, rng)

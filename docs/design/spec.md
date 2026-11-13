@@ -353,7 +353,7 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 - **Covariance:** pooled over the second halves of the chains, plus $10^{-10}$ times each coordinate's variance on the diagonal, or $10^{-10}$ for a coordinate of variance 0. The pilot's own factorisations add $10^{-12}$ times each variance (DECISIONS #47).
 - **Scale:** $2.38/\sqrt d$, `RandomWalk`'s default (DECISIONS #7).
 - **Divergence:** where the target is flat in some direction, the scales can grow until the running sum of the covariance overflows, as it also does for a proper target whose scales are near the float64 limit (about $10^{153}$); the pilot then raises `ValueError` saying that the tuning chains diverged and the target may be improper or its scales near that limit (DECISIONS #112).
-- **Report:** the pilot acceptance rates and $\hat R$ per coordinate. A `ConvergenceWarning` when the chains disagree: $\hat R > \sqrt 2$ in some coordinate, where the chain means spread more widely than the chains themselves, a sign of several modes (DECISIONS #6).
+- **Report:** the pilot acceptance rates and $\hat R$ per coordinate. A `ConvergenceWarning` when the chains disagree: $\hat R > \sqrt 2$ in some coordinate, where the chain means spread more widely than the chains themselves, a sign of several modes (DECISIONS #6), or $\hat R$ is NaN in some coordinate, where all four chains sat at one value, so the pilot never moved in it. The message gives the largest finite $\hat R$ with the advice about modes when it exceeds $\sqrt 2$, and names the NaN coordinates with advice about the target's scale and the kernel's parameters, joining the two when both occur (DECISIONS #122).
 
 ### 5.4 MALA (R-KER-MALA)
 
@@ -407,7 +407,7 @@ The documentation says that settings optimal for HMC alone can fail to contract 
 - **Sweep:** blocks are updated in the given order.
 - **Couplings, per block:**
   - `"maximal"`: rejection maximal coupling (§5.2), with the $\eta$ option;
-  - `"crn"`: common random numbers, which contract but do not meet on their own (an `eta` other than 1 raises: DECISIONS #16): a common uniform through each `ppf` for a block of one coordinate whose conditionals have one; otherwise common standard normals through a square root of each conditional's `cov`, which may be singular, added to its `mean`. Such a conditional is taken to be the normal with that mean and covariance, whatever its type (DECISIONS #48);
+  - `"crn"`: common random numbers, which contract but do not meet on their own (an `eta` other than 1 raises: DECISIONS #16): a common uniform through each `ppf` for a block of one coordinate whose conditionals have one; otherwise common standard normals through a square root of each conditional's `cov`, which may be singular, added to its `mean`, a vector of the block's size; a scalar `mean` for a block of several coordinates raises rather than being broadcast (DECISIONS #120). Such a conditional is taken to be the normal with that mean and covariance, whatever its type (DECISIONS #48);
   - `"two-scale"`: CRN while $\lVert x - y\rVert >$ `threshold`, maximal otherwise (Biswas et al. 2022). The switch depends only on the pair at the start of each sweep, and both branches couple the same conditional, so it is valid (AJ24 §4.2). `threshold` is required.
 - **Identical conditionals:** when the coordinates outside block `b` are equal in the two chains, their conditionals are identical, and both chains receive the same draw. This identity coupling is a valid state-dependent choice; it also keeps equal states equal when $\eta < 1$, which the rejection coupling alone would split with probability $1 - \eta$ (design review D-R2).
 - **Meeting:** the engine's exact comparison after each sweep (R-EST-2). Blocks updated by CRN can become equal without a coupling event.
@@ -417,7 +417,7 @@ The documentation says that settings optimal for HMC alone can fail to contract 
 
 `Mixture(kernels, weights)`. A common uniform chooses the same component for both chains, and that component's coupling is applied.
 
-The choice of component must not depend on the states (AJ24 §4.2). Switching between couplings of the same kernel may depend on them (§5.7).
+The choice of component must not depend on the states (AJ24 §4.2). Switching between couplings of the same kernel may depend on them (§5.7). A component of weight 0 is never applied, even where rounding leaves the cumulative weights below 1 (DECISIONS #119).
 
 ---
 
@@ -512,7 +512,7 @@ Methods:
 - **Plots:** `plot_meeting_times(axes=None)`, `plot_tv_bound(ax=None)`, `plot_marginals(dims=None, bins=20, axes=None)` and `plot_corner(dims=None, bins=20)` (signed 2-D histograms); the first three draw on given axes (DECISIONS #30).
 - **Persistence and merging:**
   - `save(path)` and `Result.load(path)` use a versioned `.npz` schema, with no pickle: arrays, and the settings, names, seed state and descriptions as JSON (DECISIONS #26, #29). The engine's paths are not saved;
-  - `merge(other)` joins runs with the same seed, settings and dimension and disjoint replicate indices. It does not compare kernels or initial distributions, whose descriptions omit parameters and can hold addresses (DECISIONS #53).
+  - `merge(other)` joins runs with the same seed, settings and dimension and disjoint replicate indices. It does not compare kernels or initial distributions, whose descriptions omit parameters and can hold addresses (DECISIONS #53). The merged result takes the first result's names, kernel, initial distribution, tuning report and pilot meeting times, each of the last four from `other` where the first has none (DECISIONS #121).
 
 ### 7.2 `SignedMeasure` and `Estimate` (R-OUT-2)
 

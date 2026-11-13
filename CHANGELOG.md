@@ -163,3 +163,17 @@ All notable changes to this project are documented here. The format follows
   density, such as a start outside the support of a bounded proposal, accepts any
   proposal of finite density, as the other Metropolis kernels do; it rejected every
   proposal, with a NumPy `RuntimeWarning`.
+- Fixes and checks of a hardening pass, now recorded and tested: a `Mixture` never
+  applies a component of weight 0, which the largest uniforms could select where
+  rounding left the cumulative weights below 1. `Gibbs(coupling="crn")` refuses a
+  conditional whose `mean` is not a vector of its block's size, where a scalar was
+  added to every coordinate. `weighted_quantile` refuses values or weights that are not
+  finite, `choose_k` meeting times that are not positive integers or `inf`,
+  `SignedMeasure.mass` a cell that is not an integer, which it truncated, `hill` values
+  that are not finite, and `testing.random_draws` the seeds that a run refuses;
+  `plot_marginals` and `plot_corner` check `bins` and the number of replicates before
+  opening a figure. `Result.merge` takes the kernel, initial distribution, tuning report
+  and pilot meeting times of the other result where the first has none. The warning
+  about disagreeing tuning chains also fires where an R-hat is NaN, which hid a
+  disagreement in another coordinate: it names those coordinates, which the pilot never
+  moved in, and reports the largest finite R-hat.

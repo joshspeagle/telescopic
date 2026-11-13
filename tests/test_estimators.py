@@ -157,6 +157,15 @@ def test_weighted_quantiles_refuse_weights_that_do_not_sum_to_one():
         weighted_quantile(np.arange(4.0), np.full(3, 1 / 3), 0.5)
 
 
+@pytest.mark.parametrize(
+    ("values", "weights"),
+    [([0.0, np.nan], [0.5, 0.5]), ([0.0, np.inf], [0.5, 0.5]), ([0.0, 1.0], [np.inf, -np.inf])],
+)
+def test_weighted_quantiles_refuse_values_or_weights_that_are_not_finite(values, weights):
+    with pytest.raises(ValueError, match="values and weights must be finite"):
+        weighted_quantile(np.array(values), np.array(weights), 0.5)
+
+
 def test_the_quantile_at_one_is_the_largest_atom_when_the_weights_sum_below_one():
     # Ten weights of 0.1 sum to 0.9999999999999999.
     assert weighted_quantile(np.arange(10.0), np.full(10, 0.1), 1.0) == 9.0

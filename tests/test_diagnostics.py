@@ -6,6 +6,7 @@ from telescopic.diagnostics import (
     hill,
     issues,
     slow_pair_threshold,
+    tuning_disagreement,
     tv_bound,
     variance_share,
     w1_bound,
@@ -15,7 +16,7 @@ from telescopic.initial import Normal
 from telescopic.kernels import RandomWalk
 from telescopic.results import Result
 from telescopic.target import Target
-from telescopic.tuning import TuningReport
+from telescopic.tuning import TuningReport, adaptive_metropolis
 
 
 def test_the_tv_bound_sums_the_survival_function_at_lagged_times():
@@ -106,6 +107,33 @@ def test_tuning_chains_disagree_when_their_means_spread_wider_than_the_chains():
 
     assert issues(result(np.array([1.0, 1.41]))) == []
     assert [issue.kind for issue in issues(result(np.array([1.0, 1.42])))] == ["tuning"]
+
+
+@pytest.mark.parametrize(
+    ("rhat", "disagree"), [([np.nan, 1.0], False), ([np.nan, 3.0, np.nan], True)]
+)
+def test_the_tuning_warning_names_coordinates_whose_r_hat_is_nan(rhat, disagree):
+    # A NaN, where all four chains sat at one value of a coordinate, made the largest R-hat
+    # NaN, which passed the check and hid a disagreement in another coordinate.
+    report = TuningReport(np.zeros(2), np.eye(2), np.full(4, 0.23), np.array(rhat), 100)
+    message = tuning_disagreement(report)
+    assert ("disagree (R-hat up to 3.00)" in message) == disagree
+    assert ("several modes" in message) == disagree
+    nan = [i for i, value in enumerate(rhat) if np.isnan(value)]
+    assert f"never moved in coordinates {nan} (R-hat NaN)" in message
+
+
+def test_the_tuning_warning_names_a_coordinate_whose_steps_round_away():
+    # At 2^70 a float64 is a multiple of 2^18, so steps of the target's scale, 1e3, round
+    # away: every chain stays at 2^70, whose mean and variance are exact, and R-hat is NaN.
+    start = np.column_stack([np.linspace(-2.0, 2.0, 100), np.full(100, 2.0**70)])
+
+    def log_prob(x):
+        return -0.5 * (x[..., 0] ** 2 + ((x[..., 1] - 2.0**70) / 1e3) ** 2)
+
+    pilot = adaptive_metropolis(Target(log_prob, vectorize=True), start, 1, n_steps=200)
+    message = tuning_disagreement(pilot.report())
+    assert message.startswith("the tuning chains never moved in coordinates [1]")
 
 
 def test_no_warning_fires_on_a_clean_gaussian_run():

@@ -52,9 +52,10 @@ class Mixture(Kernel):
         if len({kernel.ndim for kernel in self.kernels} - {None}) > 1:
             raise ValueError("the kernels work in different dimensions")
         self.weights = weights / total
+        # Rounding can leave the cumulative weights' last below 1, so _choose clamps the
+        # index to the last component of positive weight.
         self._last = int(np.nonzero(self.weights)[0][-1])
         self._cumulative = np.cumsum(self.weights)
-        self._cumulative[self._last :] = 1.0
 
     @property
     def needs_grad(self) -> bool:
