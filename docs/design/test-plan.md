@@ -128,7 +128,7 @@ Kernel-specific tests:
 - The cost equals $L + 2(\tau - L) + \max(0, m - \tau)$ (in 2.6).
 
 **Derived estimators**
-- `unbiased_covariance` matches the U-statistic $\frac{1}{R(R-1)}\sum_{r \ne s} a_r a_s^\top$ form exactly, which is unbiased by construction.
+- `unbiased_covariance` matches the U-statistic $\frac{1}{R(R-1)}\sum_{r \ne s} a_r a_s^\top$ form exactly, which is unbiased by construction, and is exactly symmetric for a second-moment matrix that is not.
 - `weighted_quantile`:
   - reproduces NumPy's inverted-CDF quantiles for positive integer weights, through repeated values (NumPy's `weights=` needs NumPy 2.0, newer than the oldest supported stack);
   - is monotone in $q$;
