@@ -675,6 +675,18 @@ def test_crn_gibbs_couplings_need_a_multivariate_normal_for_a_block_of_several()
         kernel.coupled_step(Target(None), x, y, fixed_draws(uniforms=[[0.5, 0.5]]))
 
 
+def test_crn_refuses_conditionals_whose_mean_and_cov_are_methods():
+    # A frozen dirichlet has mean() and cov(), which failed inside with a TypeError that
+    # named neither the coupling nor the block.
+    def given(point, block):
+        return stats.dirichlet([1.0, 2.0]) if block == 0 else Normal(0.0, 1.0)
+
+    kernel = Gibbs(given, [[0, 1], [2]], coupling="crn")
+    x, y = gibbs_state([0.3, 0.7, 1.0]), gibbs_state([0.3, 0.7, -1.0])
+    with pytest.raises(TypeError, match="coupling='crn' needs conditionals with ppf"):
+        kernel.coupled_step(Target(None), x, y, random_draws(1, 0))
+
+
 def test_crn_gibbs_couplings_map_a_uniform_of_zero_to_a_finite_point():
     kernel = Gibbs(conditional, [[0], [1]], coupling="crn")
     new_x, new_y = kernel.coupled_step(
