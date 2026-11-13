@@ -231,6 +231,8 @@ div.cell_output .output pre { padding: 11px 16px; overflow-x: auto; }
 div.cell div.cell_output .output.stderr, div.cell div.cell_output .output.traceback {
   border-left: var(--t-rule) solid var(--t-ochre);
 }
+/* A warning is a sentence, so it wraps instead of running past the column. */
+div.cell_output .output.stderr pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 div.cell_output .output.text_html { padding: 11px 16px; overflow-x: auto; }
 /* Plots are drawn on the light figure ground (brand.py); in the dark theme they sit on a
    light panel. */

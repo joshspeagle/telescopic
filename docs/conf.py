@@ -11,6 +11,8 @@ sys.path.insert(0, str(DOCS / "_ext"))
 # The plot style of every executed page, written by _scripts/brand.py; the notebook
 # kernels inherit it from the environment.
 os.environ["MATPLOTLIBRC"] = str(DOCS / "matplotlibrc")
+# The kernels run this file before the first cell, as IPython runs PYTHONSTARTUP.
+os.environ["PYTHONSTARTUP"] = str(DOCS / "notebook_startup.py")
 
 project = "telescopic"
 author = "Joshua S. Speagle"
