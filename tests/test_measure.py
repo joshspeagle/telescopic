@@ -39,3 +39,44 @@ def test_a_test_function_cannot_change_the_atoms():
     with pytest.raises(ValueError, match="read-only"):
         MEASURE.per_replicate(shift)
     np.testing.assert_allclose(MEASURE.per_replicate(lambda x: x[:, 0]), [1.0, 0.0, 4.0])
+
+
+@pytest.mark.parametrize(
+    ("replicate", "message"),
+    [
+        ([0.0, 1.5, 1.0], "replicate must give each of the 3 atoms an integer"),
+        ([0, 5, 1], "replicate must give"),
+        ([0, -1, 1], "replicate must give"),
+    ],
+)
+def test_signed_measure_refuses_replicate_indices_that_are_not_integers_in_range(
+    replicate, message
+):
+    # 1.5 was truncated to replicate 1, and 5 or -1 raised SciPy's message about a matrix.
+    with pytest.raises(ValueError, match=message):
+        SignedMeasure(np.ones((3, 1)), np.ones(3), np.array(replicate), 2)
+
+
+@pytest.mark.parametrize(
+    ("atoms", "weights", "message"),
+    [
+        (np.ones((3, 1)), np.ones(2), r"weights must have shape \(3,\)"),
+        (np.ones(3), np.ones(3), r"atoms must have shape \(N, d\)"),
+    ],
+)
+def test_signed_measure_refuses_arrays_of_the_wrong_shape(atoms, weights, message):
+    # Weights of length 2 for 3 atoms raised SciPy's "all index and data arrays must
+    # have the same length" at the first estimate.
+    with pytest.raises(ValueError, match=message):
+        SignedMeasure(atoms, weights, np.array([0, 1, 1]), 2)
+
+
+def test_signed_measure_arrays_are_read_only():
+    # Weights changed after one per_replicate call changed cov() but not per_replicate(),
+    # whose sums were cached.
+    weights = np.ones(3)
+    measure = SignedMeasure(np.ones((3, 1)), weights, np.array([0, 1, 1]), 2)
+    for array in (measure.atoms, measure.weights, measure.replicate):
+        with pytest.raises(ValueError, match="read-only"):
+            array[0] = 2
+    assert weights.flags.writeable  # the caller's array is left alone

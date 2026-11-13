@@ -88,7 +88,7 @@ def unbiased_covariance(first: FloatArray, second: FloatArray) -> FloatArray:
     -------
     ndarray, shape (p, p)
     """
-    _check_moments(first, second, 2)
+    first, second = _check_moments(first, second, 2)
     n = len(first)
     mean = first.mean(axis=0)
     sample = np.atleast_2d(np.cov(first, rowvar=False))
@@ -114,23 +114,28 @@ def unbiased_variance(first: FloatArray, second: FloatArray) -> FloatArray:
     -------
     ndarray, shape (p,)
     """
-    _check_moments(first, second, 1)
+    first, second = _check_moments(first, second, 1)
     n = len(first)
     mean = first.mean(axis=0)
     variance: FloatArray = second - mean**2 + first.var(axis=0, ddof=1) / n
     return variance
 
 
-def _check_moments(first: FloatArray, second: FloatArray, axes: int) -> None:
-    # first of shape (R, p) with R >= 2, and second of shape (p,) * axes.
-    expected = (np.shape(first)[-1],) * axes
-    if np.ndim(first) != 2 or np.shape(second) != expected:
+def _check_moments(
+    first: npt.ArrayLike, second: npt.ArrayLike, axes: int
+) -> tuple[FloatArray, FloatArray]:
+    # first of shape (R, p) with R >= 2, and second of shape (p,) * axes, as arrays.
+    shape = "(p, p)" if axes == 2 else "(p,)"
+    first = real_array("first", first, "real numbers of shape (R, p)")
+    second = real_array("second", second, f"real numbers of shape {shape}")
+    if first.ndim != 2 or second.shape != (first.shape[1],) * axes:
         raise ValueError(
-            f"first must have shape (R, p) and second {'(p, p)' if axes == 2 else '(p,)'}, "
-            f"not {np.shape(first)} and {np.shape(second)}"
+            f"first must have shape (R, p) and second {shape}, not {first.shape} and "
+            f"{second.shape}"
         )
     if len(first) < 2:
         raise ValueError(f"an unbiased estimate needs at least 2 replicates, not {len(first)}")
+    return first, second
 
 
 def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike) -> FloatArray:

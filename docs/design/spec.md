@@ -520,6 +520,8 @@ Methods:
 - `weights` `(N,)`, each replicate's summing to 1;
 - `replicate` `(N,)`, the index into the result's replicates.
 
+The constructor checks the shapes, and that each `replicate` is an integer in $[0, R)$, raising `ValueError` naming the field, and stores the arrays as read-only views (DECISIONS #107).
+
 Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 
 **`Estimate`** is frozen. It holds `value`, `standard_error`, `interval` (low, high), `level` and `replicates` (the per-replicate values), and prints as value ± standard error.

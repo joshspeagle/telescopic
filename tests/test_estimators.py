@@ -7,6 +7,7 @@ from telescopic.estimators import (
     averaging_times,
     correction_coefficients,
     unbiased_covariance,
+    unbiased_variance,
     weighted_quantile,
 )
 
@@ -154,3 +155,10 @@ def test_the_quantile_at_one_is_the_largest_atom_when_the_weights_sum_below_one(
 def test_weighted_quantiles_refuse_levels_outside_the_unit_interval():
     with pytest.raises(ValueError, match="q must be in"):
         weighted_quantile(np.arange(3.0), np.full(3, 1 / 3), np.nan)
+
+
+@pytest.mark.parametrize("estimator", [unbiased_variance, unbiased_covariance])
+def test_unbiased_variance_of_a_scalar_raises_value_error(estimator):
+    # The shape of first was read before its dimension was checked: IndexError.
+    with pytest.raises(ValueError, match=r"first must have shape \(R, p\)"):
+        estimator(np.float64(1.0), np.float64(1.0))

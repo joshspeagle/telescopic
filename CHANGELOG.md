@@ -124,4 +124,7 @@ All notable changes to this project are documented here. The format follows
   `progress`, `strict`, `store`, `keep_paths`), and an `args` that is not a tuple or a
   list, raise `TypeError` naming the argument, and so do a target or a kernel that is
   not a `Target` or `Kernel` instance, such as a bare log-density passed to
-  `engine.run` or a kernel class in a `Mixture`.
+  `engine.run` or a kernel class in a `Mixture`. `SignedMeasure` checks its arrays,
+  among them that each replicate index is an integer in range, and keeps them read-only,
+  so that `Result.measure` cannot be changed after its sums are cached;
+  `unbiased_variance` and `unbiased_covariance` of a scalar raise `ValueError`.
