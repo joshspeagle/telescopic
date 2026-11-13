@@ -115,11 +115,13 @@ For the gradient:
 - Where the log-density is finite, a gradient that is not finite raises `ValueError`
   with the point at the states that chains start from: a MALA chain could not leave such
   a start, since a move back is accepted only if the reverse proposal, which carries the
-  full drift, could return. Elsewhere it is taken as 0 too, which keeps MALA and HMC exact
-  but takes their drift away there. The pilot pairs and the replicates of a run that meet
-  one warn, in this process as soon as they do and on a pool when the run ends, and
-  `Result.n_grad_zeroed` counts the replicates' ones. Tuning does not warn: its search for
-  a step size reaches far into the tails.
+  full drift, could return. Tuning's step-size search starts its chains from the
+  pilot's last states, not from the initial distribution, and takes it as 0 there, since
+  only the step size depends on those chains. Elsewhere it is taken as 0 too, which
+  keeps MALA and HMC exact but takes their drift away there. The pilot pairs and the
+  replicates of a run that meet one warn, in this process as soon as they do and on a
+  pool when the run ends, and `Result.n_grad_zeroed` counts the replicates' ones. Tuning
+  does not warn: its search for a step size reaches far into the tails.
 - Such a gradient costs nothing where the chains do not go, as with a mixture's
   responsibilities computed from densities, which underflow far in the tails. Where they
   go, it slows them, and HMC pairs that lose their drift over much of the target may not

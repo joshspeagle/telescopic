@@ -249,7 +249,8 @@ def dual_averaging(
 ) -> float:
     r"""A step size whose mean acceptance probability is ``target_acceptance`` (spec 5.4, 5.5).
 
-    One chain per pilot chain runs ``kernel_at(step_size)`` from that chain's last state.
+    One chain per pilot chain runs ``kernel_at(step_size)`` from that chain's last state,
+    where a gradient that is not finite where the log-density is counts as 0.
     After step :math:`t` the step size becomes
     :math:`\epsilon_t = \exp(\mu - \sqrt t\,\bar H_t/\gamma)`, where :math:`\bar H_t`
     averages the target acceptance minus the chains' mean acceptance probability with
@@ -282,7 +283,15 @@ def dual_averaging(
     for chain in range(N_CHAINS):
         streams.assign(chain, replicate_generator(root, TUNING, N_CHAINS + chain))
     draws = streams.view(np.arange(N_CHAINS))
-    state = kernel_at(step_size).init_state(target, pilot.samples[:, -1])
+    # Not init_state, which raises at a gradient that is not finite where the density is:
+    # these starts are the pilot's, not the user's, and only the step size depends on
+    # them, so such a gradient is taken as 0 there too (DECISIONS #113).
+    from telescopic.kernels.base import evaluate
+
+    kernel, starts = kernel_at(step_size), pilot.samples[:, -1]
+    kernel.check_ndim(starts.shape[1])
+    kernel.check_target(target)
+    state = evaluate(target, starts, kernel.needs_grad)
     mu, h_bar, log_average = np.log(10 * step_size), 0.0, 0.0
     for t in range(1, DUAL_AVERAGING_STEPS + 1):
         state, acceptance = kernel_at(step_size).step(target, state, draws)

@@ -139,3 +139,6 @@ All notable changes to this project are documented here. The format follows
   dimension the initial distribution draws; tuning chains that diverge on a target
   flat in some direction raise an error that says so, instead of NumPy's overflow
   warnings and "cov must be finite".
+- Tuning a MALA or HMC step size no longer raises when a pilot chain ends where the
+  gradient is not finite but the log-density is: its dual-averaging chains take that
+  gradient as 0, as runs do wherever chains move.
