@@ -198,11 +198,12 @@ def one_step_law(kernel, x):
 
 # In one dimension a Gibbs conditional does not depend on the state, and both chains get
 # the same draw, so one gap and one coupling cover Gibbs.
-@pytest.mark.parametrize("gap", [0.0, 0.1, 3.0])
-@pytest.mark.parametrize("name", [name for name in NAMES if "gibbs" not in name] + ["gibbs"])
+@pytest.mark.parametrize(
+    ("name", "gap"),
+    [(name, gap) for name in NAMES if "gibbs" not in name for gap in (0.0, 0.1, 3.0)]
+    + [("gibbs", 0.0)],
+)
 def test_each_chain_of_a_coupled_step_has_the_exact_one_step_law(name, gap):
-    if name == "gibbs" and gap != 0.0:
-        return
     kernel = kernels(np.eye(1))[name]
     n = 20_000
     x0, y0 = 0.4, 0.4 + gap

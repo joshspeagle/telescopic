@@ -413,7 +413,6 @@ def test_progress_bars_count_the_replicates_as_they_finish(capsys):
 
 
 def test_pools_ship_functions_with_cloudpickle_and_say_what_to_do_without(monkeypatch):
-    pytest.importorskip("cloudpickle")
     nameless = job(lambda x: gaussian_log_prob(x))
     execute(nameless, np.arange(4), Serial(), never)
     monkeypatch.setitem(sys.modules, "cloudpickle", None)
@@ -428,9 +427,7 @@ def locked_log_prob(x, lock):
 @pytest.mark.parametrize("cloudpickle", [True, False], ids=["cloudpickle", "pickle"])
 def test_a_job_that_cannot_be_pickled_names_the_cause(cloudpickle, monkeypatch):
     # Installing cloudpickle is advised only where it is missing.
-    if cloudpickle:
-        pytest.importorskip("cloudpickle")
-    else:
+    if not cloudpickle:
         monkeypatch.setitem(sys.modules, "cloudpickle", None)
     locked = job(locked_log_prob, (threading.Lock(),))
     with pytest.raises(TypeError, match=r"cannot pickle '_thread\.lock' object") as error:
