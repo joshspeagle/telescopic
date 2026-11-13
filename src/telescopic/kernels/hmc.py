@@ -48,7 +48,9 @@ class HMC(Mixture):
     step_size : float, optional
         :math:`\epsilon`. ``None`` leaves it to :meth:`~telescopic.kernels.Kernel.tune`: dual averaging of the
         trajectories alone toward an acceptance rate of 0.8, from
-        :math:`\epsilon_0 = d^{-1/4}` (spec section 5.5; Beskos et al. 2013).
+        :math:`\epsilon_0 = d^{-1/4}` (spec section 5.5). The scaling :math:`d^{-1/4}` is
+        that of Beskos et al. (2013); the rate 0.8 is this package's choice, where they
+        find 0.651 optimal for product targets as :math:`d` grows.
     n_steps : int, optional
         Leapfrog steps per trajectory; :math:`\lceil 1/\epsilon\rceil` by default, a
         trajectory of length about 1 in whitened coordinates, and at most 1,000.

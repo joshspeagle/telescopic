@@ -4,7 +4,9 @@ m9_variance_warning.py took the share in the variances of the estimates of the m
 of the second moments about 0. The warning now takes the second moments about the atoms'
 mean. On the same 200 seeds of the banana from U[-5, 5]^2 at R = 100: the coverage of the
 95% intervals of the means and second moments, in the runs whose largest share is above
-and below 0.5, by each definition.
+and below 0.5, by each definition. The recorded output is a rerun with the Student-t
+intervals of issue #84, on the same runs (the shares are unchanged); with the normal
+quantile, the runs above 0.5 about the mean covered E[x0^2] at 0.892 against 0.963.
 
 Run: python notes/experiments/m11_variance_share.py
 """

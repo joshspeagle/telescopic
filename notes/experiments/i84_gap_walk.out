@@ -1,0 +1,4 @@
+sd 0.3: P(step < -2) = 1.3e-11; Estimate(1 ± 9.9e-18, R=2000); meeting times mean 22.5, max 41; replicates min 1; issues []
+sd 0.5: P(step < -2) = 3.2e-05; Estimate(1 ± 9.9e-18, R=2000); meeting times mean 22.06, max 33; replicates min 1; issues []
+sd 0.6: P(step < -2) = 0.00043; Estimate(0.788826 ± 0.18, R=2000); meeting times mean 26.37, max 7316; replicates min -359.77; issues ['variance']
+exit 0

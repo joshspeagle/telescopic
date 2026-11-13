@@ -32,9 +32,10 @@ class Estimate:
     standard_error : ndarray, shape () or (p,)
         Their sample standard deviation divided by :math:`\sqrt R`.
     interval : tuple of two ndarrays
-        :math:`\bar H \mp z\,\hat\sigma/\sqrt R`, with :math:`z` the standard normal
-        quantile of ``(1 + level) / 2``; valid as :math:`R` grows when the variance is
-        finite.
+        :math:`\bar H \mp t_{R-1}\,\hat\sigma/\sqrt R`, with :math:`t_{R-1}` the
+        quantile of ``(1 + level) / 2`` of Student's t with :math:`R - 1` degrees of
+        freedom; valid as :math:`R` grows when the variance is finite, and exact at every
+        :math:`R \ge 2` for normal replicates.
     level : float
     replicates : ndarray, shape (R,) or (R, p)
         The replicates' estimates :math:`\hat\pi_r(h)`.
@@ -170,8 +171,9 @@ class Result:
         self._require(2)
         values = self.measure.per_replicate(h)
         value, error = values.mean(axis=0), np.asarray(stats.sem(values, axis=0))
-        z = stats.norm.ppf((1 + level) / 2)
-        return Estimate(value, error, (value - z * error, value + z * error), level, values)
+        # Student's t, not the normal quantile, whose intervals undercover at small R.
+        t = stats.t.ppf((1 + level) / 2, self.n_replicates - 1)
+        return Estimate(value, error, (value - t * error, value + t * error), level, values)
 
     def mean(self) -> Estimate:
         """The estimate of the mean of each coordinate, with shapes ``(d,)``."""
