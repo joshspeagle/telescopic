@@ -98,4 +98,5 @@ All notable changes to this project are documented here. The format follows
   distribution; `Gibbs(coupling="crn")` uses common random numbers for pairs whose
   distance underflows to 0, which went to the maximal coupling; and the documentation
   corrects the meaning of the relative cost and the source of HMC's target acceptance
-  rate.
+  rate, and describes `discrete_maximal` as serving kernels on finite state spaces, not
+  a built-in kernel.

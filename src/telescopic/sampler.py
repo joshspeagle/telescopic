@@ -57,8 +57,8 @@ class CoupledSampler:
         ``rvs(random_state=rng)`` (such as a frozen SciPy distribution or
         :class:`telescopic.initial.Normal`), a callable ``init(rng)``, or an array of
         points of shape ``(n, d)``. Every :math:`\pi_0` from which the chain converges
-        keeps the estimates unbiased (spec section 3.3); one wider than the target and
-        covering all its modes keeps them reliable.
+        keeps the estimates unbiased (Guarantees and their limits, in :doc:`/theory`);
+        one wider than the target and covering all its modes keeps them reliable.
     args, kwargs
         Extra arguments of ``log_prob`` and ``grad``.
     grad : callable, optional

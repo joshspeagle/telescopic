@@ -59,8 +59,7 @@ other shape raises `ValueError`. It returns an {class}`telescopic.Estimate`: the
 the replicates' estimates (`value`), its `standard_error`, an `interval` at `level`
 (0.95 by default) and the replicates' estimates (`replicates`). The interval is the
 value plus or minus the standard error times the quantile of Student's t with $R - 1$
-degrees of freedom, which is wider than the normal quantile at small $R$, where the
-normal one covers less than its level. It needs at least 2 replicates; with 1,
+degrees of freedom ([Theory](../theory.md#guarantees-and-their-limits)). It needs at least 2 replicates; with 1,
 `estimate` raises `ValueError`. Here $E[x_0 x_1]$ is the covariance, 0.9:
 
 ```{code-cell} python
