@@ -113,13 +113,18 @@ here = telescopic.sample(gaussian.log_prob, gaussian.initial, rng=3)
 
 ## Pickling and the main guard
 
-The workers receive the job pickled. With cloudpickle installed (the `parallel` extra),
-telescopic pickles it with cloudpickle, which also sends lambdas and functions defined in
-a notebook or a script. Without cloudpickle, the standard pickle needs functions defined
-at the top level of an importable module, as the log-density of
-{func}`telescopic.examples.gaussian` above: a lambda raises `TypeError`, and a function
-that a worker cannot import, such as one defined in a notebook, raises `RuntimeError`,
-each with that advice.
+Every pool, a thread pool included, runs on pickled copies of the target, the kernel and
+the initial distribution. Side effects of the log-density, such as a call counter or a
+cache, happen on the copies and are not seen on your objects. An object that cannot be
+pickled, such as one that holds a `threading.Lock`, cannot run on a pool: telescopic
+raises `TypeError`.
+
+With cloudpickle installed (the `parallel` extra), telescopic pickles them with
+cloudpickle, which also sends lambdas and functions defined in a notebook or a script.
+Without cloudpickle, the standard pickle needs functions defined at the top level of an
+importable module, as the log-density of {func}`telescopic.examples.gaussian` above: a
+lambda raises `TypeError`, and a function that a worker cannot import, such as one
+defined in a notebook, raises `RuntimeError`, each with that advice.
 
 Under the spawn and forkserver start methods, the worker processes import the main
 script, and telescopic's own workers always use spawn. A script that runs on such a pool
