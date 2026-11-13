@@ -35,9 +35,11 @@ class Target:
     Notes
     -----
     The functions receive read-only arrays: a function that modifies its input raises
-    instead of corrupting the chains. The counters ``n_log_prob`` and ``n_grad`` count
-    evaluations point by point, and ``n_grad_zeroed`` the gradients taken as 0 because
-    they were not finite where the log-density is.
+    instead of corrupting the chains. An output whose shape differs from the expected
+    one only by axes of length 1, as SciPy's ``logpdf`` of one point, is reshaped. The
+    counters ``n_log_prob`` and ``n_grad`` count evaluations point by point, and
+    ``n_grad_zeroed`` the gradients taken as 0 because they were not finite where the
+    log-density is.
     """
 
     def __init__(
@@ -142,7 +144,10 @@ class Target:
         # NumPy reads None as NaN, and the error would then blame the value.
         if not self.vectorize and np.isnan(out).any():
             returned_none = any(value is None for value in values)
-        if returned_none or out.shape != (len(x), *event):
+        expected = (len(x), *event)
+        # Axes of length 1 change neither the values nor their order, so a shape that
+        # differs only by them is reshaped, as SciPy's logpdf of one point, shape ().
+        if returned_none or _without_ones(out.shape) != _without_ones(expected):
             name = getattr(function, "__name__", "the target function")
             per_point = "a float" if not event else f"shape {event}"
             if returned_none:
@@ -151,6 +156,10 @@ class Target:
                 )
             raise ValueError(
                 f"{name} returned shape {out.shape} for {len(x)} points; expected "
-                f"{(len(x), *event)}, that is {per_point} for each point"
+                f"{expected}, that is {per_point} for each point"
             )
-        return out
+        return out.reshape(expected)
+
+
+def _without_ones(shape: tuple[int, ...]) -> list[int]:
+    return [size for size in shape if size != 1]

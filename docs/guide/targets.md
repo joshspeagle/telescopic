@@ -15,7 +15,9 @@ which each pair of chains starts.
 log-density, up to an additive constant, as a float. The arguments `args` and `kwargs`
 of {func}`telescopic.sample` are passed on to it. With `vectorize=True` it takes a batch
 of shape `(n, d)` and returns shape `(n,)`, so that a step of many chains costs one call
-instead of one per point.
+instead of one per point. An output whose shape differs from the expected one only by
+axes of length 1, such as the shape `()` that SciPy's `multivariate_normal.logpdf`
+returns for a batch of one point, is reshaped; any other shape raises `ValueError`.
 
 ```{code-cell} python
 import numpy as np

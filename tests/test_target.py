@@ -118,6 +118,26 @@ def test_a_wrong_output_shape_raises():
         Target(lambda x: np.zeros(3), vectorize=True).log_prob(np.zeros((2, 1)))
 
 
+def test_a_vectorized_log_prob_that_squeezes_one_point_is_accepted():
+    # SciPy's multivariate_normal.logpdf returns shape () for one point, which stopped
+    # every run at the first batch of one row.
+    target = Target(lambda x: np.squeeze(gaussian(x)), vectorize=True)
+    values = target.log_prob(np.ones((1, 2)))
+    assert values.shape == (1,)
+    assert values[0] == -1.0
+
+
+def test_a_log_prob_that_returns_one_element_arrays_point_by_point_is_accepted():
+    values = Target(lambda x: np.array([gaussian(x)])).log_prob(np.ones((3, 2)))
+    np.testing.assert_array_equal(values, [-1.0, -1.0, -1.0])
+
+
+def test_a_gradient_of_the_wrong_shape_still_raises():
+    target = Target(gaussian, grad=lambda x: -x.T, vectorize=True)
+    with pytest.raises(ValueError, match=r"returned shape \(2, 3\) for 3 points"):
+        target.log_prob_and_grad(np.ones((3, 2)))
+
+
 @pytest.mark.parametrize(("log_prob", "grad"), [(1.0, None), (gaussian, 1.0)])
 def test_non_callables_are_rejected(log_prob, grad):
     with pytest.raises(TypeError, match="must be callable"):
