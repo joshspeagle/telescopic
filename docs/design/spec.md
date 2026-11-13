@@ -702,7 +702,7 @@ These targets are measured by `benchmarks/` and are not gating.
   - tests on Linux, macOS and Windows, with a job on the oldest supported stack;
   - a docs build;
   - a wheel and sdist build with a smoke test;
-  - the slow tier on manual dispatch.
+  - the slow tier on every push to `main` and on manual dispatch (DECISIONS #75).
 - **Repository files:** `CITATION.cff`, `CHANGELOG.md`, `CONTRIBUTING.md` (with the validation philosophy), `LICENSE`.
 
 ---
