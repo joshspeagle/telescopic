@@ -17,9 +17,16 @@ keywords = ["MCMC", "unbiased estimation", "couplings", "Bayesian inference", "a
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Scientific/Engineering :: Astronomy",
     "Topic :: Scientific/Engineering :: Mathematics",
+    "Typing :: Typed",
 ]
 
 [project.optional-dependencies]
@@ -33,6 +40,7 @@ all = ["telescopic[plot,progress,parallel,pandas]"]
 [project.urls]
 Repository = "https://github.com/joshspeagle/telescopic"
 Changelog = "https://github.com/joshspeagle/telescopic/blob/main/CHANGELOG.md"
+Issues = "https://github.com/joshspeagle/telescopic/issues"
 
 [dependency-groups]
 test = [
