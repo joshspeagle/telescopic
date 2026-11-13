@@ -185,6 +185,8 @@ Kernel-specific tests:
   - a tail index below 2 at $R \ge 500$;
   - disagreeing pilots.
 
+  `variance_share_of` names the moment and the coordinate that hold the largest variance share, the first coordinate included.
+
   `check(strict=True)` raises instead. None fires on a clean Gaussian run in a configuration whose computed false-alarm probability is below $10^{-3}$.
 
 ### 2.9 `tests/test_tuning.py`, `tests/test_sampler.py`, `tests/test_api.py` (R-TUNE-*, R-API-*)
