@@ -487,7 +487,7 @@ def test_independence_chains_outside_both_supports_stay_equal():
 class ClippedNormal:
     """N(0.3, 0.3^2) clipped onto [0, 1], with the density of its continuous part on (0, 1).
 
-    The draws clipped onto 0 and 1, about 16% of them, are atoms where log_density is -inf.
+    The draws clipped onto 0 and 1, about 17% of them, are atoms where log_density is -inf.
     """
 
     def sample(self, draws):
@@ -547,8 +547,9 @@ def test_independence_with_a_clipped_proposal_keeps_the_target_invariant():
 
 @pytest.mark.parametrize("other", [0.2, 0.0, 2.0])
 def test_independence_keeps_the_one_step_laws_with_a_clipped_proposal(other):
-    # One chain at 0.6; the other inside, at the atom 0 where pi > 0 and q = 0, which never
-    # moves and so never meets, or at 2 where pi = 0.
+    # One chain at 0.6; the other inside, at the atom 0 where pi > 0 and q = 0, or at 2
+    # where pi = 0. That the chain at 0 never moves, and so never meets, is the present
+    # rule for a start where pi > 0 = q, which waits for a ruling.
     kernel = Independence(ClippedNormal())
     report = check_coupling(kernel, UNIT, [0.6], [other], n=20_000, rng=20)
     assert min(*report.stay, *report.moves) >= P_MIN, report
@@ -557,8 +558,9 @@ def test_independence_keeps_the_one_step_laws_with_a_clipped_proposal(other):
 
 
 def test_independence_chains_with_a_clipped_proposal_stay_equal():
-    # The chains at 0 and 1, where pi > 0 and q = 0, stay there; the one at 2, where
-    # pi = 0, moves inside.
+    # The chains at 0 and 1, where pi > 0 and q = 0, stay there, by the present rule for
+    # a start where pi > 0 = q, which waits for a ruling; the one at 2, where pi = 0,
+    # moves inside.
     kernel = Independence(ClippedNormal())
     points = np.array([[0.0], [1.0], [0.6], [2.0]])
     state_x = kernel.init_state(UNIT, points)
@@ -611,10 +613,12 @@ def test_multivariate_t_log_density_is_normalised(df):
 def test_multivariate_t_log_density_is_finite_where_the_squared_distance_overflows(
     scale, distance
 ):
-    # The squared distance overflowed, and the log-density was -inf with a warning. SciPy
-    # overflows too, so the reference is its value at the point moved in by a factor c, to
-    # a squared distance s of about 1e40, minus (df + d) log c: the log-density's slope in
-    # log distance, exact to within df / s. The third point is near the mean.
+    # The squared distance overflowed: at the two far points the log-density was -inf
+    # with an overflow warning in the first three cases, and NaN and -inf without one in
+    # the last, where whitening overflowed to inf - inf. SciPy overflows too, so the
+    # reference is its value at the point moved in by a factor c, to a squared distance s
+    # of about 1e40, minus (df + d) log c: the log-density's slope in log distance, exact
+    # to within df / s. The third point is near the mean.
     df, cov = 5, scale * np.array([[2.0, 0.3], [0.3, 0.5]])
     points = np.array([[1.0, 0.5], [-0.3, 1.0], [0.0, 0.0]]) * distance
     points[2] = np.sqrt(scale) * np.array([0.3, 0.2])
@@ -623,6 +627,15 @@ def test_multivariate_t_log_density_is_finite_where_the_squared_distance_overflo
     expected = reference.logpdf(points / c[:, None]) - (df + 2) * np.log(c)
     log_density = MultivariateT(np.zeros(2), cov, df).log_density(points)
     np.testing.assert_allclose(log_density, expected, rtol=1e-12)
+
+
+def test_multivariate_t_log_density_is_minus_infinity_at_an_infinite_coordinate():
+    # The far path scaled such a row by its largest coordinate, inf / inf, and gave NaN
+    # with a warning, which an independence step raised as an invalid log-density.
+    q = MultivariateT(np.zeros(2), np.array([[2.0, 0.3], [0.3, 0.5]]), 5)
+    log_density = q.log_density(np.array([[np.inf, 0.0], [1e155, 0.0], [0.0, 0.0]]))
+    assert log_density[0] == -np.inf
+    assert np.all(np.isfinite(log_density[1:]))
 
 
 def test_multivariate_t_draws_have_the_right_covariance():

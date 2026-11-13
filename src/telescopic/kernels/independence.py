@@ -50,24 +50,27 @@ class MultivariateT:
     def log_density(self, x: FloatArray) -> FloatArray:
         """Normalized log-density at the rows of ``x``, shape ``(n,)``."""
         d = len(self.mean)
-        z = matvec(self._inverse, x - self.mean)
+        centered = x - self.mean
+        z = matvec(self._inverse, centered)
         log_density: FloatArray
         if self.df is None:
             log_density = -0.5 * ((z**2).sum(axis=1) + self._log_det + d * math.log(2 * math.pi))
             return log_density
         nu = self.df
         # A squared distance beyond the float64 range is inf, or NaN where whitening
-        # overflows to inf - inf, but the log-density is finite there.
+        # overflows to inf - inf, but the log-density is finite there. The sum of the
+        # squared distances is finite only if each is.
         with np.errstate(over="ignore"):
             squared = (z**2).sum(axis=1)
+            near = math.isfinite(squared.sum())
         log_kernel = np.log1p(squared / nu)
-        if not np.isfinite(squared).all():
+        if not near:
             # log1p(s / nu) = log s - log nu to within nu / s < 1e-307, and log s is
-            # computed from the rows scaled by their largest coordinate.
-            far = ~np.isfinite(squared)
-            centered = x[far] - self.mean
-            scale = np.abs(centered).max(axis=1)
-            whitened = matvec(self._inverse, centered / scale[:, None])
+            # computed from the rows scaled by their largest coordinate. A row that is
+            # not finite keeps its value: -inf at an infinite coordinate.
+            far = ~np.isfinite(squared) & np.isfinite(centered).all(axis=1)
+            scale = np.abs(centered[far]).max(axis=1)
+            whitened = matvec(self._inverse, centered[far] / scale[:, None])
             log_kernel[far] = 2 * np.log(scale) + np.log((whitened**2).sum(axis=1)) - math.log(nu)
         log_density = (
             gammaln((nu + d) / 2)
@@ -113,10 +116,8 @@ class Independence(Kernel):
 
     The proposal must be positive wherever the target is. Chains never move to where
     :math:`q` is 0, so a proposal that misses part of the target's support never reaches
-    that part, and the estimates are biased from any start, without a warning: on
-    :math:`\mathcal N(0, 1)` with a proposal uniform on :math:`(-2, 2)`, 500 replicates
-    estimate :math:`E[x^2] = 1` as 0.778 with a standard error of 0.0093. A chain started
-    where the target is positive and the proposal is 0 rejects every proposal.
+    that part, and the estimates are biased from any start, without a warning. A chain
+    started where the target is positive and the proposal is 0 rejects every proposal.
 
     Meeting times are geometric only when the weights :math:`\pi/q` are bounded; a
     proposal with lighter tails than the target gives heavy-tailed meeting times.

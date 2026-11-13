@@ -9,10 +9,13 @@ costs where no row is that far.
 
 Values: SciPy's multivariate_t.logpdf overflows too, so the reference is its value at the
 point moved in by a factor c, to s of about 1e40, minus (df + d) log c, which is exact to
-within df / s. Cost: the code before the fix is copied below as `before`; it and the
-fixed code are timed interleaved, 7 rounds each, on batches of n points from N(0, I),
-alone and inside an Independence step on a standard normal target, and the minimum time
-per call is compared. Their outputs are checked to be bitwise equal on those batches.
+within df / s. Cost: the code before the fix is copied below as `before`, and the fixed
+code without np.errstate as `no_errstate`, the alternative that leaves NumPy's overflow
+warning beside a far value. The fixed log_density is timed interleaved with both, and an
+Independence step on a standard normal target with each of `before` and the fixed code,
+7 rounds each, on batches of n points from N(0, I); the minimum time per call is
+compared. The outputs are checked to be bitwise equal on those batches. The first line
+of the output records the commit, the machine, the thread settings and the versions.
 
 Result (i119_t_far_log_density.out): relative differences from the reference of at most
 2e-16, at distances 1e155 and 1e300 for a scale matrix of unit size, and 1e5 and 1e160
@@ -28,7 +31,9 @@ Run: OMP_NUM_THREADS=1 python notes/experiments/i119_t_far_log_density.py
 """
 
 import math
+import os
 import platform
+import subprocess
 import timeit
 from functools import partial
 
@@ -56,7 +61,38 @@ def before(q, x):
     )
 
 
-print(f"numpy {np.__version__}, scipy {scipy.__version__}, {platform.machine()}")
+def no_errstate(q, x):
+    # The fixed log_density without np.errstate.
+    d = len(q.mean)
+    centered = x - q.mean
+    z = matvec(q._inverse, centered)
+    nu = q.df
+    squared = (z**2).sum(axis=1)
+    log_kernel = np.log1p(squared / nu)
+    if not math.isfinite(squared.sum()):
+        far = ~np.isfinite(squared) & np.isfinite(centered).all(axis=1)
+        scale = np.abs(centered[far]).max(axis=1)
+        whitened = matvec(q._inverse, centered[far] / scale[:, None])
+        log_kernel[far] = 2 * np.log(scale) + np.log((whitened**2).sum(axis=1)) - math.log(nu)
+    return (
+        gammaln((nu + d) / 2)
+        - gammaln(nu / 2)
+        - 0.5 * (d * math.log(nu * math.pi) + q._log_det)
+        - 0.5 * (nu + d) * log_kernel
+    )
+
+
+commit = subprocess.run(
+    ["git", "describe", "--always", "--dirty"], capture_output=True, text=True, check=True
+).stdout.strip()
+threads = ", ".join(
+    f"{name}={os.environ.get(name, 'unset')}"
+    for name in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS")
+)
+print(
+    f"commit {commit}; {platform.machine()}, {os.cpu_count()} CPUs; {threads}; "
+    f"Python {platform.python_version()}, numpy {np.__version__}, scipy {scipy.__version__}"
+)
 df = 5
 for size, distance in [(1.0, 1e155), (1.0, 1e300), (1e-300, 1e5), (1e-300, 1e160)]:
     cov = size * np.array([[2.0, 0.3], [0.3, 0.5]])
@@ -96,7 +132,14 @@ for d in (2, 10):
     for n in (1, 16, 256, 4096):
         x = rng.standard_normal((n, d))
         assert np.array_equal(q.log_density(x), before(q, x))
-        old, new = timed([partial(q_before.log_density, x), partial(q.log_density, x)])
+        assert np.array_equal(q.log_density(x), no_errstate(q, x))
+        old, new, bare = timed(
+            [
+                partial(q_before.log_density, x),
+                partial(q.log_density, x),
+                partial(no_errstate, q, x),
+            ]
+        )
         kernels = [Independence(q_before), Independence(q)]
         states = kernels[1].init_state(target, x)
         draws = [random_draws(n, 0) for _ in kernels]
@@ -109,6 +152,6 @@ for d in (2, 10):
         )
         print(
             f"d {d}, n {n}: log_density {old:.1f} us before, {new:.1f} us after, ratio "
-            f"{new / old:.2f}; step {step_old:.1f} us before, {step_new:.1f} us after, "
+            f"{new / old:.2f}, {bare:.1f} us without errstate; step {step_old:.1f} us before, {step_new:.1f} us after, "
             f"ratio {step_new / step_old:.2f}"
         )

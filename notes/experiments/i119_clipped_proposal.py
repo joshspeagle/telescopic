@@ -2,7 +2,7 @@
 
 Two proposals put mass on points where their reported log-density is -inf. On the
 target U[0, 1], the proposal N(0.3, 0.3^2) clipped onto [0, 1], whose log_density is
-that normal's on the open interval (0, 1) and -inf at 0 and 1 (about 16% of the draws).
+that normal's on the open interval (0, 1) and -inf at 0 and 1 (about 17% of the draws).
 On the target Exp(1), the proposal max(1 + z, 0) with the log-density of N(1, 1)
 truncated to (0, inf), -inf at 0 (about 16% of the draws). The question is whether
 chains started from the target stay distributed as the target, run step by step with
