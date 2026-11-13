@@ -71,7 +71,7 @@ Most estimator bugs cannot be caught statistically. In the census, an off-by-one
   - NaN or `+inf` raises `ValueError` naming the point;
   - `-inf` passes through.
 - **Wrappers:** `args` and `kwargs` are forwarded. Counters count evaluations. Input arrays are never modified.
-- **Gradients:** `log_prob_and_grad` without a gradient raises.
+- **Gradients:** `log_prob_and_grad` without a gradient raises. A gradient that is not finite in one coordinate, where the log-density is finite, is zero in every coordinate and counted once.
 
 **Initial distributions**
 - **Each input form:**
