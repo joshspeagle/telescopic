@@ -170,7 +170,7 @@ Kernel-specific tests:
 - **TV bound:**
   - the formula equals $\sum_{j\ge1}\hat{\mathbb P}(\tau > t + jL)$ (identity on random meeting times);
   - it is reported as $\min(1, \cdot)$ with an upper confidence bound at 0;
-  - with censored replicates it is reported as a lower bound, with their count.
+  - with censored replicates it is reported as a lower bound, with their count, and counts each censored pair as meeting at its cap plus 1, which a transcription of the definition checks.
 - **Exact reference:** for a finite chain, the bound computed from the exact meeting-time distribution is at least the exact TV distance at every $t$.
 - **W1 bound (should):** equals its definition on recorded distances.
 - **Hill tail index:** with $k_h = n/10$, recovers the index of Pareto samples within $4\alpha/\sqrt{k_h}$ at $n = 10^4$ (with $k_h = \sqrt n$ the estimate is within 10% only 69% of the time; design review D-R17).

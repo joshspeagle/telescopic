@@ -218,8 +218,9 @@ absolute value, by the coupling inequality.
 telescopic estimates the bound by the average over replicates and reports
 $\min(1, \cdot)$. With $L = k$, its value at $t = k$ is close to
 $\mathbb P(\tau - L > k)$, the fraction of pairs that meet late. A pair still unmet at
-its cap counts as meeting there, so with censored pairs the estimate is a lower bound;
-so is that of the 1-Wasserstein bound below, whose distances stop at the cap.
+its cap is known to meet after it, since its chains were compared at the cap, and counts
+as meeting at the cap plus 1, so with censored pairs the estimate is a lower bound; so
+is that of the 1-Wasserstein bound below, whose distances stop at the cap.
 
 The same argument bounds the 1-Wasserstein distance:
 

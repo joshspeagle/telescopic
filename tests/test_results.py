@@ -331,6 +331,21 @@ def test_the_default_w1_times_reach_a_censored_pairs_last_distance():
     np.testing.assert_array_equal(bound, expected)
 
 
+def test_tv_bound_counts_a_censored_pair_as_meeting_after_its_cap():
+    # The engine compares the chains at the cap, 25, before censoring a pair, so its
+    # meeting time is at least 26. With L = 3 the term of a pair is
+    # max(0, ceil((tau - L - t) / L)), and 26 adds 1 to the cap's where 3 divides 22 - t.
+    tau = np.array([4, 7, 9, 12, 20, -1, -1])
+    result = synthetic(tau, np.zeros(7), k=19, lag=3, max_iter=25)
+    known = np.where(tau < 0, 26, tau)
+    t = np.arange(30)
+    terms = np.maximum(0, np.ceil((known[:, None] - 3 - t) / 3))
+    expected = np.minimum(1, terms.mean(axis=0))
+    np.testing.assert_allclose(result.tv_bound(t), expected, rtol=1e-12)
+    np.testing.assert_allclose(result.tv_bound(), expected[: 26 - 3], rtol=1e-12)
+    assert result.diagnostics()["tv_bound_at_k"] == pytest.approx(4 / 7, rel=1e-12)
+
+
 def test_the_default_bound_times_end_where_the_bound_vanishes():
     bound = RESULT.tv_bound()
     assert len(bound) == int(RESULT.meeting_times.max()) - RESULT.lag

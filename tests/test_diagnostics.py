@@ -52,7 +52,7 @@ def test_hill_measures_the_tail_from_the_largest_value_below_it():
 
 
 def test_the_tv_bound_refuses_censored_pairs_given_as_infinite():
-    with pytest.raises(ValueError, match="censored pair as its cap"):
+    with pytest.raises(ValueError, match="censored pair as its cap plus 1"):
         tv_bound([3.0, np.inf], 1, [0])
 
 

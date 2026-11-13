@@ -118,4 +118,7 @@ All notable changes to this project are documented here. The format follows
   raise a `ValueError` or `TypeError` that names the cause; MALA's coupled step no
   longer warns when its drift overflows.
 - Changes to `Result` ruled before the first release: the last bin of a histogram is
-  closed, as in `numpy.histogram`, so an atom on the upper edge of `range` is counted.
+  closed, as in `numpy.histogram`, so an atom on the upper edge of `range` is counted;
+  the TV bound and its value at `k` count a censored pair as meeting at its cap plus 1,
+  since its chains were compared at the cap, which raises the bound by up to 1 at some
+  times of runs with censored pairs.

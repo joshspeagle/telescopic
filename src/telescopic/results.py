@@ -151,8 +151,10 @@ class Result:
         # The engine runs only requested indices, so missing ones make index shorter.
         self.interrupted = len(replicates.index) < len(replicates.requested)
         # The cap for a censored pair makes the bounds of section 3.6 lower bounds of
-        # their estimates.
+        # their estimates. The engine compared its chains at the cap before censoring
+        # it, so the TV bound counts it as meeting at cap + 1, the least it can.
         self._stopped = replicates.stopped.astype(np.int64)
+        self._earliest_meeting = self._stopped + ~met
 
     def estimate(self, h: Callable[[FloatArray], npt.ArrayLike], level: float = 0.95) -> Estimate:
         r"""Estimate :math:`\pi(h)` with a confidence interval (spec section 3.3).
@@ -305,7 +307,9 @@ class Result:
     def tv_bound(self, t: npt.ArrayLike | None = None) -> FloatArray:
         """Estimated upper bound on the total variation distance from the law of X_t to the target.
 
-        Spec section 3.6; with censored pairs it is a lower bound of that estimate.
+        Spec section 3.6. A censored pair counts as meeting just after its cap, the
+        earliest it can, so with censored pairs it is a lower bound of the estimate without
+        a cap.
 
         Parameters
         ----------
@@ -318,8 +322,8 @@ class Result:
         ndarray, shape of ``t``
         """
         if t is None:
-            t = self._times(int(np.max(self._stopped)))
-        return diagnostics.tv_bound(self._stopped, self.lag, t)
+            t = self._times(int(np.max(self._earliest_meeting)))
+        return diagnostics.tv_bound(self._earliest_meeting, self.lag, t)
 
     def w1_bound(self, t: npt.ArrayLike | None = None) -> FloatArray:
         """Estimated upper bound on the 1-Wasserstein distance from the law of X_t to the target.
@@ -381,7 +385,7 @@ class Result:
         upper = stats.binomtest(n_late, n_total, alternative="less").proportion_ci(0.95).high
         # The TV bound at k as an average over replicates (section 3.6), in O(R) memory:
         # diagnostics.tv_bound's survival function takes memory up to the largest time.
-        excess = np.ceil((self._stopped - self.lag - self.k) / self.lag)
+        excess = np.ceil((self._earliest_meeting - self.lag - self.k) / self.lag)
         tv_at_k = min(1.0, float(np.maximum(0, excess).mean()))
         share, share_of = np.nan, None
         if self.n_replicates >= 2:
