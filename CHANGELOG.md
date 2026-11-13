@@ -189,3 +189,6 @@ All notable changes to this project are documented here. The format follows
   such as a draw clipped onto the edge of an open support, is rejected; it was accepted
   and its chain never left it. The documentation states that `log_density` is the
   normalized density of what `sample` draws, positive wherever `sample` can land.
+- The Student-$t$ log-density of `MultivariateT` is finite, without a NumPy warning, at
+  points whose squared distance from the mean overflows float64, beyond about 1.34e154
+  scale units; it was `-inf` there.

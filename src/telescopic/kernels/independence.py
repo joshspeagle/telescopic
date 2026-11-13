@@ -51,18 +51,30 @@ class MultivariateT:
         """Normalized log-density at the rows of ``x``, shape ``(n,)``."""
         d = len(self.mean)
         z = matvec(self._inverse, x - self.mean)
-        squared = (z**2).sum(axis=1)
         log_density: FloatArray
         if self.df is None:
-            log_density = -0.5 * (squared + self._log_det + d * math.log(2 * math.pi))
-        else:
-            nu = self.df
-            log_density = (
-                gammaln((nu + d) / 2)
-                - gammaln(nu / 2)
-                - 0.5 * (d * math.log(nu * math.pi) + self._log_det)
-                - 0.5 * (nu + d) * np.log1p(squared / nu)
-            )
+            log_density = -0.5 * ((z**2).sum(axis=1) + self._log_det + d * math.log(2 * math.pi))
+            return log_density
+        nu = self.df
+        # A squared distance beyond the float64 range is inf, or NaN where whitening
+        # overflows to inf - inf, but the log-density is finite there.
+        with np.errstate(over="ignore"):
+            squared = (z**2).sum(axis=1)
+        log_kernel = np.log1p(squared / nu)
+        if not np.isfinite(squared).all():
+            # log1p(s / nu) = log s - log nu to within nu / s < 1e-307, and log s is
+            # computed from the rows scaled by their largest coordinate.
+            far = ~np.isfinite(squared)
+            centered = x[far] - self.mean
+            scale = np.abs(centered).max(axis=1)
+            whitened = matvec(self._inverse, centered / scale[:, None])
+            log_kernel[far] = 2 * np.log(scale) + np.log((whitened**2).sum(axis=1)) - math.log(nu)
+        log_density = (
+            gammaln((nu + d) / 2)
+            - gammaln(nu / 2)
+            - 0.5 * (d * math.log(nu * math.pi) + self._log_det)
+            - 0.5 * (nu + d) * log_kernel
+        )
         return log_density
 
     def __repr__(self) -> str:

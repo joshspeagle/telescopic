@@ -1,0 +1,14 @@
+numpy 2.5.4, scipy 1.18.1, x86_64
+scale 1, distance 1e+155: reference [-2493.544 -2497.592], before [-inf -inf], relative error 2e-16
+scale 1, distance 1e+300: reference [-4830.668 -4834.716], before [-inf -inf], relative error 2e-16
+scale 1e-300, distance 100000: reference [-1802.769 -1806.816], before [-inf -inf], relative error 1e-16
+scale 1e-300, distance 1e+160: reference [-4301.074 -4305.121], before [ nan -inf], relative error 0
+d 2, n 1: log_density 6.5 us before, 8.3 us after, ratio 1.27; step 82.9 us before, 85.2 us after, ratio 1.03
+d 2, n 16: log_density 8.0 us before, 10.6 us after, ratio 1.32; step 90.8 us before, 95.1 us after, ratio 1.05
+d 2, n 256: log_density 15.5 us before, 17.5 us after, ratio 1.13; step 205.2 us before, 209.4 us after, ratio 1.02
+d 2, n 4096: log_density 162.4 us before, 167.6 us after, ratio 1.03; step 1952.2 us before, 2114.3 us after, ratio 1.08
+d 10, n 1: log_density 7.6 us before, 9.8 us after, ratio 1.30; step 84.7 us before, 88.5 us after, ratio 1.04
+d 10, n 16: log_density 9.6 us before, 12.2 us after, ratio 1.26; step 104.0 us before, 111.5 us after, ratio 1.07
+d 10, n 256: log_density 32.8 us before, 35.9 us after, ratio 1.09; step 319.6 us before, 326.3 us after, ratio 1.02
+d 10, n 4096: log_density 386.9 us before, 371.7 us after, ratio 0.96; step 3886.1 us before, 3969.7 us after, ratio 1.02
+exit 0

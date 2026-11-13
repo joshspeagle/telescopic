@@ -605,6 +605,26 @@ def test_multivariate_t_log_density_is_normalised(df):
     )
 
 
+@pytest.mark.parametrize(
+    ("scale", "distance"), [(1.0, 1e155), (1.0, 1e300), (1e-300, 1e5), (1e-300, 1e160)]
+)
+def test_multivariate_t_log_density_is_finite_where_the_squared_distance_overflows(
+    scale, distance
+):
+    # The squared distance overflowed, and the log-density was -inf with a warning. SciPy
+    # overflows too, so the reference is its value at the point moved in by a factor c, to
+    # a squared distance s of about 1e40, minus (df + d) log c: the log-density's slope in
+    # log distance, exact to within df / s. The third point is near the mean.
+    df, cov = 5, scale * np.array([[2.0, 0.3], [0.3, 0.5]])
+    points = np.array([[1.0, 0.5], [-0.3, 1.0], [0.0, 0.0]]) * distance
+    points[2] = np.sqrt(scale) * np.array([0.3, 0.2])
+    c = np.array([distance * 1e-20 / np.sqrt(scale)] * 2 + [1.0])
+    reference = stats.multivariate_t(np.zeros(2), cov, df=df)
+    expected = reference.logpdf(points / c[:, None]) - (df + 2) * np.log(c)
+    log_density = MultivariateT(np.zeros(2), cov, df).log_density(points)
+    np.testing.assert_allclose(log_density, expected, rtol=1e-12)
+
+
 def test_multivariate_t_draws_have_the_right_covariance():
     mean, cov, df = np.array([1.0, 0.0]), np.array([[1.0, 0.4], [0.4, 2.0]]), 7
     rng = np.random.default_rng(13)
