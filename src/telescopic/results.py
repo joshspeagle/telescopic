@@ -182,7 +182,13 @@ class Result:
         return self.estimate(lambda x: x)
 
     def cov(self) -> FloatArray:
-        """Unbiased estimate of the covariance matrix of the target (spec section 3.4).
+        r"""Unbiased estimate of the covariance matrix of the target.
+
+        .. math:: \widehat{\mathrm{Cov}}_\pi(x) = R^{-1}\sum_r \hat\pi_r(xx^\top)
+                  - \bar a\bar a^\top + S_a/R
+
+        with :math:`a_r = \hat\pi_r(x)`, their mean :math:`\bar a` and sample covariance
+        :math:`S_a` over the :math:`R` replicates that met.
 
         Returns
         -------
@@ -195,7 +201,17 @@ class Result:
         return unbiased_covariance(first, second)
 
     def var(self) -> FloatArray:
-        """Unbiased estimates of the variances, shape ``(d,)``; they can be negative."""
+        r"""Unbiased estimates of the variances; they can be negative.
+
+        .. math:: \widehat{\mathrm{Var}}_\pi(x_j) = R^{-1}\sum_r \hat\pi_r(x_j^2)
+                  - \bar a_j^2 + S_{a,jj}/R
+
+        the diagonal of :meth:`cov`, in the notation there.
+
+        Returns
+        -------
+        ndarray, shape (d,)
+        """
         self._require(2)
         centred, first = self._centred()
         weights = self.measure.weights
@@ -254,8 +270,8 @@ class Result:
 
         The mass of each half-open bin is the average over replicates of its signed mass,
         so a bin can be negative. It is unbiased for a ``range`` fixed before the run; the
-        default range, from the atoms, biases the two outer bins by a term of order
-        :math:`1/R`. Memory: a few floats per atom, and per bin.
+        default range, from the atoms, biases every bin, the two outer ones by a term of
+        order :math:`1/R`. Memory: a few floats per atom, and per bin.
 
         Parameters
         ----------
