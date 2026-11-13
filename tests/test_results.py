@@ -13,7 +13,7 @@ from telescopic.diagnostics import w1_bound
 from telescopic.engine import run
 from telescopic.estimators import unbiased_covariance, unbiased_variance
 from telescopic.initial import Normal
-from telescopic.kernels import RandomWalk
+from telescopic.kernels import Independence, RandomWalk
 from telescopic.results import Result
 from telescopic.target import Target
 from telescopic.warnings import ConvergenceWarning
@@ -220,7 +220,7 @@ def test_summary_repr_html_escapes_the_names():
 
 
 @pytest.mark.parametrize("d", [2, 10])
-def test_summary_lines_fit_in_80_characters(d):
+def test_summary_of_the_default_runs_fits_in_80_characters(d):
     # The issue's two-dimensional run printed a line of 130 characters, past the 83 that
     # a code output of the documentation holds at 1440 px. At d = 2 and 10 the longest
     # lines are now 75 and 76 characters (notes/experiments/i85_summary_width.py).
@@ -234,6 +234,23 @@ def test_summary_prints_the_kernel_on_its_own_line_to_4_significant_figures():
     lines = repr(Result(RESULT._replicates, kernel=kernel).summary()).splitlines()
     assert "kernel: RandomWalk(cov=<2x2>, scale=2.381, coupling='reflection')" in lines
     assert "scale=2.3812345678" in repr(kernel)
+
+
+def test_summary_rounds_floats_but_not_dotted_tokens_in_the_kernel():
+    # A version in a proposal's repr printed as '3.1.12', and 123456.7 as 123500.0.
+    class Fitted:
+        def sample(self, draws):
+            raise NotImplementedError
+
+        def log_density(self, x):
+            raise NotImplementedError
+
+        def __repr__(self):
+            return "Fitted(version='3.10.12', scale=123456.7, shift=0.8989355)"
+
+    summary = Result(RESULT._replicates, kernel=Independence(Fitted())).summary()
+    expected = "Independence(proposal=Fitted(version='3.10.12', scale=1.235e+05, shift=0.8989))"
+    assert f"kernel: {expected}" in summary._footer_lines()
 
 
 def test_the_summary_prints_the_tail_index_on_its_own_line_from_500_replicates():

@@ -206,3 +206,13 @@ def test_paths_turn_to_the_met_color_at_the_meeting_time():
         np.testing.assert_array_equal(y.get_ydata(), y_path[:, 0])
         np.testing.assert_array_equal(met.get_xdata(), np.arange(tau, PAIRS.settings.m + 1))
         np.testing.assert_array_equal(met.get_ydata(), x_path[tau:, 0])
+
+
+def test_paths_keep_the_legend_entries_of_the_axes_they_are_given():
+    # The legend of the three lines replaced the caller's legend.
+    ax = plt.subplots()[1]
+    ax.axhline(0, label="target mean")
+    ax.legend()
+    plotting.paths(PAIRS, ax=ax)
+    labels = [text.get_text() for text in ax.get_legend().get_texts()]
+    assert labels == ["target mean", "$X$", "$Y$ (shifted by the lag)", "after the meeting"]

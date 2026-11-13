@@ -201,9 +201,10 @@ def paths(
     plane of ``dims`` (spec section 7.5).
 
     X is drawn in :data:`CHAIN_X` and Y in :data:`CHAIN_Y` until they meet; from the
-    meeting time on, the path of X, now the pair's, is drawn in :data:`MET`. Pairs are
-    told apart by position, not by color, and a legend names the three lines. In one
-    dimension the ticks of the time axis are integers.
+    meeting time on, the path of X, now the pair's, is drawn in :data:`MET`. The colors
+    are chosen for a light figure ground. Pairs are told apart by position, not by color,
+    and a legend names the three lines, after the lines that ``ax`` already labels. In
+    one dimension the ticks of the time axis are integers.
 
     Parameters
     ----------
@@ -236,7 +237,7 @@ def paths(
         else:
             x, y = x[:, dims], y[:, dims]
         # X up to and including the meeting, then the met pair from the meeting on.
-        cut = len(x) if np.isinf(tau) else int(tau) + 1
+        cut = int(min(tau, len(x) - 1)) + 1
         ax.plot(*x[:cut].T, color=CHAIN_X)
         ax.plot(*y.T, color=CHAIN_Y, linestyle="--")
         if cut < len(x):
@@ -246,6 +247,7 @@ def paths(
     y_label = "$Y$ (shifted by the lag)" if d == 1 else "$Y$"
     ax.legend(
         handles=[
+            *ax.get_legend_handles_labels()[0],
             Line2D([], [], color=CHAIN_X, label="$X$"),
             Line2D([], [], color=CHAIN_Y, linestyle="--", label=y_label),
             Line2D([], [], color=MET, label="after the meeting"),

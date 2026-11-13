@@ -497,15 +497,15 @@ def matplotlibrc() -> str:
 
 def chain_colors() -> str:
     """The chain colors of the package's plots, which are drawn on the light figure ground."""
-    light = {name: value[0] for name, value in TOKENS.items()}
+    x, y, met = (TOKENS[name][0] for name in ("cx", "cy", "met"))
     return (
         f"# {GENERATED}\n"
         "#: The color of chain :math:`X` in plots: the magenta of the documentation's identity.\n"
-        f'CHAIN_X = "{light["cx"]}"\n'
+        f'CHAIN_X = "{x}"\n'
         "#: The color of chain :math:`Y` in plots: the identity's teal.\n"
-        f'CHAIN_Y = "{light["cy"]}"\n'
+        f'CHAIN_Y = "{y}"\n'
         "#: The color of a pair once its chains have met: the identity's ink of met chains.\n"
-        f'MET = "{light["met"]}"'
+        f'MET = "{met}"'
     )
 
 

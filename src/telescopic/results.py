@@ -28,8 +28,15 @@ from telescopic.warnings import ConvergenceWarning, warn
 _WRAP = textwrap.TextWrapper(
     80, subsequent_indent="    ", break_long_words=False, break_on_hyphens=False
 )
-# A float in a kernel's repr: digits with a point or an exponent, not inside a name.
-_FLOAT = re.compile(r"(?<![\w.])\d+(?:\.\d*(?:[eE][-+]?\d+)?|[eE][-+]?\d+)")
+# A float in a kernel's repr: digits with a point or an exponent, not inside a name or a
+# dotted token such as a version, 3.10.12.
+_FLOAT = re.compile(r"(?<![\w.])\d+(?:\.\d*(?:[eE][-+]?\d+)?|[eE][-+]?\d+)(?![\w.])")
+
+
+def _four_figures(match: re.Match[str]) -> str:
+    # 4 significant figures, still written as a float (2.0 rather than 2).
+    text = f"{float(match[0]):.4g}"
+    return text if any(c in text for c in ".en") else text + ".0"
 
 
 @dataclass(frozen=True, eq=False)
@@ -694,34 +701,34 @@ class Summary:
         return pd.DataFrame(self.table, index=self.names)
 
     def __repr__(self) -> str:
-        columns = [
-            [column, *(f"{float(value):.6g}" for value in values)]
-            for column, values in self.table.items()
-        ]
-        widths = [max(map(len, cells)) for cells in columns]
-        names = ["", *self.names]
-        width = max(map(len, names))
+        rows = self._rows()
+        widths = [max(map(len, column)) for column in zip(*rows, strict=True)]
         table = [
-            f"{name:{width}}"
-            + "".join(f"  {cells[i]:>{w}}" for cells, w in zip(columns, widths, strict=True))
-            for i, name in enumerate(names)
+            "  ".join([row[0].ljust(widths[0]), *map(str.rjust, row[1:], widths[1:])])
+            for row in rows
         ]
         footer = [wrapped for line in self._footer_lines() for wrapped in _WRAP.wrap(line)]
         return "\n".join([*table, "", *footer])
 
     def _repr_html_(self) -> str:
-        head = "".join(f"<th>{html.escape(column)}</th>" for column in self.table)
-        rows = "".join(
-            f"<tr><th>{html.escape(name)}</th>"
-            + "".join(f"<td>{float(values[i]):.6g}</td>" for values in self.table.values())
-            + "</tr>"
-            for i, name in enumerate(self.names)
+        (_, *columns), *rows = [[html.escape(cell) for cell in row] for row in self._rows()]
+        head = "".join(f"<th>{column}</th>" for column in columns)
+        body = "".join(
+            f"<tr><th>{name}</th>" + "".join(f"<td>{cell}</td>" for cell in cells) + "</tr>"
+            for name, *cells in rows
         )
         items = "".join(f"<li>{html.escape(line)}</li>" for line in self._footer_lines())
         return (
             f'<div class="telescopic-summary"><table><thead><tr><th></th>{head}</tr></thead>'
-            f"<tbody>{rows}</tbody></table><ul>{items}</ul></div>"
+            f"<tbody>{body}</tbody></table><ul>{items}</ul></div>"
         )
+
+    def _rows(self) -> list[list[str]]:
+        # The table's cells as text: the header, then a row per parameter.
+        return [["", *self.table]] + [
+            [name, *(f"{float(values[i]):.6g}" for values in self.table.values())]
+            for i, name in enumerate(self.names)
+        ]
 
     def _footer_lines(self) -> list[str]:
         footer = self.footer
@@ -731,7 +738,7 @@ class Summary:
             for value in (footer[f"meeting_time_{q}"] for q in ("50", "90", "99", "max"))
         ]
         # The kernel's own repr keeps every digit; the summary rounds its floats.
-        kernel = _FLOAT.sub(lambda match: repr(float(f"{float(match[0]):.4g}")), footer["kernel"])
+        kernel = _FLOAT.sub(_four_figures, footer["kernel"])
         lines = [
             (
                 f"R = {footer['n_replicates']}, k = {footer['k']}, m = {footer['m']}, "
