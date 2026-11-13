@@ -96,6 +96,7 @@ All notable changes to this project are documented here. The format follows
 - The kernels guide defines its coupling terms before its table, and the diagnostics guide
   says what Hill's estimate and the Clopper-Pearson bound measure and when each warning
   is emitted; the docstring of `diagnostics.hill` gives the rule for ties.
+- Targets and initial distributions links `initial.as_initial`, which reads `init`.
 - Fixes from an audit of the whole package: a number argument of the wrong type raises
   `TypeError`, and one out of bounds `ValueError`, naming the argument; `names` must be
   distinct strings, one per coordinate; `Kernel.check_ndim` checks a kernel's dimension;
