@@ -44,7 +44,9 @@ Each item has the default that work proceeds on until Josh answers.
 - [ ] **The threshold of the variance warning.** Its share is now taken about the atoms'
   mean, so that it does not depend on where the origin lies (DECISIONS #54). On 200 runs of
   the banana at R = 100 it fires in 37 runs instead of 19; the runs it marks covered E[x₀²]
-  at 0.892 against 0.963 in the others (`notes/experiments/m11_variance_share.out`).
+  at 0.892 against 0.963 in the others with the normal quantile, and at 0.946 against
+  0.969 with the Student-t intervals of issue #84
+  (`notes/experiments/m11_variance_share.out`).
   Default: keep the threshold of a half. Alternative: a higher threshold, calibrated anew.
 
 - [ ] **Common random numbers for Gibbs conditionals that are not normal.** Under

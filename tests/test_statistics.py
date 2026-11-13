@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from scipy import integrate, stats
 
-from references import assert_z_scores, gaussian_log_prob
+from references import assert_z_scores, gaussian_log_prob, synthetic
 from telescopic import diagnostics, examples
 from telescopic.couplings import reflection_maximal
 from telescopic.engine import run
@@ -137,43 +137,69 @@ class AR1(Kernel):
 STANDARD_NORMAL = Target(gaussian_log_prob, vectorize=True)
 
 
+def ar1_estimates(n, rng):
+    # The estimates of x and x^2 of n replicates of the AR(1) chain from a stationary
+    # start, under the recipe for this chain (k = L = 38, m = 380). Runs of 4,000
+    # replicates bound the memory of the stored atoms, until the streaming mode on the
+    # roadmap (spec section 6.6).
+    seed, batch = int(rng.integers(2**63)), 4000
+    return np.concatenate(
+        [
+            Result(
+                run(
+                    STANDARD_NORMAL,
+                    AR1(0.9),
+                    Normal([0.0], [[1.0]]),
+                    range(start, min(start + batch, n)),
+                    k=38,
+                    m=380,
+                    lag=38,
+                    rng=seed,
+                    lanes=1024,
+                )
+            ).measure.per_replicate(moments)
+            for start in range(0, n, batch)
+        ]
+    )
+
+
 def test_intervals_cover_at_the_reference_rate():
-    # Intervals of R = 200 from a stationary start, under the recipe for this chain
-    # (k = L = 38, m = 380). The reference coverages of x and x^2 come from 10^4 intervals
+    # Intervals of R = 200. The reference coverages of x and x^2 come from 10^4 intervals
     # of an implementation written apart from the package
     # (notes/experiments/m9_coverage_reference.py).
-    reference, reference_error = np.array([0.9509, 0.9489]), 0.0022
-    per_interval, batch = 200, 4000
+    reference, reference_error = np.array([0.9521, 0.9500]), 0.0022
+    per_interval = 200
 
     def z_scores(n, rng):
-        # Runs of 4,000 replicates bound the memory of the stored atoms, until the streaming
-        # mode on the roadmap (spec section 6.6).
-        seed = int(rng.integers(2**63))
-        values = np.concatenate(
-            [
-                Result(
-                    run(
-                        STANDARD_NORMAL,
-                        AR1(0.9),
-                        Normal([0.0], [[1.0]]),
-                        range(start, start + batch),
-                        k=38,
-                        m=380,
-                        lag=38,
-                        rng=seed,
-                        lanes=1024,
-                    )
-                ).measure.per_replicate(moments)
-                for start in range(0, n * per_interval, batch)
-            ]
-        ).reshape(n, per_interval, 2)
+        values = ar1_estimates(n * per_interval, rng).reshape(n, per_interval, 2)
         estimate = values.mean(axis=1)
         error = stats.sem(values, axis=1)
-        inside = np.abs(estimate - [0.0, 1.0]) <= stats.norm.ppf(0.975) * error
+        quantile = stats.t.ppf(0.975, per_interval - 1)
+        inside = np.abs(estimate - [0.0, 1.0]) <= quantile * error
         coverage = inside.mean(axis=0)
         return (coverage - reference) / np.sqrt(coverage * (1 - coverage) / n + reference_error**2)
 
     assert_z_scores(z_scores, 2000, seed=20)
+
+
+def test_intervals_of_five_replicates_cover_at_the_nominal_rate():
+    # Result.estimate on groups of R = 5 of the same chain. The estimates of x are
+    # symmetric about the truth, 0: in 400,000 intervals of the reference implementation,
+    # Student-t covered 0.9500 (binomial standard error 0.0003) and the normal quantile
+    # 0.878. Those of x^2 are skewed, and Student-t, exact only for normal replicates,
+    # covered 0.942 there.
+    per_interval = 5
+
+    def z_scores(n, rng):
+        values = ar1_estimates(n * per_interval, rng)[:, 0].reshape(n, per_interval)
+        inside = []
+        for group in values:
+            low, high = synthetic(np.zeros(per_interval), group).estimate(lambda x: x).interval
+            inside.append(low[0] <= 0 <= high[0])
+        coverage = np.mean(inside)
+        return np.array([(coverage - 0.95) / np.sqrt(0.95 * 0.05 / n)])
+
+    assert_z_scores(z_scores, 4000, seed=21)
 
 
 @functools.cache

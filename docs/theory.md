@@ -122,9 +122,13 @@ so telescopic also counts those, and the wall time.
     $h \in L^p(\pi)$ with $p > \kappa/(\kappa-1)$, and $d\pi_0/d\pi \le M$ (Douc et al.
     2022, Thm. 17). Under these, the variance is finite if $\kappa > 2$ and
     $p > 2\kappa/(\kappa - 2)$.
-- **Error bars:** with $R$ independent replicates and finite variance,
-  $\bar H \pm z_{1-\alpha/2}\,\hat\sigma/\sqrt R$ is an asymptotically valid interval as
-  $R \to \infty$. That the cost of each replicate is random does not change this.
+- **Error bars:** with $R \ge 2$ independent replicates and finite variance,
+  $\bar H \pm t_{R-1,\,1-\alpha/2}\,\hat\sigma/\sqrt R$, with $t_{R-1,\,1-\alpha/2}$ the
+  $1 - \alpha/2$ quantile of Student's t with $R - 1$ degrees of freedom, is an
+  asymptotically valid interval as $R \to \infty$, and an exact one at every $R$ when
+  the replicates are normal. At small $R$ it is wider than the interval with the normal
+  quantile, which covers less than its level. That the cost of each replicate is random
+  does not change this.
 - **Fixed $R$:** unbiasedness holds for a number of replicates fixed before any result is
   seen. Choosing $R$ after looking at results, for example extending a run until the
   error bar is small, is optional stopping: the mean stays consistent and the large-$R$
