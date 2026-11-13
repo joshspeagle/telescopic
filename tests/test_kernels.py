@@ -379,6 +379,13 @@ def test_independence_raises_on_a_nan_proposal_log_density(coupled):
         step(TARGET, *states, random_draws(20, 0))
 
 
+def test_state_put_raises_when_the_new_states_lack_gradients():
+    # NumPy wrote None as NaN gradients, and a mixture's MALA component then stuck.
+    states = state([[0.0], [1.0]], grad=True)
+    with pytest.raises(ValueError, match="without gradients for states that carry them"):
+        states.put([1], state([[2.0]]))
+
+
 @pytest.mark.parametrize(
     ("kwargs", "message"),
     [

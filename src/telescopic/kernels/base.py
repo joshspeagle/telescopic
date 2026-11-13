@@ -51,6 +51,12 @@ class State:
         self.x[rows] = other.x
         self.log_prob[rows] = other.log_prob
         if self.grad is not None:
+            if other.grad is None:
+                # NumPy would write None as NaN.
+                raise ValueError(
+                    "a kernel returned states without gradients for states that carry "
+                    "them; it must return the fields of its input states"
+                )
             self.grad[rows] = other.grad
 
 
