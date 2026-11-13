@@ -34,7 +34,7 @@ Most estimator bugs cannot be caught statistically. In the census, an off-by-one
 ### 2.1 `tests/test_random.py` (R-EXEC-1, R-EXEC-2)
 
 - `root_seed` accepts `None`, an integer, a `SeedSequence` and a `Generator`. The same integer gives the same streams, and different namespaces give different streams.
-- `replicate_generator(root, ns, i)` equals the generator built from `SeedSequence(root.entropy, spawn_key=root.spawn_key + (ns, i))`.
+- `replicate_generator(root, ns, i)` equals the generator built from `SeedSequence(root.entropy, spawn_key=root.spawn_key + (T, ns, i))`, with the branch `T` of spec §6.1.
 - `Streams`/`Draws` (Hypothesis, over random sequences of requests from random subsets of lanes, with lanes reassigned in between): every row of every request equals the next numbers of its replicate's two child generators (§6.1), whatever the buffer width, the other lanes' requests and the order of lanes. `subset` keeps the row-to-lane mapping.
 - `fixed_draws` replays its arrays in order and raises once a row's numbers run out.
 
@@ -189,7 +189,7 @@ Kernel-specific tests:
 
   `check(strict=True)` raises instead. None fires on a clean Gaussian run in a configuration whose computed false-alarm probability is below $10^{-3}$.
 
-### 2.9 `tests/test_tuning.py`, `tests/test_sampler.py`, `tests/test_api.py` (R-TUNE-*, R-API-*)
+### 2.9 `tests/test_tuning.py`, `tests/test_sampler.py` (R-TUNE-*, R-API-*)
 
 **Tuning**
 - **Adaptive Metropolis:**
