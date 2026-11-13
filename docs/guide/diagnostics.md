@@ -181,10 +181,13 @@ geometric meeting times, and at the kernel ([Kernels](kernels.md)).
 
 **Trigger:** the chains that tuned the kernel disagree: their Gelman-Rubin $\hat R$
 (`result.tuning.rhat`) exceeds $\sqrt 2$ in some coordinate, so their means spread more
-widely than the chains themselves. **Meaning:** the target may have several modes, which
-make the meeting times heavy-tailed, and pairs that never leave one mode miss the others.
-**Remedy:** an initial distribution that covers every mode
-([Initial distributions](targets.md#choosing-one)).
+widely than the chains themselves. **Meaning:** the chains sit in different modes of the
+target, or have not converged. Several modes make the meeting times heavy-tailed, and
+pairs that never leave one mode miss the others. **Remedy:** an initial distribution
+that covers every mode ([Initial distributions](targets.md#choosing-one)). Chains that
+agree do not show that the target has one mode. The four chains share one proposal
+covariance, and on a target with well-separated modes they often settle in the same mode
+during their descent.
 
 ### Slow pairs (`slow`)
 

@@ -159,3 +159,7 @@ All notable changes to this project are documented here. The format follows
 - The package ships a `py.typed` marker, so type checkers such as mypy and pyright read
   its annotations, and its metadata lists the supported Python versions (3.11 to 3.15),
   that it runs on any operating system, that it is typed, and a link to its issues.
+- The warning that the tuning chains disagree says that the chains may also not have
+  converged, and the documentation of `TuningReport.rhat`, `tuning_disagreement` and
+  `CoupledSampler.tune` says that chains that agree do not show that the target has one
+  mode.

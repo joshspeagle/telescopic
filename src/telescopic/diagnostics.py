@@ -284,7 +284,10 @@ def tuning_disagreement(tuning: TuningReport | None) -> str | None:
     r"""The warning about tuning chains that disagree (spec section 5.3), or ``None``.
 
     The chains disagree when, in some coordinate, their means spread more widely than the
-    chains themselves: :math:`\hat R > \sqrt 2`, a sign of several modes.
+    chains themselves: :math:`\hat R > \sqrt 2`, a sign of several modes or of chains
+    that have not converged. Chains that agree do not show that the target has one mode:
+    on a target with well-separated modes, the four chains, which share one covariance,
+    often settle in the same mode during their descent.
 
     Parameters
     ----------
@@ -299,7 +302,7 @@ def tuning_disagreement(tuning: TuningReport | None) -> str | None:
         return None
     return (
         f"the tuning chains disagree (R-hat up to {np.max(tuning.rhat):.2f}): the target "
-        "may have several modes, which make meeting times heavy-tailed, and pairs that "
-        "never leave one mode miss the others; use an initial distribution that covers "
-        "every mode"
+        "may have several modes, or the chains may not have converged; several modes make "
+        "meeting times heavy-tailed, and pairs that never leave one mode miss the others; "
+        "use an initial distribution that covers every mode"
     )

@@ -36,7 +36,9 @@ class TuningReport:
         Acceptance rates of the chains' second halves.
     rhat : ndarray, shape (d,)
         Gelman-Rubin :math:`\hat R` of the second halves; well above 1 when the chains
-        disagree, a sign of multimodality.
+        disagree, because they sit in different modes or have not converged. A value
+        near 1 does not show that the chains found every mode: on a target with
+        well-separated modes, the chains often settle in the same one.
     n_steps : int
         Steps per chain.
     max_weight_ratio : float, optional
