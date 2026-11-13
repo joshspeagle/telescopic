@@ -30,20 +30,24 @@ class Mixture(Kernel):
         :meth:`~telescopic.kernels.Kernel.tune` tunes the untuned ones on one set of pilot chains; its report gives
         the largest weight ratio of any independence component.
     weights : array_like
-        Non-negative weights, normalized internally.
+        Non-negative weights with a finite sum, normalized internally.
     """
 
     def __init__(self, kernels: Sequence[Kernel], weights: npt.ArrayLike) -> None:
         self.kernels = list(kernels)
         weights = np.asarray(weights, dtype=np.float64)
-        valid = np.all(np.isfinite(weights) & (weights >= 0)) and weights.sum() > 0
+        # Finite weights near the largest float can have a sum that overflows.
+        with np.errstate(over="ignore"):
+            total = weights.sum()
+        valid = np.all(np.isfinite(weights) & (weights >= 0)) and 0 < total < np.inf
         if weights.shape != (len(self.kernels),) or not valid:
             raise ValueError(
-                "weights must be one finite, non-negative number per kernel, not all zero"
+                "weights must be one finite, non-negative number per kernel, not all zero, "
+                "with a finite sum"
             )
         if len({kernel.ndim for kernel in self.kernels} - {None}) > 1:
             raise ValueError("the kernels work in different dimensions")
-        self.weights = weights / weights.sum()
+        self.weights = weights / total
         self._last = int(np.nonzero(self.weights)[0][-1])
         self._cumulative = np.cumsum(self.weights)
         self._cumulative[self._last :] = 1.0

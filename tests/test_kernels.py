@@ -315,6 +315,12 @@ def test_mixture_rejects_invalid_weights(weights, message):
         Mixture([RandomWalk(np.eye(1)), RandomWalk(np.eye(1))], weights)
 
 
+def test_mixture_weights_whose_sum_overflows_raise_value_error():
+    # They normalized to zeros, and the constructor failed with an IndexError.
+    with pytest.raises(ValueError, match="with a finite sum"):
+        Mixture([RandomWalk(np.eye(1)), RandomWalk(np.eye(1))], [1e308, 1e308])
+
+
 def test_mixture_refuses_components_of_different_dimensions():
     with pytest.raises(ValueError, match="different dimensions"):
         Mixture([RandomWalk(np.eye(1)), RandomWalk(np.eye(2))], [0.5, 0.5])
