@@ -60,7 +60,7 @@ when the run shows signs that its error bars are unreliable. The chains should s
 wider than the posterior, but not by orders of magnitude
 ([Initial distributions](docs/guide/targets.md#choosing-one)).
 [Getting started](docs/getting-started.md) explains this example, and the
-[tutorials](docs/tutorials/index.md) work through others.
+[tutorials](docs/tutorials/) work through others.
 
 ## What it guarantees
 

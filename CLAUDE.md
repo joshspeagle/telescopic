@@ -22,7 +22,7 @@ Rhee (2014) and Jacob, O'Leary & Atchadé (2020).
 |---|---|
 | `src/telescopic/` | the package |
 | `tests/` | the pytest suite; `slow` marks statistical tests |
-| `docs/` | the Sphinx site in MyST Markdown; `docs/tutorials/` are executed notebooks; `docs/design/` holds the spec and the plans |
+| `docs/` | the Sphinx site in MyST Markdown, with its own theme (`docs/_themes/`, `docs/_ext/`); `docs/tutorials/` are executed notebooks; `docs/_scripts/brand.py` writes the identity; `docs/design/` holds the spec, the plans and the design of the identity, read in the repository and not built |
 | `benchmarks/` | timing and efficiency scripts, run by hand |
 | `scripts/` | `verify.sh`, the gate that runs what CI runs |
 | `notes/` | decisions, questions and experiments; the closed plan, log, review reports and checkpoint of the first draft; `review/`, Josh's review of it; not part of the site |
@@ -173,8 +173,11 @@ needs no issue.
 - Docs state only what the code does now, except `docs/design/`. Each fact has one home.
   Why a change was made goes in its commit and its pull request, and a decision in
   `notes/DECISIONS.md`.
-- Tutorials are MyST notebooks executed when the docs build; each runs in under
-  2 minutes.
+- Tutorials are MyST notebooks executed when the docs build (`CONTRIBUTING.md`,
+  Documentation); each runs in under 2 minutes.
+- Colors, fonts, sizes and the mark come from `docs/_scripts/brand.py`, and figures follow
+  the drawing rules of `docs/design/brand.md`: the two chain colors mean the two chains.
+  A new page joins a captioned toctree of `docs/index.md`, which makes its section.
 
 ## Measurements
 

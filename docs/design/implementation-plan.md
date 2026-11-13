@@ -225,11 +225,11 @@ These add to the rules of `CLAUDE.md`.
 
 ## 5. Documentation plan
 
-- **Toolchain:** Sphinx, MyST-NB (MyST Markdown notebooks executed at every build, DECISIONS #42), numpydoc, furo and sphinx-copybutton.
+- **Toolchain:** Sphinx, MyST-NB (MyST Markdown notebooks executed at every build in CI and by default, DECISIONS #42 and #81), numpydoc, sphinx-copybutton and the project's own theme (DECISIONS #79).
 - **Tutorials:** each runs in under 2 minutes on a laptop CPU.
-- **Pages:**
-  1. *Getting started*: install, the README example expanded, and what the summary means.
-  2. *User guide*:
+- **Pages:** a landing page and six sections (DECISIONS #83):
+  1. *Start*: Getting started: install, the README example expanded, and what the summary means.
+  2. *How-to guides* (first planned as a user guide):
      - targets and initial distributions;
      - kernels and couplings, and how to choose them;
      - `k`, `m` and `lag`, and the automatic pipeline;
@@ -247,9 +247,10 @@ These add to the rules of `CLAUDE.md`.
      5. Gibbs couplings: the pump-failure model.
      6. Parallel runs and compute budgets.
      7. When unbiased is not enough: multimodal targets and heavy tails, with the warnings they raise.
-  5. *API reference* (autodoc).
-  6. *Design notes*: the spec, the plans and the landscape report.
-  7. *Changelog, contributing, citing.*
+  5. *Reference*: the API reference (autodoc), citing and the changelog.
+  6. *Project*: contributing.
+
+  The design records (the spec, the plans and the landscape report) are not pages of the site: they stay in the repository and are linked from Contributing (DECISIONS #80).
 
 ## 6. CI (GitHub Actions)
 
