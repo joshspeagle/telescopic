@@ -165,9 +165,8 @@ needs no issue.
   why, such as a numerical subtlety or the paper equation it implements.
 - Docs state only what the code does now, except `docs/design/`. Each fact has one home.
   Why a change was made goes in its commit and in `notes/`.
-- Tutorials are MyST notebooks executed at every build, in CI and by default;
-  `TELESCOPIC_DOCS_EXECUTE=cache` or `off` lets a local build reuse or skip them. Each
-  runs in under 2 minutes.
+- Tutorials are MyST notebooks executed when the docs build (`CONTRIBUTING.md`,
+  Documentation); each runs in under 2 minutes.
 - Colors, fonts, sizes and the mark come from `docs/_scripts/brand.py`, and figures follow
   the drawing rules of `docs/design/brand.md`: the two chain colors mean the two chains.
   A new page joins a captioned toctree of `docs/index.md`, which makes its section.

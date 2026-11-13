@@ -56,9 +56,8 @@ page is listed in one of them.
    `notes/`, decision numbers or the specification's requirement numbers, which are
    internal.
 7. **Identity.** A change to a color, a font, a size or the mark is made in
-   `docs/_scripts/brand.py`, which is then run; `brand.py --check` passes. A change to
-   the engine, the random streams or the random-walk kernel that changes the landing
-   page's coupled pair fails `docs/_scripts/hero_pair.py --check`: run the script and
-   commit the new `hero_pair.json`, then `brand.py`.
+   `docs/_scripts/brand.py`, and a change to the package that moves the landing page's
+   coupled pair is saved with `docs/_scripts/hero_pair.py`; `CONTRIBUTING.md`
+   (Documentation) gives the commands, and both scripts' `--check` pass.
 8. **Build.** `scripts/verify.sh --docs` passes: the build runs the tutorials, treats
    warnings as errors and checks every cross-reference.

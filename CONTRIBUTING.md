@@ -50,20 +50,19 @@ TELESCOPIC_DOCS_EXECUTE=cache sphinx-build docs docs/_build/html
 ```
 
 The colors, fonts, sizes, marks and plot style come from one script,
-`docs/_scripts/brand.py`, which writes the theme's tokens, the marks, the lockups, the
-favicon, the landing page's hero, `docs/matplotlibrc` and the tables of
-`docs/design/brand.md`. Edit the values there and run it; CI runs it with `--check`,
-which names any file that is stale:
+`docs/_scripts/brand.py`, whose docstring lists the files it writes. Edit the values
+there and run it; CI runs it with `--check`, which names any file that is stale:
 
 ```bash
-python docs/_scripts/brand.py            # writes the identity's files
-python docs/_scripts/brand.py --check    # fails if a written file is stale
 python docs/_scripts/fetch_fonts.py      # after a change to brand.FONTS: the woff2 files
 python docs/_scripts/hero_pair.py        # after a change to the package moves the hero's pair
+python docs/_scripts/brand.py            # writes the identity's files, the hero among them
+python docs/_scripts/brand.py --check    # fails if a written file is stale
 ```
 
 The hero is one coupled pair run by telescopic; `hero_pair.py --check`, which CI also
-runs, fails when the package no longer produces the saved pair.
+runs, fails when the package no longer produces the saved pair and says what moved. Save
+the new pair with `hero_pair.py`, then run `brand.py`, which draws the hero from it.
 
 The design records are read in the repository and are not built into the site:
 [`docs/design/`](https://github.com/joshspeagle/telescopic/tree/main/docs/design) holds
