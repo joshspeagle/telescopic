@@ -1,0 +1,13 @@
+commit e121ed8; x86_64, 4 CPUs; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=unset, MKL_NUM_THREADS=unset; Python 3.13.18, numpy 2.5.4, scipy 1.18.1
+scale 1, distance 1e+155: reference [-2493.544 -2497.592], before [-inf -inf], relative error 2e-16
+scale 1, distance 1e+300: reference [-4830.668 -4834.716], before [-inf -inf], relative error 2e-16
+scale 1e-300, distance 100000: reference [-1802.769 -1806.816], before [-inf -inf], relative error 1e-16
+scale 1e-300, distance 1e+160: reference [-4301.074 -4305.121], before [ nan -inf], relative error 0
+d 2, n 1: log_density 7.6 us before, 9.5 us after, ratio 1.25, 8.1 us without errstate; step 79.4 us before, 82.6 us after, ratio 1.04
+d 2, n 16: log_density 8.0 us before, 10.1 us after, ratio 1.26, 8.8 us without errstate; step 91.6 us before, 94.8 us after, ratio 1.03
+d 2, n 256: log_density 16.6 us before, 20.0 us after, ratio 1.20, 16.3 us without errstate; step 218.7 us before, 224.5 us after, ratio 1.03
+d 2, n 4096: log_density 154.0 us before, 155.3 us after, ratio 1.01, 158.9 us without errstate; step 2152.2 us before, 2171.7 us after, ratio 1.01
+d 10, n 1: log_density 8.0 us before, 9.9 us after, ratio 1.25, 8.3 us without errstate; step 83.1 us before, 87.5 us after, ratio 1.05
+d 10, n 16: log_density 9.7 us before, 13.4 us after, ratio 1.39, 10.6 us without errstate; step 102.8 us before, 106.3 us after, ratio 1.03
+d 10, n 256: log_density 39.4 us before, 37.8 us after, ratio 0.96, 34.7 us without errstate; step 352.3 us before, 352.0 us after, ratio 1.00
+d 10, n 4096: log_density 414.2 us before, 452.8 us after, ratio 1.09, 481.3 us without errstate; step 4458.7 us before, 4363.7 us after, ratio 0.98

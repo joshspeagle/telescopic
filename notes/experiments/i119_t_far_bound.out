@@ -1,0 +1,7 @@
+commit 2c73025
+scale matrix 1e-300 I, x = (1e10, 1e10): exact -1886.7506, returned -1886.7506, NumPy warnings [], before the fix -inf
+scale matrix 1e-307 I, x = (1e10, 1e10): exact -1927.0459, returned -1927.0459, NumPy warnings [], before the fix -inf
+scale matrix 4e-308 I, x = (1e10, 1e10): exact -1929.3366, returned -1929.3366, NumPy warnings [], before the fix -inf
+scale matrix 1e-308 I, x = (1e10, 1e10): exact -1932.8023, returned -inf, NumPy warnings ['overflow encountered in reduce'], before the fix -inf
+scale matrix 1e-310 I, x = (1e10, 1e10): exact -1944.3153, returned -inf, NumPy warnings ['overflow encountered in square'], before the fix -inf
+mean (-1e308, 0), x = (1.7e308, 0): exact -4967.5311, returned nan, NumPy warnings ['overflow encountered in subtract'], before the fix nan

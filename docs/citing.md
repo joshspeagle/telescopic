@@ -49,6 +49,8 @@ The list below collects the works cited in this documentation and in the docstri
   lengths in Hamiltonian Monte Carlo. J. Mach. Learn. Res. 15, 1593–1623.
 - Jacob, P. E., O'Leary, J. & Atchadé, Y. F. (2020). Unbiased Markov chain Monte Carlo
   methods with couplings. J. R. Stat. Soc. B 82(3), 543–600.
+- Mengersen, K. L. & Tweedie, R. L. (1996). Rates of convergence of the Hastings and
+  Metropolis algorithms. Ann. Statist. 24(1), 101–121.
 - Middleton, L., Deligiannidis, G., Doucet, A. & Jacob, P. E. (2020). Unbiased Markov
   chain Monte Carlo for intractable target distributions. Electron. J. Stat. 14(2),
   2842–2891.

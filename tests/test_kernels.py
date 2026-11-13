@@ -484,6 +484,95 @@ def test_independence_chains_outside_both_supports_stay_equal():
     assert np.all(np.abs(state_x.x) < 1)
 
 
+class ClippedNormal:
+    """N(0.3, 0.3^2) clipped onto [0, 1], with the density of its continuous part on (0, 1).
+
+    The draws clipped onto 0 and 1, about 17% of them, are atoms where log_density is -inf.
+    """
+
+    def sample(self, draws):
+        return np.clip(0.3 + 0.3 * draws.normal(1), 0.0, 1.0)
+
+    def log_density(self, x):
+        inside = (x[:, 0] > 0) & (x[:, 0] < 1)
+        return np.where(inside, stats.norm.logpdf(x[:, 0], 0.3, 0.3), -np.inf)
+
+
+# U[0, 1], positive at 0 and 1, where the clipped proposal's log-density is -inf.
+UNIT = Target(lambda x: np.where((x[:, 0] >= 0) & (x[:, 0] <= 1), 0.0, -np.inf), vectorize=True)
+
+
+@pytest.mark.parametrize("coupled", [False, True])
+def test_independence_rejects_a_proposal_where_its_log_density_is_minus_infinity(coupled):
+    # A normal of -2 is clipped onto 0, where pi > 0 and log q = -inf: the weight was +inf,
+    # so the move was accepted, and every later proposal rejected.
+    kernel = Independence(ClippedNormal())
+    start = kernel.init_state(UNIT, np.array([[0.6]]))
+    draws = fixed_draws([[-2.0]], [[0.5]])
+    if coupled:
+        new_x, new_y = kernel.coupled_step(UNIT, start, start.take([0]), draws)
+        np.testing.assert_array_equal(new_y.x, [[0.6]])
+    else:
+        new_x, accepted = kernel.step(UNIT, start, draws)
+        np.testing.assert_array_equal(accepted, [0.0])
+    np.testing.assert_array_equal(new_x.x, [[0.6]])
+
+
+def test_an_independence_step_with_a_clipped_proposal_follows_the_exact_law():
+    # From 0.6, a proposal y in (0, 1) is accepted with probability min(1, phi(0.6)/phi(y))
+    # for phi the N(0.3, 0.3^2) density, so the moves have density min(phi(y), phi(0.6)),
+    # which is phi(0.6) on (0, 0.6] and phi(y) on (0.6, 1); the atoms are rejected.
+    n, normal = 20_000, stats.norm(0.3, 0.3)
+    kernel = Independence(ClippedNormal())
+    start = kernel.init_state(UNIT, np.full((n, 1), 0.6))
+    new, _ = kernel.step(UNIT, start, random_draws(n, 18))
+    moved = new.x[new.x[:, 0] != 0.6, 0]
+    level = normal.pdf(0.6)
+
+    def mass(y):
+        return level * np.minimum(y, 0.6) + normal.cdf(np.maximum(y, 0.6)) - normal.cdf(0.6)
+
+    assert stats.binomtest(len(moved), n, mass(1.0)).pvalue > P_MIN
+    assert stats.kstest(moved, lambda y: mass(y) / mass(1.0)).pvalue > P_MIN
+
+
+def test_independence_with_a_clipped_proposal_keeps_the_target_invariant():
+    # 4,000 chains from U[0, 1] after 200 steps; with the atoms accepted, 94% sat at 0.
+    kernel = Independence(ClippedNormal())
+    states = kernel.init_state(UNIT, np.random.default_rng(19).random((4_000, 1)))
+    for step in range(200):
+        states, _ = kernel.step(UNIT, states, random_draws(4_000, step))
+    assert stats.kstest(states.x[:, 0], "uniform").pvalue > P_MIN
+
+
+@pytest.mark.parametrize("other", [0.2, 0.0, 2.0])
+def test_independence_keeps_the_one_step_laws_with_a_clipped_proposal(other):
+    # One chain at 0.6; the other inside, at the atom 0 where pi > 0 and q = 0, or at 2
+    # where pi = 0. That the chain at 0 never moves, and so never meets, is the present
+    # rule for a start where pi > 0 = q, which waits for a ruling.
+    kernel = Independence(ClippedNormal())
+    report = check_coupling(kernel, UNIT, [0.6], [other], n=20_000, rng=20)
+    assert min(*report.stay, *report.moves) >= P_MIN, report
+    assert report.stale == report.near_misses == 0, report
+    assert (report.met > 0) == (other != 0.0), report
+
+
+def test_independence_chains_with_a_clipped_proposal_stay_equal():
+    # The chains at 0 and 1, where pi > 0 and q = 0, stay there, by the present rule for
+    # a start where pi > 0 = q, which waits for a ruling; the one at 2, where pi = 0,
+    # moves inside.
+    kernel = Independence(ClippedNormal())
+    points = np.array([[0.0], [1.0], [0.6], [2.0]])
+    state_x = kernel.init_state(UNIT, points)
+    state_y = kernel.init_state(UNIT, points.copy())
+    for step in range(20):
+        state_x, state_y = kernel.coupled_step(UNIT, state_x, state_y, random_draws(4, step))
+        np.testing.assert_array_equal(state_x.x, state_y.x)
+        np.testing.assert_array_equal(state_x.log_prob, state_y.log_prob)
+    np.testing.assert_array_equal(state_x.x[:2], [[0.0], [1.0]])
+    assert 0 < state_x.x[3, 0] < 1
+
+
 def test_state_put_raises_when_the_new_states_lack_gradients():
     # NumPy wrote None as NaN gradients, and a mixture's MALA component then stuck.
     states = state([[0.0], [1.0]], grad=True)
@@ -516,6 +605,37 @@ def test_multivariate_t_log_density_is_normalised(df):
     np.testing.assert_allclose(
         MultivariateT(mean, cov, df).log_density(x), reference.logpdf(x), rtol=1e-12
     )
+
+
+@pytest.mark.parametrize(
+    ("scale", "distance"), [(1.0, 1e155), (1.0, 1e300), (1e-300, 1e5), (1e-300, 1e160)]
+)
+def test_multivariate_t_log_density_is_finite_where_the_squared_distance_overflows(
+    scale, distance
+):
+    # The squared distance overflowed: at the two far points the log-density was -inf
+    # with an overflow warning in the first three cases, and NaN and -inf without one in
+    # the last, where whitening overflowed to inf - inf. SciPy overflows too, so the
+    # reference is its value at the point moved in by a factor c, to a squared distance s
+    # of about 1e40, minus (df + d) log c: the log-density's slope in log distance, exact
+    # to within df / s. The third point is near the mean.
+    df, cov = 5, scale * np.array([[2.0, 0.3], [0.3, 0.5]])
+    points = np.array([[1.0, 0.5], [-0.3, 1.0], [0.0, 0.0]]) * distance
+    points[2] = np.sqrt(scale) * np.array([0.3, 0.2])
+    c = np.array([distance * 1e-20 / np.sqrt(scale)] * 2 + [1.0])
+    reference = stats.multivariate_t(np.zeros(2), cov, df=df)
+    expected = reference.logpdf(points / c[:, None]) - (df + 2) * np.log(c)
+    log_density = MultivariateT(np.zeros(2), cov, df).log_density(points)
+    np.testing.assert_allclose(log_density, expected, rtol=1e-12)
+
+
+def test_multivariate_t_log_density_is_minus_infinity_at_an_infinite_coordinate():
+    # The far path scaled such a row by its largest coordinate, inf / inf, and gave NaN
+    # with a warning, which an independence step raised as an invalid log-density.
+    q = MultivariateT(np.zeros(2), np.array([[2.0, 0.3], [0.3, 0.5]]), 5)
+    log_density = q.log_density(np.array([[np.inf, 0.0], [1e155, 0.0], [0.0, 0.0]]))
+    assert log_density[0] == -np.inf
+    assert np.all(np.isfinite(log_density[1:]))
 
 
 def test_multivariate_t_draws_have_the_right_covariance():
