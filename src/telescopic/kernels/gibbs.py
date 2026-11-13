@@ -223,7 +223,7 @@ def _common(p: list[Any], q: list[Any], draws: Draws, size: int) -> tuple[Any, .
     ):
         raise TypeError(
             "coupling='crn' needs conditionals with ppf for blocks of one coordinate, or "
-            "multivariate normal ones with mean and cov"
+            "multivariate normal ones whose mean and cov are values, not methods"
         )
     z = draws.normal(size)
     return tuple(

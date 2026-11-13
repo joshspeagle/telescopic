@@ -36,10 +36,12 @@ class Mixture(Kernel):
     def __init__(self, kernels: Sequence[Kernel], weights: npt.ArrayLike) -> None:
         self.kernels = list(kernels)
         weights = np.asarray(weights, dtype=np.float64)
-        # Finite weights near the largest float can have a sum that overflows.
-        with np.errstate(over="ignore"):
+        # Finite weights near the largest float can have a sum that overflows, and inf and
+        # -inf one that is NaN; a finite positive sum of non-negative weights makes each
+        # finite.
+        with np.errstate(over="ignore", invalid="ignore"):
             total = weights.sum()
-        valid = np.all(np.isfinite(weights) & (weights >= 0)) and 0 < total < np.inf
+        valid = np.all(weights >= 0) and 0 < total < np.inf
         if weights.shape != (len(self.kernels),) or not valid:
             raise ValueError(
                 "weights must be one finite, non-negative number per kernel, not all zero, "
@@ -69,9 +71,14 @@ class Mixture(Kernel):
         return next((kernel.ndim for kernel in self.kernels if kernel.ndim is not None), None)
 
     def check_ndim(self, ndim: int) -> None:
-        # Every component, which tuning, unlike the constructor, does not compare.
-        for kernel in self.kernels:
-            kernel.check_ndim(ndim)
+        # The mixture's dimension, then every component's, which tuning, unlike the
+        # constructor, does not compare.
+        super().check_ndim(ndim)
+        for i, kernel in enumerate(self.kernels):
+            try:
+                kernel.check_ndim(ndim)
+            except ValueError as error:
+                raise ValueError(f"component {i} of the mixture: {error}") from None
 
     def _tuned(
         self, target: Target, initial: Any, pilot: PilotRun, rng: Seed

@@ -80,8 +80,9 @@ class Independence(Kernel):
     Parameters
     ----------
     proposal : MultivariateT, optional
-        Any object with ``sample(draws)`` and ``log_density(x)``; its ``mean``, if it has
-        one that is not a method, fixes the dimension. ``None`` leaves the kernel untuned:
+        Any object with ``sample(draws)`` and ``log_density(x)``, where a NaN or ``+inf``
+        log-density raises ``ValueError`` with the point; its ``mean``, if it has one that
+        is not a method, fixes the dimension. ``None`` leaves the kernel untuned:
         :meth:`~telescopic.kernels.Kernel.tune` fits a Student-:math:`t_5` located at the
         mean of adaptive Metropolis pilot chains, with their covariance as its scale
         matrix (spec section 5.6, D-25). Its report gives the largest weight

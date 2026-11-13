@@ -308,17 +308,18 @@ def test_random_walk_rejects_invalid_parameters(kwargs, message):
 
 @pytest.mark.parametrize(
     ("weights", "message"),
-    [([np.nan, 1.0], "finite, non-negative"), ([0.0, 0.0], "not all zero"), ([1.0], "per kernel")],
+    [
+        ([np.nan, 1.0], "finite, non-negative"),
+        ([0.0, 0.0], "not all zero"),
+        ([1.0], "per kernel"),
+        # Their sums overflow, which normalized them to zeros, or are NaN, which warned.
+        ([1e308, 1e308], "with a finite sum"),
+        ([np.inf, -np.inf], "finite, non-negative"),
+    ],
 )
 def test_mixture_rejects_invalid_weights(weights, message):
     with pytest.raises(ValueError, match=message):
         Mixture([RandomWalk(np.eye(1)), RandomWalk(np.eye(1))], weights)
-
-
-def test_mixture_weights_whose_sum_overflows_raise_value_error():
-    # They normalized to zeros, and the constructor failed with an IndexError.
-    with pytest.raises(ValueError, match="with a finite sum"):
-        Mixture([RandomWalk(np.eye(1)), RandomWalk(np.eye(1))], [1e308, 1e308])
 
 
 def test_mixture_refuses_components_of_different_dimensions():
@@ -332,7 +333,8 @@ def test_a_tuned_mixture_with_components_of_different_dimensions_raises():
         [RandomWalk(), Independence(MultivariateT(np.zeros(1), np.eye(1)))], [0.5, 0.5]
     )
     tuned, _ = mixture.tune(TARGET, np.random.default_rng(0).standard_normal((100, 2)), rng=0)
-    with pytest.raises(ValueError, match="works in 1 dimensions, but the initial points have 2"):
+    message = "component 1 of the mixture: the kernel works in 1 dimensions, but the initial"
+    with pytest.raises(ValueError, match=message):
         tuned.init_state(TARGET, np.zeros((3, 2)))
 
 
@@ -490,7 +492,8 @@ def test_mala_step_matches_the_reference_with_both_proposal_densities(u):
 
 def test_mala_coupled_step_with_an_overflowing_drift_emits_no_warning_and_keeps_the_states():
     # A step size of 1e300 makes the drift infinite; the warning was an error under
-    # the filter of the test suite, and reached users of sample().
+    # the filter of the test suite, and reached users of sample(). This test relies on
+    # that filter (filterwarnings = error in pyproject.toml) to catch it.
     kernel = MALA(1e300, cov=[[1.0]])
     x, y = state([[1.0], [2.0]], grad=True), state([[-1.0], [3.0]], grad=True)
     new_x, new_y = kernel.coupled_step(TARGET, x, y, random_draws(2, 0))
@@ -699,7 +702,7 @@ def test_crn_refuses_conditionals_whose_mean_and_cov_are_methods():
 
     kernel = Gibbs(given, [[0, 1], [2]], coupling="crn")
     x, y = gibbs_state([0.3, 0.7, 1.0]), gibbs_state([0.3, 0.7, -1.0])
-    with pytest.raises(TypeError, match="coupling='crn' needs conditionals with ppf"):
+    with pytest.raises(TypeError, match="mean and cov are values, not methods"):
         kernel.coupled_step(Target(None), x, y, random_draws(1, 0))
 
 
