@@ -175,4 +175,5 @@ All notable changes to this project are documented here. The format follows
   opening a figure. `Result.merge` takes the kernel, initial distribution, tuning report
   and pilot meeting times of the other result where the first has none. The warning
   about disagreeing tuning chains also fires where an R-hat is NaN, which hid a
-  disagreement in another coordinate.
+  disagreement in another coordinate: it names those coordinates, which the pilot never
+  moved in, and reports the largest finite R-hat.
