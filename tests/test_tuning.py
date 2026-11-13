@@ -267,7 +267,7 @@ def test_choose_k_takes_the_inverted_cdf_quantile_of_tau_minus_one(lowest):
 
 
 def test_choose_k_takes_the_inverted_cdf_quantile_of_any_pilot_size():
-    # Of 150, the 149th smallest tau - 1; interpolation and the lower neighbour give 147.
+    # Of 150, the 149th smallest tau - 1; interpolation and the lower neighbor give 147.
     assert choose_k(np.arange(1.0, 151.0)) == 148
 
 

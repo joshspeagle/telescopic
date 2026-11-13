@@ -37,12 +37,13 @@ PILOT_SETTINGS = engine.Settings(0, 0, 1, max_iter=PILOT_MAX_ITER, store=False)
 _LIVE = ("slow", "tuning")
 
 
+# Spec R-API-1 and R-TUNE-2; pool, sections 6.1 and 6.4; rng, section 6.1.
 class CoupledSampler:
-    r"""Unbiased MCMC with coupled chains: tuning, pilot meeting times and runs (spec R-API-1).
+    r"""Unbiased MCMC with coupled chains: tuning, pilot meeting times and runs.
 
     The pipeline tunes the kernel's unset parameters on adaptive pilot chains, chooses
-    ``k``, ``m`` and the lag from the meeting times of 100 lag-1 pilot pairs (spec
-    R-TUNE-2), then runs replicates of coupled chains whose signed measures give unbiased
+    ``k``, ``m`` and the lag from the meeting times of 100 lag-1 pilot pairs, then runs
+    replicates of coupled chains whose signed measures give unbiased
     estimates of any expectation under the target.
 
     Parameters
@@ -82,12 +83,12 @@ class CoupledSampler:
         schwimmbad pool. A pool runs chunks of consecutive indices, at most four per
         worker; a task in a worker process runs with BLAS pinned to one thread and
         Ctrl-C ignored. With a log-density evaluated point by point, no replicate
-        depends on the pool (spec sections 6.1 and 6.4).
+        depends on the pool.
     progress : bool
         Show the progress of the pilot and of each run: a tqdm bar when tqdm is
         installed, lines on stderr otherwise.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
-        The root of every random stream (spec section 6.1).
+        The root of every random stream.
 
     Attributes
     ----------
@@ -143,15 +144,20 @@ class CoupledSampler:
 
     @property
     def settings(self) -> engine.Settings | None:
-        """The settings of the runs, fixed by the first; ``None`` before it."""
+        """The settings of the runs, fixed by the first; ``None`` before it.
+
+        Returns
+        -------
+        telescopic.engine.Settings or None
+        """
         return None if self._replicates is None else self._replicates.settings
 
+    # Spec section 5.3.
     def tune(self) -> TuningReport | None:
         """Tune the kernel's unset parameters on pilot chains, once, and freeze the kernel.
 
         Warns when the chains disagree, a sign of several modes or of chains that have not
-        converged; chains that agree do not show that the target has one mode (spec
-        section 5.3).
+        converged; chains that agree do not show that the target has one mode.
 
         Returns
         -------
@@ -165,10 +171,11 @@ class CoupledSampler:
                 warn(disagreement, ConvergenceWarning)
         return self.tuning
 
+    # Spec R-TUNE-2 and section 6.3.
     def meeting_times(
         self, n: int = PILOT_REPLICATES, *, max_iter: int = PILOT_MAX_ITER
     ) -> FloatArray:
-        """Meeting times of ``n`` new pilot pairs with lag 1 (spec R-TUNE-2).
+        """Meeting times of ``n`` new pilot pairs with lag 1.
 
         Each call runs new pilot replicates, continuing their indices, and adds them to
         ``pilot``.
@@ -178,7 +185,7 @@ class CoupledSampler:
         n : int
             Pilot pairs to add, at least 1.
         max_iter : int
-            The cap, above 1; a pair still unmet there is censored (spec section 6.3).
+            The cap, above 1; a pair still unmet there is censored.
 
         Returns
         -------
@@ -203,6 +210,7 @@ class CoupledSampler:
         self.pilot = times if self.pilot is None else np.concatenate([self.pilot, times])
         return times
 
+    # Spec R-TUNE-2 and D-21, sections 3.3, 6.5 and 7.4, R-EST-5.
     def run(
         self,
         n_replicates: int,
@@ -217,23 +225,23 @@ class CoupledSampler:
         """Run ``n_replicates`` more replicates and return the result of all of them so far.
 
         The first call tunes the kernel, completes the pilot to 100 pairs for an automatic
-        ``k``, and fixes the settings of the later calls (spec R-TUNE-2). The result warns
-        about the conditions of spec section 7.4.
+        ``k``, and fixes the settings of the later calls. The result warns about the
+        conditions listed under Warnings, in :doc:`/guide/diagnostics`.
 
         The first Ctrl-C during the replicates lets those in progress finish and returns a
         result flagged ``interrupted``; the next call runs the missing replicates first. A
-        second Ctrl-C raises ``KeyboardInterrupt`` at once, without a result (spec
-        section 6.5).
+        second Ctrl-C raises ``KeyboardInterrupt`` at once, without a result.
 
         Parameters
         ----------
         n_replicates : int
+            The number of replicates to add, at least 1.
         k, m, lag : int or "auto"
             ``"auto"`` derives a value on the first call: the pilot's quantile for ``k``,
-            then ``lag = max(1, k)`` and ``m = 10 k`` (spec R-TUNE-2, D-21). A value given
+            then ``lag = max(1, k)`` and ``m = 10 k``. A value given
             explicitly is kept. On later calls ``"auto"`` keeps the first call's value.
         thin : int, optional
-            Average every ``thin``-th state from ``k`` (spec R-EST-5): 1 on the first
+            Average every ``thin``-th state from ``k``: 1 on the first
             call, and the first call's value on later ones.
         max_iter : int, optional
             Censor pairs still unmet at this time. ``None`` runs every pair until it
@@ -246,7 +254,7 @@ class CoupledSampler:
         -------
         Result
             Unbiased for an ``n_replicates`` fixed in advance; extending a run after
-            looking at it keeps consistency, not exact unbiasedness (spec section 3.3).
+            looking at it keeps consistency, not exact unbiasedness.
         """
         n_replicates = integer("n_replicates", n_replicates, minimum=1)
         given = self._check(k, m, lag, thin, max_iter)
@@ -399,6 +407,7 @@ class CoupledSampler:
             )
 
 
+# Spec R-API-1 and section 7.4.
 def sample(
     log_prob: Callable[..., Any] | None,
     init: Any,
@@ -419,7 +428,7 @@ def sample(
     progress: bool = False,
     rng: Seed = None,
 ) -> Result:
-    r"""Unbiased estimates of expectations under a target, in one call (spec R-API-1).
+    r"""Unbiased estimates of expectations under a target, in one call.
 
     ``sample(log_prob, init, n, ...)`` is ``CoupledSampler(log_prob, init, ...).run(n,
     ...)``: it tunes the kernel's unset parameters, chooses ``k`` from 100 lag-1 pilot
@@ -435,17 +444,44 @@ def sample(
         a callable ``init(rng)`` or an array of points of shape ``(n, d)``.
     n_replicates : int
         The number :math:`R` of replicates, at least 2.
-    args, kwargs, grad, vectorize, kernel, names, pool, progress, rng
-        As for :class:`CoupledSampler`.
-    k, m, lag, thin, max_iter
-        As for :meth:`CoupledSampler.run`: ``"auto"`` chooses ``k`` from the pilot, then
-        ``lag = max(1, k)`` and ``m = 10 k``; ``thin`` averages every ``thin``-th state;
-        ``max_iter`` censors pairs still unmet at that time.
+    args : tuple or list
+        Extra positional arguments of ``log_prob`` and ``grad``, such as ``(data,)``.
+    kwargs : mapping, optional
+        Extra keyword arguments of ``log_prob`` and ``grad``.
+    grad : callable, optional
+        :math:`\nabla\log\pi` with the signature of ``log_prob``. Only the kernels that
+        need it, MALA and HMC, evaluate it; ``"auto"`` is random-walk Metropolis.
+    vectorize : bool
+        Whether ``log_prob`` and ``grad`` take a batch of points.
+    kernel : Kernel or str
+        A kernel, or one of ``"auto"`` and ``"rwmh"`` (random-walk Metropolis with the
+        reflection-maximal coupling), ``"mala"`` and ``"hmc"`` (which need ``grad``) and
+        ``"independence"``.
+    k, m, lag : int or "auto"
+        ``"auto"`` chooses ``k`` from the pilot's meeting times, then ``lag = max(1, k)``
+        and ``m = 10 k``. A value given explicitly is kept.
+    thin : int, optional
+        Average every ``thin``-th state from ``k``; ``None`` averages every state.
+    max_iter : int, optional
+        Censor pairs still unmet at this time; ``None`` runs every pair until it meets.
+    names : sequence of str, optional
+        Parameter names for summaries.
+    pool : None, int, executor or pool
+        Where the pilot pairs and the replicates run: ``None`` in this process; an
+        integer, that many worker processes; or an object with ``submit``, such as a
+        :class:`concurrent.futures.Executor`, or with ``map``, such as an emcee or
+        schwimmbad pool. See :class:`CoupledSampler` for how a pool runs them.
+    progress : bool
+        Show the progress of the pilot and of the run: a tqdm bar when tqdm is installed,
+        lines on stderr otherwise.
+    rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
+        The root of every random stream.
 
     Returns
     -------
     Result
-        Its estimates are unbiased; it warns about the conditions of spec section 7.4.
+        Its estimates are unbiased; it warns about the conditions listed under Warnings,
+        in :doc:`/guide/diagnostics`.
     """
     # Checked before tuning: the estimates and the summary need 2 replicates that met.
     integer("n_replicates", n_replicates, minimum=2)

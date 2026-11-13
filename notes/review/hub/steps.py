@@ -204,7 +204,7 @@ PHASES = [
                     "src/telescopic/estimators.py:unbiased_covariance",
                     "src/telescopic/estimators.py:weighted_quantile",
                     "src/telescopic/results.py:Result.estimate",
-                    "src/telescopic/results.py:Result._centred",
+                    "src/telescopic/results.py:Result._centered",
                 ],
                 "tests": ["tests/test_estimators.py", "tests/test_results.py"],
                 "decisions": ["D-14", 54],

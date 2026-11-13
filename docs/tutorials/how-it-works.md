@@ -55,12 +55,25 @@ dashed line joins its solid one, marked with a dot. After a meeting only $X$ run
 $m$, in the dark ink of met chains. The MCMC average uses the shaded times, $k$ to $m$:
 
 ```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      Four pairs of paths falling from about 5 toward 0 against t; each dashed
+      teal path joins its solid magenta one at a dot, after which one dark line
+      continues, and the times from k to m are shaded.
+  figure:
+    caption: >-
+      The paths of the first four pairs against $t$: $X_t$ solid in magenta and
+      $Y_{t-1}$ dashed in teal, a dot where each pair meets, the pair in dark ink
+      afterwards, and the times $k$ to $m$ that the MCMC average uses shaded.
+---
 n = 4
 ax = plotting.paths(replicates, n=n)
 meeting = replicates.meeting_time[:n].astype(int)
 position = np.array([replicates.paths[i][0][meeting[i], 0] for i in range(n)])
 ax.plot(meeting, position, "o", color=plotting.MET)
-ax.axvspan(k, m, color="grey", alpha=0.15)
+ax.axvspan(k, m, color="gray", alpha=0.15)
 ax.set(xlabel="$t$", ylabel="$X_t$ and $Y_{t-1}$");
 ```
 
@@ -101,12 +114,24 @@ so the weights sum to 1 and some are negative. The weights of this replicate, su
 equal atoms, positive in blue and negative in gold:
 
 ```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      Vertical stems at the atoms of one replicate, most above zero in blue and
+      some below in gold.
+  figure:
+    caption: >-
+      The weights of one replicate's atoms, summed over equal atoms, positive in
+      blue and negative in gold: they sum to 1, and the bias correction makes some
+      of them negative.
+---
 points, which = np.unique(atoms, return_inverse=True)
 summed = np.bincount(which, weights)
 fig, ax = plt.subplots(figsize=(5, 3))
 for sign, color, label in ((summed > 0, "C0", "positive"), (summed < 0, "C1", "negative")):
     ax.stem(points[sign], summed[sign], linefmt=color, markerfmt=color, basefmt="none", label=label)
-ax.axhline(0, color="grey", linewidth=0.8)
+ax.axhline(0, color="gray", linewidth=0.8)
 ax.legend()
 ax.set(xlabel="atom", ylabel="weight");
 ```
@@ -165,9 +190,3 @@ assert rows[k, "full"][1] < rows[1, "full"][1]
 The MCMC average is many error bars from 0 with either lag, since the lag does not change
 the law of $X$. The full estimator is within two error bars of 0 with both lags, and its
 error bar is smaller with $L = k$.
-
-## Next
-
-[Choosing k, m and the lag](choosing-settings.md) shows how {func}`telescopic.sample`
-chooses $k$, $m$ and the lag, and how the lag changes the bound on the distance to
-stationarity.

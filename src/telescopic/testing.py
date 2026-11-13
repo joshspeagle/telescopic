@@ -22,6 +22,7 @@ PROJECTIONS = 5
 NEAR_MISS_ULPS = 64
 
 
+# Spec section 5.1 and R-KER-3.
 @dataclass(frozen=True)
 class CouplingReport:
     """The checks of :func:`check_coupling`.
@@ -41,11 +42,11 @@ class CouplingReport:
         The fraction of pairs that met: a coupling that never meets gives no estimate.
     stale : int
         Chains whose returned log-density or gradient differs from a fresh evaluation at
-        their position; the engine reuses them (spec section 5.1).
+        their position; the engine reuses them.
     near_misses : int
         Pairs whose positions differ by at most 64 units in the last place in every
         coordinate: a coupling that recomputes Y where it should copy X's proposal
-        leaves them, and the engine never sees such pairs meet (spec R-KER-3).
+        leaves them, and the engine never sees such pairs meet.
     """
 
     stay: tuple[float, float]
@@ -78,6 +79,7 @@ class CouplingReport:
         )
 
 
+# Spec section 9.
 def check_coupling(
     kernel: Kernel,
     target: Target,
@@ -86,7 +88,7 @@ def check_coupling(
     n: int = 10_000,
     rng: Seed = None,
 ) -> CouplingReport:
-    """Check a kernel's coupling as the engine uses it (spec section 9).
+    """Check a kernel's coupling as the engine uses it.
 
     From ``n`` pairs, ``(x, y)`` or ``(y, x)`` in random rows, one coupled step is compared
     with one step of the kernel alone from the first points and one from the second: how

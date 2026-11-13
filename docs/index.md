@@ -24,7 +24,7 @@ estimator pairs them with a lag of 1. The lines join at the meeting time, and on
 ```
 
 :::{container} routes
-- [**I use emcee and want error bars I can trust**](tutorials/quickstart.md)
+- [**I use emcee and want error bars I can trust**](tutorials/beside-emcee.md)
 
   The same line fit with emcee and with telescopic, side by side.
 - [**How can MCMC be unbiased?**](tutorials/how-it-works.md)
@@ -65,12 +65,12 @@ getting-started
 :hidden:
 :caption: Tutorials
 
-Coupled chains and unbiasedness <tutorials/how-it-works>
-Failure modes <tutorials/failure-modes>
-Comparing with emcee <tutorials/quickstart>
-Choosing k, m, and lag <tutorials/choosing-settings>
-MALA and HMC with gradients <tutorials/gradients>
-Coupled Gibbs sampling <tutorials/gibbs>
+tutorials/how-it-works
+tutorials/beside-emcee
+tutorials/choosing-settings
+tutorials/gradients
+tutorials/gibbs
+tutorials/failure-modes
 ```
 
 ```{toctree}

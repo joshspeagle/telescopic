@@ -368,8 +368,8 @@ def test_a_uniform_of_zero_never_draws_a_category_of_zero_weight():
     assert (i[0], j[0]) == (1, 0)
 
 
-def test_discrete_maximal_normalises_each_distribution_in_log_space():
-    # The same distribution under different, extreme normalising constants always meets.
+def test_discrete_maximal_normalizes_each_distribution_in_log_space():
+    # The same distribution under different, extreme normalizing constants always meets.
     rng = np.random.default_rng(6)
     log_p = np.log(rng.dirichlet(np.ones(5), size=1000))
     draws = fixed_draws(uniforms=rng.random((1000, 3)))

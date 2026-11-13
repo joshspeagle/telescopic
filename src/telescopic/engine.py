@@ -37,8 +37,9 @@ LANES = 256
 COUNTS = ("n_log_prob", "n_grad", "n_grad_zeroed")
 
 
+# Spec section 3.2 and R-EST-5.
 class Settings(NamedTuple):
-    r"""The settings of a run (spec section 3.2).
+    r"""The settings of a run.
 
     Attributes
     ----------
@@ -47,7 +48,7 @@ class Settings(NamedTuple):
     lag : int
         The lag :math:`L \ge 1`.
     thin : int
-        Average every ``thin``-th time from ``k`` (spec R-EST-5).
+        Average every ``thin``-th time from ``k``.
     max_iter : int or None
         The cap: a pair still unmet when :math:`t` reaches it is censored.
     store : bool
@@ -63,24 +64,23 @@ class Settings(NamedTuple):
     store: bool = True
 
 
+# Spec section 6.2; seed, section 6.1; atoms, R-EST-6; requested, section 6.5; evaluations,
+# R-EST-7 and R-INPUT-1.
 @dataclass
 class Replicates:
     r"""The outputs of a set of replicates, sorted by replicate index, and their run's settings.
 
-    Spec section 6.2.
-
     Attributes
     ----------
     seed : numpy.random.SeedSequence
-        The root seed of the run, from which each replicate's stream derives (spec
-        section 6.1).
+        The root seed of the run, from which each replicate's stream derives.
     settings : Settings
     index : ndarray of int, shape (R,)
         Replicate indices.
     meeting_time : ndarray of float, shape (R,)
         :math:`\tau = \inf\{t \ge L : X_t = Y_{t-L}\}`, or ``inf`` for a censored pair.
     atoms, weights, owner : ndarrays, shapes (N, d), (N,), (N,)
-        The signed measures of the replicates that met (spec R-EST-6): the atoms, their
+        The signed measures of the replicates that met: the atoms, their
         weights (each replicate's sum to 1), and the index of the replicate each atom
         belongs to. Sorted by owner.
     distance_owner, distance_time, distance : ndarrays, shape (M,)
@@ -90,12 +90,11 @@ class Replicates:
         The replicates whose :math:`X_0` or :math:`Y_0` has zero target density.
     requested : ndarray of int
         The indices the run was asked for, sorted: ``index`` lacks those of replicates
-        that an interrupted run never started (spec section 6.5).
+        that an interrupted run never started.
     n_log_prob, n_grad : int
-        Evaluations of the log-density and its gradient (spec R-EST-7).
+        Evaluations of the log-density and its gradient.
     n_grad_zeroed : int
-        Gradients taken as 0 because they were not finite where the log-density is
-        (spec R-INPUT-1).
+        Gradients taken as 0 because they were not finite where the log-density is.
     seconds : float
         Wall time of the run.
     paths : dict of int to (ndarray, ndarray)
@@ -123,17 +122,27 @@ class Replicates:
 
     @property
     def stopped(self) -> FloatArray:
-        """The time each pair stopped, shape (R,): its meeting time, or the cap if censored."""
+        """The time each pair stopped: its meeting time, or the cap if censored.
+
+        Returns
+        -------
+        ndarray, shape (R,)
+        """
         cap = self.settings.max_iter
         stopped: FloatArray = np.minimum(self.meeting_time, np.inf if cap is None else cap)
         return stopped
 
+    # Spec R-EST-7.
     @property
     def cost(self) -> IntArray:
-        r"""Kernel applications, shape (R,), counting a coupled step before the meeting as two.
+        r"""Kernel applications, counting a coupled step before the meeting as two.
 
         X runs to :math:`\max(s, m)` and Y from :math:`L` to :math:`s`, with :math:`s` the
-        time the pair stopped (spec R-EST-7).
+        time the pair stopped.
+
+        Returns
+        -------
+        ndarray of int, shape (R,)
         """
         stopped = self.stopped
         cost: IntArray = (stopped + np.maximum(stopped, self.settings.m)).astype(np.int64)
@@ -158,6 +167,7 @@ class Status(NamedTuple):
     t: int
 
 
+# Spec sections 3.1, 6.1, 6.2 and 6.5, R-EST-5, R-EXEC-2 and R-EXEC-7.
 def run(
     target: Target,
     kernel: Kernel,
@@ -175,14 +185,14 @@ def run(
     keep_paths: bool = False,
     monitor: Callable[[Status], bool] | None = None,
 ) -> Replicates:
-    r"""Run the replicates ``indices`` of the estimator :math:`H_S` (spec sections 3.1, 6.2).
+    r"""Run the replicates ``indices`` of the estimator :math:`H_S`.
 
     Each replicate draws :math:`X_0` and then :math:`Y_0` from ``initial`` with its own
-    stream (spec section 6.1), runs :math:`X` alone for ``lag`` steps, then the coupled
+    stream, runs :math:`X` alone for ``lag`` steps, then the coupled
     kernel until :math:`X_t = Y_{t-L}` under ``==``, then :math:`X` alone until :math:`t = m`.
     A replicate's output depends only on the root seed, its index and the arguments,
     never on the other replicates or on ``lanes``: bitwise for a log-density evaluated
-    point by point, up to rounding for a vectorized one (spec R-EXEC-2). The engine emits
+    point by point, up to rounding for a vectorized one. The engine emits
     no warning: it records what its caller needs to warn about.
 
     Parameters
@@ -200,12 +210,12 @@ def run(
     lag : int
         The lag :math:`L \ge 1`.
     thin : int
-        Average every ``thin``-th time from ``k`` (spec R-EST-5).
+        Average every ``thin``-th time from ``k``.
     max_iter : int, optional
         Censor a pair still unmet when :math:`t` reaches ``max_iter``, which must exceed
         ``max(lag, m)``. ``None`` runs every pair until it meets.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
-        The root seed (spec section 6.1), recorded in the output. Runs of other indices
+        The root seed, recorded in the output. Runs of other indices
         with the same ``SeedSequence`` or integer can be merged.
     lanes : int
         Number of replicates advanced together, at most the number requested.
@@ -216,7 +226,7 @@ def run(
     monitor : callable, optional
         Called with a :class:`Status` after every iteration. Once it returns true, no
         new replicate starts and the ones in progress finish, so the finished indices
-        are those started (spec section 6.5).
+        are those started.
 
     Returns
     -------
@@ -225,8 +235,7 @@ def run(
     Notes
     -----
     Memory: the stored atoms take about :math:`R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})
-    (8d + 16)` bytes, and the :math:`\tau - L` distances of each replicate 24 bytes each
-    (spec R-EXEC-7).
+    (8d + 16)` bytes, and the :math:`\tau - L` distances of each replicate 24 bytes each.
     """
     instance("target", target, Target)
     instance("kernel", kernel, Kernel)
@@ -263,8 +272,9 @@ def run(
     return batch.result(seed, np.sort(requested), start)
 
 
+# Spec section 3.2.
 def check_settings(settings: Settings) -> Settings:
-    r"""Check the settings of a run and return them with Python integers (spec section 3.2).
+    r"""Check the settings of a run and return them with Python integers.
 
     They need integers :math:`0 \le k \le m`, :math:`L \ge 1` and ``thin`` :math:`\ge 1`,
     and an integer ``max_iter`` above :math:`\max(L, m)` or ``None``. NumPy integers

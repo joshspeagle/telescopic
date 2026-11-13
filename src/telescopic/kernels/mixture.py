@@ -16,13 +16,14 @@ from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport
 
 
+# Spec R-KER-MIX.
 class Mixture(Kernel):
-    """A mixture of kernels (spec R-KER-MIX).
+    """A mixture of kernels.
 
     Each step draws one uniform and applies the component it selects. The coupled step
     gives both chains the same component and applies that component's coupling. The
     choice never depends on the states, which keeps each marginal the mixture
-    (Atchade & Jacob 2024, section 4.2).
+    (Atchadé & Jacob 2024, section 4.2).
 
     Parameters
     ----------

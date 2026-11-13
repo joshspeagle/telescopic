@@ -47,9 +47,10 @@ def _four_figures(match: re.Match[str]) -> str:
     return text if any(c in text for c in ".en") else text + ".0"
 
 
+# Spec R-OUT-2.
 @dataclass(frozen=True, eq=False)
 class Estimate:
-    r"""An unbiased estimate of :math:`\pi(h)` with its Monte Carlo error (spec R-OUT-2).
+    r"""An unbiased estimate of :math:`\pi(h)` with its Monte Carlo error.
 
     Attributes
     ----------
@@ -63,6 +64,7 @@ class Estimate:
         with :math:`R - 1` degrees of freedom; valid as :math:`R` grows when the variance
         is finite, and exact at every :math:`R \ge 2` for normal replicates.
     level : float
+        The confidence level of ``interval``, such as 0.95.
     replicates : ndarray, shape (R,) or (R, p)
         The replicates' estimates :math:`\hat\pi_r(h)`.
     """
@@ -84,8 +86,10 @@ class Estimate:
         return f"Estimate({body}, R={len(self.replicates)})"
 
 
+# Spec R-OUT-1; settings, section 3.2; n_grad_zeroed, R-INPUT-1; interrupted,
+# section 6.5.
 class Result:
-    r"""The output of a run of coupled chains (spec R-OUT-1).
+    r"""The output of a run of coupled chains.
 
     Censored pairs appear in ``meeting_times`` as ``inf`` and are excluded from the
     estimates, from ``n_replicates`` and from ``measure``.
@@ -107,7 +111,7 @@ class Result:
     Attributes
     ----------
     k, m, lag, thin : int
-        The settings of the run (spec section 3.2).
+        The settings of the run.
     max_iter : int or None
         The cap of the run.
     seed : numpy.random.SeedSequence
@@ -127,12 +131,12 @@ class Result:
         of tuning and of the meeting-time pilot.
     n_grad_zeroed : int
         Gradients of the replicates taken as 0 because they were not finite where the
-        log-density is (spec R-INPUT-1).
+        log-density is.
     wall_time : float
         Seconds spent running the replicates, without tuning and the pilot.
     interrupted : bool
         Whether a requested replicate never ran, so that the estimates are consistent
-        but not exactly unbiased until it does (spec section 6.5).
+        but not exactly unbiased until it does.
     """
 
     def __init__(
@@ -189,8 +193,9 @@ class Result:
             f"lag={self.lag}, censored={self.n_censored}, interrupted={self.interrupted})"
         )
 
+    # Spec section 3.3.
     def estimate(self, h: Callable[[FloatArray], npt.ArrayLike], level: float = 0.95) -> Estimate:
-        r"""Estimate :math:`\pi(h)` with a confidence interval (spec section 3.3).
+        r"""Estimate :math:`\pi(h)` with a confidence interval.
 
         Parameters
         ----------
@@ -214,7 +219,13 @@ class Result:
         return Estimate(value, error, interval, level, values)
 
     def mean(self) -> Estimate:
-        """The estimate of the mean of each coordinate, with shapes ``(d,)``."""
+        """The estimate of the mean of each coordinate.
+
+        Returns
+        -------
+        Estimate
+            With ``value`` and ``standard_error`` of shape ``(d,)``.
+        """
         return self.estimate(lambda x: x)
 
     def cov(self) -> FloatArray:
@@ -231,9 +242,9 @@ class Result:
         ndarray, shape (d, d)
         """
         self._require(2)
-        centred, first = self._centred()
+        centered, first = self._centered()
         weights = self.measure.weights
-        second = centred.T @ (weights[:, None] * centred) / self.n_replicates
+        second = centered.T @ (weights[:, None] * centered) / self.n_replicates
         return unbiased_covariance(first, second)
 
     def var(self) -> FloatArray:
@@ -249,19 +260,24 @@ class Result:
         ndarray, shape (d,)
         """
         self._require(2)
-        centred, first = self._centred()
+        centered, first = self._centered()
         weights = self.measure.weights
-        second = np.einsum("i,ij,ij->j", weights, centred, centred) / self.n_replicates
+        second = np.einsum("i,ij,ij->j", weights, centered, centered) / self.n_replicates
         return unbiased_variance(first, second)
 
     def std(self) -> FloatArray:
-        r"""Standard deviations :math:`\sqrt{\max(0, \widehat{\mathrm{Var}})}`, shape ``(d,)``.
+        r"""Standard deviations :math:`\sqrt{\max(0, \widehat{\mathrm{Var}})}`.
 
         Consistent as :math:`R` grows, not unbiased.
+
+        Returns
+        -------
+        ndarray, shape (d,)
         """
         deviations: FloatArray = np.sqrt(np.maximum(0.0, self.var()))
         return deviations
 
+    # Spec section 3.4.
     def quantile(
         self, q: npt.ArrayLike, h: Callable[[FloatArray], npt.ArrayLike] | None = None
     ) -> FloatArray:
@@ -315,10 +331,11 @@ class Result:
         mass = real("mass", mass, 0, 1)
         return self.quantile([(1 - mass) / 2, (1 + mass) / 2], h)
 
+    # Spec section 3.4.
     def histogram(
         self, dims: int | Sequence[int], bins: int = 20, range: npt.ArrayLike | None = None
     ) -> tuple[FloatArray, FloatArray, FloatArray | list[FloatArray]]:
-        """Histogram of one coordinate or several, with standard errors (spec section 3.4).
+        """Histogram of one coordinate or several, with standard errors.
 
         The mass of each bin is the average over replicates of its signed mass, so a bin
         can be negative. The bins are half-open, :math:`[a, b)`, except the last, which is
@@ -370,12 +387,13 @@ class Result:
         error = np.sqrt(squares / (n - 1) / n)
         return mean.reshape(shape), error.reshape(shape), edges if np.ndim(dims) else edges[0]
 
+    # Spec section 3.6.
     def tv_bound(self, t: npt.ArrayLike | None = None) -> FloatArray:
         """Estimated upper bound on the total variation distance from the law of X_t to the target.
 
-        Spec section 3.6. A censored pair counts as meeting just after its cap, the
-        earliest it can, so with censored pairs it is a lower bound of the estimate without
-        a cap.
+        The bound derived under Distance to stationarity, in :doc:`/theory`. A censored pair
+        counts as meeting just after its cap, the earliest it can, so with censored pairs
+        it is a lower bound of the estimate without a cap.
 
         Parameters
         ----------
@@ -391,10 +409,12 @@ class Result:
             t = self._times(int(np.max(self._earliest_meeting)))
         return diagnostics.tv_bound(self._earliest_meeting, self.lag, t)
 
+    # Spec section 3.6.
     def w1_bound(self, t: npt.ArrayLike | None = None) -> FloatArray:
         """Estimated upper bound on the 1-Wasserstein distance from the law of X_t to the target.
 
-        Spec section 3.6. It depends on the parameterization of the target. A censored
+        The bound derived under Distance to stationarity, in :doc:`/theory`. It depends on
+        the parameterization of the target. A censored
         pair's distances stop at its cap, so with censored pairs it is a lower bound of the
         estimate without a cap.
 
@@ -414,6 +434,7 @@ class Result:
             replicates.distance_time, replicates.distance, len(self.index), self.lag, t
         )
 
+    # Spec section 3.6 and R-TUNE-4.
     def diagnostics(self) -> dict[str, Any]:
         """Diagnostics of the run: meeting times, censoring, bias corrections, cost.
 
@@ -427,13 +448,13 @@ class Result:
             ``n_tail`` :math:`= \\lfloor R/10 \\rfloor`, ``nan`` below 500 replicates;
             ``censored``; ``late_fraction``, the fraction of pairs with
             :math:`\\tau - L > k`, censored ones included (the leading term of the TV
-            bound at :math:`k`, spec section 3.6), with ``late_fraction_upper``, its
+            bound at :math:`k`), with ``late_fraction_upper``, its
             one-sided 95% Clopper-Pearson upper bound, which stays informative when the
             fraction is 0; ``tv_bound_at_k``; ``variance_share``, the largest share of one
             replicate in the sample variance of the estimate of a coordinate's mean or
             variance, and ``variance_share_of``, that estimate, ``nan`` and ``None``
             below 2 replicates; ``mean_cost``, ``seconds_per_replicate`` and
-            ``relative_cost``, the mean cost over :math:`m - k + 1` (spec R-TUNE-4).
+            ``relative_cost``, the mean cost over :math:`m - k + 1`.
         """
         return dict(self._diagnostics)
 
@@ -457,9 +478,9 @@ class Result:
         if self.n_replicates >= 2:
             # The second moments about the atoms' mean, which the variances use: about 0,
             # far from it, they would vary with the means and hide their own spread.
-            centred, first = self._centred()
-            # Squared in place: the centred atoms are not read again.
-            second = self.measure.per_replicate(lambda _: np.square(centred, out=centred))
+            centered, first = self._centered()
+            # Squared in place: the centered atoms are not read again.
+            second = self.measure.per_replicate(lambda _: np.square(centered, out=centered))
             shares = diagnostics.variance_share(np.concatenate([first, second], axis=1))
             worst = int(np.argmax(shares))
             moment = "mean" if worst < self.ndim else "variance"
@@ -483,8 +504,9 @@ class Result:
             "relative_cost": mean_cost / (self.m - self.k + 1),
         }
 
+    # Spec R-OUT-3.
     def summary(self) -> Summary:
-        """Estimates per parameter and the diagnostics of the run (spec R-OUT-3).
+        """Estimates per parameter and the diagnostics of the run.
 
         Returns
         -------
@@ -514,10 +536,11 @@ class Result:
         }
         return Summary(self.names, table, footer)
 
+    # Spec R-OUT-1.
     def merge(self, other: Result) -> Result:
         """Join with a run of the same seed and configuration and disjoint replicates.
 
-        Spec R-OUT-1; :func:`telescopic.engine.merge` checks the seeds, the settings, the
+        :func:`telescopic.engine.merge` checks the seeds, the settings, the
         dimensions and the replicates. That the runs share the target, the kernel and the
         initial distribution is the caller's to ensure: their descriptions omit parameters.
         The merged result takes this result's names, and its kernel, initial distribution,
@@ -543,8 +566,9 @@ class Result:
             pilot=self.pilot if self.pilot is not None else other.pilot,
         )
 
+    # Spec R-OUT-1.
     def save(self, path: str | os.PathLike[str] | IO[bytes]) -> None:
-        """Save as a versioned ``.npz`` file, without pickle (spec R-OUT-1).
+        """Save as a versioned ``.npz`` file, without pickle.
 
         The kernel and the initial distribution are saved as their descriptions,
         ``str(kernel)`` and ``str(initial)``; the engine's paths are not saved.
@@ -581,12 +605,12 @@ class Result:
 
         Parameters
         ----------
-        axes : sequence of two matplotlib Axes, optional
+        axes : sequence of two Axes, optional
             By default, those of a new figure.
 
         Returns
         -------
-        list of two matplotlib Axes
+        list of two Axes
         """
         # Imported here: matplotlib is optional, and telescopic.plotting imports this module.
         from telescopic import plotting
@@ -598,12 +622,12 @@ class Result:
 
         Parameters
         ----------
-        ax : matplotlib Axes, optional
+        ax : Axes, optional
             By default, that of a new figure.
 
         Returns
         -------
-        matplotlib Axes
+        Axes
         """
         from telescopic import plotting
 
@@ -622,12 +646,12 @@ class Result:
         dims : int or sequence of int, optional
             Coordinates; all by default.
         bins : int
-        axes : sequence of matplotlib Axes, optional
+        axes : sequence of Axes, optional
             One per coordinate; by default, those of a new figure.
 
         Returns
         -------
-        list of matplotlib Axes
+        list of Axes
         """
         from telescopic import plotting
 
@@ -644,14 +668,17 @@ class Result:
 
         Returns
         -------
-        ndarray of matplotlib Axes
+        ndarray of Axes
         """
         from telescopic import plotting
 
         return plotting.corner(self, dims, bins)
 
+    # Spec section 7.4.
     def check(self, strict: bool = False) -> None:
-        """Warn about the conditions of spec section 7.4 that apply to this run.
+        """Warn about the conditions that apply to this run.
+
+        They are listed under Warnings, in :doc:`/guide/diagnostics`.
 
         Parameters
         ----------
@@ -676,13 +703,13 @@ class Result:
         which[values == edges[-1]] = bins - 1
         return which, edges
 
-    def _centred(self) -> tuple[FloatArray, FloatArray]:
+    def _centered(self) -> tuple[FloatArray, FloatArray]:
         # The atoms about their mean, and each replicate's mean of them. Each replicate's
         # weights sum to 1, so the covariance estimator is the same about any point; about
         # 0, a mean far from 0 next to the spread would cancel catastrophically.
         atoms = self.measure.atoms
-        centred = atoms - np.ones(len(atoms)) @ atoms / len(atoms)  # faster than mean(axis=0)
-        return centred, self.measure.per_replicate(lambda _: centred)
+        centered = atoms - np.ones(len(atoms)) @ atoms / len(atoms)  # faster than mean(axis=0)
+        return centered, self.measure.per_replicate(lambda _: centered)
 
     def _require(self, n: int) -> None:
         if self.n_replicates < n:
@@ -720,7 +747,14 @@ class Summary:
     footer: dict[str, Any]
 
     def to_dict(self) -> dict[str, Any]:
-        """The summary as nested dictionaries of Python numbers."""
+        """The summary as nested dictionaries of Python numbers.
+
+        Returns
+        -------
+        dict
+            ``"parameters"``, a dictionary of each parameter's columns, and the entries of
+            the footer.
+        """
         parameters = {
             name: {column: float(values[i]) for column, values in self.table.items()}
             for i, name in enumerate(self.names)
@@ -728,7 +762,12 @@ class Summary:
         return {"parameters": parameters, **self.footer}
 
     def to_pandas(self) -> Any:
-        """The table as a ``pandas.DataFrame`` indexed by parameter name (needs pandas)."""
+        """The table as a data frame indexed by parameter name (needs pandas).
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
         try:
             import pandas as pd
         except ImportError as error:
