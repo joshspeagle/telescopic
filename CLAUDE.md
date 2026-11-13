@@ -97,8 +97,10 @@ issue and its pull request, whose description holds its checks, decisions and re
 
 6. Update the documentation that the change touches (`.claude/rules/docs-upkeep.md`).
 7. Push, and watch CI on the pull request without waiting on it; fix a failing job at
-   its cause. Mark the pull request ready when the gate and CI pass. Josh merges it,
-   with a merge commit, and CI on `main` is checked after the merge.
+   its cause. Mark the pull request ready when the gate, CI and the reviews of step 5
+   pass, and then merge it, with a merge commit, and check CI on `main` afterwards. A
+   change that fundamentally alters functionality or the public API is not merged until
+   Josh has reviewed it: say so in its pull request and ask him (DECISIONS #97).
 8. Add a dated log comment for the session to the phase's tracking issue: what was done,
    found and ruled, with issue, pull request and commit numbers, and update its State
    table when an epic moves. Without GitHub access, end the reply with that text.
