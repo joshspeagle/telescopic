@@ -134,3 +134,15 @@ def read_only(array: npt.NDArray[Any]) -> npt.NDArray[Any]:
     view = array.view()
     view.flags.writeable = False
     return view
+
+
+def values_of(h: Any, points: FloatArray) -> FloatArray:
+    # h at points of shape (n, d), a read-only view since an h that wrote to its input
+    # would change every later estimate, checked to give shape (n,) or (n, p).
+    values = np.asarray(h(read_only(points)), dtype=np.float64)
+    if values.ndim not in (1, 2) or len(values) != len(points):
+        raise ValueError(
+            f"h must map atoms of shape (n, d) to shape (n,) or (n, p); for n = "
+            f"{len(points)} it returned shape {values.shape}"
+        )
+    return values

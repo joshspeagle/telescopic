@@ -9,7 +9,7 @@ from scipy import stats
 from references import gaussian_log_prob, synthetic
 from telescopic.diagnostics import w1_bound
 from telescopic.engine import run
-from telescopic.estimators import unbiased_covariance
+from telescopic.estimators import unbiased_covariance, weighted_quantile
 from telescopic.initial import Normal
 from telescopic.kernels import RandomWalk
 from telescopic.results import Result
@@ -101,6 +101,24 @@ def test_without_bias_corrections_quantiles_are_those_of_the_pooled_draws():
         np.testing.assert_array_equal(result.quantile(levels)[:, dim], expected)
         central = np.quantile(atoms, [(1 - 0.555) / 2, (1 + 0.555) / 2], method="inverted_cdf")
         np.testing.assert_array_equal(result.credible_interval(0.555)[:, dim], central)
+
+
+def test_quantile_of_h_equals_weighted_quantile_recipe():
+    # The recipe applies h to every atom and divides the pooled weights by R; RESULT has
+    # bias corrections, so some weights are negative.
+    assert RESULT.measure.weights.min() < 0
+    weights = RESULT.measure.weights / RESULT.n_replicates
+    atoms = RESULT.measure.atoms
+    product = atoms[:, 0] * atoms[:, 1]
+    levels = [0.137, 0.503, 0.911]
+    expected = weighted_quantile(product, weights, levels)
+    np.testing.assert_array_equal(RESULT.quantile(levels, lambda x: x[:, 0] * x[:, 1]), expected)
+    assert RESULT.quantile(0.503, lambda x: x[:, 0] * x[:, 1]) == expected[1]
+    # Values of shape (n, p) give a column per value, as the coordinates do.
+    both = RESULT.quantile(levels, lambda x: np.column_stack([x[:, 0] * x[:, 1], x[:, 0]]))
+    np.testing.assert_array_equal(both, np.column_stack([expected, RESULT.quantile(levels)[:, 0]]))
+    central = weighted_quantile(product, weights, [0.16, 0.84])
+    np.testing.assert_array_equal(RESULT.credible_interval(h=lambda x: x[:, 0] * x[:, 1]), central)
 
 
 def test_quantiles_keep_apart_atoms_that_share_some_coordinates():
@@ -301,6 +319,7 @@ def test_results_from_equal_array_seeds_merge():
         (lambda r: r.tv_bound([-1]), ValueError, "t must be non-negative"),
         (lambda r: r.w1_bound([-1]), ValueError, "t must be non-negative"),
         (lambda r: r.quantile(np.nan), ValueError, "q must be in"),
+        (lambda r: r.quantile(0.5, lambda x: x[:1]), ValueError, "h must map atoms"),
     ],
 )
 def test_invalid_arguments_of_the_result_raise(call, error, message):

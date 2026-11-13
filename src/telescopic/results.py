@@ -13,7 +13,7 @@ import numpy.typing as npt
 from scipy import stats
 
 from telescopic import diagnostics, engine
-from telescopic._types import FloatArray, coordinates, integer, parameter_names, real
+from telescopic._types import FloatArray, coordinates, integer, parameter_names, real, values_of
 from telescopic.engine import Replicates
 from telescopic.estimators import unbiased_covariance, unbiased_variance, weighted_quantile
 from telescopic.measure import SignedMeasure
@@ -213,42 +213,55 @@ class Result:
         deviations: FloatArray = np.sqrt(np.maximum(0.0, self.var()))
         return deviations
 
-    def quantile(self, q: npt.ArrayLike) -> FloatArray:
-        """Quantiles of each coordinate under the pooled signed measure (spec section 3.4).
+    def quantile(
+        self, q: npt.ArrayLike, h: Callable[[FloatArray], npt.ArrayLike] | None = None
+    ) -> FloatArray:
+        """Quantiles of each coordinate, or of ``h``, under the pooled signed measure.
 
-        Consistent as :math:`R` grows, not unbiased.
+        Spec section 3.4. Consistent as :math:`R` grows, not unbiased.
 
         Parameters
         ----------
         q : float or array_like of float in [0, 1]
+        h : callable, optional
+            Maps points of shape ``(n, d)``, a read-only array, to values of shape ``(n,)``
+            or ``(n, p)``, whose quantiles are taken in place of the coordinates'.
 
         Returns
         -------
-        ndarray, shape (d,) for a scalar ``q``, else ``(len(q), d)``
+        ndarray, shape ``q.shape + (d,)``, or with ``h``, ``q.shape`` or ``q.shape + (p,)``
         """
         self._require(1)
-        # Rejections repeat atoms; merging consecutive equal rows first shortens every sort.
+        # Rejections repeat atoms; merging consecutive equal rows first shortens every sort
+        # and the calls of h.
         atoms = self.measure.atoms
         first = np.concatenate([[True], np.any(atoms[1:] != atoms[:-1], axis=1)]).nonzero()[0]
         weights = np.add.reduceat(self.measure.weights, first) / self.n_replicates
-        columns = [weighted_quantile(column, weights, q) for column in atoms[first].T]
-        quantiles: FloatArray = np.stack(columns, axis=-1)
+        values = atoms[first] if h is None else values_of(h, atoms[first])
+        columns = [weighted_quantile(c, weights, q) for c in values.reshape(len(first), -1).T]
+        quantiles: FloatArray = np.stack(columns, axis=-1).reshape(np.shape(q) + values.shape[1:])
         return quantiles
 
-    def credible_interval(self, mass: float = 0.68) -> FloatArray:
-        """The central credible interval holding ``mass`` of each marginal of the target.
+    def credible_interval(
+        self, mass: float = 0.68, h: Callable[[FloatArray], npt.ArrayLike] | None = None
+    ) -> FloatArray:
+        r"""The central credible interval holding ``mass`` of each marginal, or of ``h``.
+
+        The quantiles at :math:`(1 - \mathrm{mass})/2` and :math:`(1 + \mathrm{mass})/2`.
 
         Parameters
         ----------
         mass : float in (0, 1)
+        h : callable, optional
+            As in :meth:`quantile`.
 
         Returns
         -------
-        ndarray, shape (2, d)
+        ndarray, shape (2, d), or with ``h``, (2,) or (2, p)
             Lower and upper ends.
         """
         mass = real("mass", mass, 0, 1)
-        return self.quantile([(1 - mass) / 2, (1 + mass) / 2])
+        return self.quantile([(1 - mass) / 2, (1 + mass) / 2], h)
 
     def histogram(
         self, dims: int | Sequence[int], bins: int = 20, range: npt.ArrayLike | None = None

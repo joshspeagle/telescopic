@@ -123,4 +123,6 @@ All notable changes to this project are documented here. The format follows
   since its chains were compared at the cap, which raises the bound by up to 1 at some
   times of runs with censored pairs; `Result.interval` is renamed
   `Result.credible_interval`, with no alias, and `Estimate.interval` is an array of
-  shape `(2,)` or `(2, p)`, lower ends first, instead of a tuple of two arrays.
+  shape `(2,)` or `(2, p)`, lower ends first, instead of a tuple of two arrays;
+  `Result.quantile` and `Result.credible_interval` take a function `h`, as `estimate`
+  does, for the quantiles of a derived quantity.

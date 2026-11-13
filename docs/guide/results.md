@@ -121,28 +121,17 @@ result.quantile([0.05, 0.5, 0.95]), stats.norm.ppf([0.05, 0.5, 0.95])
 result.credible_interval(0.9)
 ```
 
-`quantile` and `credible_interval` take the coordinates of the target only. For a quantity
-derived from them, apply {func}`telescopic.estimators.weighted_quantile` to its values at
-the atoms, with each atom's weight divided by $R$. On a coordinate, this gives what
-`quantile` gives:
+Both take a function `h`, as `estimate` does, for the quantiles of a quantity derived
+from the coordinates: `h` maps points of shape `(n, d)` to values of shape `(n,)` or
+`(n, p)`, and the quantiles are those of its values at the atoms, with each atom's
+weight divided by $R$ (the quantiles of {func}`telescopic.estimators.weighted_quantile`),
+of shape `(len(q),)` or `(len(q), p)`. The sum $x_0 + x_1$ is Gaussian, with a variance
+equal to the sum of the entries of the covariance matrix:
 
 ```{code-cell} python
 levels = [0.05, 0.5, 0.95]
-weights = result.measure.weights / result.n_replicates
-x0 = result.measure.atoms[:, 0]
-np.array_equal(
-    telescopic.estimators.weighted_quantile(x0, weights, levels),
-    result.quantile(levels)[:, 0],
-)
-```
-
-The sum $x_0 + x_1$ is Gaussian, with a variance equal to the sum of the entries of the
-covariance matrix:
-
-```{code-cell} python
-total = result.measure.atoms.sum(axis=1)  # x0 + x1 at every atom
 (
-    telescopic.estimators.weighted_quantile(total, weights, levels),
+    result.quantile(levels, lambda x: x[:, 0] + x[:, 1]),
     stats.norm.ppf(levels, scale=np.sqrt(gaussian.cov.sum())),
 )
 ```
