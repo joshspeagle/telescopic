@@ -35,9 +35,10 @@ class Target:
     Notes
     -----
     The functions receive read-only arrays: a function that modifies its input raises
-    instead of corrupting the chains. An output whose shape differs from the expected
-    one only by axes of length 1, as SciPy's ``logpdf`` of one point, is reshaped. The
-    counters ``n_log_prob`` and ``n_grad`` count evaluations point by point, and
+    instead of corrupting the chains. Their outputs are copied, so a function may reuse
+    its output array, and an output whose shape differs from the expected one only by
+    axes of length 1, as SciPy's ``logpdf`` of one point, is reshaped. The counters
+    ``n_log_prob`` and ``n_grad`` count evaluations point by point, and
     ``n_grad_zeroed`` the gradients taken as 0 because they were not finite where the
     log-density is.
     """
@@ -124,8 +125,6 @@ class Target:
                     "where log_prob is finite: chains cannot start there; compute grad in "
                     "log space, as with scipy.special.logsumexp, or start them elsewhere"
                 )
-            # A copy: a vectorized grad may return its own array.
-            gradients = gradients.copy()
             gradients[bad] = 0.0
             self.n_grad_zeroed += int(bad.sum())
         return values, gradients
@@ -140,7 +139,8 @@ class Target:
         else:
             values = [function(row, *self.args, **self.kwargs) for row in view]
             returned_none = False
-        out = np.asarray(values, dtype=np.float64)
+        # A copy, so that a function that reuses its own array cannot alias states.
+        out = np.array(values, dtype=np.float64)
         # NumPy reads None as NaN, and the error would then blame the value.
         if not self.vectorize and np.isnan(out).any():
             returned_none = any(value is None for value in values)

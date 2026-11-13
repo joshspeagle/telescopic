@@ -3,7 +3,9 @@ import math
 import numpy as np
 import pytest
 
+from telescopic.kernels import MALA
 from telescopic.target import Target
+from telescopic.testing import random_draws
 
 
 def gaussian(x, scale=1.0):
@@ -136,6 +138,33 @@ def test_a_gradient_of_the_wrong_shape_still_raises():
     target = Target(gaussian, grad=lambda x: -x.T, vectorize=True)
     with pytest.raises(ValueError, match=r"returned shape \(2, 3\) for 3 points"):
         target.log_prob_and_grad(np.ones((3, 2)))
+
+
+@pytest.mark.parametrize("buffered", ["log_prob", "grad"])
+def test_a_target_function_that_reuses_its_buffer_does_not_alias_states(buffered):
+    # The start states aliased the buffer, so the next evaluation, at the proposals,
+    # overwrote them, and a MALA step kept the proposals' values on rejected rows.
+    buffers = {}
+
+    def reusing(function):
+        def wrapped(x):
+            values = function(x)
+            out = buffers.setdefault((function, values.shape), np.empty(values.shape))
+            out[...] = values
+            return out
+
+        return wrapped
+
+    functions = {"log_prob": gaussian, "grad": np.negative}
+    functions[buffered] = reusing(functions[buffered])
+    target = Target(functions["log_prob"], functions["grad"], vectorize=True)
+    n = 2000
+    kernel = MALA(1.6, cov=[[1.0]])
+    start = kernel.init_state(target, np.random.default_rng(0).standard_normal((n, 1)))
+    new, _ = kernel.step(target, start, random_draws(n, 0))
+    for states in (start, new):
+        np.testing.assert_array_equal(states.log_prob, gaussian(states.x))
+        np.testing.assert_array_equal(states.grad, -states.x)
 
 
 @pytest.mark.parametrize(("log_prob", "grad"), [(1.0, None), (gaussian, 1.0)])

@@ -40,7 +40,8 @@ mean, sd = np.array([1.0, -2.0]), np.array([0.5, 2.0])
 `grad` is the gradient of the log-density, with the same signature, returning shape
 `(d,)`, or `(n, d)` with `vectorize=True`. MALA and HMC need it
 ([Kernels and couplings](kernels.md)). Both functions receive read-only arrays, so one
-that writes to its input raises instead of corrupting the chains.
+that writes to its input raises instead of corrupting the chains, and what they return is
+copied, so one may reuse its output array from call to call.
 
 {class}`telescopic.Target` holds these functions. {func}`telescopic.sample` and
 {class}`telescopic.CoupledSampler` build one from their arguments; it is needed directly
