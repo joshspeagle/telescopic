@@ -203,6 +203,7 @@ Kernel-specific tests:
   - $\beta > 1 - 1/R_0$ raises, and so does a quantile that falls on a censored pilot pair;
   - explicit values are kept, and `lag` and `m` follow an explicit `k` without a pilot.
 - **Dual averaging:** reaches its target acceptance within 0.05 on a Gaussian.
+- **Frozen kernels:** tuning keeps a random walk's `scale` and `coupling`, and an independence kernel's report gives the largest importance weight over the median, recomputed from the pilot.
 
 **`CoupledSampler`**
 - `run` tunes and pilots when needed, and records the reports.
