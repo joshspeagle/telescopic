@@ -536,7 +536,7 @@ Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 **Footer:**
 - $R$, $k$, $m$, $L$, `thin`;
 - the kernel and its coupling;
-- meeting-time median, 90th and 99th percentiles, maximum, and number censored;
+- meeting-time median, 90th and 99th percentiles, maximum, and number censored. The quantiles cover every pair, censored ones sorted above every finite meeting time, by the inverted empirical CDF as in §6.3; `diagnostics()` gives `inf` for a quantile that falls on a censored pair, and the summary prints it as `> max_iter`, with the cap's value (DECISIONS #93);
 - the tail index of warning 4 of §7.4, from 500 replicates (DECISIONS #40);
 - mean cost per replicate, in kernel applications and in seconds;
 - the relative cost, mean cost / $(m - k + 1)$ (R-TUNE-4);
