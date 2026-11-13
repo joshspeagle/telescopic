@@ -9,7 +9,7 @@ from scipy import stats
 from references import gaussian_log_prob, synthetic
 from telescopic.diagnostics import w1_bound
 from telescopic.engine import run
-from telescopic.estimators import unbiased_covariance
+from telescopic.estimators import unbiased_covariance, unbiased_variance
 from telescopic.initial import Normal
 from telescopic.kernels import RandomWalk
 from telescopic.results import Result
@@ -152,6 +152,20 @@ def test_censored_pairs_are_listed_as_infinite_and_left_out_of_the_estimates():
     assert any("reached max_iter = 4" in str(warning.message) for warning in record)
     with pytest.raises(RuntimeError, match="reached max_iter"):
         result.check(strict=True)
+
+
+def test_variance_and_quantiles_of_a_censored_run_use_the_pairs_that_met():
+    # 7 of 10 pairs met, each with one atom of weight 1: the moments are those of the 7
+    # values, divided by the 7 replicates that met, not the 10 that ran.
+    met = np.random.default_rng(9).standard_normal((7, 2))
+    result = synthetic(
+        [1, 2, 3, 4, 5, 6, 7, -1, -1, -1], np.vstack([met, np.zeros((3, 2))]), max_iter=8
+    )
+    expected = unbiased_variance(met, np.mean(met**2, axis=0))
+    np.testing.assert_allclose(result.var(), expected, rtol=1e-12)
+    np.testing.assert_allclose(result.var(), np.diag(result.cov()), rtol=1e-12)
+    np.testing.assert_allclose(result.std(), np.sqrt(expected), rtol=1e-12)
+    np.testing.assert_array_equal(result.quantile(0.5), np.median(met, axis=0))
 
 
 def test_the_summary_reports_every_parameter_and_the_run():
