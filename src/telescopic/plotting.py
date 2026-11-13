@@ -80,7 +80,7 @@ def tv_bound(result: Result, ax: Axes | None = None) -> Axes:
     t, bound = np.arange(len(bound))[::step], bound[::step]
     positive = bound > 0
     ax.plot(t[positive], bound[positive])
-    ax.axvline(result.k, color="grey", linestyle="--", label="$k$")
+    ax.axvline(result.k, color="gray", linestyle="--", label="$k$")
     ax.set(xlabel="$t$", ylabel=r"TV bound on $X_t$")
     # A log scale needs a positive value: none when every pair met at t = L.
     if np.any(positive):

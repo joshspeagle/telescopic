@@ -197,7 +197,7 @@ button.copybtn {
   transition: opacity 0.15s; cursor: pointer;
 }
 div.highlight:hover button.copybtn, button.copybtn:focus-visible { opacity: 1; }
-/* copybutton.css greys the button on hover and press, which hides ink in the dark theme */
+/* copybutton.css grays the button on hover and press, which hides ink in the dark theme */
 div.highlight button.copybtn:is(:hover, :active) { background: var(--t-surface); }
 button.copybtn svg { display: none; }
 /* sphinx-copybutton draws its label as a tooltip beside the button; draw it inside */
@@ -258,7 +258,7 @@ div.admonition > :last-child { margin-bottom: 0; }
 div.admonition :not(pre) > code { background: var(--t-bg); }
 div.admonition:is(.warning, .caution, .attention, .danger, .error) { --accent: var(--t-ochre); }
 
-/* ---------------------------------------------------------------- tables, maths, figures */
+/* ---------------------------------------------------------------- tables, math, figures */
 table.docutils {
   display: block; max-width: 100%; overflow-x: auto;
   margin: 1.3rem 0; font-size: 0.93rem;

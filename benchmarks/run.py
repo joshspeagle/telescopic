@@ -92,7 +92,7 @@ def timed_run(target, lanes, n, settings):
 
 
 def lockstep():
-    # Microseconds per pair-step of the vectorised target, by lanes, in the main run and in
+    # Microseconds per pair-step of the vectorized target, by lanes, in the main run and in
     # the meeting-time pilot.
     out = {}
     for name, settings, lane_counts, minimum in (

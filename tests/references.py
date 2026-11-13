@@ -82,7 +82,7 @@ def gaussian_log_prob(x):
 
 
 def reflection(mu_x, mu_y, chol, z, u):
-    # Jacob, O'Leary & Atchade (2020), section 4.1.
+    # Jacob, O'Leary & Atchadé (2020), section 4.1.
     delta = np.linalg.solve(chol, mu_x - mu_y)
     x = mu_x + chol @ z
     if np.log(u) < -(z @ delta) - delta @ delta / 2:
@@ -93,7 +93,7 @@ def reflection(mu_x, mu_y, chol, z, u):
 
 def maximal_table(p, q):
     # P(i = a, j = b) under the maximal coupling of discrete p and q: the overlap on the
-    # diagonal, and the normalised residuals, independent, elsewhere.
+    # diagonal, and the normalized residuals, independent, elsewhere.
     overlap = np.minimum(p, q)
     alpha = overlap.sum()
     table = np.diag(overlap)

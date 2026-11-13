@@ -44,7 +44,7 @@ class RandomWalk(Kernel):
         Gaussian target whose covariance is ``cov`` (Roberts, Gelman & Gilks 1997).
     coupling : {"reflection", "maximal"}
         ``"reflection"`` couples the proposals by the reflection-maximal coupling and
-        uses one uniform for both acceptances (Jacob, O'Leary & Atchade 2020; O'Leary
+        uses one uniform for both acceptances (Jacob, O'Leary & Atchadé 2020; O'Leary
         2021). ``"maximal"`` uses the rejection maximal coupling with independent
         residuals, whose meeting times grow exponentially with the dimension; it is for
         comparison only.

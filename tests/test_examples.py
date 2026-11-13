@@ -62,8 +62,8 @@ def test_the_exact_covariances_match_independent_draws(name):
     # The funnel is left out: its fourth moments, about 3 e^18, leave no usable error bar.
     def z(n, rng):
         draws = exact_draws(name, n, rng)
-        centred = draws - EXAMPLES[name].mean
-        return z_scores(centred[:, :, None] * centred[:, None, :], EXAMPLES[name].cov)
+        centered = draws - EXAMPLES[name].mean
+        return z_scores(centered[:, :, None] * centered[:, None, :], EXAMPLES[name].cov)
 
     assert_z_scores(z, 20_000, seed=2)
 

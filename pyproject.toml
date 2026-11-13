@@ -117,3 +117,13 @@ extend-select = ["B", "C4", "I", "NPY", "PT", "RUF", "SIM", "UP"]
 [tool.ruff.lint.isort]
 # The tests' helper module of reference implementations.
 known-first-party = ["references"]
+
+[tool.codespell]
+# American spelling, and common misspellings, outside the design records, notes and
+# research notes. The attributes Future.cancel(l)ed and ndarray.flags.write(e)able keep
+# their spelling; the brackets keep the pattern itself from matching.
+builtin = "clear,rare,en-GB_to_en-US"
+skip = "./.git,./docs/design,./notes,./research_notes,./reports,*.svg,*.woff2,*.png,*.npz"
+ignore-regex = "\\.(cancel[l]ed|writ[e]able)\\b"
+# A color of the identity, named in docs/_scripts/brand.py.
+ignore-words-list = "ochre"

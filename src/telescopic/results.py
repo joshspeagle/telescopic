@@ -200,9 +200,9 @@ class Result:
         ndarray, shape (d, d)
         """
         self._require(2)
-        centred, first = self._centred()
+        centered, first = self._centered()
         weights = self.measure.weights
-        second = centred.T @ (weights[:, None] * centred) / self.n_replicates
+        second = centered.T @ (weights[:, None] * centered) / self.n_replicates
         return unbiased_covariance(first, second)
 
     def var(self) -> FloatArray:
@@ -218,9 +218,9 @@ class Result:
         ndarray, shape (d,)
         """
         self._require(2)
-        centred, first = self._centred()
+        centered, first = self._centered()
         weights = self.measure.weights
-        second = np.einsum("i,ij,ij->j", weights, centred, centred) / self.n_replicates
+        second = np.einsum("i,ij,ij->j", weights, centered, centered) / self.n_replicates
         return unbiased_variance(first, second)
 
     def std(self) -> FloatArray:
@@ -413,9 +413,9 @@ class Result:
         if self.n_replicates >= 2:
             # The second moments about the atoms' mean, which the variances use: about 0,
             # far from it, they would vary with the means and hide their own spread.
-            centred, first = self._centred()
-            # Squared in place: the centred atoms are not read again.
-            second = self.measure.per_replicate(lambda _: np.square(centred, out=centred))
+            centered, first = self._centered()
+            # Squared in place: the centered atoms are not read again.
+            second = self.measure.per_replicate(lambda _: np.square(centered, out=centered))
             shares = diagnostics.variance_share(np.concatenate([first, second], axis=1))
             worst = int(np.argmax(shares))
             moment = "mean" if worst < self.ndim else "variance"
@@ -638,13 +638,13 @@ class Result:
             edges[-1] = np.nextafter(edges[-1], np.inf)
         return np.searchsorted(edges, values, side="right") - 1, edges
 
-    def _centred(self) -> tuple[FloatArray, FloatArray]:
+    def _centered(self) -> tuple[FloatArray, FloatArray]:
         # The atoms about their mean, and each replicate's mean of them. Each replicate's
         # weights sum to 1, so the covariance estimator is the same about any point; about
         # 0, a mean far from 0 next to the spread would cancel catastrophically.
         atoms = self.measure.atoms
-        centred = atoms - np.ones(len(atoms)) @ atoms / len(atoms)  # faster than mean(axis=0)
-        return centred, self.measure.per_replicate(lambda _: centred)
+        centered = atoms - np.ones(len(atoms)) @ atoms / len(atoms)  # faster than mean(axis=0)
+        return centered, self.measure.per_replicate(lambda _: centered)
 
     def _require(self, n: int) -> None:
         if self.n_replicates < n:

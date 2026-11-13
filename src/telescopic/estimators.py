@@ -108,7 +108,7 @@ def unbiased_covariance(first: FloatArray, second: FloatArray) -> FloatArray:
     n = len(first)
     mean = first.mean(axis=0)
     sample = np.atleast_2d(np.cov(first, rowvar=False))
-    # Symmetrising the second moments makes the result exactly symmetric.
+    # Symmetrizing the second moments makes the result exactly symmetric.
     covariance: FloatArray = (second + second.T) / 2 - np.outer(mean, mean) + sample / n
     return covariance
 
@@ -166,7 +166,7 @@ def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike)
     sums decides between two neighboring values. For non-negative weights this is the
     inverted-CDF quantile. The
     result is consistent as the number of replicates grows, not unbiased (Jacob,
-    O'Leary & Atchade 2020, Proposition 3.2).
+    O'Leary & Atchadé 2020, Proposition 3.2).
 
     Parameters
     ----------

@@ -73,7 +73,7 @@ ax = plotting.paths(replicates, n=n)
 meeting = replicates.meeting_time[:n].astype(int)
 position = np.array([replicates.paths[i][0][meeting[i], 0] for i in range(n)])
 ax.plot(meeting, position, "o", color="black")
-ax.axvspan(k, m, color="grey", alpha=0.15)
+ax.axvspan(k, m, color="gray", alpha=0.15)
 ax.set(xlabel="$t$", ylabel="$X_t$ and $Y_{t-1}$");
 ```
 

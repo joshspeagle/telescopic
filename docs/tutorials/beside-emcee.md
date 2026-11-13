@@ -168,5 +168,5 @@ the means by an amount that the error bar does not include.
 telescopic's is the standard error of a mean of independent replicates, whose estimates
 are unbiased for any burn-in `k` ([Theory](../theory.md#guarantees-and-their-limits)). It
 is valid as the number of replicates grows, provided their variance is finite, and it
-needs no judgement of convergence: the meeting times bound the distance from
+needs no judgment of convergence: the meeting times bound the distance from
 stationarity instead ([Getting started](../getting-started.md)).

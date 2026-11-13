@@ -66,10 +66,10 @@ fig, (left, right) = plt.subplots(1, 2, figsize=(9, 3.5))
 left.hist(shifted, bins=20)
 left.set(xlabel=r"$\tau - 1$", ylabel="pilot pairs")
 right.step(shifted, survival, where="post")
-right.axhline(0.01, color="grey", linestyle=":")
+right.axhline(0.01, color="gray", linestyle=":")
 right.set(yscale="log", xlabel="$t$", ylabel=r"$P(\tau - 1 > t)$")
 for ax in (left, right):
-    ax.axvline(k, color="grey", linestyle="--", label="$k$")
+    ax.axvline(k, color="gray", linestyle="--", label="$k$")
 right.legend();
 ```
 
@@ -222,7 +222,7 @@ fig, ax = plt.subplots(figsize=(5, 3.5))
 for label, result in (("lag 1", results["lag_1"]), (f"lag {k}", recipe)):
     bound = result.tv_bound(t)
     ax.plot(t[bound > 0], bound[bound > 0], label=label)
-ax.axvline(k, color="grey", linestyle="--", label="$k$")
+ax.axvline(k, color="gray", linestyle="--", label="$k$")
 ax.set(yscale="log", xlabel="$t$", ylabel=r"TV bound on $X_t$")
 ax.legend();
 ```

@@ -177,7 +177,7 @@ def adaptive_metropolis(
     x, d = points[:, 0].copy(), len(first)
     # Learning a covariance takes of order d^2 steps. Beyond 20 dimensions, refactoring the
     # covariance and keeping states only every ceil(d/20) steps, or fewer so that each
-    # chain keeps two, bounds the factorisations by 10 d^2 / ceil(d/20) and the stored
+    # chain keeps two, bounds the factorizations by 10 d^2 / ceil(d/20) and the stored
     # states by about 400 d (DECISIONS #34).
     n_steps = max(2000, 200 * d, 10 * d * d) if n_steps is None else n_steps
     streams = Streams(N_CHAINS)
@@ -198,7 +198,7 @@ def adaptive_metropolis(
     kept_log_p = np.empty((N_CHAINS, n_kept))
     accepted = np.zeros(N_CHAINS)
     # The covariance after t steps is (Sigma_0 + sum_{s < t} delta_s^T delta_s / 4) / (t + 1):
-    # total holds the sum, and the steps between factorisations join it in one product.
+    # total holds the sum, and the steps between factorizations join it in one product.
     deltas = np.empty((stride, N_CHAINS, d))
     for step in range(n_steps):
         if step % stride == 0:
@@ -216,7 +216,7 @@ def adaptive_metropolis(
                         "parameters"
                     )
             # A ridge of 1e-12 times each coordinate's variance, which keeps the
-            # factorisation independent of the coordinates' scales.
+            # factorization independent of the coordinates' scales.
             chol = np.linalg.cholesky(total / (step + 1) * ridge)
         steps = np.exp(0.5 * log_scale)[:, None] * matvec(chol, draws.normal(d))
         proposal_log_p = target.log_prob(x + steps)
@@ -313,7 +313,7 @@ def choose_k(meeting_times: npt.ArrayLike, quantile: float = 0.99) -> int:
     r"""Choose ``k`` from lag-1 pilot meeting times.
 
     :math:`k = \max(1, \hat q_\beta(\tau - 1))`, with :math:`\hat q_\beta` the
-    inverted-CDF sample quantile (Atchade & Jacob 2024). The recipe then sets
+    inverted-CDF sample quantile (Atchadé & Jacob 2024). The recipe then sets
     :math:`L = k` and :math:`m = 10k`.
 
     Parameters
