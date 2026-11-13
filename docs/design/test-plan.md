@@ -101,20 +101,22 @@ Each kernel ($\times$ each coupling it offers) gets the same suite, via a parame
 Kernel-specific tests:
 - **RWMH:**
   - `"reflection"` meets more often than `"maximal"` at $d = 10$ (O'Leary 2021 Table 1 reference: about 30 vs 279 mean meeting time, checked loosely in the slow tier);
-  - draws per step as documented.
+  - draws per step as documented;
+  - identical coupled proposals cost one evaluation of the target.
 - **MALA:** the acceptance ratio includes both proposal densities. Checked against a reference for a non-Gaussian target, where omitting the reverse term changes the answer.
 - **HMC:**
   - trajectories equal an independent leapfrog implementation draw for draw, and on $\mathcal N(0, 1)$, where the leapfrog map is linear, each chain's one-step law matches the exact one, which holds only for a reversible, volume-preserving integrator with the right acceptance;
   - shared momentum contracts two chains on a Gaussian;
   - the meeting component meets with the probability of §5.2;
+  - a trajectory that reaches a log-density of $-\infty$ stops there: it does not evaluate the target again and is rejected, even where a later leap returns to the support;
   - a common uniform chooses the same component for both chains.
 - **IMH:** both chains propose the same point, and the pair meets when both accept.
 - **Gibbs:**
-  - `"maximal"` couplings of conditionals have exact marginals (KS against the conditional's CDF);
+  - `"maximal"` couplings of conditionals have exact marginals (KS against the conditional's CDF), and meet at the rate $\int\min(\eta p, q)$ (binomial test);
   - `"crn"` uses a common uniform through `ppf`;
   - `"two-scale"` switches at the threshold, and requires one;
   - when the coordinates outside a block are equal, both chains receive the same draw, so equal states stay equal with $\eta < 1$.
-- **Mixture:** the component frequencies match the weights. Component choice does not depend on the states (structural test with `fixed_draws`).
+- **Mixture:** the component frequencies match the weights, which are normalized when they do not sum to 1. Component choice does not depend on the states (structural test with `fixed_draws`).
 - **Draw counts (R-KER-5):** each kernel consumes the random numbers it documents, checked with `fixed_draws` arrays of exactly that size.
 
 ### 2.5 `tests/test_estimators.py` (R-EST-4–8)
