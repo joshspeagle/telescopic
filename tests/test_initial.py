@@ -89,6 +89,7 @@ def test_an_object_without_rvs_is_not_an_initial_distribution():
         (lambda: Normal([0.0, 0.0], [[1.0, 0.5], [0.0, 1.0]]), "cov must be symmetric"),
         (lambda: Normal([0.0, 0.0], [[1.0, 2.0], [2.0, 1.0]]), "positive definite"),
         (lambda: Uniform([1.0], [0.0]), "low < high"),
+        (lambda: Uniform([0.0, 0.0], [1.0, 0.0]), "low < high"),
         (lambda: Empirical(np.zeros((2, 2, 2))), "shape"),
         (lambda: Empirical(np.zeros((0, 2))), "n >= 1"),
         (lambda: Normal([0.0, 0.0], [[1e-12, 5e-9], [0.0, 1e-12]]), "symmetric"),
