@@ -9,21 +9,23 @@ like the code around it.
 ```bash
 git clone https://github.com/joshspeagle/telescopic
 cd telescopic
-uv venv --python 3.13 .venv
-uv pip install -e . --group dev
-.venv/bin/pre-commit install      # ruff lint and format on every commit
+# In an environment of your own (venv, uv, conda), with pip 25.1 or newer:
+python -m pip install -e . --group dev --group docs
+pre-commit install      # ruff lint and format on every commit
 ```
 
 ## Commands
 
 ```bash
-.venv/bin/python -m pytest                 # fast tier, under 2 minutes; warnings are errors
-.venv/bin/python -m pytest -m ""           # all tests, including the slow statistical tier
-.venv/bin/python -m pytest --cov=telescopic
-.venv/bin/ruff check . && .venv/bin/ruff format --check . && .venv/bin/mypy
-uv pip install -e . --group docs && .venv/bin/sphinx-build -W --keep-going docs docs/_build/html
-.venv/bin/python benchmarks/run.py         # timings against spec section 10, on an idle machine
+scripts/verify.sh              # lint, format check, type check and the fast tests
+scripts/verify.sh --cov        # with the coverage floor that CI enforces
+scripts/verify.sh --docs       # also the strict documentation build, which runs the tutorials
+scripts/verify.sh --slow       # also the slow statistical tests
+python benchmarks/run.py       # timings against spec section 10, on an idle machine
 ```
+
+The script runs the commands of CI's lint and test jobs on the checkout's sources. The
+fast tests finish in under 2 minutes and treat warnings as errors.
 
 ## Validation philosophy
 
