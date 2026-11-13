@@ -52,7 +52,9 @@ class RandomWalk(Kernel):
     -----
     A step uses ``d`` normals and 1 uniform; a coupled step with the reflection coupling
     uses ``d`` normals and 2 uniforms and at most two log-density evaluations per pair,
-    one when the proposals coincide.
+    one when the proposals coincide. With the maximal coupling, a coupled step draws its
+    proposals, two per pair on average, and their uniforms from each pair's own generator
+    (:meth:`~telescopic.kernels.Draws.generator`), then 1 uniform for both acceptances.
     """
 
     def __init__(
