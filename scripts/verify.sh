@@ -27,7 +27,9 @@ if ! "$python" -c "import numpy, scipy, pytest, ruff, mypy" 2>/dev/null; then
   echo "Install them with 'pip install -e . --group dev', or set PYTHON to an interpreter that has them." >&2
   exit 2
 fi
-export PYTHONPATH="src${PYTHONPATH:+:$PYTHONPATH}"
+# Absolute: the documentation build starts each notebook kernel in its page's folder,
+# where a relative path would miss and the kernel would import an installed copy.
+export PYTHONPATH="$PWD/src${PYTHONPATH:+:$PYTHONPATH}"
 
 "$python" -m ruff check .
 "$python" -m ruff format --check .
