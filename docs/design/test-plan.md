@@ -78,7 +78,7 @@ Most estimator bugs cannot be caught statistically. In the census, an off-by-one
   - callables, SciPy frozen distributions and point arrays all give draws of shape `(d,)`;
   - point arrays are sampled uniformly over their rows (chi-square test on row counts).
 - **Validation:**
-  - wrong shapes or non-finite draws raise;
+  - wrong shapes or non-finite draws raise, and so does a `Uniform` box with `low` equal to `high` in one coordinate;
   - a draw with $\log\pi = -\infty$ emits `InputWarning`.
 
 ### 2.4 `tests/test_kernels.py` (R-KER-*)
