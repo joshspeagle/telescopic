@@ -67,7 +67,7 @@ class MultivariateT:
         if not near:
             # log1p(s / nu) = log s - log nu to within nu / s < 1e-307, and log s is
             # computed from the rows scaled by their largest coordinate. A row that is
-            # not finite keeps its value: -inf at an infinite coordinate.
+            # not finite keeps its value.
             far = ~np.isfinite(squared) & np.isfinite(centered).all(axis=1)
             scale = np.abs(centered[far]).max(axis=1)
             whitened = matvec(self._inverse, centered[far] / scale[:, None])
@@ -114,13 +114,16 @@ class Independence(Kernel):
     A step and a coupled step use what the proposal's ``sample`` uses (``d + df``
     normals for :class:`MultivariateT`, ``d`` with ``df=None``) and 1 uniform.
 
-    The proposal must be positive wherever the target is. Chains never move to where
-    :math:`q` is 0, so a proposal that misses part of the target's support never reaches
-    that part, and the estimates are biased from any start, without a warning. A chain
-    started where the target is positive and the proposal is 0 rejects every proposal.
+    The proposal must be positive wherever the target is. The kernel never moves a chain
+    to where :math:`q` is 0, so, used alone, a proposal that misses part of the target's
+    support never reaches that part, and the estimates are biased from any start, without
+    a warning. A chain at a point where the target is positive and the proposal is 0
+    rejects every proposal.
 
     Meeting times are geometric only when the weights :math:`\pi/q` are bounded; a
-    proposal with lighter tails than the target gives heavy-tailed meeting times.
+    proposal with lighter tails than the target gives heavy-tailed meeting times. A run
+    then usually gives too little mass to the region where :math:`\pi/q` is large, with
+    error bars that are too small and often without a warning.
 
     A tuned proposal covers only the modes that the pilot chains reached. On a target with
     well-separated modes, the chains can settle in one mode, and pairs then meet quickly
