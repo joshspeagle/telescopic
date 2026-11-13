@@ -188,7 +188,8 @@ the initial distribution $\pi_0$, with its own random stream. `init` can be:
   an ensemble sampler like emcee. A single point of shape `(d,)` is refused;
   `Empirical([point])` starts every chain there.
 
-The dimension `d` comes from a draw. Draws are converted to shape `(d,)`: SciPy returns
+The samplers pass `init` to {func}`telescopic.initial.as_initial`, which turns any of
+these forms into an object with `rvs`. The dimension `d` comes from a draw. Draws are converted to shape `(d,)`: SciPy returns
 a scalar for a normal in one dimension, and shape `(1, d)` for a Dirichlet. A draw of
 another shape, or with a non-finite coordinate, raises `ValueError`. We can run each form on the Gaussian above:
 

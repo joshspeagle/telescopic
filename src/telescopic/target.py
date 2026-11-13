@@ -12,6 +12,7 @@ from telescopic._types import FloatArray, flag, log_densities, read_only, real_o
 from telescopic.warnings import InputWarning, warn
 
 
+# Spec section 5.7 (log_prob None) and R-INPUT-1.
 class Target:
     r"""A log-density :math:`\log\pi` known up to a constant, with an optional gradient.
 
@@ -25,7 +26,7 @@ class Target:
         an array of shape ``(n,)`` for ``x`` of shape ``(n, d)`` when ``vectorize`` is
         true. ``-inf`` marks zero density. It must be deterministic: the same point
         must always give the same value. ``None`` is for Gibbs kernels, which need no
-        log-density: every point then gets 0 (spec section 5.7).
+        log-density: every point then gets 0.
     grad : callable, optional
         :math:`\nabla\log\pi` with the same signature, returning shape ``(d,)`` or
         ``(n, d)``.
@@ -81,12 +82,22 @@ class Target:
 
     @property
     def has_grad(self) -> bool:
-        """Whether a gradient was given."""
+        """Whether a gradient was given.
+
+        Returns
+        -------
+        bool
+        """
         return self._grad is not None
 
     @property
     def has_log_prob(self) -> bool:
-        """Whether a log-density was given."""
+        """Whether a log-density was given.
+
+        Returns
+        -------
+        bool
+        """
         return self._log_prob is not None
 
     def log_prob(self, x: FloatArray) -> FloatArray:
@@ -116,7 +127,7 @@ class Target:
         The gradient is evaluated only where the log-density is finite, and is 0 where it
         is ``-inf``. Where it is finite, a gradient that is not finite is taken as 0 too,
         and counted in ``n_grad_zeroed``; at the states that chains ``start`` from, it
-        raises ``ValueError`` with the point (spec R-INPUT-1).
+        raises ``ValueError`` with the point.
 
         Parameters
         ----------

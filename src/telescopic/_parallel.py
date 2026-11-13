@@ -170,7 +170,7 @@ def _gather(
     stop: Any,
 ) -> list[engine.Replicates]:
     # Every chunk is submitted at once, in index order. Once the monitor asks to stop,
-    # the chunks not started are cancelled, except the first, so that a run returns a
+    # the chunks not started are canceled, except the first, so that a run returns a
     # replicate, as the engine's first fill does. A process pool keeps up to
     # max_workers + 1 chunks beyond its running ones in its call queue, refilled when a
     # chunk ends, where cancel() fails: the stop event makes them run nothing on

@@ -30,7 +30,17 @@ class Normal:
         )
 
     def rvs(self, *, random_state: np.random.Generator) -> FloatArray:
-        """One draw, shape ``(d,)``."""
+        """One draw.
+
+        Parameters
+        ----------
+        random_state : numpy.random.Generator
+            The source of randomness.
+
+        Returns
+        -------
+        ndarray, shape (d,)
+        """
         return self.mean + self._chol @ random_state.standard_normal(len(self.mean))
 
     def __repr__(self) -> str:
@@ -51,7 +61,17 @@ class Uniform:
             raise ValueError("low and high must have the same shape, with low < high")
 
     def rvs(self, *, random_state: np.random.Generator) -> FloatArray:
-        """One draw, shape ``(d,)``."""
+        """One draw.
+
+        Parameters
+        ----------
+        random_state : numpy.random.Generator
+            The source of randomness.
+
+        Returns
+        -------
+        ndarray, shape (d,)
+        """
         return random_state.uniform(self.low, self.high)
 
     def __repr__(self) -> str:
@@ -85,7 +105,17 @@ class Empirical:
             )
 
     def rvs(self, *, random_state: np.random.Generator) -> FloatArray:
-        """One of the points, chosen uniformly, shape ``(d,)``."""
+        """A copy of one of the points, chosen uniformly.
+
+        Parameters
+        ----------
+        random_state : numpy.random.Generator
+            The source of randomness.
+
+        Returns
+        -------
+        ndarray, shape (d,)
+        """
         point: FloatArray = self.points[random_state.integers(len(self.points))].copy()
         return point
 
@@ -104,8 +134,9 @@ class _Callable:
         return f"{getattr(self.function, '__name__', 'callable')}(rng)"
 
 
+# Spec R-INPUT-2.
 def as_initial(init: Any) -> Distribution:
-    """Interpret ``init`` as an initial distribution (spec R-INPUT-2).
+    """Interpret ``init`` as an initial distribution.
 
     Parameters
     ----------

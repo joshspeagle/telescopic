@@ -25,9 +25,10 @@ N_CHAINS = 4
 DUAL_AVERAGING_STEPS = 1000
 
 
+# Spec R-TUNE-1 and section 5.3.
 @dataclass(frozen=True, eq=False)
 class TuningReport:
-    r"""What a tuning pilot found (spec R-TUNE-1, section 5.3).
+    r"""What a tuning pilot found.
 
     Attributes
     ----------
@@ -77,15 +78,24 @@ class PilotRun:
 
     @cached_property
     def mean(self) -> FloatArray:
-        """The pooled mean, shape ``(d,)``."""
+        """The pooled mean.
+
+        Returns
+        -------
+        ndarray, shape (d,)
+        """
         mean: FloatArray = self.samples.reshape(-1, self.samples.shape[2]).mean(axis=0)
         return mean
 
     @cached_property
     def cov(self) -> FloatArray:
-        """The pooled covariance plus 1e-10 times each variance on its diagonal, ``(d, d)``.
+        """The pooled covariance plus 1e-10 times each variance on its diagonal.
 
         A coordinate of variance 0 gets 1e-10.
+
+        Returns
+        -------
+        ndarray, shape (d, d)
         """
         pooled = self.samples.reshape(-1, self.samples.shape[2])
         cov = np.atleast_2d(np.cov(pooled, rowvar=False))
@@ -97,7 +107,12 @@ class PilotRun:
 
     @cached_property
     def rhat(self) -> FloatArray:
-        """Gelman-Rubin :math:`\\hat R` of each coordinate, shape ``(d,)``."""
+        """Gelman-Rubin :math:`\\hat R` of each coordinate.
+
+        Returns
+        -------
+        ndarray, shape (d,)
+        """
         n = self.samples.shape[1]
         within = self.samples.var(axis=1, ddof=1).mean(axis=0)
         between = n * self.samples.mean(axis=1).var(axis=0, ddof=1)
@@ -106,12 +121,24 @@ class PilotRun:
         return rhat
 
     def report(self, max_weight_ratio: float | None = None) -> TuningReport:
-        """The :class:`TuningReport` of this run."""
+        """The report of this run.
+
+        Parameters
+        ----------
+        max_weight_ratio : float, optional
+            For an independence kernel, the largest weight :math:`\\pi/q` of the pilot's
+            draws relative to their median, which the report carries.
+
+        Returns
+        -------
+        TuningReport
+        """
         return TuningReport(
             self.mean, self.cov, self.acceptance, self.rhat, self.n_steps, max_weight_ratio
         )
 
 
+# Spec sections 5.3 and 6.1.
 def adaptive_metropolis(
     target: Target,
     initial: Any,
@@ -119,7 +146,7 @@ def adaptive_metropolis(
     *,
     n_steps: int | None = None,
 ) -> PilotRun:
-    r"""Four adaptive Metropolis chains that pool their adaptation (spec section 5.3).
+    r"""Four adaptive Metropolis chains that pool their adaptation.
 
     Chain :math:`c` proposes :math:`x' \sim \mathcal N(x_c, \lambda_c\Sigma)`. After step
     :math:`t = 1, 2, \dots` its scale moves toward an acceptance rate of 0.234, and the
@@ -136,7 +163,7 @@ def adaptive_metropolis(
     (Haario, Saksman & Tamminen 2001, with the global scales of Andrieu & Thoms 2008,
     section 5, pooled across chains as in Craiu, Rosenthal & Yang 2009). Chain ``i``
     starts from the first of its 25 draws, and draws from replicate ``i`` of the tuning
-    namespace (spec section 6.1).
+    namespace.
 
     Parameters
     ----------
@@ -176,7 +203,7 @@ def adaptive_metropolis(
     x, d = points[:, 0].copy(), len(first)
     # Learning a covariance takes of order d^2 steps. Beyond 20 dimensions, refactoring the
     # covariance and keeping states only every ceil(d/20) steps, or fewer so that each
-    # chain keeps two, bounds the factorisations by 10 d^2 / ceil(d/20) and the stored
+    # chain keeps two, bounds the factorizations by 10 d^2 / ceil(d/20) and the stored
     # states by about 400 d (DECISIONS #34).
     n_steps = max(2000, 200 * d, 10 * d * d) if n_steps is None else n_steps
     streams = Streams(N_CHAINS)
@@ -197,7 +224,7 @@ def adaptive_metropolis(
     kept_log_p = np.empty((N_CHAINS, n_kept))
     accepted = np.zeros(N_CHAINS)
     # The covariance after t steps is (Sigma_0 + sum_{s < t} delta_s^T delta_s / 4) / (t + 1):
-    # total holds the sum, and the steps between factorisations join it in one product.
+    # total holds the sum, and the steps between factorizations join it in one product.
     deltas = np.empty((stride, N_CHAINS, d))
     for step in tuning_steps(range(n_steps), "tuning"):
         if step % stride == 0:
@@ -215,7 +242,7 @@ def adaptive_metropolis(
                         "parameters"
                     )
             # A ridge of 1e-12 times each coordinate's variance, which keeps the
-            # factorisation independent of the coordinates' scales.
+            # factorization independent of the coordinates' scales.
             chol = np.linalg.cholesky(total / (step + 1) * ridge)
         steps = np.exp(0.5 * log_scale)[:, None] * matvec(chol, draws.normal(d))
         proposal_log_p = target.log_prob(x + steps)
@@ -243,6 +270,7 @@ def adaptive_metropolis(
     return PilotRun(samples, kept_log_p, accepted / (n_steps - first_kept), n_steps)
 
 
+# Spec sections 5.4 and 5.5.
 def dual_averaging(
     kernel_at: Callable[[float], Kernel],
     target: Target,
@@ -251,7 +279,7 @@ def dual_averaging(
     target_acceptance: float,
     step_size: float,
 ) -> float:
-    r"""A step size whose mean acceptance probability is ``target_acceptance`` (spec 5.4, 5.5).
+    r"""A step size whose mean acceptance probability is ``target_acceptance``.
 
     One chain per pilot chain runs ``kernel_at(step_size)`` from that chain's last state,
     where a gradient that is not finite where the log-density is counts as 0.
@@ -306,11 +334,12 @@ def dual_averaging(
     return float(np.exp(log_average))
 
 
+# Spec R-TUNE-2.
 def choose_k(meeting_times: npt.ArrayLike, quantile: float = 0.99) -> int:
-    r"""Choose ``k`` from lag-1 pilot meeting times (spec R-TUNE-2).
+    r"""Choose ``k`` from lag-1 pilot meeting times.
 
     :math:`k = \max(1, \hat q_\beta(\tau - 1))`, with :math:`\hat q_\beta` the
-    inverted-CDF sample quantile (Atchade & Jacob 2024). The recipe then sets
+    inverted-CDF sample quantile (Atchadé & Jacob 2024). The recipe then sets
     :math:`L = k` and :math:`m = 10k`.
 
     Parameters

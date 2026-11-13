@@ -13,9 +13,10 @@ from scipy.sparse import csr_array
 from telescopic._types import FloatArray, IntArray, integer, integral, read_only
 
 
+# Spec R-EST-6 and R-OUT-2.
 @dataclass(frozen=True, eq=False)
 class SignedMeasure:
-    r"""The signed measures :math:`\hat\pi_r` of :math:`R` replicates (spec R-EST-6, R-OUT-2).
+    r"""The signed measures :math:`\hat\pi_r` of :math:`R` replicates.
 
     .. math:: \hat\pi_r(h) = \sum_{i : \mathrm{replicate}_i = r} \omega_i\,h(x_i)
 

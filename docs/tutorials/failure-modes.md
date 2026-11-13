@@ -119,6 +119,19 @@ The interval now covers the truth, but it is far wider than the range of a proba
 The meeting times show why:
 
 ```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      Two survival curves of the meeting times on logarithmic axes: the curve from
+      N(10, 1) ends before 100 steps, and the curve from N(10, 10 squared) reaches
+      beyond 10,000.
+  figure:
+    caption: >-
+      The survival functions of the meeting times from $\mathcal N(10, 1)$ and
+      from $\mathcal N(10, 10^2)$, on log-log axes: from the wider start, the
+      slowest pairs take more than $10^4$ steps to meet.
+---
 fig, ax = plt.subplots(figsize=(5, 3.5))
 for label, result in (("$N(10, 1)$", narrow), ("$N(10, 10^2)$", wide)):
     tau = np.sort(result.meeting_times)
@@ -356,17 +369,19 @@ modes it is given: a mode that no optimization found stays as invisible as befor
 
 ## A start far wider than the target
 
-The line fit of [Getting started](../getting-started.md), with the log-density of the
-[quickstart](quickstart.md), which takes one point or a batch, and its exact Gaussian
-posterior, computed as there:
+The line fit of [Getting started](../getting-started.md), on its data `x`, `y` and
+`yerr`, with the log-density of [telescopic beside emcee](beside-emcee.md), which takes
+one point or a batch, and its exact Gaussian posterior, computed as there:
 
 ```{code-cell} python
-rng = np.random.default_rng(0)
-x = np.sort(10 * rng.random(50))
-yerr = 0.1 + 0.5 * rng.random(50)
-y = -0.9 * x + 4.3 + yerr * rng.normal(size=50)
+:tags: [remove-cell]
 
+from line_fit import data
 
+x, y, yerr = data()
+```
+
+```{code-cell} python
 def log_prob(theta, x, y, yerr):
     slope, intercept = theta[..., :1], theta[..., 1:]
     return -0.5 * np.sum(((y - slope * x - intercept) / yerr) ** 2, axis=-1)

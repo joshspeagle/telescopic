@@ -179,7 +179,7 @@ reticulate.
 On a pool, telescopic's workers start no new replicate after the first Ctrl-C, and a chunk
 that starts afterwards runs nothing, unless it is the first, so that the result holds at
 least one replicate. On an executor of your own, the running chunks finish and the chunks
-not yet started are cancelled, except those that the executor has already queued for its
+not yet started are canceled, except those that the executor has already queued for its
 workers: a `ProcessPoolExecutor` queues up to one more chunk than it has workers. Those
 chunks run in full and the result includes their replicates, so the run can take up to
 two chunk durations longer to return. A pool with only `map` returns the waves it

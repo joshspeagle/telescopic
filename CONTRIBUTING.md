@@ -11,13 +11,13 @@ git clone https://github.com/joshspeagle/telescopic
 cd telescopic
 # In an environment of your own (venv, uv, conda), with pip 25.1 or newer:
 python -m pip install -e . --group dev --group docs
-pre-commit install      # ruff lint and format on every commit
+pre-commit install      # ruff lint and format, and codespell, on every commit
 ```
 
 ## Commands
 
 ```bash
-scripts/verify.sh              # lint, format check, type check (Python 3.12+), fast tests
+scripts/verify.sh              # lint, format, spelling and type checks (Python 3.12+), fast tests
 scripts/verify.sh --cov        # with the coverage floor that CI enforces
 scripts/verify.sh --docs       # also the identity checks and the strict documentation build
 scripts/verify.sh --slow       # also the slow statistical tests

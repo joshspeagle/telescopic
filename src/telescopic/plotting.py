@@ -32,11 +32,12 @@ MET = "#062A4F"
 # chains:end
 
 
+# Spec section 7.5.
 def meeting_times(result: Result, axes: Sequence[Axes] | None = None) -> list[Axes]:
     r"""The meeting times: a histogram of :math:`\tau - L`, and its survival function.
 
     The survival function :math:`P(\tau - L > t)` is on a log scale, where a straight
-    tail means geometric meeting times (spec section 7.5). A censored pair counts in it
+    tail means geometric meeting times. A censored pair counts in it
     at every time up to the cap, where the curve ends at the fraction censored, and not
     in the histogram.
 
@@ -68,10 +69,11 @@ def meeting_times(result: Result, axes: Sequence[Axes] | None = None) -> list[Ax
     return [histogram, survival]
 
 
+# Spec section 3.6.
 def tv_bound(result: Result, ax: Axes | None = None) -> Axes:
     """The estimated bound on the total variation distance to the target against t.
 
-    The bound is on a log scale, with ``k`` marked (spec section 3.6).
+    The bound is on a log scale, with ``k`` marked.
 
     Parameters
     ----------
@@ -90,7 +92,7 @@ def tv_bound(result: Result, ax: Axes | None = None) -> Axes:
     t, bound = np.arange(len(bound))[::step], bound[::step]
     positive = bound > 0
     ax.plot(t[positive], bound[positive])
-    ax.axvline(result.k, color="grey", linestyle="--", label="$k$")
+    ax.axvline(result.k, color="gray", linestyle="--", label="$k$")
     ax.set(xlabel="$t$", ylabel=r"TV bound on $X_t$")
     # A log scale needs a positive value: none when every pair met at t = L.
     if np.any(positive):
@@ -99,6 +101,7 @@ def tv_bound(result: Result, ax: Axes | None = None) -> Axes:
     return ax
 
 
+# Spec section 7.5.
 def marginals(
     result: Result,
     dims: int | Sequence[int] | None = None,
@@ -109,7 +112,7 @@ def marginals(
 
     A bin's density is the average over replicates of its signed mass, divided by its
     width, so a bin can be negative: the bias corrections carry negative weights, and
-    where few atoms fall they can outweigh the others (spec section 7.5). The boxes show
+    where few atoms fall they can outweigh the others. The boxes show
     the Monte Carlo error.
 
     Parameters
@@ -143,12 +146,13 @@ def marginals(
     return axes
 
 
+# Spec section 7.5.
 def corner(result: Result, dims: int | Sequence[int] | None = None, bins: int = 20) -> Any:
     """A corner plot of signed histograms: marginals on the diagonal, pairs below it.
 
-    The pairs are colored by signed density with a diverging map centered on 0
-    (spec section 7.5). Telescopic never passes signed weights to ``corner`` or ArviZ,
-    whose weighted quantiles assume non-negative weights.
+    The pairs are colored by signed density with a diverging map centered on 0.
+    Telescopic never passes signed weights to ``corner`` or ArviZ, whose weighted
+    quantiles assume non-negative weights.
 
     Parameters
     ----------
@@ -187,6 +191,7 @@ def corner(result: Result, dims: int | Sequence[int] | None = None, bins: int = 
     return grid
 
 
+# Spec section 7.5.
 def paths(
     replicates: Replicates,
     dims: Sequence[int] = (0, 1),
@@ -198,7 +203,7 @@ def paths(
     They need the paths that :func:`telescopic.engine.run` keeps with
     ``keep_paths=True``. In one dimension they run against time, with Y shifted by the
     lag so that each pair meets at its meeting time; otherwise they are drawn in the
-    plane of ``dims`` (spec section 7.5).
+    plane of ``dims``.
 
     X is drawn in :data:`CHAIN_X` and Y in :data:`CHAIN_Y` until they meet; from the
     meeting time on, the path of X, now the pair's, is drawn in :data:`MET`. The colors

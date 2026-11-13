@@ -42,7 +42,7 @@ BROKEN_GRADIENT = dataclasses.replace(G1, grad=lambda x: np.where(x > 1, np.nan,
 
 
 def far(d):
-    # Centred three standard deviations from the target's mean in every coordinate.
+    # Centered three standard deviations from the target's mean in every coordinate.
     return Normal(np.full(d, 3.0), np.eye(d))
 
 
@@ -229,7 +229,7 @@ def test_random_walk_meeting_times_match_oleary():
 
 
 def test_bimodal_meeting_times_match_jacob_oleary_atchade():
-    # Jacob, O'Leary & Atchade (2020), section 5.1: proposal variance 9 from N(10, 10^2),
+    # Jacob, O'Leary & Atchadé (2020), section 5.1: proposal variance 9 from N(10, 10^2),
     # mean meeting time 20 and 99% quantile 105.
     target = Target(MIXTURE.log_prob, vectorize=True)
     kernel = RandomWalk(np.eye(1), scale=3.0)
@@ -249,7 +249,7 @@ def test_banana_meeting_times_match_heng_jacob():
 
 
 def test_a_wide_initial_distribution_exposes_the_second_mode():
-    # Jacob, O'Leary & Atchade (2020), section 5.1, proposal variance 1: from N(10, 1) the
+    # Jacob, O'Leary & Atchadé (2020), section 5.1, proposal variance 1: from N(10, 1) the
     # pairs meet fast in the right mode and miss the left one; from N(10, 10^2), pairs that
     # start in different modes take far longer, which the meeting times show.
     target = Target(MIXTURE.log_prob, vectorize=True)

@@ -21,8 +21,9 @@ from telescopic.target import Target
 MAX_STEPS = 1000
 
 
+# Spec R-KER-HMC and section 5.5; the whitened meeting step is D-24.
 class HMC(Mixture):
-    r"""Hamiltonian Monte Carlo with a random-walk meeting step (spec R-KER-HMC).
+    r"""Hamiltonian Monte Carlo with a random-walk meeting step.
 
     With probability :math:`1 - \gamma`, a leapfrog trajectory: from a whitened momentum
     :math:`\nu \sim \mathcal N(0, I)`, ``n_steps`` updates
@@ -41,14 +42,14 @@ class HMC(Mixture):
     Coupled chains take the same component. Their trajectories share the momentum and the
     uniform, so the chains contract; the random-walk step couples them by the
     reflection-maximal coupling, so chains that have come close meet (Heng & Jacob 2019,
-    with a whitened meeting step, D-24).
+    with a whitened meeting step).
 
     Parameters
     ----------
     step_size : float, optional
         :math:`\epsilon`. ``None`` leaves it to :meth:`~telescopic.kernels.Kernel.tune`: dual averaging of the
         trajectories alone toward an acceptance rate of 0.8, from
-        :math:`\epsilon_0 = d^{-1/4}` (spec section 5.5). The scaling :math:`d^{-1/4}` is
+        :math:`\epsilon_0 = d^{-1/4}`. The scaling :math:`d^{-1/4}` is
         that of Beskos et al. (2013); the rate 0.8 is this package's choice, where they
         find 0.651 optimal for product targets as :math:`d` grows.
     n_steps : int, optional
@@ -87,17 +88,32 @@ class HMC(Mixture):
 
     @property
     def step_size(self) -> float | None:
-        """The leapfrog step size :math:`\\epsilon`."""
+        """The leapfrog step size :math:`\\epsilon`, or ``None`` while unset.
+
+        Returns
+        -------
+        float or None
+        """
         return self._leapfrog.step_size
 
     @property
     def n_steps(self) -> int | None:
-        """Leapfrog steps per trajectory, or ``None`` while the step size is unknown."""
+        """Leapfrog steps per trajectory, or ``None`` while the step size is unknown.
+
+        Returns
+        -------
+        int or None
+        """
         return self._leapfrog.n_steps
 
     @property
     def cov(self) -> FloatArray | None:
-        """:math:`\\Sigma`."""
+        """:math:`\\Sigma`, or ``None`` while unset.
+
+        Returns
+        -------
+        ndarray, shape (d, d), or None
+        """
         return self._leapfrog.cov
 
     @property

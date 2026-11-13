@@ -32,11 +32,12 @@ Rhee (2014) and Jacob, O'Leary & Atchadé (2020).
 
 ## Commands
 
-- The gate: `scripts/verify.sh` runs the lint, the format check, the type check and the
-  fast tests on the checkout's sources, as CI's lint and test jobs do on the installed
-  package. `--cov` adds CI's coverage floor, `--docs` the strict documentation build
-  and `--slow` the slow tests. It needs the `dev` dependency group (`docs` too for
-  `--docs`): `pip install -e . --group dev --group docs`, with pip 25.1 or newer. Set
+- The gate: `scripts/verify.sh` runs the lint, the format check, the spelling check, the
+  type check and the fast tests on the checkout's sources, as CI's lint and test jobs
+  do on the installed package. `--cov` adds CI's coverage floor, `--docs` the strict
+  documentation build and `--slow` the slow tests. It needs the `dev` dependency group
+  (`docs` too for `--docs`): `pip install -e . --group dev --group docs`, with pip 25.1
+  or newer. Set
   `PYTHON` to the interpreter that has them when that is not the first `python`; where
   that environment lives is each machine's own setting.
 - One test file: `PYTHONPATH=src pytest tests/test_engine.py`. The fast tests skip those

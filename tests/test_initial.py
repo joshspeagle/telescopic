@@ -59,7 +59,7 @@ def test_a_draw_of_shape_one_by_d_is_a_point():
     np.testing.assert_allclose(point.sum(), 1.0)
 
 
-def test_a_covariance_symmetric_up_to_rounding_is_accepted_and_symmetrised():
+def test_a_covariance_symmetric_up_to_rounding_is_accepted_and_symmetrized():
     # As np.linalg.inv returns: an asymmetry of 1e-20 against variances of 1e-4 is
     # rounding, which a test relative to each entry refused.
     cov = np.array([[1e-4, 1e-20], [0.0, 2e-4]])

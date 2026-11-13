@@ -16,6 +16,7 @@ from telescopic._types import BoolArray, Distribution, FloatArray, IndexArray, r
 _DIRICHLET = type(stats.dirichlet([1.0, 1.0]))
 
 
+# Spec R-CPL-1.
 def reflection_maximal(
     mu_x: FloatArray, mu_y: FloatArray, chol: FloatArray, inverse: FloatArray, draws: Draws
 ) -> tuple[FloatArray, FloatArray, BoolArray]:
@@ -26,7 +27,7 @@ def reflection_maximal(
     :math:`\log u < -z\cdot\delta - \lVert\delta\rVert^2/2`; otherwise
     :math:`y = \mu_y + C(z - 2(e\cdot z)e)` with :math:`e = \delta/\lVert\delta\rVert`, or
     :math:`e = 0` where :math:`\lVert\delta\rVert` is 0 or not finite
-    (Jacob, O'Leary & Atchadé 2020, section 4.1; spec R-CPL-1). The coupling is maximal:
+    (Jacob, O'Leary & Atchadé 2020, section 4.1). The coupling is maximal:
     :math:`P(x = y) = 2\Phi(-\lVert\delta\rVert/2)`.
 
     Parameters
@@ -64,6 +65,7 @@ def reflection_maximal(
     return x, y, identical
 
 
+# Spec R-CPL-2.
 def maximal(
     p: list[Distribution], q: list[Distribution], draws: Draws, eta: float = 1.0
 ) -> tuple[FloatArray, FloatArray, BoolArray, IndexArray]:
@@ -73,7 +75,7 @@ def maximal(
     :math:`\min(\eta, q(X)/p(X))`. Otherwise draw :math:`Y \sim q` until
     :math:`u > \eta\,p(Y)/q(Y)` (Thorisson's algorithm, Jacob, O'Leary & Atchadé 2020
     Algorithm 2; with :math:`\eta < 1`, the bounded-variance version of Gerber & Lee 2020,
-    Atchadé & Jacob 2024 Algorithm 2; spec R-CPL-2). The meeting probability is
+    Atchadé & Jacob 2024 Algorithm 2). The meeting probability is
     :math:`\int\min(\eta p, q)` over the draws whose log-densities are finite, maximal at
     :math:`\eta = 1`; the number of draws from ``p`` and ``q`` has mean 2 and variance
     at most :math:`2\eta/(1-\eta)`.
@@ -127,6 +129,7 @@ def maximal(
     return x_array, y_array, n_draws == 1, n_draws
 
 
+# Spec R-CPL-3.
 def discrete_maximal(
     log_p: FloatArray, log_q: FloatArray, draws: Draws
 ) -> tuple[IndexArray, IndexArray]:
@@ -135,7 +138,7 @@ def discrete_maximal(
     With probability :math:`\alpha = \sum_k \min(p_k, q_k)` both indices are drawn from
     :math:`\min(p, q)/\alpha`; otherwise they are drawn independently from the normalized
     residuals :math:`p - \min(p, q)` and :math:`q - \min(p, q)`, whose supports are
-    disjoint (Jacob, O'Leary & Atchadé 2020, section 5.4; spec R-CPL-3). So
+    disjoint (Jacob, O'Leary & Atchadé 2020, section 5.4). So
     :math:`P(i = j) = \alpha = 1 - \mathrm{TV}(p, q)`.
 
     Parameters

@@ -41,14 +41,34 @@ class MultivariateT:
         self._log_det = 2.0 * np.log(np.diag(self._chol)).sum()
 
     def sample(self, draws: Draws) -> FloatArray:
-        """One draw per row of ``draws``, shape ``(n, d)``; uses ``d + df`` normals per row."""
+        """One draw per row of ``draws``; uses ``d + df`` normals per row.
+
+        Parameters
+        ----------
+        draws : Draws
+            The random numbers of ``n`` chains.
+
+        Returns
+        -------
+        ndarray, shape (n, d)
+        """
         z = draws.normal(len(self.mean))
         if self.df is not None:
             z = z / np.sqrt((draws.normal(self.df) ** 2).sum(axis=1) / self.df)[:, None]
         return self.mean + matvec(self._chol, z)
 
     def log_density(self, x: FloatArray) -> FloatArray:
-        """Normalized log-density at the rows of ``x``, shape ``(n,)``."""
+        """Normalized log-density at the rows of ``x``.
+
+        Parameters
+        ----------
+        x : ndarray, shape (n, d)
+            The points.
+
+        Returns
+        -------
+        ndarray, shape (n,)
+        """
         d = len(self.mean)
         centered = x - self.mean
         z = matvec(self._inverse, centered)
@@ -84,8 +104,9 @@ class MultivariateT:
         return f"MultivariateT(mean={self.mean.tolist()}, df={self.df})"
 
 
+# Spec R-KER-IMH; the tuned proposal is that of spec section 5.6 and D-25.
 class Independence(Kernel):
-    r"""Independence Metropolis-Hastings (spec R-KER-IMH).
+    r"""Independence Metropolis-Hastings.
 
     A proposal :math:`x' \sim q` is accepted when
     :math:`\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]`. The weight
@@ -106,7 +127,7 @@ class Independence(Kernel):
         is not a method, fixes the dimension. ``None`` leaves the kernel untuned:
         :meth:`~telescopic.kernels.Kernel.tune` fits a Student-:math:`t_5` located at the
         mean of adaptive Metropolis pilot chains, with their covariance as its scale
-        matrix (spec section 5.6, D-25). Its report gives the largest weight
+        matrix. Its report gives the largest weight
         :math:`\pi/q` of the pilot's draws relative to their median.
 
     Notes

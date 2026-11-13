@@ -74,6 +74,32 @@ All notable changes to this project are documented here. The format follows
   landing page with a coupled pair drawn by telescopic itself, and navigation by section
   (Start, Tutorials, How-to guides, Theory, Reference, Project). Every plot of the
   executed pages shares one style. The design records are no longer built into the site.
+- Each tutorial has one title in the sidebar, on its page and in the pager, and the
+  comparison with emcee moved to `tutorials/beside-emcee`. The tutorials are ordered as a
+  learning path, with the failure modes last, and the pager is their only "next" link.
+- Warnings on the executed pages print as their class and message, without the path of
+  the notebook's temporary file, and wrap within the column.
+- Every figure on the executed pages has alternative text and a caption.
+- The API reference cites no internal requirement or decision numbers; where such a
+  citation carried meaning, it links the page that explains it.
+- The docstring of `telescopic.sample` describes each of its parameters, and that of
+  `Estimate` its `level`.
+- Signatures in the API reference show the parameters' names and defaults, one per line
+  when long, and the types stay in the docstrings, which state the type of every value
+  that a public method or property returns. The types link to the documentation of
+  telescopic, Python, NumPy and matplotlib.
+- American spelling throughout the package, its tests and the site, with "Atchadé" spelled
+  one way; codespell checks it in `scripts/verify.sh`, CI's lint job and a pre-commit
+  hook.
+- Getting started writes the lag as $L$ in its equations, defines the pilots and a
+  consistent estimate where it first uses them, and says how to turn on the tail check.
+- Theory opens with what it derives, writes the algorithm without the meeting time and
+  defines it after, and says what the conditions of unbiasedness ask in practice before
+  stating them.
+- The kernels guide defines its coupling terms before its table, and the diagnostics guide
+  says what Hill's estimate and the Clopper-Pearson bound measure and when each warning
+  is emitted; the docstring of `diagnostics.hill` gives the rule for ties.
+- Targets and initial distributions links `initial.as_initial`, which reads `init`.
 - Fixes from an audit of the whole package: a number argument of the wrong type raises
   `TypeError`, and one out of bounds `ValueError`, naming the argument; `names` must be
   distinct strings, one per coordinate; `Kernel.check_ndim` checks a kernel's dimension;
