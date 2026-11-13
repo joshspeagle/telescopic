@@ -76,15 +76,18 @@ class Independence(Kernel):
     :math:`\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]`. The weight
     :math:`\pi/q` is 0 wherever :math:`\pi` is 0, even where :math:`q` is 0 too, so a chain
     at zero density accepts any proposal of finite density, as random-walk Metropolis
-    does. The coupled step shares the proposal and :math:`u` between the chains, which is
-    a maximal kernel coupling (O'Leary, Wang & Jacob 2021): a pair meets when both chains
-    accept.
+    does. A proposal where :math:`q` is 0 is rejected, even where :math:`\pi` is not:
+    ``sample`` drew a point that ``log_density`` gives no mass, such as a draw clipped onto
+    the edge of an open support. The coupled step shares the proposal and :math:`u`
+    between the chains, which is a maximal kernel coupling (O'Leary, Wang & Jacob 2021):
+    a pair meets when both chains accept.
 
     Parameters
     ----------
     proposal : MultivariateT, optional
-        Any object with ``sample(draws)`` and ``log_density(x)``, where a NaN or ``+inf``
-        log-density raises ``ValueError`` with the point; its ``mean``, if it has one that
+        Any object with ``sample(draws)`` and ``log_density(x)``, the normalized density of
+        what ``sample`` draws, positive wherever ``sample`` can land. A NaN or ``+inf``
+        log-density raises ``ValueError`` with the point. Its ``mean``, if it has one that
         is not a method, fixes the dimension. ``None`` leaves the kernel untuned:
         :meth:`~telescopic.kernels.Kernel.tune` fits a Student-:math:`t_5` located at the
         mean of adaptive Metropolis pilot chains, with their covariance as its scale
@@ -161,15 +164,20 @@ class Independence(Kernel):
         return f"Independence(proposal={self.proposal!r})"
 
 
-def _log_weights(q: MultivariateT, *states: State) -> list[FloatArray]:
-    # log pi - log q at each state's positions, from one call of q.log_density, whose rows
-    # do not depend on each other (spec R-KER-6). A NaN log q would make every move to its
-    # point a rejection, and so bias the chain without an error.
-    x = np.concatenate([state.x for state in states])
-    log_q = np.split(log_densities("proposal log_density", q.log_density(x), x), len(states))
-    # Where log pi = -inf the weight is -inf even where log q = -inf too: -inf - -inf
+def _log_weights(q: MultivariateT, proposal: State, *states: State) -> list[FloatArray]:
+    # log pi - log q at the proposal's positions, then at each state's, from one call of
+    # q.log_density, whose rows do not depend on each other (spec R-KER-6). A NaN log q
+    # would make every move to its point a rejection, and so bias the chain without an
+    # error.
+    x = np.concatenate([proposal.x, *(state.x for state in states)])
+    log_q = np.split(log_densities("proposal log_density", q.log_density(x), x), 1 + len(states))
+    # A proposal where log q = -inf has weight -inf, so it is rejected: sample drew a point
+    # that log_density gives no mass, such as a draw clipped onto the edge of an open
+    # support, and a weight of +inf would accept it and never leave it.
+    new = proposal.log_prob - np.where(log_q[0] == -np.inf, np.inf, log_q[0])
+    # Where log pi = -inf a state's weight is -inf even where log q = -inf too: -inf - -inf
     # would be NaN, which rejects every proposal, so such a chain would never move.
-    return [
+    return [new] + [
         state.log_prob - np.where(state.log_prob == -np.inf, 0.0, part)
-        for state, part in zip(states, log_q, strict=True)
+        for state, part in zip(states, log_q[1:], strict=True)
     ]

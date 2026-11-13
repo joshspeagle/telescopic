@@ -185,3 +185,7 @@ All notable changes to this project are documented here. The format follows
   only the modes its tuning chains reached, so a run on well-separated modes can be
   confidently wrong without a warning; the failure-modes tutorial shows such a run and
   two checks that help.
+- An `Independence` proposal drawn where the proposal's own `log_density` is `-inf`,
+  such as a draw clipped onto the edge of an open support, is rejected; it was accepted
+  and its chain never left it. The documentation states that `log_density` is the
+  normalized density of what `sample` draws, positive wherever `sample` can land.

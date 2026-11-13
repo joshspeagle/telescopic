@@ -238,15 +238,18 @@ result.summary()
 state, and accepts when
 $\log u < [\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]$. The weight $\pi/q$
 is 0 wherever $\pi$ is 0, even where $q$ is 0 too, so a chain at zero density accepts
-any proposal of finite density, as the random walk does.
+any proposal of finite density, as the random walk does. A proposal where $q$ is 0 is
+rejected, even where $\pi$ is not: `sample` drew a point that `log_density` gives no
+mass, such as a draw clipped onto the edge of an open support.
 
 - The coupled step gives both chains the same proposal and the same uniform, so a pair
   meets when both accept. It is a maximal coupling of the kernel (O'Leary, Wang & Jacob
   2021).
 - `proposal` is a {class}`telescopic.kernels.MultivariateT`, a Student-$t$ with location
   `mean`, scale matrix `cov` and `df` degrees of freedom, a positive integer (`df=None`
-  gives a Gaussian). A proposal of your own whose `log_density` returns NaN or `+inf`
-  raises `ValueError` with the point.
+  gives a Gaussian). A proposal of your own has `sample(draws)` and `log_density(x)`,
+  the normalized density of what `sample` draws, positive wherever `sample` can land; a
+  `log_density` that returns NaN or `+inf` raises `ValueError` with the point.
 - `tune` sets a Student-$t$ with 5 degrees of freedom, located at the pilot's mean, with
   the pilot's covariance as scale matrix. The report's `max_weight_ratio` is the largest
   weight $\pi/q$ among the pilot's states, relative to their median; a large value
