@@ -13,7 +13,7 @@ import numpy.typing as npt
 from scipy import stats
 
 from telescopic import diagnostics, engine
-from telescopic._types import FloatArray, coordinates, integer, parameter_names, real
+from telescopic._types import FloatArray, coordinates, flag, integer, parameter_names, real
 from telescopic.engine import Replicates
 from telescopic.estimators import unbiased_covariance, unbiased_variance, weighted_quantile
 from telescopic.measure import SignedMeasure
@@ -131,7 +131,7 @@ class Result:
         if self.n_censored and replicates.settings.max_iter is None:
             raise ValueError("replicates with censored pairs need the max_iter of their run")
         self.ndim = replicates.atoms.shape[1]
-        self.names = parameter_names(names, self.ndim)
+        self.names = parameter_names(names, self.ndim, "the atoms are points")
         self.index = replicates.index
         self.meeting_times = replicates.meeting_time
         self.costs = replicates.cost
@@ -583,6 +583,7 @@ class Result:
         strict : bool
             Raise ``RuntimeError`` instead of warning.
         """
+        strict = flag("strict", strict)
         messages = [issue.message for issue in diagnostics.issues(self)]
         if strict and messages:
             raise RuntimeError("; ".join(messages))

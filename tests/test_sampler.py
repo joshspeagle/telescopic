@@ -157,7 +157,6 @@ def test_an_explicit_k_of_zero_gets_a_lag_of_one():
 @pytest.mark.parametrize(
     ("call", "message"),
     [
-        (lambda: CoupledSampler(log_prob, INIT, names=["a"]), "names must have 2 entries"),
         (lambda: CoupledSampler(log_prob, INIT, kernel=KERNEL).meeting_times(0), "n must be"),
         (
             lambda: CoupledSampler(log_prob, INIT, kernel=RandomWalk(np.eye(3))),
@@ -344,3 +343,16 @@ def test_a_run_warns_when_it_first_takes_a_gradient_as_zero():
     evaluated = int(re.search(pattern, message).group(1))
     assert 0 < evaluated < result.n_grad
     assert result.n_grad_zeroed > 0
+
+
+def test_meeting_times_refuses_max_iter_none():
+    # None ran an uncapped pilot, whose pairs then chose k.
+    with pytest.raises(TypeError, match="max_iter must be an integer, not None"):
+        CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=0).meeting_times(5, max_iter=None)
+
+
+def test_a_names_length_mismatch_names_the_initial_dimension():
+    # It blamed names, "names must have 1 entries, not 2", for an initial distribution of
+    # the wrong dimension.
+    with pytest.raises(ValueError, match="draws points of dimension 1, but names gives 2"):
+        CoupledSampler(log_prob, Normal([0.0], [1.0]), names=["p", "lam"])

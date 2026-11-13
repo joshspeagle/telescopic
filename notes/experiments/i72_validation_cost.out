@@ -1,0 +1,11 @@
+telescopic 0.1.0.dev0, Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
+Intel(R) Xeon(R) Processor @ 2.10GHz, x86_64, 4 CPUs, OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1
+commit 0331396, against the merge base with origin/main, 6659fb9
+load average before: (0.58, 1.75, 2.41)
+Target.log_prob, pointwise, n = 4         : new/old median 0.904, quartiles 0.848 to 0.967
+Target.log_prob, pointwise, n = 512       : new/old median 1.001, quartiles 0.988 to 1.014; quartiles span 1: not distinguishable from 1
+Target.log_prob, vectorized, n = 512      : new/old median 1.001, quartiles 0.944 to 1.063; quartiles span 1: not distinguishable from 1
+adaptive_metropolis, d = 2, 2000 steps    : new/old median 1.044, quartiles 1.012 to 1.072
+adaptive_metropolis, d = 30, 2000 steps   : new/old median 1.038, quartiles 1.011 to 1.093
+Gibbs crn coupled_step, n = 512           : new/old median 1.041, quartiles 1.024 to 1.063
+load average after: (0.77, 1.66, 2.35)

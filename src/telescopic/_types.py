@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import numbers
 import operator
+import reprlib
 from collections.abc import Sequence
+from decimal import Decimal
 from typing import Any, Protocol
 
 import numpy as np
@@ -47,6 +49,23 @@ def integer(
     return number
 
 
+def flag(name: str, value: Any) -> bool:
+    # True or False, NumPy's bools included. Anything else raises TypeError naming the
+    # argument: a truthy string such as "no" would act as True (DECISIONS #104).
+    if not isinstance(value, bool | np.bool_):
+        raise TypeError(f"{name} must be True or False, not {value!r}")
+    return bool(value)
+
+
+def instance(name: str, value: Any, kind: type) -> None:
+    # A telescopic object, such as a Target or a Kernel, checked where it is first passed:
+    # a function, a string or a class instead failed later, on an attribute (DECISIONS
+    # #106).
+    if not isinstance(value, kind):
+        given = f"the class {value.__name__}" if isinstance(value, type) else type(value).__name__
+        raise TypeError(f"{name} must be a {kind.__name__} instance, not {given}")
+
+
 def real(
     name: str, value: Any, low: float = -np.inf, high: float = np.inf, *, closed: bool = False
 ) -> float:
@@ -84,9 +103,52 @@ def coordinates(dims: int | Sequence[int], ndim: int) -> npt.NDArray[np.intp]:
     return columns.astype(np.intp)
 
 
+def real_array(
+    name: str,
+    values: Any,
+    expected: str,
+    *,
+    dtype: type[np.floating[Any]] | None = np.float64,
+    ndmin: int = 0,
+) -> npt.NDArray[Any]:
+    # values as a new array of real numbers, of dtype unless None, which keeps integers.
+    # Strings, None, booleans, complex numbers and ragged sequences raise TypeError naming
+    # the argument, with NumPy's error chained when it raised one (DECISIONS #103).
+    cause = None
+    try:
+        array = real_objects(np.array(values, ndmin=ndmin, order="C"))
+    except (TypeError, ValueError) as error:
+        cause = error
+    if cause is not None or array.dtype.kind not in "iuf":
+        raise TypeError(f"{name} must be {expected}, not {shown(values)}") from cause
+    return array if dtype is None else array.astype(dtype, copy=False)
+
+
+def real_objects(array: npt.NDArray[Any]) -> npt.NDArray[Any]:
+    # An object array whose elements are all real numbers, such as Fractions, Decimals or
+    # an object column of pandas, as floats, which NumPy's float conversion gave; any
+    # other array unchanged, so that None stays an object rather than NaN.
+    if array.dtype.kind == "O" and all(
+        isinstance(value, numbers.Real | Decimal) and not isinstance(value, bool)
+        for value in array.flat
+    ):
+        return array.astype(np.float64)
+    return array
+
+
+def shown(values: Any) -> str:
+    # values in one line of an error message: a pandas object or a matrix prints on several.
+    if values is None or np.isscalar(values) or isinstance(values, list | tuple | np.ndarray):
+        return " ".join(reprlib.repr(values).split())
+    dtype = getattr(values, "dtype", None)
+    return f"an object of type {type(values).__name__}" + (
+        "" if dtype is None else f" with dtype {dtype}"
+    )
+
+
 def vector(name: str, values: npt.ArrayLike, ndim: int | None = None) -> FloatArray:
     # A finite vector of shape (d,), d >= 1, or a scalar as shape (1,).
-    array = np.array(values, dtype=np.float64, ndmin=1)
+    array = real_array(name, values, "real numbers of shape (d,)", ndmin=1)
     if array.ndim != 1 or len(array) == 0:
         raise ValueError(f"{name} must have shape (d,) with d >= 1, not {array.shape}")
     if ndim is not None and len(array) != ndim:
@@ -114,8 +176,9 @@ def averaging(k: Any, m: Any, thin: Any) -> tuple[int, int, int]:
     return k, m, integer("thin", thin, minimum=1)
 
 
-def parameter_names(names: Sequence[str] | None, ndim: int) -> list[str]:
-    # Distinct names of the ndim coordinates; x0, x1, ... by default.
+def parameter_names(names: Sequence[str] | None, ndim: int, points: str) -> list[str]:
+    # Distinct names of the ndim coordinates of the points that points describes, such as
+    # "the atoms are points", which a length error blames; x0, x1, ... by default.
     if names is None:
         return [f"x{i}" for i in range(ndim)]
     # Listed first, so that an iterator is read once; a string would list its letters.
@@ -123,7 +186,7 @@ def parameter_names(names: Sequence[str] | None, ndim: int) -> list[str]:
     if listed is None or not all(isinstance(name, str) for name in listed):
         raise TypeError(f"names must be a sequence of strings, not {names!r}")
     if len(listed) != ndim:
-        raise ValueError(f"names must have {ndim} entries, not {len(listed)}")
+        raise ValueError(f"{points} of dimension {ndim}, but names gives {len(listed)}")
     if len(set(listed)) != ndim:
         raise ValueError(f"names must be distinct, not {listed}")
     return listed
