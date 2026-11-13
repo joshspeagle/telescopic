@@ -90,3 +90,12 @@ All notable changes to this project are documented here. The format follows
   ignores Ctrl-C, or whose handler Python did not set, keeps its handler; the tuning
   pilot takes a third less time at d = 100, Gibbs sweeps less, and joint histograms take
   memory in proportion to the atoms (`SignedMeasure.mass` is sparse).
+- Changes from a statistical audit against the source papers: `Result.estimate` builds
+  its interval with the quantile of Student's t with $R - 1$ degrees of freedom instead
+  of the normal quantile, whose 95% intervals covered 0.878 at $R = 5$ on an
+  autoregressive chain, where Student's t covered 0.950; the stated
+  guarantee of unbiasedness requires that the chain converge from the initial
+  distribution; `Gibbs(coupling="crn")` uses common random numbers for pairs whose
+  distance underflows to 0, which went to the maximal coupling; and the documentation
+  corrects the meaning of the relative cost and the source of HMC's target acceptance
+  rate.

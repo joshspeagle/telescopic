@@ -101,7 +101,8 @@ $|S| + 2\max(0, \tau - \min S - L)$ atoms, since atoms with $c_t = 0$ are droppe
 
 A replicate uses $C = L + 2(\tau - L) + \max(0, m - \tau)$ applications of the kernel,
 counting a coupled step before the meeting as two. Its **relative cost** is the mean cost
-divided by $m - k + 1$, the cost of the MCMC average alone. The **inefficiency** of the
+divided by $m - k + 1$, the number of averaged states: the cost per averaged state,
+against about 1 for an MCMC average without burn-in. The **inefficiency** of the
 estimator is $\mathbb E[C]\,\mathbb V[H_{k:m}]$ (Glynn & Whitt 1992; JOA20 §3.1): at a
 fixed budget of kernel applications, the variance of the average over replicates is the
 inefficiency divided by the budget, so it is the figure to minimize when comparing kernels

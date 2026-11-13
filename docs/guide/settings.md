@@ -189,10 +189,11 @@ Every evaluation belongs to the run, and no pilot ran.
 
 The cost of a replicate is the number of times it applies the kernel, a coupled step
 before the meeting counting as two; `result.costs` holds it for each replicate. The
-relative cost is the mean cost over the $m - k + 1$ steps of the MCMC average alone, and
-the theory gives its value under the automatic settings
-([Theory](../theory.md#choosing-k-m-and-l)). `result.diagnostics()` gives it, with the mean
-cost and the seconds per replicate.
+relative cost is the mean cost divided by $m - k + 1$, the number of averaged states:
+the cost per averaged state, against about 1 for an MCMC average without burn-in. The
+theory gives its value under the automatic settings
+([Theory](../theory.md#choosing-k-m-and-l)). `result.diagnostics()` gives it, with the
+mean cost and the seconds per replicate.
 
 The inefficiency of an estimate is the mean cost times the variance of one replicate's
 estimate, $\mathbb E[C]\,\mathbb V[H]$ ([Theory](../theory.md#cost)): the figure to
