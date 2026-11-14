@@ -10,7 +10,7 @@ from typing import Any
 
 import numpy as np
 import numpy.typing as npt
-from scipy import integrate, special
+from scipy import special
 
 from telescopic._types import Distribution, FloatArray, integer, real
 from telescopic.initial import Normal, Uniform
@@ -304,6 +304,9 @@ def _pump_moments() -> tuple[FloatArray, FloatArray]:
         second[np.arange(10), np.arange(10)] += shape / rate**2  # Var(lambda_i | beta)
         result: FloatArray = weight * np.concatenate([[1.0], first, second.ravel()])
         return result
+
+    # Imported at first use, which keeps import telescopic free of scipy.integrate.
+    from scipy import integrate
 
     total, _ = integrate.quad_vec(moments, 0, np.inf, epsabs=0, epsrel=1e-12)
     total = total / total[0]

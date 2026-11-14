@@ -27,12 +27,15 @@ your own has; the kernel is tuned in this process.
   emcee takes.
 
 Starting worker processes takes time, so a pool pays off only for runs that take longer
-than the start. telescopic starts and stops only the workers of an integer pool. The
-workers of an executor or a pool of your own live as long as it does and serve every run
-given it, and you close it. The executor below spawns its workers, as telescopic does:
-forking a process that runs threads, such as a notebook's kernel or a multithreaded BLAS,
-can deadlock. With `progress=True`, the sampler shows the progress of its pilot pairs and
-of each run ([Progress](#progress)):
+than the start. Each worker starts Python and imports telescopic, which imports NumPy and
+SciPy's linear algebra, sparse arrays and special functions. The functions that need
+SciPy's statistics, optimization or integration, none of which runs in a worker, import
+them at their first call. telescopic starts and stops only the workers of an integer
+pool. The workers of an executor or a pool of your own live as long as it does and serve
+every run given it, and you close it. The executor below spawns its workers, as
+telescopic does: forking a process that runs threads, such as a notebook's kernel or a
+multithreaded BLAS, can deadlock. With `progress=True`, the sampler shows the progress of
+its pilot pairs and of each run ([Progress](#progress)):
 
 ```{code-cell} python
 import multiprocessing

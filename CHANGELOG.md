@@ -312,3 +312,8 @@ All notable changes to this project are documented here. The format follows
   `CoupledSampler` and `sample` turns it off, and `CoupledSampler.gradient_check`, a
   `diagnostics.GradientCheck`, records what it compared. An error raised inside the
   check keeps its type and message, with a note that it was raised in the check.
+- `import telescopic` no longer imports `scipy.stats`, `scipy.optimize` and
+  `scipy.integrate`: the functions that use them import them at their first call. In a
+  fresh process the import takes about a third of the processor time it took, which
+  shortens the start of each worker of a process pool; the first call that needs
+  `scipy.stats`, such as the end of the first run of `sample`, pays its import once.

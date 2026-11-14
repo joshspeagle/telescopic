@@ -8,7 +8,6 @@ from dataclasses import dataclass
 import numpy as np
 import numpy.typing as npt
 from numpy.random import Generator
-from scipy import stats
 
 from telescopic._random import Draws, Streams, root_seed
 from telescopic._types import FloatArray, Seed, instance, integer, real, real_array
@@ -184,6 +183,8 @@ def _compare(
     # For chains that start at point: Fisher's exact test of how often they stay put, and
     # Kolmogorov-Smirnov tests of their moves along each direction and of their lengths,
     # Bonferroni-corrected, which need two moves on a side. A NaN position gives NaN.
+    from scipy import stats
+
     stayed = [np.all(chain == point, axis=1) for chain in (coupled, single)]
     table = [[int(s.sum()), int(len(s) - s.sum())] for s in stayed]
     stay = float(stats.fisher_exact(table).pvalue)

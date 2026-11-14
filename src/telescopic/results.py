@@ -13,7 +13,6 @@ from typing import IO, Any
 
 import numpy as np
 import numpy.typing as npt
-from scipy import stats
 
 from telescopic import diagnostics, engine
 from telescopic._types import (
@@ -229,6 +228,10 @@ class Result:
         level = real("level", level, 0, 1)
         self._require(2)
         values = self.measure.per_replicate(h)
+        # Imported at first use, which keeps import telescopic, and so a pool worker's
+        # start, free of scipy.stats.
+        from scipy import stats
+
         value, error = values.mean(axis=0), np.asarray(stats.sem(values, axis=0))
         # Student's t, not the normal quantile, whose intervals undercover at small R.
         t = stats.t.ppf((1 + level) / 2, self.n_replicates - 1)
@@ -489,6 +492,8 @@ class Result:
             tail_index = diagnostics.hill(met - self.lag + 1, self.n_replicates // 10)
         n_late = int(np.sum(self.meeting_times - self.lag > self.k))
         n_total = len(self.meeting_times)
+        from scipy import stats
+
         upper = stats.binomtest(n_late, n_total, alternative="less").proportion_ci(0.95).high
         # The TV bound at k as an average over replicates (section 3.6), in O(R) memory:
         # diagnostics.tv_bound's survival function takes memory up to the largest time.
