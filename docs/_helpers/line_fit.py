@@ -1,4 +1,4 @@
-"""The data of the line fit of Getting started, for the pages that reuse it."""
+"""The data of the line fit of the Quickstart, for the pages that reuse it."""
 
 import numpy as np
 
@@ -6,7 +6,7 @@ import numpy as np
 def data() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """``x``, ``y`` and ``yerr``: 50 points of the line ``-0.9 x + 4.3`` with Gaussian errors.
 
-    Getting started and the README write this code out in full. Only Getting started
+    The Quickstart and the README write this code out in full. Only the Quickstart
     checks that its data equal these; nothing checks the README's copy.
     """
     rng = np.random.default_rng(0)

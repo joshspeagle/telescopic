@@ -123,7 +123,7 @@ census of published methods and software behind the design.
 ## Adding a kernel
 
 A kernel follows the rules of the guide's
-[Writing a kernel](docs/guide/custom-kernels.md#the-rules) page and passes
+[Write a kernel](docs/guide/custom-kernels.md#the-rules) page and passes
 `telescopic.testing.check_coupling`. Add the oracle, marginal and faithfulness tests of
 `docs/design/test-plan.md` section 2.4.
 

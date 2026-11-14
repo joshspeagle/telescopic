@@ -15,23 +15,23 @@ the same pull request. The documentation states only what the code does now.
 
 ## Which pages a module maps to
 
-| Module of `src/telescopic/` | Guide and getting started | Tutorials | Theory and reference |
+| Module of `src/telescopic/` | Start and how-to guides | Tutorials | Theory and reference |
 |---|---|---|---|
-| `__init__.py` (the public namespace) | `getting-started.md` | | `api.md` |
-| `sampler.py`, `tuning.py` | `getting-started.md`, `guide/settings.md` | `tutorials/beside-emcee.md`, `tutorials/choosing-settings.md` | `theory.md`, `api.md` (Running, Building blocks) |
-| `kernels/`, `couplings.py` | `guide/kernels.md`, `guide/custom-kernels.md` | `tutorials/gradients.md`, `tutorials/gibbs.md`, `tutorials/how-it-works.md` | `theory.md`, `api.md` (Kernels and couplings) |
-| `target.py`, `initial.py` | `getting-started.md`, `guide/targets.md` | `tutorials/beside-emcee.md` | `api.md` (Targets and initial distributions) |
-| `engine.py`, `_parallel.py`, `_random.py` | `guide/parallel.md`, `guide/settings.md` | `tutorials/how-it-works.md` | `api.md` (Building blocks) |
-| `_progress.py` | `getting-started.md`, `guide/parallel.md` | | |
-| `estimators.py`, `measure.py`, `results.py` | `guide/results.md` | `tutorials/how-it-works.md`, `tutorials/beside-emcee.md` | `theory.md`, `api.md` (Results, Building blocks) |
-| `_io.py` (saving and loading) | `guide/results.md` | | `api.md` (Results) |
-| `diagnostics.py`, `warnings.py` | `guide/diagnostics.md` | `tutorials/failure-modes.md`, `tutorials/choosing-settings.md` | `theory.md`, `api.md` (Diagnostics, plots and checks; Warnings) |
-| `plotting.py` | `guide/results.md`, `guide/diagnostics.md` | `tutorials/how-it-works.md` | `api.md` (Diagnostics, plots and checks) |
-| `examples.py` | `guide/kernels.md` | every tutorial that uses the target | `api.md` (Examples) |
+| `__init__.py` (the public namespace) | `start/quickstart.md` | | `api.md` |
+| `sampler.py`, `tuning.py` | `start/quickstart.md`, `start/coming-from-emcee.md`, `guide/settings.md`, `guide/step-size.md` | `tutorials/choosing-settings.md` | `theory.md`, `api.md` (Running, Building blocks) |
+| `kernels/`, `couplings.py` | `guide/kernels.md`, `guide/step-size.md`, `guide/custom-kernels.md` | `tutorials/gradients.md`, `tutorials/gibbs.md`, `tutorials/how-it-works.md` | `theory.md`, `api.md` (Kernels and couplings) |
+| `target.py`, `initial.py` | `start/quickstart.md`, `start/coming-from-emcee.md`, `guide/log-density.md`, `guide/initial-distribution.md` | | `api.md` (Targets and initial distributions) |
+| `engine.py`, `_parallel.py`, `_random.py` | `guide/parallel.md`, `guide/settings.md` | `tutorials/how-it-works.md`, `tutorials/unbiased-on-average.md` | `api.md` (Building blocks) |
+| `_progress.py` | `start/install.md`, `guide/parallel.md` | | |
+| `estimators.py`, `measure.py`, `results.py` | `start/coming-from-emcee.md`, `guide/estimates.md`, `guide/plots.md`, `guide/save-load-merge.md`, `guide/meeting-times.md` | `tutorials/how-it-works.md`, `tutorials/unbiased-on-average.md` | `theory.md`, `reference/result-fields.md`, `reference/warnings.md`, `api.md` (Results, Building blocks) |
+| `_io.py` (saving and loading) | `guide/save-load-merge.md` | | `api.md` (Results) |
+| `diagnostics.py`, `warnings.py` | `guide/meeting-times.md` | `tutorials/failure-modes.md`, `tutorials/choosing-settings.md` | `theory.md`, `reference/result-fields.md`, `reference/warnings.md`, `api.md` (Diagnostics, plots and checks; Warnings) |
+| `plotting.py` | `guide/plots.md`, `guide/meeting-times.md` | `tutorials/how-it-works.md` | `api.md` (Diagnostics, plots and checks) |
+| `examples.py` | `guide/kernels.md`, `guide/step-size.md` | every tutorial that uses the target | `api.md` (Examples) |
 | `testing.py` | `guide/custom-kernels.md` | | `api.md` (Diagnostics, plots and checks) |
-| `_gradient_check.py` | `guide/targets.md`, `guide/settings.md` | `tutorials/gradients.md` | `api.md` (Running; Diagnostics, plots and checks) |
+| `_gradient_check.py` | `guide/log-density.md`, `guide/settings.md` | `tutorials/gradients.md` | `api.md` (Running; Diagnostics, plots and checks) |
 | `_types.py`, `_linalg.py` (private helpers) | the pages of the public functions whose arguments they check or whose errors they word | | |
-| `pyproject.toml` (dependencies, extras, Python versions) | `README.md`, `getting-started.md`, `CONTRIBUTING.md` | | |
+| `pyproject.toml` (dependencies, extras, Python versions) | `README.md`, `start/install.md`, `CONTRIBUTING.md` | | |
 
 Paths in the table are relative to `docs/`, except `README.md`, `CONTRIBUTING.md` and
 `pyproject.toml`. When a page moves or a module is added, change this table in the same

@@ -4,7 +4,7 @@ kernelspec:
   name: python3
 ---
 
-# Settings
+# Set k, m, the lag, thin and max_iter
 
 ## The settings
 
@@ -23,7 +23,7 @@ they meet ([Theory](../theory.md#the-time-averaged-estimator)).
 - `thin`, at least 1, averages every `thin`-th state from `k`
   ([Memory and thinning](#memory-and-thinning)).
 - `max_iter` censors the pairs still unmet at that time, which biases the estimates
-  ([Diagnostics and warnings](diagnostics.md#censored-pairs-censored)). It must exceed
+  ([Censored pairs](../reference/warnings.md#censored-pairs-censored)). It must exceed
   `max(lag, m)`; `None`, the default, runs every pair until it meets.
 
 Any $0 \le k \le m$, `lag` $\ge 1$ and `thin` $\ge 1$ give unbiased estimates: the
@@ -44,7 +44,7 @@ With the defaults, before the replicates run:
    covariance and keep their states only every $\lceil d/20\rceil$ steps, which bounds
    the pilot's time and memory. Chains that disagree raise a warning that the target may
    have several modes or the chains may not have converged
-   ([Diagnostics and warnings](diagnostics.md#disagreeing-tuning-chains-tuning)); chains
+   ([Disagreeing tuning chains](../reference/warnings.md#disagreeing-tuning-chains-tuning)); chains
    that agree can still all sit in one mode. A chain that accepts no proposal in its
    second half raises `ValueError`.
 2. **The meeting-time pilot.** 100 pairs with lag 1 run until they meet, or until
@@ -53,7 +53,7 @@ With the defaults, before the replicates run:
    the pilot's meeting times ([Theory](../theory.md#choosing-k-m-and-l)); `thin = 1` and no
    cap. When more than 1% of the pilot pairs are censored, `k` cannot be chosen and the
    run raises `ValueError`, with a note on the step size when MALA or HMC tuned theirs
-   ([When the automatic step fails](kernels.md#when-the-automatic-step-fails)).
+   ([When the automatic step fails](step-size.md#when-the-automatic-step-fails)).
 
 A value given explicitly is kept. Given `k`, the meeting-time pilot does not run, and an
 automatic `lag` or `m` follows from it: `lag = max(1, k)` and `m = 10k`. The tuning
@@ -64,7 +64,7 @@ pilot runs whenever the kernel has parameters to tune.
 Before any of it, a sampler built with a gradient and a kernel that evaluates it
 compares the gradient with differences of the log-density, `grad` with those of
 `log_prob` or the gradient of `log_prob_and_grad` with those of its own values, unless
-`check_grad=False` ([Checking the gradient](targets.md#checking-the-gradient)).
+`check_grad=False` ([Checking the gradient](log-density.md#checking-the-gradient)).
 
 - {meth}`~telescopic.CoupledSampler.tune` tunes the kernel once, keeps it as
   `sampler.kernel`, and returns the report of the tuning pilot, or `None` when nothing
@@ -89,7 +89,7 @@ one, and compares other settings with the recipe's.
 ## A slow log-density
 
 When the log-density is slow, its evaluations set the time of a run. A counter added to
-the log-density of the line fit of [Getting started](../getting-started.md#a-first-run),
+the log-density of the line fit of the [Quickstart](../start/quickstart.md#a-first-run),
 on its data `x`, `y` and `yerr`, counts them in each step:
 
 ```{code-cell} python
@@ -148,7 +148,7 @@ log-density and its gradient once per step (MALA) or once per leapfrog step (HMC
 pilot's pairs evaluate it about twice per step, and `result.n_log_prob` counts only the
 run's evaluations. With a kernel that evaluates the gradient, the gradient check adds 40
 evaluations of `log_prob` and 8 of `grad`, or 40 of `log_prob_and_grad`, with float64
-values when the sampler is built, before tuning, which no run counts ([Checking the gradient](targets.md#checking-the-gradient)).
+values when the sampler is built, before tuning, which no run counts ([Checking the gradient](log-density.md#checking-the-gradient)).
 Tuning and the pilot can be skipped:
 
 - **Tuning** runs only for a kernel with parameters left unset. A kernel whose
@@ -197,7 +197,7 @@ Every evaluation belongs to the run, and no pilot ran.
   $R = R_1 (s_1 / s)^2$ replicates for a standard error near $s$.
 - Two warnings need enough replicates: one replicate's share of the variance is checked
   from 100 replicates, and the tail of the meeting times from 500
-  ([Diagnostics and warnings](diagnostics.md)).
+  ([Warnings and errors](../reference/warnings.md)).
 
 ## Cost
 

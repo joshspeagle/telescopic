@@ -24,15 +24,15 @@ estimator pairs them with a lag of 1. The lines join at the meeting time, and on
 ```
 
 :::{container} routes
-- [**I use emcee and want error bars I can trust**](tutorials/beside-emcee.md)
+- [**I use emcee and want error bars I can trust**](start/coming-from-emcee.md)
 
   The same line fit with emcee and with telescopic, side by side.
 - [**How can MCMC be unbiased?**](tutorials/how-it-works.md)
 
   One run taken apart: pairs that meet, and the correction that removes the bias.
-- [**My chains do not meet**](guide/diagnostics.md)
+- [**My chains do not meet**](reference/warnings.md)
 
-  What the meeting times and the warnings say, and what to change.
+  What each warning says, and what to change.
 :::
 
 This example estimates the mean of a correlated Gaussian, (0, 0), and the mean of the
@@ -58,7 +58,9 @@ print(result.estimate(lambda t: t[:, 0] * t[:, 1]))
 :hidden:
 :caption: Start
 
-getting-started
+start/install
+start/quickstart
+start/coming-from-emcee
 ```
 
 ```{toctree}
@@ -66,7 +68,7 @@ getting-started
 :caption: Tutorials
 
 tutorials/how-it-works
-tutorials/beside-emcee
+tutorials/unbiased-on-average
 tutorials/choosing-settings
 tutorials/gradients
 tutorials/gibbs
@@ -77,11 +79,15 @@ tutorials/failure-modes
 :hidden:
 :caption: How-to guides
 
-guide/targets
+guide/log-density
+guide/initial-distribution
 guide/kernels
+guide/step-size
 guide/settings
-guide/results
-guide/diagnostics
+guide/estimates
+guide/plots
+guide/save-load-merge
+guide/meeting-times
 guide/parallel
 guide/custom-kernels
 ```
@@ -98,6 +104,8 @@ theory
 :caption: Reference
 
 api
+reference/result-fields
+reference/warnings
 citing
 changelog
 ```

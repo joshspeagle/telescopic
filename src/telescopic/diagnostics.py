@@ -289,7 +289,7 @@ class Issue(NamedTuple):
 
 # Spec section 7.4.
 def issues(result: Result) -> list[Issue]:
-    """The warnings that apply to ``result`` (Warnings, in :doc:`/guide/diagnostics`).
+    """The warnings that apply to ``result`` (Warnings, in :doc:`/reference/warnings`).
 
     Parameters
     ----------

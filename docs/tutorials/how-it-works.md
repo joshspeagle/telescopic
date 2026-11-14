@@ -6,10 +6,11 @@ kernelspec:
 
 # How it works
 
-[Getting started](../getting-started.md) describes a run in words. This page runs one by
-hand, on a standard normal target in one dimension with chains started far from it: the
-paths of a few pairs, one replicate's estimate taken apart, and the bias that the
-correction removes on average. [Theory](../theory.md) derives each step.
+The [Quickstart](../start/quickstart.md) describes a run in words. This
+page runs one by hand, on a standard normal target in one dimension with chains started
+far from it: the paths of a few pairs and one replicate's estimate taken apart;
+[Unbiased on average](unbiased-on-average.md) shows the bias that the correction removes
+on average. [Theory](../theory.md) derives each step.
 
 ```{code-cell} python
 :tags: [remove-cell]
@@ -155,38 +156,3 @@ print(f"signed measure: {estimate:.6f}")
 One replicate's correction can move its estimate toward the target's mean, 0, or away
 from it: only the average over replicates is unbiased. For a pair that meets by $k + L$
 the correction is zero, and the estimate is the MCMC average alone.
-
-## Unbiased on average
-
-From a start five standard deviations away, a burn-in of 5 steps is too short, and the
-MCMC average is biased. The bias correction removes this bias on average. 4000 replicates
-for each of two lags, 1 and $k$, estimate the mean of the target, 0, with `z` the estimate
-in units of its error bar:
-
-```{code-cell} python
-print(f"{'lag':>3}  {'estimator':12}{'mean':>8}{'error bar':>11}{'z':>7}")
-rows = {}
-for lag, seed in ((1, 2), (k, 3)):
-    runs = engine.run(
-        target, kernel, init, range(4000), k=k, m=m, lag=lag, rng=seed, keep_paths=True
-    )
-    mcmc = np.array([runs.paths[i][0][k : m + 1, 0].mean() for i in runs.index])
-    full = telescopic.Result(runs).estimate(lambda x: x[:, 0]).replicates
-    for name, values in (("MCMC average", mcmc), ("full", full)):
-        mean, error = values.mean(), values.std(ddof=1) / np.sqrt(len(values))
-        rows[lag, name] = mean / error, error
-        print(f"{lag:3}  {name:12}{mean:8.4f}{error:11.4f}{mean / error:7.2f}")
-```
-
-```{code-cell} python
-:tags: [remove-cell]
-
-# The claims of the next paragraph.
-assert all(abs(rows[lag, "MCMC average"][0]) > 10 for lag in (1, k))
-assert all(abs(rows[lag, "full"][0]) < 2 for lag in (1, k))
-assert rows[k, "full"][1] < rows[1, "full"][1]
-```
-
-The MCMC average is many error bars from 0 with either lag, since the lag does not change
-the law of $X$. The full estimator is within two error bars of 0 with both lags, and its
-error bar is smaller with $L = k$.

@@ -4,142 +4,18 @@ kernelspec:
   name: python3
 ---
 
-# Diagnostics and warnings
+# Warnings and errors
 
-The meeting times of the pairs bound the distance of the chains from the target and set
-the cost of a run, and telescopic warns when a run's error bars may be unreliable. The
-examples use the run of [Results](results.md):
-
-```{code-cell} python
-import warnings
-
-import numpy as np
-
-import telescopic
-from telescopic import examples
-
-gaussian = examples.gaussian(2)
-result = telescopic.sample(
-    gaussian.log_prob, gaussian.initial, 1000, vectorize=True, rng=11
-)
-```
-
-## Meeting times
-
-`result.meeting_times` holds each pair's meeting time $\tau$
-([Theory](../theory.md#coupled-chains)), `inf` for a pair censored at `max_iter`
-([`censored`](#censored-pairs-censored)); `result.costs` holds its kernel applications
-and `result.index` its replicate index.
-
-{meth}`telescopic.Result.plot_meeting_times` draws a histogram of $\tau - L$ and its
-survival function on a log scale, where a straight tail means geometric meeting times. A
-censored pair counts in the survival function at every time up to its cap, where the
-curve ends at the fraction of pairs censored, and not in the histogram.
-
-```{code-cell} python
----
-mystnb:
-  image:
-    alt: >-
-      Left, a histogram of tau minus L over the pairs; right, the fraction of
-      pairs with tau minus L above t, on a logarithmic scale, falling with t.
-  figure:
-    caption: >-
-      The meeting times of the run, less the lag: their histogram (left) and their
-      survival function $P(\tau - L > t)$ on a log scale (right).
----
-result.plot_meeting_times();
-```
-
-## Distance to stationarity
-
-{meth}`telescopic.Result.tv_bound` estimates the upper bound on the total variation
-distance between the law of $X_t$ and the target
-([Theory](../theory.md#distance-to-stationarity)) by its average over the replicates,
-capped at 1. By default it returns the bound at every $t$ from 0 to the last time at
-which it is positive, so that entry `t` is the bound at `t`. A censored pair is known to
-meet after its cap, where its chains were last compared, and counts as meeting at the
-cap plus 1, so with censored pairs the estimate is a lower bound of the one without a
-cap.
-
-```{code-cell} python
-result.tv_bound([0, result.k // 2, result.k])
-```
-
-{meth}`telescopic.Result.plot_tv_bound` draws it on a log scale, with `k` marked:
-
-```{code-cell} python
----
-mystnb:
-  image:
-    alt: >-
-      A line on a logarithmic scale that falls from 1 as t grows, with a dashed
-      vertical line at k.
-  figure:
-    caption: >-
-      The estimated upper bound on the total variation distance between the law of
-      $X_t$ and the target, against $t$, with $k$ dashed.
----
-result.plot_tv_bound();
-```
-
-{meth}`telescopic.Result.w1_bound` estimates the bound on the 1-Wasserstein distance in
-the same way, from the distances $\lVert X_t - Y_{t-L} \rVert$ that the engine records
-before each pair meets. A censored pair's distances stop at its cap, so with censored
-pairs it too is a lower bound. It depends on the parameterization of the target through
-the Euclidean norm: in other units or coordinates the bound changes.
-
-```{code-cell} python
-result.w1_bound([0, result.k // 2, result.k])
-```
-
-{func}`telescopic.diagnostics.tv_bound` and {func}`telescopic.diagnostics.w1_bound`
-compute the same bounds from arrays, such as meeting times of your own, with each
-censored pair given as the cap plus 1.
-
-## The diagnostics of a run
-
-{meth}`telescopic.Result.diagnostics` returns the diagnostics that the summary prints, as
-a dictionary; [Results](results.md#the-summary) defines each line of the summary.
-
-```{code-cell} python
-result.diagnostics()
-```
+telescopic warns when a run's error bars may be unreliable.
 
 ```{code-cell} python
 :tags: [remove-cell]
 
-# The claims of the next paragraph.
-values = result.diagnostics()
-assert set(values) == {
-    "meeting_time_50", "meeting_time_90", "meeting_time_99", "meeting_time_max",
-    "censored", "tail_index", "late_fraction", "late_fraction_upper", "tv_bound_at_k",
-    "variance_share", "variance_share_of", "variance_share_replicate", "mean_cost",
-    "seconds_per_replicate", "relative_cost",
-}
-assert result.lag == result.k
-assert abs(values["late_fraction"] - values["tv_bound_at_k"]) < 0.01
-```
+import warnings
 
-- `meeting_time_50`, `meeting_time_90`, `meeting_time_99`, `meeting_time_max` and
-  `censored`: the quantiles of the meeting times of every pair, each an observed meeting
-  time from the sorted values, where censored pairs sort above every pair that met, and
-  the number of censored pairs. A quantile that falls on a censored pair is `inf`.
-- `tail_index`: the tail index of $\tau - L + 1$, the power $\alpha$ at which the
-  probability of a value above $t$ falls as $t^{-\alpha}$, by Hill's estimate from the
-  largest values; `nan` below 500 replicates or behind ties
-  ([`tail`](#heavy-tailed-meeting-times-tail)).
-- `late_fraction` and `late_fraction_upper`: the fraction of pairs that met after
-  `k + lag`, censored ones included, and its one-sided 95% Clopper-Pearson upper bound,
-  an exact binomial confidence bound, which stays informative when the fraction is 0. The fraction is the leading term of
-  `tv_bound_at_k`, the TV bound at $k$, and with `lag = k` the two are close.
-- `variance_share`, `variance_share_of` and `variance_share_replicate`: the largest share
-  of one replicate in the variance of the estimate of a coordinate's mean or variance,
-  that estimate, such as `"the variance of x1"`, and the index of that replicate; `nan`,
-  `None` and `None` below 2 replicates
-  ([`variance`](#one-replicate-dominating-the-variance-variance)).
-- `mean_cost`, `seconds_per_replicate` and `relative_cost`: the cost of a replicate
-  ([Settings](settings.md#cost)).
+import telescopic
+from telescopic import examples
+```
 
 ## Warnings
 
@@ -179,7 +55,7 @@ may never meet, so a run without a cap could wait forever.
 **Trigger:** more than a quarter of the pairs meet after `k + lag` (`late_fraction` above
 0.25). **Meaning:** `k` may be too small, so that many replicates carry bias corrections,
 which make the variance high. **Remedy:** a new sampler with a larger `k`
-([Settings](settings.md)).
+([Settings](../guide/settings.md)).
 
 ### One replicate dominating the variance (`variance`)
 
@@ -190,7 +66,7 @@ holds it as `variance_share_of`, and the index of the replicate that holds it, w
 the warning names, as `variance_share_replicate`, whether or not the warning fires.
 **Meaning:** heavy tails or rare excursions make the error bars unreliable. A replicate
 whose chain is still on its way to the target at `k` does this, as from a start far
-wider than the target ([Initial distributions](targets.md#choosing-one)), and so does a
+wider than the target ([Initial distributions](../guide/initial-distribution.md#choosing-one)), and so does a
 replicate that found a mode that the others missed. **Remedy:** check the initial
 distribution, and look for a mode that the other replicates missed, starting with the
 one named; its row in the `replicates` of an estimate is its position among the
@@ -208,14 +84,14 @@ not the warning fires. Ties among the earliest meeting times can leave the estim
 ({func}`telescopic.diagnostics.hill` gives the rule). The warning
 also sees only a tail that shows up in the run: a heavy tail carried by well under one
 pair in $R$, as with an independence proposal whose weights are unbounded
-([Independence](kernels.md#independence)), leaves it silent.
+([Independence](../guide/kernels.md#independence)), leaves it silent.
 **Meaning:** unbiasedness needs moments of the meeting time, and valid error bars need a
 finite variance of the estimates ([Theory](../theory.md#guarantees-and-their-limits)).
 Meeting times with a polynomial tail can break both: a tail index below 2 means an
 infinite variance of the meeting times, the estimates may have one too, and then their
 error bars are not reliable at any number of replicates. **Remedy:** look at the
 survival function of `plot_meeting_times`, whose tail is straight on its log scale for
-geometric meeting times, and at the kernel ([Kernels](kernels.md)).
+geometric meeting times, and at the kernel ([Kernels](../guide/kernels.md)).
 
 ### Disagreeing tuning chains (`tuning`)
 
@@ -230,10 +106,10 @@ kernel's variance there is about $10^{-10}$ and its chains barely move in it eit
 this happens where float64 cannot resolve the target's scale at the coordinate's values,
 such as a scale of $10^3$ at $2^{70}$, where floats are $2^{18}$ apart. **Remedy:** for
 several modes, unless the initial distribution already covers every mode, one that does
-([Initial distributions](targets.md#choosing-one)); for a NaN, a target written in
+([Initial distributions](../guide/initial-distribution.md#choosing-one)); for a NaN, a target written in
 coordinates centered near 0, or the kernel's parameters given instead of tuned
-([Kernels](kernels.md)). Chains that agree can still all sit in one mode, and the
-warning is then silent ([Tuning](kernels.md#tuning)).
+([Kernels](../guide/kernels.md)). Chains that agree can still all sit in one mode, and the
+warning is then silent ([Tuning](../guide/kernels.md#tuning)).
 
 ### Slow pairs (`slow`)
 
@@ -241,9 +117,9 @@ warning is then silent ([Tuning](kernels.md#tuning)).
 sampler names the replicate in one warning per run. **Meaning:** the meeting times may be
 heavy-tailed, and the run waits for that pair: a first Ctrl-C starts no new replicate
 but lets the pairs in progress finish, this one too, and a second stops the run without
-a result ([Parallel runs](parallel.md#interrupting-a-run)). **Remedy:** look at the
+a result ([Parallel runs](../guide/parallel.md#interrupting-a-run)). **Remedy:** look at the
 kernel and the initial distribution. In the meeting-time pilot, whose own cap is on
-[Settings](settings.md#the-automatic-pipeline), the threshold is $10^4$.
+[Settings](../guide/settings.md#the-automatic-pipeline), the threshold is $10^4$.
 
 ## A run that warns
 
@@ -303,10 +179,10 @@ Setup of these runs: telescopic at commit d014ac1, Python 3.13.18, NumPy 2.5.4 a
 The last two cases show the limit of every diagnostic here: a run whose pairs all met in
 one mode cannot be detected from its own output, since nothing in its meeting times or
 estimates shows the mode that no replicate visited. The remedy is an initial
-distribution that covers every mode ([Initial distributions](targets.md#choosing-one)),
+distribution that covers every mode ([Initial distributions](../guide/initial-distribution.md#choosing-one)),
 and a kernel that reaches every mode from it, which an automatically tuned
 {class}`~telescopic.kernels.Independence` proposal may not
-([Independence](kernels.md#independence)).
+([Independence](../guide/kernels.md#independence)).
 [When unbiased is not enough](../tutorials/failure-modes.md) works through such runs and
 shows two checks that help, and a case where runs with different seeds all agree on a
 wrong estimate.
@@ -320,10 +196,10 @@ a result may be unreliable: the conditions above. An
 {class}`telescopic.InputWarning <telescopic.warnings.InputWarning>` says that an input is
 legal but questionable: replicates or pilot pairs whose initial draws have zero target
 density, gradients taken as 0 because they were not finite where the log-density is
-([Targets](targets.md#special-values)), a gradient that disagrees with differences of
+([Special values](../guide/log-density.md#special-values)), a gradient that disagrees with differences of
 the log-density when a sampler is built, or a check of it that could compare nothing
-([Checking the gradient](targets.md#checking-the-gradient)), and a run that, with its
-first estimates, would take more than 1 GB ([Settings](settings.md#memory-and-thinning)).
+([Checking the gradient](../guide/log-density.md#checking-the-gradient)), and a run that, with its
+first estimates, would take more than 1 GB ([Settings](../guide/settings.md#memory-and-thinning)).
 Each warning points at the line of your code that called telescopic.
 
 The filters of the `warnings` module select them by class:
@@ -355,11 +231,3 @@ try:
 except RuntimeError as error:
     print(error)
 ```
-
-## Checking a coupling
-
-{func}`telescopic.testing.check_coupling` checks a kernel's coupling as the engine uses
-it: one coupled step against steps of the kernel alone, the fraction of pairs that meet,
-stale cached log-densities and pairs that nearly meet. A kernel of your own should pass
-it before use; [Writing a kernel](custom-kernels.md#testing) describes its tests and runs
-it on a new kernel.

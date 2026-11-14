@@ -4,7 +4,7 @@ kernelspec:
   name: python3
 ---
 
-# Writing a kernel
+# Write a kernel
 
 A kernel is a subclass of {class}`telescopic.kernels.Kernel` with two methods: `step`
 moves a batch of chains, and `coupled_step` moves a batch of pairs. The engine does the
@@ -20,7 +20,7 @@ rest.
 
 `target` is the {class}`telescopic.Target`: `target.log_prob(x)` evaluates the
 log-density at the rows of `x`, and `target.log_prob_and_grad(x)` also the gradient, by
-the rules of [Special values](targets.md#special-values). A
+the rules of [Special values](log-density.md#special-values). A
 {class}`telescopic.kernels.State` holds `n` chains, batch first: positions `x` of shape
 `(n, d)`, log-densities `log_prob` of shape `(n,)`, and gradients `grad` of shape
 `(n, d)` or `None`. A kernel returns new states with the fields of its input states, all
@@ -170,9 +170,11 @@ would then have to evaluate `target.log_prob_and_grad` at its new positions.
 
 ## Testing
 
-Check a new coupling with {func}`telescopic.testing.check_coupling` before using it: it
-compares coupled steps with steps of the kernel alone from the same points, and its
-report's `passed()` says whether they agree, as the API reference details. It catches a
+{func}`telescopic.testing.check_coupling` checks a kernel's coupling as the engine uses
+it: one coupled step against steps of the kernel alone from the same points, the fraction
+of pairs that meet, stale cached log-densities and pairs that nearly meet. A kernel of
+your own should pass it before use. Its report's `passed()` says whether the coupled and
+the uncoupled steps agree, as the API reference details. It catches a
 coupling that reads another row's state the more surely the more the log-densities at
 `x` and `y` differ, and `x` and `y` should be close enough to meet in one step
 sometimes.

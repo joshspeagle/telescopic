@@ -4,20 +4,7 @@ kernelspec:
   name: python3
 ---
 
-# Getting started
-
-## Installation
-
-telescopic needs Python 3.11 or newer, NumPy, SciPy and threadpoolctl. Install telescopic
-and its optional dependencies from a clone of the repository:
-
-```bash
-pip install ".[all]"
-```
-
-The extras are `plot` (matplotlib, for the plots), `progress` (tqdm, for progress
-bars), `parallel` (cloudpickle, which sends functions defined in a notebook to worker
-processes), `pandas` (summaries as data frames) and `all`.
+# Quickstart
 
 ## What a run does
 
@@ -34,7 +21,7 @@ is a **signed measure**: points with weights that sum to 1, some of them negativ
 The average of the replicates' estimates is **unbiased**: its expectation is the
 posterior expectation, whatever $k$, $m$ and $L$, from every initial distribution from
 which the chain converges, and its error bar is valid as the number of replicates grows.
-[How it works](tutorials/how-it-works.md) shows a pair meeting, and [Theory](theory.md)
+[How it works](../tutorials/how-it-works.md) shows a pair meeting, and [Theory](../theory.md)
 derives the estimator and states the conditions.
 
 ## A first run
@@ -76,7 +63,7 @@ assert warnings.formatwarning("m", UserWarning, "f.py", 1) == "UserWarning: m\n"
 
 The initial distribution should be wider than the posterior and cover all its modes,
 but not wider by orders of magnitude
-([Initial distributions](guide/targets.md#choosing-one)). A Gaussian ten times wider
+([Initial distributions](../guide/initial-distribution.md#choosing-one)). A Gaussian ten times wider
 than an optimizer's error bars suits a posterior with one mode:
 
 ```{code-cell} python
@@ -98,13 +85,13 @@ The table has one row per parameter: the estimate of the posterior mean, which i
 unbiased, with its standard error, and the standard deviation and the 16th, 50th and
 84th percentiles, which are **consistent**: they converge to the posterior's values as
 the number of replicates grows, but are not unbiased at a fixed number. Below it are the
-run's diagnostics and the warnings that apply: [Results](guide/results.md#the-summary)
-defines each entry, and [Diagnostics and warnings](guide/diagnostics.md) says what each
+run's diagnostics and the warnings that apply: [The summary](../reference/result-fields.md#the-summary)
+defines each entry, and [Warnings and errors](../reference/warnings.md) says what each
 warning means.
 
 The check for heavy-tailed meeting times needs at least 500 replicates, so it is off at
 the default of 100: pass `n_replicates=500` to `sample` to turn it on
-([How many replicates](guide/settings.md#how-many-replicates)).
+([How many replicates](../guide/settings.md#how-many-replicates)).
 
 ## Any function, after the run
 
@@ -140,32 +127,16 @@ mystnb:
 result.plot_tv_bound();
 ```
 
-## Coming from emcee
-
-| emcee | telescopic |
-|---|---|
-| walkers, which move together as an ensemble | replicates: independent pairs of chains |
-| burn-in steps, discarded | `k`, chosen from pilot meeting times; the bias left at `k` is corrected, not ignored |
-| the autocorrelation time, which sets the error bars | meeting times, which set the cost; the error bars come from independent replicates |
-| `get_chain(flat=True)` | `result.measure`: atoms whose weights can be negative; they are not samples, so plot them with their weights ([Signed measures](guide/results.md#signed-measures)) |
-| `log_prob_fn(theta, *args)`, `vectorize=True`, `pool=` | the same: `log_prob(theta, *args)`, `vectorize=True`, `pool=`, except that `log_prob` returns the log-density alone, without blobs; derived quantities come from `result.estimate` after the run |
-
-telescopic does not make chains mix faster. Where one chain mixes slowly, as between
-distant modes, pairs meet late and replicates cost more. Its gain is error bars that do
-not depend on judging convergence, from replicates that run in parallel without
-communication. [telescopic beside emcee](tutorials/beside-emcee.md) runs both on this
-line fit.
-
 ## A slow log-density
 
 Before the replicates run, tuning and the meeting-time pilot evaluate the log-density
 thousands of times, and tuning does so in this process.
-[A slow log-density](guide/settings.md#a-slow-log-density) counts them and says how to
-skip either step, and [Parallel runs](guide/parallel.md) how to run the pilot and the
+[A slow log-density](../guide/settings.md#a-slow-log-density) counts them and says how to
+skip either step, and [Parallel runs](../guide/parallel.md) how to run the pilot and the
 replicates on several processes.
 
 ## Next
 
 The tutorials work through examples, starting with
-[How it works](tutorials/how-it-works.md). The how-to guides, starting with
-[Targets and initial distributions](guide/targets.md), cover each part of the package, and the [theory](theory.md) states what the estimators guarantee.
+[How it works](../tutorials/how-it-works.md). The how-to guides, starting with
+[Write the log-density and constraints](../guide/log-density.md), cover each part of the package, and the [theory](../theory.md) states what the estimators guarantee.

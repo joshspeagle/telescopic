@@ -123,7 +123,7 @@ so telescopic also counts those, and the wall time.
   tails and for an $h$ with enough moments under the chain. A run checks the first from
   500 replicates, for a tail that shows up in it: `result.diagnostics()["tail_index"]`
   estimates the tail index and the `tail` warning fires below 2
-  ([Diagnostics and warnings](guide/diagnostics.md#heavy-tailed-meeting-times-tail)).
+  ([Heavy-tailed meeting times](reference/warnings.md#heavy-tailed-meeting-times-tail)).
   The precise conditions are:
   - JOA20, Prop. 3.1: the chain started from $\pi_0$ converges in the sense of their
     Assumption 2.1, $\mathbb E[h(X_t)] \to \pi(h)$ as $t \to \infty$ with
