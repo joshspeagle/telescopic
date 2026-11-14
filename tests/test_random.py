@@ -119,6 +119,22 @@ def test_subset_rows_keep_their_lanes():
     np.testing.assert_array_equal(picked, expected)
 
 
+def test_children_of_a_rows_generator_follow_its_buffered_streams():
+    # Spec section 6.1: spawn keys + (2,), (3,), ... under the replicate's seed, after the
+    # normals' and uniforms', and the replicate's own stream does not move.
+    root = root_seed(5)
+    streams = Streams(2)
+    for lane in range(2):
+        streams.assign(lane, replicate_generator(root, MAIN, lane))
+    draws = streams.view([1, 0]).subset([0])
+    children = [draws.child(0) for _ in range(2)]
+    expected = replicate_generator(root, MAIN, 1).spawn(4)[2:]
+    for child, generator in zip(children, expected, strict=True):
+        assert child.bit_generator.seed_seq.spawn_key == generator.bit_generator.seed_seq.spawn_key
+        assert child.random() == generator.random()
+    assert draws.generator(0).random() == replicate_generator(root, MAIN, 1).random()
+
+
 def test_injected_numbers_replay_in_order_then_run_out():
     draws = fixed_draws(normals=[[1.0, 2.0, 3.0]], uniforms=[[0.5]])
     np.testing.assert_array_equal(draws.normal(2), [[1.0, 2.0]])
