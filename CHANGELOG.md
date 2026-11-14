@@ -301,4 +301,5 @@ All notable changes to this project are documented here. The format follows
   line. It costs 40 evaluations of `log_prob` and 8 of `grad` at any dimension, draws
   from a random stream of its own and changes no result; `check_grad=False` on
   `CoupledSampler` and `sample` turns it off, and `CoupledSampler.gradient_check`, a
-  `diagnostics.GradientCheck`, records what it compared.
+  `diagnostics.GradientCheck`, records what it compared. An error raised inside the
+  check keeps its type and message, with a note that it was raised in the check.

@@ -44,17 +44,6 @@ class _Recorder:
         self.itemsize = 8
 
 
-def _guarded(method: Callable[[FloatArray], Any], x: FloatArray) -> Any:
-    try:
-        return method(x)
-    except Exception as error:
-        raise RuntimeError(
-            "the gradient check, which compares grad with differences of log_prob at draws "
-            f"of the initial distribution when the sampler is built, raised: {error}; pass "
-            "check_grad=False to skip it"
-        ) from error
-
-
 def _signs(generator: Generator, d: int) -> FloatArray:
     signs: FloatArray = generator.choice(SIGNS, size=d)
     return signs
@@ -130,7 +119,7 @@ def _sweep(
         lp.reset()
         gr.reset()
         zeroed = target.n_grad_zeroed
-        f0, g = _guarded(target.log_prob_and_grad, x[None])
+        f0, g = target.log_prob_and_grad(x[None])
         seen_f = min(seen_f, lp.itemsize)
         if p == 0:
             itemsize_f = min(itemsize_f, lp.itemsize)
@@ -140,7 +129,7 @@ def _sweep(
             # function sees the points the comparison uses.
             x = x.astype(dtype_f).astype(np.float64)
             zeroed = target.n_grad_zeroed
-            f0, g = _guarded(target.log_prob_and_grad, x[None])
+            f0, g = target.log_prob_and_grad(x[None])
         f0, g, zeroed = f0[0], g[0], target.n_grad_zeroed > zeroed
         seen_g = min(seen_g, gr.itemsize)
         if p == 0:
@@ -153,7 +142,7 @@ def _sweep(
         # bound: its movement under a relative perturbation 8 times its cast's measures it.
         probe = 0.0
         if itemsize_g < 8 and np.isfinite(f0) and not zeroed:
-            moved = _guarded(target.log_prob_and_grad, (x * (1 + 4 * eps_g * probe_sign))[None])
+            moved = target.log_prob_and_grad((x * (1 + 4 * eps_g * probe_sign))[None])
             probe = np.abs(moved[1][0] - g)
         if f0 == -np.inf or zeroed:
             skipped += 1
@@ -166,7 +155,7 @@ def _sweep(
             row += x
         if itemsize_f < 8:
             stencil[...] = stencil.astype(dtype_f)
-        values = _guarded(target.log_prob, stencil)
+        values = target.log_prob(stencil)
         # The displacements as rounded, m_t = fl(x + t v) - x; then m_1 - m_-1 in row 0
         # and m_2 - m_-2 in row 2, and their widths along v, about 2 and 4.
         stencil -= x
@@ -218,14 +207,23 @@ def check_gradient(
     target = Target(*recorders, args=args, kwargs=kwargs, vectorize=vectorize)
     target._warned_precision = True
     assumed = (8, 8)
-    while True:
-        # A function whose dtype narrows after the first draw restarts the sweep with the
-        # narrowest dtype; for any other function this runs once.
-        rows, unusable, skipped, used, seen, h = _sweep(target, recorders, initial, seed, assumed)
-        narrowest = (min(seen[0], used[0]), min(seen[1], used[1]))
-        if narrowest == used:
-            break
-        assumed = narrowest
+    try:
+        while True:
+            # A function whose dtype narrows after the first draw restarts the sweep with
+            # the narrowest dtype; for any other function this runs once.
+            rows, unusable, skipped, used, seen, h = _sweep(
+                target, recorders, initial, seed, assumed
+            )
+            narrowest = (min(seen[0], used[0]), min(seen[1], used[1]))
+            if narrowest == used:
+                break
+            assumed = narrowest
+    except Exception as error:
+        error.add_note(
+            "raised in the gradient check, which evaluates log_prob and grad at draws of the "
+            "initial distribution when the sampler is built"
+        )
+        raise
     eps_f = float(np.finfo(np.dtype(f"f{used[0]}")).eps)
     tolerance = np.empty(len(rows))
     if rows:

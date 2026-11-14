@@ -134,10 +134,9 @@ def main():
 
     try:
         package((failing, lambda x: -x, F.Normal(np.zeros(3), np.ones(3))), 239100, True)
-    except RuntimeError as error:
+    except ZeroDivisionError as error:
         print(
-            f"an error inside the check: {type(error).__name__}: {error} "
-            f"(cause: {type(error.__cause__).__name__})"
+            f"an error inside the check: {type(error).__name__}: {error} (notes: {error.__notes__})"
         )
 
 

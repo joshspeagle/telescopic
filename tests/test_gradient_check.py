@@ -73,13 +73,26 @@ def test_the_check_costs_40_log_densities_and_8_gradients_at_any_dimension(d):
     assert (counted[0].points, counted[1].points) == (40, 8)
 
 
-def test_an_error_inside_the_check_names_the_check():
-    def failing(x):
-        raise ZeroDivisionError("a gradient that fails")
+def failing(x):
+    raise ZeroDivisionError("a gradient that fails")
 
-    with pytest.raises(RuntimeError, match=r"the gradient check.*check_grad=False") as raised:
-        checked(failing)
-    assert isinstance(raised.value.__cause__, ZeroDivisionError)
+
+@pytest.mark.parametrize(
+    ("gradient", "error", "message"),
+    [
+        (failing, ZeroDivisionError, "a gradient that fails"),
+        (lambda x: None, ValueError, "returned None for 1 points"),
+        (lambda x: -x[:, :1], ValueError, r"returned shape \(1, 1\)"),
+    ],
+)
+def test_an_error_inside_the_check_keeps_its_type_and_notes_the_check(gradient, error, message):
+    # It was raised again as a RuntimeError that advised check_grad=False, which only
+    # moved the package's own complaints about the functions' outputs to the run.
+    with pytest.raises(error, match=message) as raised:
+        checked(gradient)
+    (note,) = raised.value.__notes__
+    assert note.startswith("raised in the gradient check, which evaluates log_prob and grad")
+    assert "check_grad" not in note
 
 
 def test_a_check_that_compares_nothing_warns():

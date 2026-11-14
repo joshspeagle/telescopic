@@ -197,8 +197,10 @@ print(f"{len(check.gap)} lines, the smallest ratio {check.ratio.min():.3g}")
 `check_grad=False` turns the check off, and `gradient_check` is then `None`. A check
 that could compare no line, because every draw has zero density or a gradient that is not
 finite, or every line reaches zero density, as from a start on a boundary of the support,
-warns too, since it leaves `grad` unchecked. An error that `log_prob` or `grad` raises
-inside the check is raised again as a `RuntimeError` that names the check.
+warns too, since it leaves `grad` unchecked. An error raised inside the check, by
+`log_prob` or `grad` or about what they return, is raised as it is, with a note that it
+was raised in the gradient check, which evaluates them at draws of the initial
+distribution when the sampler is built.
 
 A warning means that `grad` is not the derivative of `log_prob` as computed, along the
 spread of the initial distribution, by more than the check can attribute to rounding:
