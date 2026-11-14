@@ -75,6 +75,72 @@ one.log_prob(points), batch.log_prob(points), one.n_log_prob
 With `vectorize=True`, a replicate's results can depend in the last bits on how the
 replicates are batched ([Parallel runs](parallel.md#reproducibility)).
 
+## The value and the gradient in one call
+
+A function that computes the log-density and its gradient together, sharing the work of
+the two, can be passed as `log_prob_and_grad` in place of `grad`. It takes the arguments
+of `log_prob`, `args` and `kwargs` included, and returns a pair: the value, a float, and
+the gradient, of shape `(d,)`, at one point, or with `vectorize=True` the values of
+shape `(n,)` and the gradients of shape `(n, d)` of a batch. Wherever the chains of
+MALA, HMC or a mixture with one of them need a gradient, it is called once, where with
+`grad` the target calls `log_prob` and then `grad`. Passing both `grad` and
+`log_prob_and_grad` raises `ValueError`.
+
+`log_prob` is still needed, and its values must be those of `log_prob_and_grad`: the
+evaluations that need no gradient call it, such as the steps of tuning's pilot chains.
+Each part of the pair is checked and converted as the output of `log_prob` or `grad` is,
+and an error names the function and the part. The gradient that `log_prob_and_grad`
+returns where its value is `-inf` is not used: states there carry a gradient of 0, as
+with `grad`. The counts of evaluations keep their meaning: each point counts in
+`n_log_prob`, and in `n_grad` where its value is finite. For the Gaussian above, a
+function written by hand computes the standardized point once for both:
+
+```{code-cell} python
+def log_prob_and_grad_batch(x, mean, sd):
+    z = (x - mean) / sd
+    return -0.5 * np.sum(z**2, axis=1), -z / sd
+
+
+both = telescopic.Target(
+    log_prob_batch,
+    log_prob_and_grad=log_prob_and_grad_batch,
+    args=(mean, sd),
+    vectorize=True,
+)
+values, gradients = both.log_prob_and_grad(points)
+values, gradients, both.n_log_prob, both.n_grad
+```
+
+What it saves depends on how much work the two functions share. On two regressions in 10
+dimensions, a whole `sample` call with MALA or HMC, tuning included, made 0.51 to 0.73
+times as many calls of the user's functions with `log_prob_and_grad`. It took 0.70 to
+0.84 times as long on a linear regression whose `log_prob` and `grad` repeated a third of
+their arithmetic, and 0.92 to 0.98 times as long on a logistic
+regression whose costly part, a logarithm or an exponential of each observation, is not
+shared.
+
+With JAX, `jax.value_and_grad` gives such a function, for one point, and
+`jax.vmap` of it one for a batch:
+
+```python
+import jax
+import jax.numpy as jnp
+
+jax.config.update("jax_enable_x64", True)  # float64, as telescopic computes
+
+
+def log_prob_jax(x):
+    return -0.5 * jnp.sum(x**2)
+
+
+log_prob = jax.jit(jax.vmap(log_prob_jax))
+log_prob_and_grad = jax.jit(jax.vmap(jax.value_and_grad(log_prob_jax)))
+init = telescopic.initial.Normal(np.zeros(2), np.eye(2))
+result = telescopic.sample(
+    log_prob, init, log_prob_and_grad=log_prob_and_grad, vectorize=True, kernel="mala"
+)
+```
+
 ## Special values
 
 - `-inf` means zero density. Every Metropolis test rejects a proposal there, so the
@@ -157,7 +223,10 @@ dimension, and 8 more of each when `grad` returns float32 values, and again when
 `log_prob` does; a `log_prob` whose values narrow to float32 only after the first draw
 costs a second sweep at float32. It draws 48 points of the initial distribution, in two
 passes of 24, from a random stream of its own, and it changes no result: a run is the
-same with and without it.
+same with and without it. A sampler built with `log_prob_and_grad` compares its
+gradient with differences of its own values, which are those the chains use, at the
+same points and in 40 evaluations of it, and does not call `log_prob`; its warnings
+then name the gradient and the log-density of `log_prob_and_grad`.
 
 A gradient with its sign wrong warns before any pair runs, with the size of the
 disagreement:

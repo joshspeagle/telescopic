@@ -256,3 +256,71 @@ def test_a_start_far_narrower_than_its_distance_from_0_is_compared_on_every_line
 
     check = quiet(lambda x: -(x - 1e6), far, Normal(np.full(3, 1e6), 1e-12 * np.eye(3)))
     assert len(check.gap) == 8
+
+
+def never_called(x):
+    raise AssertionError("log_prob was called")
+
+
+def checked_combined(log_prob_and_grad, rng=1):
+    # The check of a log_prob_and_grad, with a log_prob that it must not call.
+    return check_gradient(
+        never_called,
+        None,
+        as_initial(INIT),
+        root_seed(rng),
+        args=(),
+        kwargs=None,
+        vectorize=True,
+        log_prob_and_grad=log_prob_and_grad,
+    )
+
+
+def float32(function, where=lambda x: True):
+    def narrow(x):
+        values = function(x)
+        return values.astype(np.float32) if where(x) else values
+
+    return narrow
+
+
+@pytest.mark.parametrize(
+    ("function", "gradient"),
+    [
+        (log_prob, grad),
+        (log_prob, float32(grad)),
+        (float32(log_prob), float32(grad)),
+        (float32(log_prob, lambda x: np.all(x[:, 0] > 0)), grad),
+        (log_prob, lambda x: x - MEAN),
+    ],
+    ids=["float64", "float32 gradient", "float32", "narrowing log-density", "wrong sign"],
+)
+def test_a_combined_callable_gets_the_record_and_cost_of_its_two_functions(function, gradient):
+    # Its gradient is compared with differences of its own values, at the same points.
+    separate = Counted(function), Counted(gradient)
+    combined = Counted(lambda x: (function(x), gradient(x)))
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        expected = checked(separate[1], separate[0], rng=5)
+        record = checked_combined(combined, rng=5)
+    for name, value in vars(expected).items():
+        np.testing.assert_array_equal(getattr(record, name), value, err_msg=name)
+    assert len(caught) == 2 * (expected.gap > expected.tolerance).any()
+    assert combined.points == separate[0].points
+
+
+def test_the_check_of_a_combined_callable_names_it_in_its_warning_and_errors():
+    def wrong_sign(x):
+        return log_prob(x), x - MEAN
+
+    with pytest.warns(
+        InputWarning,
+        match="the gradient of log_prob_and_grad disagrees with "
+        "differences of the log-density of log_prob_and_grad",
+    ):
+        checked_combined(wrong_sign)
+    with pytest.raises(ValueError, match="returned None") as raised:
+        checked_combined(lambda x: None)
+    assert raised.value.__notes__[0].startswith(
+        "raised in the gradient check, which evaluates log_prob_and_grad at draws"
+    )

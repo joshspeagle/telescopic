@@ -44,7 +44,8 @@ belongs to chain, or pair, `i`:
 Other members have defaults that a kernel can override:
 
 - `needs_grad`, false by default: whether the kernel evaluates the gradient. When it is
-  true, the states carry gradients and a target without `grad` is refused.
+  true, the states carry gradients and a target without a gradient, given as `grad` or
+  `log_prob_and_grad`, is refused.
 - `needs_log_prob`, true by default: false for a kernel that never evaluates the
   log-density, such as Gibbs. The target may then have `log_prob=None`.
 - `init_state(target, x)` evaluates the target at starting points, with gradients when

@@ -56,6 +56,11 @@ All notable changes to this project are documented here. The format follows
   cluster's, was counted as having as many workers as this process may use CPUs, which
   left its other workers idle. The argument replaces a reported size, and with a
   log-density evaluated point by point it changes no replicate.
+- `log_prob_and_grad=` on `sample`, `CoupledSampler` and `Target`, in place of `grad`,
+  takes a function that returns the log-density and its gradient together, such as
+  JAX's `value_and_grad`, and is called once where `log_prob` and `grad` were called one
+  after the other. `log_prob` is still required, for the evaluations that need no
+  gradient, and a run gives the same numbers and counts as with the two functions.
 - A pool's chunks hold at most 1,024 replicates. Above 4,096 replicates per worker, four
   chunks per worker grew with the run, to 62,500 replicates each for 1,000,000 on 4
   workers; now a worker's memory, the result it sends back and the steps of the progress

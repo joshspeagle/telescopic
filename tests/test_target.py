@@ -320,3 +320,77 @@ def test_none_among_real_numbers_held_as_objects_is_refused(vectorize):
 
     with pytest.raises(ValueError, match="log_prob returned"):
         Target(log_prob, vectorize=vectorize).log_prob(np.array([[-1.0], [1.0]]))
+
+
+def half_gaussian_and_grad(x):
+    # The standard normal on x0 > 0, with a gradient that is NaN where the density is 0.
+    inside = x[..., 0] > 0
+    return np.where(inside, gaussian(x), -np.inf), np.where(inside[..., None], -x, np.nan)
+
+
+@pytest.mark.parametrize("vectorize", [False, True])
+def test_log_prob_and_grad_is_called_once_per_point_or_batch_and_counted_as_grad(vectorize):
+    calls = []
+
+    def counted(x):
+        calls.append(len(np.atleast_2d(x)))
+        return half_gaussian_and_grad(x)
+
+    x = np.array([[1.0, 2.0], [-1.0, 0.0], [2.0, 0.0]])
+    target = Target(never_called, log_prob_and_grad=counted, vectorize=vectorize)
+    values, gradients = target.log_prob_and_grad(x)
+    np.testing.assert_array_equal(values, [-2.5, -np.inf, -2.0])
+    # The gradient where the density is 0 is 0, whatever the function returned there.
+    np.testing.assert_array_equal(gradients, [[-1.0, -2.0], [0.0, 0.0], [-2.0, 0.0]])
+    assert calls == ([3] if vectorize else [1, 1, 1])
+    assert (target.n_log_prob, target.n_grad, target.n_grad_zeroed) == (3, 2, 0)
+
+
+def never_called(x):
+    raise AssertionError("log_prob was called")
+
+
+def test_a_non_finite_gradient_of_log_prob_and_grad_at_a_start_names_it():
+    target = Target(gaussian, log_prob_and_grad=lambda x: (gaussian(x), np.nan * x))
+    with pytest.raises(ValueError, match=r"log_prob_and_grad returned \[nan\] at x = \[1.0\]"):
+        target.log_prob_and_grad(np.ones((1, 1)), start=True)
+
+
+def test_grad_and_log_prob_and_grad_are_exclusive_and_need_log_prob():
+    with pytest.raises(ValueError, match="pass grad or log_prob_and_grad, not both"):
+        Target(gaussian, np.negative, log_prob_and_grad=half_gaussian_and_grad)
+    with pytest.raises(ValueError, match="log_prob_and_grad needs log_prob"):
+        Target(None, log_prob_and_grad=half_gaussian_and_grad)
+    with pytest.raises(TypeError, match="log_prob_and_grad must be callable"):
+        Target(gaussian, log_prob_and_grad=1.0)
+
+
+@pytest.mark.parametrize(
+    ("vectorize", "output", "message"),
+    [
+        (False, lambda x: gaussian(x), r"returned .*-0.5.* at x = \[1.0\]; it must return a pair"),
+        (True, lambda x: gaussian(x), r"returned array\(\[-0.5\]\) for 1 points; .* a pair"),
+        (False, lambda x: (gaussian(x), None), r"<lambda>'s gradient returned None at x"),
+        (True, lambda x: (np.nan * x[:, 0], -x), r"log_prob_and_grad returned nan at x"),
+    ],
+    ids=["no pair", "no pair, vectorized", "no gradient", "NaN log-density"],
+)
+def test_outputs_of_log_prob_and_grad_are_checked_and_named(vectorize, output, message):
+    target = Target(gaussian, log_prob_and_grad=output, vectorize=vectorize)
+    with pytest.raises(ValueError, match=message):
+        target.log_prob_and_grad(np.ones((1, 1)))
+
+
+def test_outputs_of_log_prob_and_grad_are_copied_and_warn_once_when_narrow():
+    buffers = np.empty(2, dtype=np.float32), np.empty((2, 1))
+
+    def reusing(x):
+        buffers[0][:], buffers[1][:] = gaussian(x), -x
+        return buffers
+
+    target = Target(gaussian, log_prob_and_grad=reusing, vectorize=True)
+    with pytest.warns(InputWarning, match="reusing's log-density returned float32 values"):
+        values, gradients = target.log_prob_and_grad(np.array([[1.0], [2.0]]))
+    target.log_prob_and_grad(np.zeros((2, 1)))
+    np.testing.assert_array_equal(values, [-0.5, -2.0])
+    np.testing.assert_array_equal(gradients, [[-1.0], [-2.0]])
