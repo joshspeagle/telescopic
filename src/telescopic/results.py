@@ -216,10 +216,13 @@ class Result:
 
         >>> from telescopic import examples, sample
         >>> example = examples.gaussian(2)
-        >>> result = sample(example.log_prob, example.initial, vectorize=True, rng=0)
+        >>> result = sample(
+        ...     example.log_prob, example.initial,
+        ...     n_replicates=50, vectorize=True, rng=0,
+        ... )
         >>> estimate = result.estimate(lambda x: x[:, 0] > 0)
         >>> estimate.value.shape, estimate.replicates.shape
-        ((), (100,))
+        ((), (50,))
         """
         level = real("level", level, 0, 1)
         self._require(2)
@@ -300,6 +303,7 @@ class Result:
         Parameters
         ----------
         q : float or array_like of float in [0, 1]
+            The levels of the quantiles.
         h : callable, optional
             As in :meth:`estimate`; its quantiles are taken in place of the coordinates'.
 
@@ -332,6 +336,7 @@ class Result:
         Parameters
         ----------
         mass : float in (0, 1)
+            The probability that the interval holds.
         h : callable, optional
             As in :meth:`quantile`.
 
@@ -539,7 +544,10 @@ class Result:
 
         >>> from telescopic import examples, sample
         >>> example = examples.gaussian(2)
-        >>> result = sample(example.log_prob, example.initial, vectorize=True, rng=0)
+        >>> result = sample(
+        ...     example.log_prob, example.initial,
+        ...     n_replicates=50, vectorize=True, rng=0,
+        ... )
         >>> summary = result.summary()
         >>> summary.names, list(summary.table)
         (['x0', 'x1'], ['mean', 'standard_error', 'std', 'q16', 'q50', 'q84'])
@@ -582,6 +590,7 @@ class Result:
         Parameters
         ----------
         other : Result
+            The result to join with this one.
 
         Returns
         -------
@@ -678,6 +687,7 @@ class Result:
         dims : int or sequence of int, optional
             Coordinates; all by default.
         bins : int
+            The number of bins along each coordinate.
         axes : sequence of Axes, optional
             One per coordinate; by default, those of a new figure.
 
@@ -697,6 +707,7 @@ class Result:
         dims : int or sequence of int, optional
             Coordinates; all by default.
         bins : int
+            The number of bins along each coordinate.
 
         Returns
         -------

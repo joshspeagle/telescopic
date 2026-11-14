@@ -65,6 +65,7 @@ class CouplingReport:
         Parameters
         ----------
         alpha : float
+            The level below which a p-value fails, in (0, 1).
 
         Returns
         -------
@@ -102,12 +103,14 @@ def check_coupling(
     kernel : Kernel
         A tuned kernel.
     target : Target
+        The target of the steps.
     x, y : array_like, shape (d,)
         The starting points, close enough for the coupling to meet them in one step
         sometimes: for HMC, within about its ``meeting_scale``.
     n : int
         Pairs; at least 2. More detect smaller differences.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
+        The root of the check's random streams.
 
     Returns
     -------
@@ -241,7 +244,9 @@ def random_draws(n_rows: int, rng: Seed = None) -> Draws:
     Parameters
     ----------
     n_rows : int
+        The number of rows, at least 1.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
+        The seed of the one generator.
 
     Returns
     -------

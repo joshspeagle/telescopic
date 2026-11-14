@@ -81,7 +81,9 @@ class Gibbs(Kernel):
     >>> from telescopic import examples, kernels, sample
     >>> example = examples.pumps()
     >>> kernel = kernels.Gibbs(example.conditional, example.blocks)
-    >>> result = sample(None, example.initial, kernel=kernel, rng=0)
+    >>> result = sample(
+    ...     None, example.initial, kernel=kernel, n_replicates=50, rng=0
+    ... )
     >>> result.n_log_prob, result.mean().value.shape
     (0, (11,))
     """

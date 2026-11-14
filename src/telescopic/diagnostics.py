@@ -78,7 +78,9 @@ def w1_bound(
     n_replicates : int
         The number of replicates :math:`R`, including those with no recorded distance.
     lag : int
+        The lag :math:`L` of the runs that recorded the distances.
     t : array_like of int
+        Times at which to bound the distance.
 
     Returns
     -------
@@ -212,6 +214,7 @@ def issues(result: Result) -> list[Issue]:
     Parameters
     ----------
     result : Result
+        The result to check.
 
     Returns
     -------

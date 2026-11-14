@@ -44,7 +44,8 @@ class Mixture(Kernel):
     ...     [kernels.RandomWalk(), kernels.Independence()], [0.8, 0.2]
     ... )
     >>> result = sample(
-    ...     example.log_prob, example.initial, kernel=kernel, vectorize=True, rng=0
+    ...     example.log_prob, example.initial, kernel=kernel,
+    ...     n_replicates=50, vectorize=True, rng=0,
     ... )
     >>> result.kernel.is_tuned, result.tuning.max_weight_ratio is not None
     (True, True)

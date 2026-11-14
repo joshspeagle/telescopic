@@ -27,9 +27,11 @@ class MultivariateT:
     Parameters
     ----------
     mean : array_like, shape (d,)
+        The location :math:`\mu`.
     cov : array_like, shape (d, d)
         Scale matrix; the covariance is ``cov * df / (df - 2)`` for ``df > 2``.
     df : int or None
+        The degrees of freedom :math:`\nu`, a positive integer, or ``None``.
     """
 
     def __init__(self, mean: npt.ArrayLike, cov: npt.ArrayLike, df: int | None = 5) -> None:
@@ -161,7 +163,8 @@ class Independence(Kernel):
     >>> proposal = kernels.MultivariateT(example.mean, 2 * example.cov)
     >>> kernel = kernels.Independence(proposal)
     >>> result = sample(
-    ...     example.log_prob, example.initial, kernel=kernel, vectorize=True, rng=0
+    ...     example.log_prob, example.initial, kernel=kernel,
+    ...     n_replicates=50, vectorize=True, rng=0,
     ... )
     >>> result.tuning is None
     True

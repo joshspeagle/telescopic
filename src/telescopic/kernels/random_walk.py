@@ -67,7 +67,8 @@ class RandomWalk(Kernel):
     >>> example = examples.gaussian(2)
     >>> kernel = kernels.RandomWalk()
     >>> result = sample(
-    ...     example.log_prob, example.initial, kernel=kernel, vectorize=True, rng=0
+    ...     example.log_prob, example.initial, kernel=kernel,
+    ...     n_replicates=50, vectorize=True, rng=0,
     ... )
     >>> kernel.is_tuned, result.kernel.is_tuned
     (False, True)

@@ -61,7 +61,7 @@ class MALA(GradientKernel):
     >>> example = examples.gaussian(2)
     >>> result = sample(
     ...     example.log_prob, example.initial, grad=example.grad,
-    ...     kernel=kernels.MALA(), vectorize=True, rng=0,
+    ...     kernel=kernels.MALA(), n_replicates=50, vectorize=True, rng=0,
     ... )
     >>> result.n_grad == result.n_log_prob
     True

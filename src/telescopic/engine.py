@@ -209,6 +209,7 @@ def run(
     Parameters
     ----------
     target : Target
+        The target to sample.
     kernel : Kernel
         A tuned kernel.
     initial
@@ -293,6 +294,7 @@ def check_settings(settings: Settings) -> Settings:
     Parameters
     ----------
     settings : Settings
+        The settings to check.
 
     Returns
     -------
@@ -324,6 +326,7 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
     Parameters
     ----------
     parts : sequence of Replicates
+        The outputs to join, at least one.
 
     Returns
     -------
@@ -403,6 +406,7 @@ def stored_bytes(settings: Settings, ndim: int, coupled: npt.ArrayLike) -> float
     Parameters
     ----------
     settings : Settings
+        The settings of the run.
     ndim : int
         The dimension :math:`d`.
     coupled : array_like of int, shape (R,)

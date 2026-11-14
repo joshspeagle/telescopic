@@ -79,7 +79,7 @@ class HMC(Mixture):
     >>> example = examples.gaussian(2)
     >>> result = sample(
     ...     example.log_prob, example.initial, grad=example.grad,
-    ...     kernel=kernels.HMC(), vectorize=True, rng=0,
+    ...     kernel=kernels.HMC(), n_replicates=50, vectorize=True, rng=0,
     ... )
     >>> result.kernel.n_steps == math.ceil(1 / result.kernel.step_size)
     True

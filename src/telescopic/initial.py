@@ -18,6 +18,7 @@ class Normal:
     Parameters
     ----------
     mean : array_like, shape (d,)
+        The mean :math:`\mu`.
     cov : array_like, shape (d, d) or (d,)
         Covariance matrix, or the variances of a diagonal one.
     """
@@ -53,6 +54,7 @@ class Uniform:
     Parameters
     ----------
     low, high : array_like, shape (d,)
+        The lower and the upper corners of the box.
     """
 
     def __init__(self, low: npt.ArrayLike, high: npt.ArrayLike) -> None:
