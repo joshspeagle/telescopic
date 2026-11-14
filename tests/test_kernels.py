@@ -45,18 +45,14 @@ def shifted(point, block):
 
 
 class Box:
-    """Independent uniforms on [center - 1, center + 1]: a law with a mean and a
-    covariance that is not normal, and without ppf."""
+    """Independent uniforms on [center - 1, center + 1], without ppf. Its mean and cov
+    made the normal map of common random numbers take it for a normal."""
 
     def __init__(self, center, size):
         self.mean, self.cov = np.full(size, center), np.eye(size) / 3
 
     def rvs(self, *, random_state):
         return self.mean + random_state.uniform(-1.0, 1.0, len(self.mean))
-
-    def logpdf(self, value):
-        inside = np.all(np.abs(value - self.mean) <= 1.0)
-        return -len(self.mean) * np.log(2.0) if inside else -np.inf
 
 
 def shifted_box(point, block):
@@ -990,6 +986,45 @@ def test_crn_gibbs_couplings_draw_from_a_singular_multivariate_normal():
         assert stats.kstest(new.x[:, 1] - 0.5 * new.x[:, 0], "norm").pvalue > P_MIN
 
 
+def test_crn_gibbs_couplings_draw_a_block_of_several_with_ppf_from_its_own_sampler():
+    # One uniform through the ppf of array parameters would give each coordinate of the
+    # block the same quantile.
+    def given(point, block):
+        if block == 0:
+            return stats.gamma([2.0, 0.5], scale=1.0 + point[2] ** 2)
+        return Normal(0.0, 1.0)
+
+    kernel = Gibbs(given, [[0, 1], [2]], coupling="crn")
+    x, y = [1.0, 1.0, 0.5], [1.0, 1.0, -1.5]
+    draws = fixed_draws(uniforms=[[0.3, 0.6]], generators=[np.random.default_rng(8)])
+    new_x, new_y = kernel.coupled_step(Target(None), gibbs_state(x), gibbs_state(y), draws)
+    for start, new in ((x, new_x), (y, new_y)):
+        child = np.random.default_rng(8).spawn(1)[0]
+        np.testing.assert_array_equal(new.x[0, :2], given(start, 0).rvs(random_state=child))
+
+
+def test_crn_gibbs_couplings_draw_a_row_alike_alone_and_beside_rows_of_another_kind():
+    # A row's coupling of a block depends on its own two conditionals: beside a row whose
+    # conditionals lack ppf, a row whose conditionals have it drew from generators in the
+    # same state, and alone from a common uniform.
+    def given(point, block):
+        other = point[1 - block]
+        return Normal(0.5 * other, 1.0) if other > 0 else Box(0.5 * other, 1)
+
+    kernel = Gibbs(given, [[0], [1]], coupling="crn")
+    x, y = np.array([[0.0, 1.0], [0.0, -1.0]]), np.array([[0.0, 2.0], [0.0, -2.0]])
+
+    def step(n):
+        draws = fixed_draws(
+            uniforms=[[0.7, 0.4], [0.6, 0.1]][:n],
+            generators=[np.random.default_rng(seed) for seed in (5, 6)][:n],
+        )
+        return kernel.coupled_step(Target(None), gibbs_state(x[:n]), gibbs_state(y[:n]), draws)
+
+    for alone, beside in zip(step(1), step(2), strict=True):
+        np.testing.assert_array_equal(alone.x[0], beside.x[0])
+
+
 def test_crn_gibbs_couplings_draw_a_block_from_its_own_conditional_whatever_its_type():
     # Common normals through the cov of a conditional that is not normal gave both chains
     # a normal draw in the coupled step only.
@@ -1013,7 +1048,6 @@ FAMILIES = {
     "dirichlet": lambda v: stats.dirichlet([1.0 + v, 2.0, 0.5]),
     "wishart": lambda v: stats.wishart(4, [[1.0 + v, 0.2], [0.2, 1.0]]),
     "gamma": lambda v: stats.gamma([2.0, 0.5], scale=1.0 + v),
-    "own": lambda v: Box(v, 2),
 }
 
 

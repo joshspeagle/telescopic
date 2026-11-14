@@ -8,7 +8,6 @@ from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
-from numpy.random import Generator
 from scipy import stats
 
 from telescopic._linalg import square_root
@@ -32,13 +31,19 @@ class Gibbs(Kernel):
 
     - ``"maximal"``: the rejection maximal coupling, with ``eta``;
     - ``"crn"``: common random numbers, which contract the chains but make them equal only
-      by rounding. For a block of one coordinate whose conditionals have ``ppf``, one
+      by rounding. For a block of one coordinate whose two conditionals have ``ppf``, one
       uniform goes through each ``ppf``. For SciPy's frozen ``multivariate_normal``,
       common standard normals go through a square root of each covariance, which may be
-      singular. For any other block, each chain draws from its own conditional with
-      ``rvs``, from generators in the same state, so each keeps its conditional's law
-      whatever its type; how close the two draws are then depends on how ``rvs`` uses
-      the generator;
+      singular. For any other block of several coordinates, or of one
+      without ``ppf``, each chain draws from its own conditional with ``rvs``, from
+      generators in the same state, so each keeps its conditional's law whatever its
+      type. The two draws are then close when ``rvs`` reads a fixed count of numbers from
+      the generator and maps them smoothly in the conditional's parameters, as a normal
+      block drawn as ``mean + cholesky(cov) @ random_state.standard_normal(k)``, or with
+      ``random_state.multivariate_normal(mean, cov, method="cholesky")``, does. NumPy's
+      default method, a singular value decomposition, which SciPy's
+      ``multivariate_normal`` calls, can change signs and order between nearby
+      covariances, and then the two draws are as far apart as independent ones;
     - ``"two-scale"``: common random numbers for pairs farther apart than ``threshold``
       at the start of the sweep, the maximal coupling for the others (Biswas, Bhattacharya,
       Jacob & Johndrow 2022).
@@ -71,8 +76,9 @@ class Gibbs(Kernel):
     each block from the row's generator. A coupled step does the same for the maximal
     coupling and for identical conditionals. For common random numbers it reads 1 uniform
     per row and block through ``ppf``, or the block's size of normals for SciPy's
-    multivariate normal, or else builds a generator from a child that it spawns from the
-    row's generator, which leaves the row's own stream where it was.
+    multivariate normal, or else draws from a new child of the row's
+    generator, :meth:`~telescopic.kernels.Draws.child`, which leaves the row's own stream
+    where it was.
     A conditional that draws a point that is not finite, or not of its block's size,
     raises ``ValueError``. With ``log_prob=None`` the target has no log-density, and states
     carry 0.
@@ -236,32 +242,44 @@ def _maximal(p: list[Any], q: list[Any], draws: Draws, eta: float) -> tuple[Floa
 
 
 def _common(p: list[Any], q: list[Any], draws: Draws, size: int) -> tuple[list[Any], ...]:
-    # Common random numbers: a uniform through each ppf for a block of one coordinate;
-    # common normals through a square root of each covariance for SciPy's multivariate
-    # normal, whose own sampler decomposes the covariance with signs and an order that
-    # can change between nearby covariances; or else each chain's own sampler, run from
-    # the same state of a generator.
-    if size == 1 and all(hasattr(conditional, "ppf") for conditional in p + q):
-        # A uniform of 0, drawn with probability 2^-53, would give ppf = -inf.
-        u = np.maximum(draws.uniform(), np.finfo(np.float64).tiny)
+    # Common random numbers, chosen row by row from the row's two conditionals, so that a
+    # row's draw does not depend on the other rows (spec R-EXEC-2): a uniform through each
+    # ppf for a block of one coordinate; common normals through a square root of each
+    # covariance for SciPy's multivariate normal, whose own sampler decomposes the
+    # covariance with signs and an order that can change between nearby covariances; or
+    # else each chain's own sampler, run from the same state of a generator.
+    drawn_x: list[Any] = [None] * len(p)
+    drawn_y: list[Any] = [None] * len(p)
+    quantile = np.array(
+        [size == 1 and hasattr(a, "ppf") and hasattr(b, "ppf") for a, b in zip(p, q, strict=True)],
+        dtype=bool,
+    )
+    rows = quantile.nonzero()[0]
+    # A uniform of 0, drawn with probability 2^-53, would give ppf = -inf.
+    u = np.maximum(draws.subset(rows).uniform(), np.finfo(np.float64).tiny)
+    for row, value in zip(rows.tolist(), u, strict=True):
         # Each ppf gives a scalar, or an array for array parameters.
-        return tuple([c.ppf(value) for c, value in zip(side, u, strict=True)] for side in (p, q))
-    if all(isinstance(conditional, _MULTIVARIATE_NORMAL) for conditional in p + q):
-        z = draws.normal(size)
-        return tuple(
-            [
-                c.mean + square_root("a conditional's cov", c.cov, size) @ row
-                for c, row in zip(side, z, strict=True)
-            ]
-            for side in (p, q)
-        )
-    drawn_x, drawn_y = [], []
-    for row, (p_row, q_row) in enumerate(zip(p, q, strict=True)):
-        # A child of the row's generator, spawned without moving the row's own stream, and
-        # set back to its first state before the second chain draws.
-        generator = Generator(draws.generator(row).bit_generator.spawn(1)[0])
+        drawn_x[row], drawn_y[row] = p[row].ppf(value), q[row].ppf(value)
+    normal = ~quantile & np.array(
+        [
+            isinstance(a, _MULTIVARIATE_NORMAL) and isinstance(b, _MULTIVARIATE_NORMAL)
+            for a, b in zip(p, q, strict=True)
+        ],
+        dtype=bool,
+    )
+    rows = normal.nonzero()[0]
+    if len(rows):  # replayed draws may hold no normals
+        for row, z in zip(rows.tolist(), draws.subset(rows).normal(size), strict=True):
+            drawn_x[row], drawn_y[row] = (
+                c.mean + square_root("a conditional's cov", c.cov, size) @ z
+                for c in (p[row], q[row])
+            )
+    for row in (~quantile & ~normal).nonzero()[0].tolist():
+        # A child of the row's generator, set back to its first state before the second
+        # chain draws.
+        generator = draws.child(row)
         start = generator.bit_generator.state
-        drawn_x.append(p_row.rvs(random_state=generator))
+        drawn_x[row] = p[row].rvs(random_state=generator)
         generator.bit_generator.state = start
-        drawn_y.append(q_row.rvs(random_state=generator))
+        drawn_y[row] = q[row].rvs(random_state=generator)
     return drawn_x, drawn_y

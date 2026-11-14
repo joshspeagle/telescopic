@@ -9,10 +9,12 @@ and do pairs meet as soon?
 Method. Part 1 measures the distance between the two chains' draws of N(0, C) and
 N(0, C'), where C' is C scaled by 1 + e or C^(1/2) (I + e S) C^(1/2) for a random
 symmetric S of spectral norm 1, for e = 1%, 10% and 50%, under the normal map, under
-SciPy's frozen `multivariate_normal` drawn from generators in the same state, and for
-independent draws, over 200 random covariances C of size 3 (Wishart with 6 degrees of
-freedom) and one near-isotropic one, I + 0.01 W, with 200 draws each; "flipped" is the
-fraction of the C whose same-state draws are on average 10 times farther apart than the
+SciPy's frozen `multivariate_normal` drawn from generators in the same state ("same
+state"), under NumPy's `Generator.multivariate_normal` with `method="cholesky"` drawn
+from generators in the same state ("Cholesky"), and for independent draws, over 200
+random covariances C of size 3 (Wishart with 6 degrees of freedom) and one
+near-isotropic one, I + 0.01 W, with 200 draws each; "flipped" is the fraction of the C
+whose SciPy draws are on average 10 times farther apart than the
 normal map's. Part 2 measures the pilot meeting times of 100 pairs per seed for 5 seeds,
 under "crn" and "two-scale" (threshold 1, or the square root of the trace of the
 posterior covariance for the pumps), of the Gibbs samplers of four targets:
@@ -33,35 +35,44 @@ is the normal map that the package applied before the change, coupling for coupl
 "SciPy" draws it with SciPy's frozen `multivariate_normal`, as a user would write it,
 which the package couples as its commit does: from generators in the same state after
 the change, and by the normal map before it and under the alternative that keeps the map
-for SciPy's multivariate normal. A row prints, for each seed, the median meeting time and
-the number of pairs censored at 2000 sweeps, then the mean and standard deviation of the
-5 medians, and the time of a sweep relative to the first row of its target, which varies
-by a fifth or more between runs on a shared machine.
+for SciPy's multivariate normal. SciPy's `rvs` calls NumPy's
+`Generator.multivariate_normal` with its default method, a singular value decomposition.
+"NumPy", for the robust regression only, draws it with a class of the user's own whose
+`rvs` calls that sampler with `method="cholesky"`. A row prints, for each seed, the
+median meeting time and the number of pairs censored at 2000 sweeps, then the mean and
+standard deviation of the 5 medians, and the time of a sweep relative to the first row
+of its target. Such ratios of times vary between runs on a shared machine: the output at
+commit 970e3c8 and the one committed with 3e300e4 give 4.54 and 5.42 for the pumps
+without `ppf` under "crn", and differ by factors of up to 1.48 on the other rows. The
+last line gives the processor time of the run.
 
 Result (i127_gibbs_same_state.out, at the change): from generators in the same state,
 SciPy's draws are as close as the normal map's for covariances that differ by a scale
 factor, but a change of shape of 1% leaves them 0.063 apart on average, against 0.0056
 for the map and 2.2 for independent draws, as 4% of the covariances flip a sign or an
 order of the decomposition, and near the identity they are as far apart as independent
-draws. Pairs of the robust regression meet later under "crn", at a median of 205.4
-sweeps (sd 18.5 over the seeds) against 147.1 (sd 10.3) under the map, and as fast under
-"two-scale" (4.0 against 3.7). The other targets meet as before, and the pumps without
-`ppf` meet as with it. Under the alternative (i127_gibbs_same_state_alternative.out),
-the robust regression's pairs with SciPy's conditionals meet under "crn" at a median of
-142.9 sweeps (sd 2.7), as under the map. Run as
-`python notes/experiments/i127_gibbs_same_state.py`, about 15 minutes on one core.
+draws. NumPy's sampler with `method="cholesky"` gives draws as close as the normal map's
+in every row, to the 4 decimals printed (0.0056 at a change of shape of 1%). Pairs of
+the robust regression meet later under "crn", at a median of 205.4 sweeps (sd 18.5 over
+the seeds) against 147.1 (sd 10.3) under the map, and as fast under "two-scale" (4.0
+against 3.7); with NumPy's Cholesky method they meet at the map's medians, seed for seed
+(147.1 and 3.7). The other targets meet as before, and the pumps without `ppf` meet as
+with it. Under the alternative (i127_gibbs_same_state_alternative.out), the robust
+regression's pairs with SciPy's conditionals meet under "crn" at a median of 142.9
+sweeps (sd 2.7), as under the map. Run as
+`python notes/experiments/i127_gibbs_same_state.py`.
 """
 
-import math
 import time
 
 import numpy as np
 from i85_setup import setup
 from numpy.random import PCG64DXSM, Generator, SeedSequence
-from scipy import linalg, special, stats
+from scipy import linalg, stats
 
 import telescopic
 from telescopic import examples
+from telescopic.examples import _Gamma as Gamma
 from telescopic.initial import Uniform
 from telescopic.kernels import Gibbs
 
@@ -83,22 +94,15 @@ class CholeskyNormal:
         return -0.5 * (z @ z + len(z) * np.log(2 * np.pi)) - np.sum(np.log(np.diag(self.chol)))
 
 
-class Gamma:
-    # Gamma(shape, rate) with the methods Gibbs calls, quick to build.
-    def __init__(self, shape, rate):
-        self.shape, self.rate = shape, rate
+class NumPyNormal(CholeskyNormal):
+    # A conditional of the user's own that draws with NumPy's multivariate normal sampler
+    # and its Cholesky method, not its default, a singular value decomposition.
+    def __init__(self, mean, cov):
+        super().__init__(mean, cov)
+        self.cov = cov
 
     def rvs(self, *, random_state):
-        return float(random_state.gamma(self.shape, 1 / self.rate))
-
-    def logpdf(self, value):
-        a, b = self.shape, self.rate
-        if value <= 0:
-            return -math.inf
-        return a * math.log(b) - math.lgamma(a) + (a - 1) * math.log(value) - b * value
-
-    def ppf(self, u):
-        return float(special.gammaincinv(self.shape, u) / self.rate)
+        return random_state.multivariate_normal(self.mean, self.cov, method="cholesky")
 
 
 class GammaWithoutPpf:
@@ -120,7 +124,7 @@ def distances():
     print("Part 1: mean distance between the two chains' draws of N(0, C) and N(0, C')")
     print(
         f"{'C':15} {'change':6} {'e':>5} {'normal map':>11} {'same state':>11} "
-        f"{'independent':>12} {'flipped':>8}"
+        f"{'Cholesky':>9} {'independent':>12} {'flipped':>8}"
     )
     for name, group in (("random (200)", covs), ("near-isotropic", [near_isotropic])):
         for change in ("scale", "shape"):
@@ -132,7 +136,7 @@ def distances():
                 flipped = np.mean([row[1] > 10 * row[0] for row in rows])
                 print(
                     f"{name:15} {change:6} {e:5.2f} {mean[0]:11.4f} {mean[1]:11.4f} "
-                    f"{mean[2]:12.4f} {flipped:8.2f}"
+                    f"{mean[2]:9.4f} {mean[3]:12.4f} {flipped:8.2f}"
                 )
 
 
@@ -148,13 +152,18 @@ def _distances(c, change, e, rng):
     zero = np.zeros(3)
     laws = [stats.multivariate_normal(zero, c), stats.multivariate_normal(zero, other)]
     maps = [CholeskyNormal(zero, c), CholeskyNormal(zero, other)]
-    total = np.zeros(3)
+    total = np.zeros(4)
     for seed in SeedSequence(int(rng.integers(2**32))).spawn(200):
-        same = [Generator(PCG64DXSM(seed)) for _ in range(4)]
+        same = [Generator(PCG64DXSM(seed)) for _ in range(6)]
         fresh = Generator(PCG64DXSM(seed.spawn(1)[0]))
+        cholesky = [
+            generator.multivariate_normal(zero, cov, method="cholesky")
+            for generator, cov in zip(same[4:], (c, other), strict=True)
+        ]
         total += [
             np.linalg.norm(maps[0].rvs(random_state=same[0]) - maps[1].rvs(random_state=same[1])),
             np.linalg.norm(laws[0].rvs(random_state=same[2]) - laws[1].rvs(random_state=same[3])),
+            np.linalg.norm(cholesky[0] - cholesky[1]),
             np.linalg.norm(laws[0].rvs(random_state=same[2]) - laws[1].rvs(random_state=fresh)),
         ]
     return total / 200
@@ -263,6 +272,7 @@ def meeting_times():
         "robust regression": {
             "map": regression(CholeskyNormal),
             "SciPy": regression(stats.multivariate_normal),
+            "NumPy": regression(NumPyNormal),
         },
         "normal means": {
             "map": normal_means(CholeskyNormal),
@@ -288,5 +298,7 @@ def meeting_times():
 
 if __name__ == "__main__":
     print(setup())
+    start = time.process_time()
     distances()
     meeting_times()
+    print(f"\nProcessor time of the run: {(time.process_time() - start) / 60:.1f} minutes")
