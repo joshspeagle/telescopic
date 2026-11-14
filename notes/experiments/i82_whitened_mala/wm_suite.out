@@ -1,0 +1,51 @@
+commit 9932df7; the package's fast tests of the modules that build MALA, with MALA replaced by WhitenedMALA (wm_patch.py)
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src:<this folder> python -m pytest -p wm_patch -p no:cacheprovider -q -rf tests/test_kernels.py tests/test_testing.py tests/test_sampler.py tests/test_engine.py tests/test_tuning.py tests/test_target.py tests/test_parallel.py tests/test_validation.py tests/test_statistics.py tests/test_docstrings.py
+tests/test_kernels.py:329: AssertionError
+______ test_products_use_blas_exactly_for_a_vectorized_target[mala-True] _______
+name = 'mala', vectorize = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3a7a3f1cc0>
+    @pytest.mark.parametrize("vectorize", [False, True])
+    @pytest.mark.parametrize(
+        "name", ["reflection", "maximal", "independence", "mixture", "mala", "hmc", "pilot"]
+    )
+    def test_products_use_blas_exactly_for_a_vectorized_target(name, vectorize, monkeypatch):
+        # MultivariateT, and so Independence, receives no target and never uses BLAS. The
+        # spy records the flag of each product that goes through `matvec`, and each use of
+        # `@`, BLAS's product, there; a product computed outside `matvec` escapes it.
+        flags, matmuls = [], []
+    
+        class Recorded(np.ndarray):
+            def __matmul__(self, other):
+                matmuls.append(other)
+                return super().__matmul__(other)
+    
+        def spy(matrix, vectors, *, blas):
+            flags.append(blas)
+            return np.asarray(matvec(matrix, vectors.view(Recorded), blas=blas))
+    
+        for module in (random_walk, mala, hmc, couplings, independence, tuning):
+            monkeypatch.setattr(module, "matvec", spy)
+        target = Target(gaussian_log_prob, grad=lambda x: -x, vectorize=vectorize)
+        if name == "pilot":
+            tuning.adaptive_metropolis(target, initial.Normal(np.zeros(2), np.ones(2)), 0, n_steps=200)
+        else:
+            kernel = kernels(np.eye(2))[name]
+            x, y = (state(np.full((3, 2), value), grad=True) for value in (0.0, 1.0))
+            kernel.step(target, x, random_draws(3, 0))
+            kernel.coupled_step(target, x, y, random_draws(3, 1))
+>       assert flags
+E       assert []
+tests/test_kernels.py:329: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_kernels.py::test_products_use_blas_exactly_for_a_vectorized_target[mala-False]
+FAILED tests/test_kernels.py::test_products_use_blas_exactly_for_a_vectorized_target[mala-True]
+2 failed, 612 passed, 26 deselected in 47.14s
+
+The slow statistical tests whose cases build MALA, with the same patch:
+python -m pytest -p wm_patch -p no:cacheprovider -q -rf -m slow tests/test_statistics.py -k "mala-d5-lag7 or mixture-d5 or mala-nan-gradient"
+...                                                                      [100%]
+3 passed, 18 deselected in 0.80s
+
+real	0m1.405s
+user	0m1.359s
+sys	0m0.048s

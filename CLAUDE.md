@@ -6,11 +6,11 @@ Rhee (2014) and Jacob, O'Leary & Atchadé (2020).
 
 ## Start here
 
-- Read the tracking issue of the current phase on GitHub, now #65 (the tune-up; this
-  line is updated when a new phase opens its issue): the State table in its body is the
-  current position, and its last log comments say what the latest sessions did. Then
-  read the open items of `notes/QUESTIONS.md`. `notes/PLAN.md` and `notes/LOG.md` are
-  the closed record of the first draft (#1).
+- Read the tracking issue of the current phase on GitHub, now #162 (the phase after the
+  tune-up of #65; this line is updated when a new phase opens its issue): the State table
+  in its body is the current position, and its last log comments say what the latest
+  sessions did. Then read the open items of `notes/QUESTIONS.md`. `notes/PLAN.md` and
+  `notes/LOG.md` are the closed record of the first draft (#1).
 - The requirement is `docs/design/spec.md`. Tests follow `docs/design/test-plan.md`, and
   the order of work follows `docs/design/implementation-plan.md`.
 - A change to the package or to the documentation follows `.claude/rules/docs-upkeep.md`.
