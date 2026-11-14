@@ -92,16 +92,16 @@ jobs:
       # The identity's files and the landing page's coupled pair match their sources.
       - run: python docs/_scripts/brand.py --check
       - run: python docs/_scripts/hero_pair.py --check
+      # The doctrees go beside the site, not into it, so that they are not published.
       - name: Build, with warnings as errors, executing the tutorials
-        run: sphinx-build -W --keep-going docs docs/_build/html
-      # The site of main is what the deploy job publishes.
+        run: sphinx-build -W --keep-going -d docs/_build/doctrees docs docs/_build/html
       - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v4
         with:
           path: docs/_build/html
 
   deploy:
-    # Publishes the site that the docs job built, on a push to main only.
+    # Publishes the site that the docs job built.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: docs
     runs-on: ubuntu-latest
@@ -109,7 +109,7 @@ jobs:
     permissions:
       pages: write
       id-token: write
-    # A newer deployment waits for a running one instead of canceling it.
+    # The group of Pages deployments: a running one is never canceled.
     concurrency:
       group: pages
       cancel-in-progress: false
