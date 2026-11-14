@@ -344,6 +344,9 @@ regression whose block of 3 coefficients has a normal conditional, pairs meet af
 median of 147.1 sweeps, averaged over 5 seeds, with NumPy's Cholesky method, as many as
 with the Cholesky factor written out, and 205.4 with SciPy's `multivariate_normal`.
 
+Setup of these runs: telescopic at commit 9be9024, Python 3.13.18, NumPy 2.5.4 and SciPy
+1.18.1, `OMP_NUM_THREADS=1`, on an Intel Xeon processor at 2.10 GHz with 4 logical cores.
+
 A Gibbs kernel needs no log-density, so `log_prob` can be `None`, and has nothing to
 tune:
 
