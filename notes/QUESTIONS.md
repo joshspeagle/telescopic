@@ -47,5 +47,6 @@ Each item has the default that work proceeds on until Josh answers.
   the check ships** (wrong families with a float32 `log_prob`, a point start at the mode
   and a held coordinate; the after-pilot design (T)). Default, which the change for #123
   builds: (a), and no third round, with the review's limits documented from its
-  measurements, a warning when the check compared no line, and (T) as a research item
-  with its own registered test (DECISIONS #159).
+  measurements, which `notes/experiments/x123/guide_figures.py` repeats with the
+  package's check (DECISIONS #172), a warning when the check compared no line, and
+  (T) as a research item with its own registered test (DECISIONS #159).
