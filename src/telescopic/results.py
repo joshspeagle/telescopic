@@ -40,6 +40,8 @@ _WRAP = textwrap.TextWrapper(
 # A float in a kernel's repr: digits with a point or an exponent, not inside a name or a
 # dotted token such as a version, 3.10.12.
 _FLOAT = re.compile(r"(?<![\w.])\d+(?:\.\d*(?:[eE][-+]?\d+)?|[eE][-+]?\d+)(?![\w.])")
+# The floats of the atoms that the covariance weights at a time, 1 MiB (DECISIONS #180).
+_BLOCK = 2**17
 
 
 def _four_figures(match: re.Match[str]) -> str:
@@ -264,8 +266,13 @@ class Result:
         self._require(2)
         centered, first = self._centered()
         weights = self.measure.weights
-        second = centered.T @ (weights[:, None] * centered) / self.n_replicates
-        return unbiased_covariance(first, second)
+        # Summed over blocks of rows, so that the weighted copy is one block, not the atoms.
+        second = np.zeros((self.ndim, self.ndim))
+        rows = max(1, _BLOCK // self.ndim)
+        for start in range(0, len(weights), rows):
+            block = centered[start : start + rows]
+            second += block.T @ (weights[start : start + rows, None] * block)
+        return unbiased_covariance(first, second / self.n_replicates)
 
     def var(self) -> FloatArray:
         r"""Unbiased estimates of the variances; they can be negative.
@@ -280,10 +287,8 @@ class Result:
         ndarray, shape (d,)
         """
         self._require(2)
-        centered, first = self._centered()
-        weights = self.measure.weights
-        second = np.einsum("i,ij,ij->j", weights, centered, centered) / self.n_replicates
-        return unbiased_variance(first, second)
+        first, second = self._moments
+        return unbiased_variance(first, second.mean(axis=0))
 
     def std(self) -> FloatArray:
         r"""Standard deviations :math:`\sqrt{\max(0, \widehat{\mathrm{Var}})}`.
@@ -327,7 +332,11 @@ class Result:
         atoms = self.measure.atoms
         first = np.concatenate([[True], np.any(atoms[1:] != atoms[:-1], axis=1)]).nonzero()[0]
         weights = np.add.reduceat(self.measure.weights, first) / self.n_replicates
-        values = atoms[first] if h is None else values_of(h, atoms[first])
+        if h is None:
+            # One column gathered at a time: a copy of the merged rows would hold most atoms.
+            columns = [weighted_quantile(atoms[first, j], weights, q) for j in range(self.ndim)]
+            return np.stack(columns, axis=-1)
+        values = values_of(h, atoms[first])
         quantiles: FloatArray = np.apply_along_axis(weighted_quantile, 0, values, weights, q)
         return quantiles
 
@@ -504,10 +513,7 @@ class Result:
         if self.n_replicates >= 2:
             # The second moments about the atoms' mean, which the variances use: about 0,
             # far from it, they would vary with the means and hide their own spread.
-            centered, first = self._centered()
-            # Squared in place: the centered atoms are not read again.
-            second = self.measure.per_replicate(lambda _: np.square(centered, out=centered))
-            values = np.concatenate([first, second], axis=1)
+            values = np.concatenate(self._moments, axis=1)
             shares = diagnostics.variance_share(values)
             worst = int(np.argmax(shares))
             moment = "mean" if worst < self.ndim else "variance"
@@ -754,6 +760,15 @@ class Result:
         which = np.searchsorted(edges, values, side="right") - 1
         which[values == edges[-1]] = bins - 1
         return which, edges
+
+    @functools.cached_property
+    def _moments(self) -> tuple[FloatArray, FloatArray]:
+        # Each replicate's first and second moments of the atoms about their mean, (R, d)
+        # each, which var and the diagnostics share: 2 R d floats, not the N x d atoms.
+        centered, first = self._centered()
+        # Squared in place: the centered atoms are not read again.
+        second = self.measure.per_replicate(lambda _: np.square(centered, out=centered))
+        return first, second
 
     def _centered(self) -> tuple[FloatArray, FloatArray]:
         # The atoms about their mean, and each replicate's mean of them. Each replicate's

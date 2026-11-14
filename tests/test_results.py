@@ -8,7 +8,7 @@ import pytest
 from scipy import stats
 
 from references import gaussian_log_prob, synthetic
-from telescopic import examples, sample
+from telescopic import examples, results, sample
 from telescopic.diagnostics import w1_bound
 from telescopic.engine import run
 from telescopic.estimators import unbiased_covariance, unbiased_variance, weighted_quantile
@@ -93,7 +93,13 @@ def test_estimates_from_too_few_replicates_that_met_raise(meeting_times, method,
         method(result)
 
 
-def test_the_covariance_combines_first_and_second_moments_coordinate_by_coordinate():
+@pytest.mark.parametrize("block", [results._BLOCK, 14])
+def test_the_covariance_combines_first_and_second_moments_coordinate_by_coordinate(
+    block, monkeypatch
+):
+    # In one block of rows, and in blocks of 7 rows, the last one partial.
+    monkeypatch.setattr(results, "_BLOCK", block)
+    assert len(RESULT.measure.weights) % 7
     first = RESULT.measure.per_replicate(lambda x: x)
     second = np.array(
         [
@@ -109,6 +115,15 @@ def test_the_covariance_combines_first_and_second_moments_coordinate_by_coordina
     np.testing.assert_array_equal(covariance, covariance.T)
     np.testing.assert_allclose(RESULT.var(), np.diag(covariance), rtol=1e-12)
     np.testing.assert_allclose(RESULT.std(), np.sqrt(np.maximum(0, np.diag(covariance))))
+
+
+def test_variances_are_the_same_before_and_after_the_diagnostics():
+    # var and the diagnostics read the same cached moments, which neither may change.
+    before, after = gaussian_result(), gaussian_result()
+    variances = before.var()
+    after.diagnostics()
+    np.testing.assert_array_equal(after.var(), variances)
+    np.testing.assert_array_equal(before.var(), variances)
 
 
 def test_variances_stay_exact_far_from_the_origin():
