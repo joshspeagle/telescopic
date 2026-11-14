@@ -68,6 +68,7 @@ start/coming-from-emcee
 :caption: Tutorials
 
 tutorials/how-it-works
+tutorials/unbiased-on-average
 tutorials/choosing-settings
 tutorials/gradients
 tutorials/gibbs
