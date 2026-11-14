@@ -27,11 +27,25 @@ Each item has the default that work proceeds on until Josh answers.
   Josh ruled on issue #89 (2026-11-13): an opt-in tuning that puts contraction first
   (issue #91), which becomes the default if its pre-registered test passes.
 
-- [ ] **What a warning of the gradient check means (issue #123).** A check limited only
-  by numerical noise warns on any `grad` that is not the derivative of `log_prob` as
-  computed, which includes gradients that do no harm: the exact gradient of a log-density
-  from a solver at tolerance 1e-5, a factor of 1.005, a prior left out. A relative floor
-  silences those and misses a wrong coordinate whose share of a line's predicted change
-  is below half the floor. The second pre-registered experiment records what floors of
-  1e-6, 1e-4 and 1e-2 would have decided. Default: no floor, a message that states the
-  size of the disagreement, and the documented way to turn the check off.
+- [ ] **The gradient check: on by default, and a third round? (issue #123).** The
+  second pre-registered experiment passed for the noise-limited design (N): no warning in
+  32,700 checks of 109 correct families, and a warning in every check of 46 harmful wrong
+  gradients, at 40 evaluations of `log_prob` and 8 of `grad` at any dimension
+  (`notes/experiments/x123/RESULT.md`). Its adversarial review weakened what that
+  supports (`review/REVIEW.md`): (N) also warns on gradients that are approximate by
+  design (a solver, numerical differences, single precision behind a float64 return, a
+  factor of 1.005, a prior left out), harmless wherever their harm was measured, and it
+  is blind from a
+  start at a mode, to an error away from the starts, above about 1e9 in |`log_prob`| and
+  with a float32 `log_prob` in high dimension. No floor computed on a line separates the
+  harmful from the harmless: every relative floor that silences part of the harmless
+  group also loses warnings on harmful ones. Two rulings are asked (comment of
+  2026-11-14 on #123). **1. What the package does when a sampler is built with `grad`:**
+  (a) (N) runs by default, warns with the size of the disagreement and is turned off by
+  `check_grad=False`; (b) the check is opt-in; (c) the design with the sampler's floor
+  (H) by default and (N) on request. **2. Whether the record needs a third round before
+  the check ships** (wrong families with a float32 `log_prob`, a point start at the mode
+  and a held coordinate; the after-pilot design (T)). Default, which the change for #123
+  builds: (a), and no third round, with the review's limits documented from its
+  measurements, a warning when the check compared no line, and (T) as a research item
+  with its own registered test (DECISIONS #159).
