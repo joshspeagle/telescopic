@@ -58,6 +58,13 @@ def test_signed_measure_refuses_replicate_indices_that_are_not_integers_in_range
         SignedMeasure(np.ones((3, 1)), np.ones(3), np.array(replicate), 2)
 
 
+def test_signed_measure_rejects_unsorted_replicate():
+    # The sums are built from each replicate's range of consecutive atoms, so an unsorted
+    # replicate would assign atoms to the wrong replicates.
+    with pytest.raises(ValueError, match="replicate must be in nondecreasing order"):
+        SignedMeasure(np.ones((3, 1)), np.ones(3), np.array([1, 0, 1]), 2)
+
+
 @pytest.mark.parametrize(
     ("atoms", "weights", "message"),
     [

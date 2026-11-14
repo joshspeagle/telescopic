@@ -320,3 +320,6 @@ All notable changes to this project are documented here. The format follows
 - `Result.var`, `Result.std` and the diagnostics share each replicate's moments,
   computed once, so `summary()` centers the atoms once; `var` and `std` can differ from
   before in the last bits.
+- `SignedMeasure` requires `replicate` in nondecreasing order, each replicate's atoms
+  consecutive, and raises `ValueError` otherwise; its sums share the weights and hold
+  8 bytes per atom fewer.
