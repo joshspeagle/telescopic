@@ -1,4 +1,4 @@
-commit f4d03ba; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+commit 3029130; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
 command: python notes/experiments/x123/package_equivalence.py
 family k at seeds 230000 + 10 k + (0..9); columns: lines, gaps and tolerances identical; decisions identical (registered, package record, package warning); unusable lines and skipped points identical; warnings of the registered (N); compared lines
 [  0] A N(0, 1e-08^2 I) d=5, matched                                             | 10 10 10 | N  0 | lines 80
@@ -174,4 +174,4 @@ family k at seeds 230000 + 10 k + (0..9); columns: lines, gaps and tolerances id
 [170] F N(0,I) d=1000, start sd (0.25, 2, ...): sign of coordinate 0             | 10 10 10 | N 10 | lines 80
 total of 1710 checks, 583 warned by (N): lines identical 1710, decisions identical 1710, counts identical 1710
 dtype that narrows after the first draw, seeds 239000..239049: lines identical 50/50, decisions identical 50/50, counts identical 50/50
-an error inside the check: RuntimeError: the gradient check, which compares grad with differences of log_prob at draws of the initial distribution when the sampler is built, raised: a log_prob that fails; pass check_grad=False to skip it (cause: ZeroDivisionError)
+an error inside the check: ZeroDivisionError: a log_prob that fails (notes: ['raised in the gradient check, which evaluates log_prob and grad at draws of the initial distribution when the sampler is built'])

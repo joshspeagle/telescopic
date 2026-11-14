@@ -254,7 +254,7 @@ and of the start 100 times tighter come from the test fixed in advance, run with
 code, which the package's check reproduces line for line; the others were measured with
 the package's check.
 
-Setup of these runs: telescopic at commit COMMIT-G (7b2c992 for the test fixed in
+Setup of these runs: telescopic at commit 3029130 (7b2c992 for the test fixed in
 advance), Python 3.13.18, NumPy 2.5.4 and SciPy 1.18.1, `OMP_NUM_THREADS=1`, on an Intel
 Xeon processor at 2.10 GHz with 4 logical cores.
 

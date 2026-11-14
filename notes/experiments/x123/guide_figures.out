@@ -1,0 +1,31 @@
+commit 3029130; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/guide_figures.py
+== a correct gradient can warn (fa1.py)
+periodic term, 1e5 periods across the start, d = 1: 48 of 200
+periodic term, 1e6 periods across the start, d = 1: 200 of 200
+piecewise-linear table of spacing 1e-5, d = 5, start sd 2: 143 of 200
+== gradients approximate by design
+grad computed from float32 x, returned as float64 (fa4.py), N(0,I) d=5: 195 of 200
+grad computed from float32 x, returned as float64 (fa4.py), N(0,I) d=1000 start sd 2: 0 of 200
+grad computed from float32 x, returned as float64 (fa4.py), N(1e3,I) d=5: 200 of 200
+grad computed from float32 x, returned as float64 (fa4.py), N(1e6,I) d=5: 200 of 200
+grad computed from float32 x, returned as float64 (fa4.py), Student t3 d=5 start sd 2: 196 of 200
+grad computed from float32 x, returned as float64 (fa4.py), logistic n=1e4 d=5: 0 of 100
+grad computed from float32 x, returned as float64 (fa4.py), rotated cond 1e4 d=10: 200 of 200
+grad computed from float32 x, returned as float64 (fa4.py), funnel: 200 of 200
+grad computed from float32 x, returned as float64 (fa4.py), banana: 200 of 200
+grad computed from float32 x, returned as float64 (fa4.py), pumps: 30 of 200
+targets with 195 to 200 warnings of 200: 7 of 10
+forward differences as grad (fa5.py), N(0,I) d=5: 198 of 200
+forward differences as grad (fa5.py), Student t3 d=5 start sd 2: 194 of 200
+forward differences as grad (fa5.py), banana: 200 of 200
+forward differences as grad (fa5.py), logistic n=1e4 d=5: 0 of 50
+ODE log-density by adaptive RK45 at rtol 1e-6, gradient of the exact solution (fa2.py solver): 100 of 100
+== silence is weak evidence (cases5.py, wrong gradients)
+N(0,I) d=5, point start at the mode: wrong sign: 0 of 200
+N(0,I) d=5, start sd 0.1: gradient right for |x| < 1, wrong sign outside: 0 of 200
+N(0,I) - 1e+10 d=5, start sd 2: sign of coordinate 0: 0 of 200
+float32 throughout, N(0,I) d=200, start sd 2: sign of coordinate 0: 196 of 200
+float32 throughout, N(0,I) d=1000, start sd 2: sign of coordinate 0: 37 of 200
+float32 throughout, N(0,I) d=10000, start sd 2: sign of coordinate 0: 0 of 100
+half-normal d=3 (x >= 0), start with coordinate 0 on the boundary: wrong sign: warned that grad disagrees 0, compared no line 200, of 200
