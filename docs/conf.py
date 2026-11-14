@@ -113,6 +113,8 @@ html_theme = "telescopic"
 html_theme_path = ["_themes"]
 html_theme_options = {"source_repository": "https://github.com/joshspeagle/telescopic"}
 html_title = f"telescopic {release}"
+# The address of the published site, for each page's canonical link.
+html_baseurl = "https://joshspeagle.com/telescopic/"
 html_favicon = "_themes/telescopic/static/brand/favicon.svg"
 # No template links a page's source and search reads the built pages, so _sources/ would
 # only be dead weight.
