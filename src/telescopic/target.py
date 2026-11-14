@@ -38,7 +38,8 @@ class Target:
     kwargs : mapping, optional
         Extra keyword arguments passed to them.
     vectorize : bool
-        Whether ``log_prob`` and ``grad`` accept a batch of points.
+        Whether ``log_prob`` and ``grad`` accept a batch of points. Kernels then also
+        compute their matrix products with BLAS, for a batch of chains at once.
 
     Notes
     -----

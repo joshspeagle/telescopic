@@ -19,7 +19,13 @@ __all__ = ["discrete_maximal", "maximal", "reflection_maximal"]
 
 # Spec R-CPL-1.
 def reflection_maximal(
-    mu_x: FloatArray, mu_y: FloatArray, chol: FloatArray, inverse: FloatArray, draws: Draws
+    mu_x: FloatArray,
+    mu_y: FloatArray,
+    chol: FloatArray,
+    inverse: FloatArray,
+    draws: Draws,
+    *,
+    blas: bool = False,
 ) -> tuple[FloatArray, FloatArray, BoolArray]:
     r"""Reflection-maximal coupling of :math:`\mathcal N(\mu_x, CC^\top)` and :math:`\mathcal N(\mu_y, CC^\top)`.
 
@@ -41,6 +47,11 @@ def reflection_maximal(
         :math:`C^{-1}`, which whitens the difference of the means.
     draws : Draws
         Random numbers for the ``n`` rows; each row uses ``d`` normals and 1 uniform.
+    blas : bool
+        Whether to compute the products with :math:`C` and :math:`C^{-1}` by BLAS, which
+        is several times faster beyond a few dimensions but gives a row bits that depend
+        on the other rows; kernels set it for vectorized targets. Otherwise a row's
+        arithmetic does not depend on the other rows.
 
     Returns
     -------
@@ -54,15 +65,15 @@ def reflection_maximal(
     # Infinite means, from a drift that overflowed, can give inf - inf = NaN, which fails
     # the test as it should.
     with np.errstate(invalid="ignore"):
-        delta = matvec(inverse, mu_x - mu_y)
+        delta = matvec(inverse, mu_x - mu_y, blas)
         squared = np.einsum("ij,ij->i", delta, delta)
         identical = log_u < -np.einsum("ij,ij->i", z, delta) - 0.5 * squared
     norm = np.sqrt(squared)[:, None]
     # e = 0 where the norm is 0 or not finite: y is then mu_y + C z, which keeps its law.
     e = np.divide(delta, norm, out=np.zeros_like(delta), where=(norm > 0) & (norm < np.inf))
     reflected = z - 2.0 * np.einsum("ij,ij->i", e, z)[:, None] * e
-    x = mu_x + matvec(chol, z)
-    y = np.where(identical[:, None], x, mu_y + matvec(chol, reflected))
+    x = mu_x + matvec(chol, z, blas)
+    y = np.where(identical[:, None], x, mu_y + matvec(chol, reflected, blas))
     return x, y, identical
 
 

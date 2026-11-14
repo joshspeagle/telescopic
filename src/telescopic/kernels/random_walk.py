@@ -109,7 +109,7 @@ class RandomWalk(Kernel):
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         chol, _ = self._ready()
-        x = state.x + matvec(chol, draws.normal(len(chol)))
+        x = state.x + matvec(chol, draws.normal(len(chol)), target.vectorize)
         proposal = evaluate(target, x, state.grad is not None)
         log_alpha = log_ratio(proposal.log_prob, state.log_prob)
         accepted = draws.log_uniform() < log_alpha
@@ -120,7 +120,9 @@ class RandomWalk(Kernel):
     ) -> tuple[State, State]:
         chol, inverse = self._ready()
         if self.coupling == "reflection":
-            x, y, identical = reflection_maximal(state_x.x, state_y.x, chol, inverse, draws)
+            x, y, identical = reflection_maximal(
+                state_x.x, state_y.x, chol, inverse, draws, blas=target.vectorize
+            )
         else:
             x, y, identical, _ = maximal(
                 [_Gaussian(mean, chol, inverse) for mean in state_x.x],

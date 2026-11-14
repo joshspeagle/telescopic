@@ -72,7 +72,8 @@ batch = telescopic.Target(
 one.log_prob(points), batch.log_prob(points), one.n_log_prob
 ```
 
-With `vectorize=True`, a replicate's results can depend in the last bits on how the
+With `vectorize=True`, the kernels also compute their matrix products with BLAS, for a
+batch of chains at once, and a replicate's results depend in the last bits on how the
 replicates are batched ([Parallel runs](parallel.md#reproducibility)).
 
 ## Special values

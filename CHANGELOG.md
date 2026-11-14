@@ -337,3 +337,12 @@ All notable changes to this project are documented here. The format follows
   shortens the import, and with it the start of each worker of a process pool; the first
   call that needs `scipy.stats`, such as the end of the first run of `sample`, pays its
   import once.
+- With a vectorized target (`vectorize=True`), RandomWalk, MALA, HMC and the tuning
+  pilot compute their products of a batch of chains with a matrix by BLAS, several times
+  faster beyond a few dimensions: whole runs at 200 dimensions took 2.3 times less
+  processor time with RandomWalk and 3.5 times less with MALA. Such a run is bitwise
+  identical when repeated with the same seed and layout, and agrees statistically, no
+  longer bitwise, with runs of other lane counts, pools, merges and later calls of a
+  sampler; its seeded outputs move in the last bits. A target evaluated point by point
+  keeps every bitwise guarantee. `couplings.reflection_maximal` takes `blas=True` to do
+  the same.

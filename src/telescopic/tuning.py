@@ -251,7 +251,7 @@ def adaptive_metropolis(
             # A ridge of 1e-12 times each coordinate's variance, which keeps the
             # factorization independent of the coordinates' scales.
             chol = np.linalg.cholesky(total / (step + 1) * ridge)
-        steps = np.exp(0.5 * log_scale)[:, None] * matvec(chol, draws.normal(d))
+        steps = np.exp(0.5 * log_scale)[:, None] * matvec(chol, draws.normal(d), target.vectorize)
         proposal_log_p = target.log_prob(x + steps)
         # A NaN log ratio (-inf - -inf) is a rejection, with acceptance probability 0.
         with np.errstate(invalid="ignore"):

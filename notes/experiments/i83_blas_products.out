@@ -1,0 +1,27 @@
+setup: commit 3dc2412-dirty of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
+before: commit 3dc2412; after: this checkout; children run with {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1'}
+load average before: (1.95, 1.7, 1.76)
+
+1. Moved numbers: 64 replicates, k = 10, m = 50, lag 1, max_iter = 2000, rng = 1
+RandomWalk         d =   2: hash 52e67fed8a27 -> b753857cc711; meeting times that differ  0 of 64, censored  0; E[x^2] largest relative difference 1.4e-15; E[x] largest difference 2.0e-16 standard errors
+RandomWalk         d =  20: hash e337451017a8 -> 5154b756d709; meeting times that differ  0 of 64, censored  0; E[x^2] largest relative difference 1.9e-14; E[x] largest difference 2.2e-15 standard errors
+RandomWalk         d = 200: hash bf2404a610ba -> 679d1f771a96; meeting times that differ  0 of 64, censored 63; E[x^2] largest relative difference 1.1e-13; E[x] largest difference 2.3e-13 standard errors
+RandomWalk maximal d =   2: hash b45e1ff4f624 -> 60ce7a39339b; meeting times that differ  0 of 64, censored  0; E[x^2] largest relative difference 1.8e-16; E[x] largest difference 0.0e+00 standard errors
+RandomWalk maximal d =  20: hash d46ff5fb4c73 -> d46ff5fb4c73; meeting times that differ  0 of 64, censored 64
+RandomWalk maximal d = 200: hash d46ff5fb4c73 -> d46ff5fb4c73; meeting times that differ  0 of 64, censored 64
+Independence       d =   2: hash a06277d56a48 -> a06277d56a48; meeting times that differ  0 of 64, censored  0; E[x^2] largest relative difference 0.0e+00; E[x] largest difference 0.0e+00 standard errors
+Independence       d =  20: hash d435459e701a -> d435459e701a; meeting times that differ  0 of 64, censored  0; E[x^2] largest relative difference 0.0e+00; E[x] largest difference 0.0e+00 standard errors
+Independence       d = 200: hash 8aa956196f43 -> 8aa956196f43; meeting times that differ  0 of 64, censored  0; E[x^2] largest relative difference 0.0e+00; E[x] largest difference 0.0e+00 standard errors
+MALA               d =   2: hash 216cc5f45bd8 -> 9b40aa007fa6; meeting times that differ  0 of 64, censored  0; E[x^2] largest relative difference 2.3e-16; E[x] largest difference 1.4e-16 standard errors
+MALA               d =  20: hash 282b22719bc9 -> 039e4ca358ee; meeting times that differ  0 of 64, censored  0; E[x^2] largest relative difference 3.6e-16; E[x] largest difference 2.4e-15 standard errors
+MALA               d = 200: hash 8ff82be7bce0 -> 279404dda6a8; meeting times that differ  0 of 64, censored  0; E[x^2] largest relative difference 3.2e-15; E[x] largest difference 1.8e-14 standard errors
+HMC                d =   2: hash 4d6c91ec345d -> 63effee07ccb; meeting times that differ 19 of 64, censored  0; E[x^2] largest relative difference 3.7e-04; E[x] largest difference 5.1e-02 standard errors
+HMC                d =  20: hash e67be5a18bdc -> 3365355c200c; meeting times that differ  0 of 64, censored  0; E[x^2] largest relative difference 8.7e-16; E[x] largest difference 8.9e-14 standard errors
+HMC                d = 200: hash 863e7657b5e7 -> c62f94093dbe; meeting times that differ  0 of 64, censored  0; E[x^2] largest relative difference 3.2e-15; E[x] largest difference 4.3e-14 standard errors
+
+2. Gain: 256 replicates, k = 10, m = 200, lag 1, max_iter = 1000, rng = 2; 7 rounds after one uncounted
+RandomWalk d =  20: processor seconds median 0.36 before, 0.35 after; before/after per round: median 1.13, range 0.84 to 1.48
+RandomWalk d = 200: processor seconds median 13.94 before, 5.93 after; before/after per round: median 2.34, range 1.92 to 2.57
+MALA       d =  20: processor seconds median 0.19 before, 0.13 after; before/after per round: median 1.40, range 1.00 to 2.30
+MALA       d = 200: processor seconds median 5.53 before, 1.65 after; before/after per round: median 3.45, range 2.96 to 3.77
+load average after: (2.98, 2.46, 2.08)

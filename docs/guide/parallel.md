@@ -137,11 +137,18 @@ index, so its output does not depend on where it runs. With a log-density evalua
 by point (`vectorize=False`, the default), the replicates are bitwise identical in any
 pool, with any number of workers and chunks, on one machine with the same NumPy and SciPy
 versions; generator algorithms, SciPy's samplers and BLAS builds can change between
-versions and machines. A vectorized log-density can differ in the last bits between batch
-layouts, so there the agreement is statistical. So can functions of your own that call
+versions and machines. With a vectorized log-density (`vectorize=True`), the kernels also
+compute their matrix products for a batch of chains at once, with BLAS, which is several
+times faster beyond a few dimensions, and BLAS gives a chain last bits that depend on the
+other chains of its batch. A replicate's output then depends in the last bits on the
+replicates that ran beside it, so runs with other numbers of workers or chunks, merged
+runs and a sampler's later calls agree with each other statistically; a run repeated with
+the same seed, the same layout, the same BLAS build and the same number of BLAS threads
+is bitwise identical. Functions of your own that call
 multithreaded BLAS or LAPACK, such as a SciPy multivariate normal of 200 dimensions as
-the initial distribution, since this process keeps its BLAS threads. Limiting it to one
-thread, with `threadpoolctl.threadpool_limits(1)`, makes them agree again. We compare the first run
+the initial distribution, can also differ in the last bits between this process and
+workers, since this process keeps its BLAS threads. Limiting it to one thread, with
+`threadpoolctl.threadpool_limits(1)`, makes them agree again. We compare the first run
 above, on two workers, with the same run in this process:
 
 ```{code-cell} python

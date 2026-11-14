@@ -165,7 +165,7 @@ class _Leapfrog(GradientKernel):
         return math.ceil(1 / max(self.step_size, 1 / MAX_STEPS))
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
-        end, log_alpha = self._trajectory(target, state, draws.normal(state.x.shape[1]))
+        end, log_alpha = self._trajectory(target, state, draws.normal(state.x.shape[1]), 1)
         accepted = draws.log_uniform() < log_alpha
         return select(accepted, end, state), acceptance(log_alpha)
 
@@ -180,7 +180,7 @@ class _Leapfrog(GradientKernel):
             np.concatenate([state_x.log_prob, state_y.log_prob]),
             np.concatenate([cast(FloatArray, state_x.grad), cast(FloatArray, state_y.grad)]),
         )
-        end, log_alpha = self._trajectory(target, both, np.concatenate([momentum, momentum]))
+        end, log_alpha = self._trajectory(target, both, np.concatenate([momentum, momentum]), 2)
         log_u = draws.log_uniform()
         moved = select(np.concatenate([log_u, log_u]) < log_alpha, end, both)
         grad = cast(FloatArray, moved.grad)
@@ -194,27 +194,35 @@ class _Leapfrog(GradientKernel):
         return float(d**-0.25)
 
     def _trajectory(
-        self, target: Target, state: State, momentum: FloatArray
+        self, target: Target, state: State, momentum: FloatArray, chains: int
     ) -> tuple[State, FloatArray]:
         # The end of each trajectory and its log acceptance ratio, -inf for a trajectory
         # that stopped. Stopped rows keep moving in the arithmetic, never in the target.
+        # The rows hold the states of `chains` chains one after the other; each chain's
+        # products are a separate BLAS call of the same shape, so that chains that met
+        # stay equal.
         if self._chol is None or self.step_size is None:
             raise ValueError(
                 "HMC needs step_size and cov; give them, or tune the kernel on a pilot run"
             )
         chol, epsilon, length = self._chol, self.step_size, cast(int, self.n_steps)
         x, grad = state.x, cast(FloatArray, state.grad)
+
+        def product(matrix: FloatArray, vectors: FloatArray) -> FloatArray:
+            stacked = vectors.reshape(chains, -1, vectors.shape[1])
+            return matvec(matrix, stacked, target.vectorize).reshape(vectors.shape)
+
         going = np.ones(len(x), dtype=bool)
         with np.errstate(over="ignore", invalid="ignore"):
             start = state.log_prob - 0.5 * np.einsum("ij,ij->i", momentum, momentum)
-            momentum = momentum + 0.5 * epsilon * matvec(chol.T, grad)
+            momentum = momentum + 0.5 * epsilon * product(chol.T, grad)
             for leap in range(length):
-                x = x + epsilon * matvec(chol, momentum)
+                x = x + epsilon * product(chol, momentum)
                 reached = evaluate_proposal(target, x, going)
                 log_prob, grad = reached.log_prob, cast(FloatArray, reached.grad)
                 going = np.isfinite(log_prob)
                 kick = epsilon if leap < length - 1 else 0.5 * epsilon
-                momentum = momentum + kick * matvec(chol.T, grad)
+                momentum = momentum + kick * product(chol.T, grad)
             # From a start outside the support (log pi = -inf) any finite end is accepted.
             log_alpha = log_prob - 0.5 * np.einsum("ij,ij->i", momentum, momentum) - start
         return State(x, log_prob, grad), np.where(going, log_alpha, -np.inf)
