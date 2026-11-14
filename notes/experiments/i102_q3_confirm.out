@@ -1,3 +1,4 @@
+setup: commit d014ac1 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
 jobs stopped at 540 s (rule not evaluated): [('bimodal d=2 s=6', 44), ('bimodal d=10 s=12', 44), ('bimodal d=10 s=12', 47), ('extra funnel default', 312)]
   bimodal d=2 s=6 seed 44: truth unknown; R-hat warn 0, statistic 10.8, rule fires 1
   bimodal d=10 s=12 seed 44: truth unknown; R-hat warn 0, statistic 27.7, rule fires 1
@@ -709,4 +710,4 @@ per cell: wrong / raised / runs | fires on wrong | fires on right | R-hat warn |
   student4 d=10 tight             0/ 0/20 | n=0                | 0/20 [0.00, 0.17]  |  0 |  0 | 0.250 0.0014
   extra funnel default           11/ 0/19 | 0/11 [0.00, 0.28]  | 0/8 [0.00, 0.37]   |  8 |  8 | 0.250 0.0007  (information only)
 
-sum of job seconds 5352; wall time 2 s (shared machine)
+sum of job seconds 5666; wall time 2 s (shared machine)

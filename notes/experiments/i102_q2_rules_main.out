@@ -1,3 +1,4 @@
+setup: commit d014ac1 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
 pre-tuned runs equal telescopic.sample to 1e-12 (bimodal d=10 s=6, seeds 0, 1)
 
 raw table (main): cell | seed | n_steps pilot-evals run-evals k m=10k tau_max | estimate se z wrong | q-side Lmax Lmed disagree | R0a R0b | R1 half_dens at (m=16, n=n_steps/16) | (m=32, n=n_steps/8) | warnings
@@ -662,4 +663,4 @@ extra funnel default           | 117 |   2000   8004 16059342 3818 38180 102104 
 extra funnel default           | 118 |   2000   8004  8512231 2041 20410  59689 |    1.1971   0.2295      5.22 1 | +1   17.79   10.48 0 |     -1.0      1.6 |     -1.8 |     -0.8 | 1 one replicate holds 100% of the variance  thin=3
 extra funnel default           | 119 |   2000   8004  8794725 2136 21360  22050 |    1.4024   0.0698     20.09 1 | +1   17.44   10.34 1 |     -0.2      3.1 |     -3.4 |     -1.1 | 1 one replicate holds 71% of the variance   thin=3
 
-wall time 3 s (shared machine; not a measurement)
+wall time 4 s (shared machine; not a measurement)

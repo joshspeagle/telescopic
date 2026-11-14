@@ -29,7 +29,9 @@ its R-hat warning then fires in 19 of 20 and 20 of 20 runs (d = 10 and 32, s = 6
 the warning fires exactly in the runs that split (5 of 20 and 2 of 20), whose proposal
 then spans both modes.
 
-Ran against commit c961089, in about five minutes on three workers.
+Ran against commit c961089, in about five minutes on three workers. Rerun for issue #85 at
+the commit that the first line of its output records, with the same result, in about
+nine minutes on one worker.
 
 Run: python notes/experiments/i102_q1_split.py [workers]   (default 3)
 """
@@ -39,6 +41,7 @@ import time
 from multiprocessing import Pool
 
 import numpy as np
+from i85_setup import setup
 from i102_common import pilot, two_modes
 
 from telescopic.initial import Normal
@@ -134,6 +137,7 @@ def show_trace(d, s, seed):
 
 if __name__ == "__main__":
     t0 = time.time()
+    print(setup())
     check_copy()
     for seed in (0, 1, 2):
         show_trace(10, 6, seed)
