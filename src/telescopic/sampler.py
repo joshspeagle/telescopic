@@ -494,7 +494,7 @@ class CoupledSampler:
                         "with MALA or HMC, an automatic step size can fail to couple: try a "
                         "step_size checked on pilot pairs, or, for HMC with a given n_steps "
                         "or cov, leaving them unset (When the automatic step fails, in the "
-                        "kernels guide)"
+                        "guide 'Check and set a step size')"
                     )
                 raise
             raise ValueError(

@@ -82,6 +82,7 @@ tutorials/failure-modes
 guide/log-density
 guide/initial-distribution
 guide/kernels
+guide/step-size
 guide/settings
 guide/results
 guide/diagnostics

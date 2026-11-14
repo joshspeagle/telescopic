@@ -167,9 +167,9 @@ assert np.all(np.abs(z) < 3)
 
 The differences are of the size of their standard errors: the two kernels agree. Here
 their automatic step sizes coupled; on some targets, log-concave or not, they do not
-([When the automatic step fails](../guide/kernels.md#when-the-automatic-step-fails)), and
+([When the automatic step fails](../guide/step-size.md#when-the-automatic-step-fails)), and
 the step size must be given and checked against pilot meeting times
-([Checking a step size](../guide/kernels.md#checking-a-step-size)).
+([Checking a step size](../guide/step-size.md#checking-a-step-size)).
 
 ## A gradient that is not the derivative
 

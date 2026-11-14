@@ -376,3 +376,6 @@ All notable changes to this project are documented here. The format follows
   `n_steps`, or a given `cov` that does not whiten the target, can put the automatic step.
   With MALA or HMC, the error raised when `k` cannot be chosen carries a note that points
   to it.
+- The section on a failing automatic step moved from the kernels guide to the guide "Check
+  and set a step size", and the note of the error raised when `k` cannot be chosen with
+  MALA or HMC names that guide.
