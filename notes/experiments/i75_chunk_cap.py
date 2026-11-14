@@ -17,9 +17,9 @@ and #52 and up to 4,096 replicates per worker; one replicate more gives one chun
 The issue's runs get chunks of at most 1,024 replicates: 98 chunks on 4 workers at
 100,000 replicates, where four per worker made 16 of 6,250, and 977 on 4 or 64 workers
 at 1,000,000, where they made 16 of 62,500 and 256 of 3,906 or 3,907. The line fit took
-8.62 s at best with the cap against 8.35 s without, 1.03 times as long, on a machine
-shared with other jobs, where the three runs of each spread over 8.62 to 9.37 s and 8.35
-to 9.01 s, ranges that overlap. Its largest chunk's pickled result fell from 52.9 to
+8.72 s at best with the cap against 8.16 s without, 1.07 times as long, on a machine
+shared with other jobs, where the three runs of each spread over 8.72 to 9.11 s and 8.16
+to 8.76 s, ranges that meet. Its largest chunk's pickled result fell from 52.9 to
 26.5 MB, in proportion to its replicates (25.8 kB per replicate in this setup).
 
 Run from the repository: python notes/experiments/i75_chunk_cap.py
