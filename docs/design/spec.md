@@ -715,11 +715,11 @@ These targets are measured by `benchmarks/` and are not gating.
   - toolchain: Sphinx, MyST-NB (tutorials executed at every build in CI and by default; a local build may reuse the cache or skip execution, DECISIONS #81), numpydoc, autosummary (a generated page for each public class and module and for `sample`, DECISIONS #184), sphinx-copybutton, and a theme of the project's own on Sphinx's `basic` theme, whose colors, type, marks and plot style are written by one script (DECISIONS #79);
   - pages: a landing page and six sections: Start (Getting started), Tutorials, How-to guides, Theory, Reference (API reference, Citing, Changelog) and Project (Contributing);
   - the design records (this specification, the plans, the design of the site's identity, the landscape report and the research notes) stay in the repository and are not built (DECISIONS #80);
-  - hosting: GitHub Pages from `main`, once the site's structure is final (DECISIONS #82).
+  - hosting: GitHub Pages, published by CI's `deploy` job from the site that the `docs` job builds on each push to `main` (DECISIONS #82, #188).
 - **CI (GitHub Actions):**
   - lint and types;
   - tests on Linux, macOS and Windows, with a job on the oldest supported stack;
-  - a docs build;
+  - a docs build, published on GitHub Pages on a push to `main` (DECISIONS #188);
   - a wheel and sdist build with a smoke test;
   - the slow tier on every push to `main` and on manual dispatch (DECISIONS #75).
 - **Repository files:** `CITATION.cff`, `CHANGELOG.md`, `CONTRIBUTING.md` (with the validation philosophy), `LICENSE`.
