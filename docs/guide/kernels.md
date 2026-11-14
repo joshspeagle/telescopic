@@ -170,12 +170,12 @@ that direction, and the tuning, which looks only at the acceptance rate, can set
 such a step. Two settings expose it:
 
 - **A given `n_steps` with an automatic step.** On {func}`telescopic.examples.gaussian`
-  in 10 dimensions with `HMC(n_steps=3)`, over 10 seeds, `k` could not be chosen at 2 and
-  was 12,377 to 52,065 at the others, against 83 to 113 with `HMC()`.
+  in 10 dimensions with `HMC(n_steps=3)`, over 10 seeds, `k` could not be chosen at 2 of
+  them and was 12,377 to 52,065 at the others, against 83 to 113 with `HMC()`.
 - **A given `cov` that does not whiten the target**, which leaves eigenvalues that differ.
   On a Gaussian whose scales run from 1 to 1/4 in 10 dimensions with
-  `HMC(cov=np.eye(10))`, over 10 seeds, `k` could not be chosen at 3 and was 1,566 to
-  10,134 at the others, against 50 to 65 with `HMC()`.
+  `HMC(cov=np.eye(10))`, over 10 seeds, `k` could not be chosen at 3 of them and was
+  1,566 to 10,134 at the others, against 50 to 65 with `HMC()`.
 
 The remedy is to leave `n_steps` and `cov` to the kernel: `HMC()` chose `k` at every seed
 of both examples.

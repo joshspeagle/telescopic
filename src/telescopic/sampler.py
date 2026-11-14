@@ -480,7 +480,8 @@ class CoupledSampler:
             return choose_k(pilot)
         except ValueError as error:
             if not self._pilot_zero_density:
-                if self.kernel.needs_grad:
+                # self.tuning is None when the kernel came with every parameter.
+                if self.kernel.needs_grad and self.tuning is not None:
                     error.add_note(
                         "with MALA or HMC, an automatic step size can fail to couple: try a "
                         "step_size checked on pilot pairs, or, for HMC with a given n_steps "
