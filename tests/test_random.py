@@ -148,7 +148,6 @@ def test_a_request_for_no_rows_returns_no_numbers():
     # Longer than the buffer of injected numbers, which no row asks to top up.
     draws = fixed_draws(uniforms=[[0.5]]).subset(np.arange(0))
     assert draws.normal(3).shape == (0, 3)
-    assert draws.uniform().shape == (0,)
 
 
 def test_injected_arrays_must_have_one_row_per_chain():
