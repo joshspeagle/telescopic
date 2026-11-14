@@ -3,6 +3,8 @@ gauss10 ['tau 28.1 f 0.475 grads 109', 'tau 34.8 f 0.666 grads 334'] ratio CF/P 
 gauss10 default J0.2 tau 25.8 f 0.357 grads 101
 gauss10 default J0.3 tau 25.0 f 0.300 grads 97
 gauss10 default J0.5 tau 26.4 f 0.389 grads 103
+gauss2 gamma 0.2: P 26, CF 67 gradients per meeting; CF/P at 0.2 2.51; CF at 0.2 over P at 0.05 1.18; CF at 0.05 over P at 0.05 3.38
+gauss10 gamma 0.2: P 47, CF 166 gradients per meeting; CF/P at 0.2 3.53; CF at 0.2 over P at 0.05 1.52; CF at 0.05 over P at 0.05 3.05
 worst-mode geometric-mean factor over the jitter, at the package's tuned steps (tuning-only seeds 0-99): median / max over tunings
 (2, 2) j=0.0 0.998/1.0000 (>0.99: 93); j=0.2 0.874/0.8956 (>0.99: 0); j=0.3 0.633/0.7688 (>0.99: 0); j=0.5 0.525/0.5647 (>0.99: 0)
 (2, 5) j=0.0 0.823/0.9913 (>0.99: 1); j=0.2 0.553/0.5706 (>0.99: 0); j=0.3 0.566/0.5749 (>0.99: 0); j=0.5 0.497/0.5037 (>0.99: 0)
