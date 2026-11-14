@@ -191,6 +191,18 @@ class Result:
         Returns
         -------
         Estimate
+
+        Examples
+        --------
+        The probability that the first coordinate is positive is the expectation of an
+        indicator, one value per point; ``replicates`` holds each replicate's estimate:
+
+        >>> from telescopic import examples, sample
+        >>> example = examples.gaussian(2)
+        >>> result = sample(example.log_prob, example.initial, vectorize=True, rng=0)
+        >>> estimate = result.estimate(lambda x: x[:, 0] > 0)
+        >>> estimate.value.shape, estimate.replicates.shape
+        ((), (100,))
         """
         level = real("level", level, 0, 1)
         self._require(2)
@@ -474,6 +486,18 @@ class Result:
         Returns
         -------
         Summary
+
+        Examples
+        --------
+        The summary has a row per parameter and a column per estimate; ``print(summary)``
+        shows them as a table, with the diagnostics of the run below it:
+
+        >>> from telescopic import examples, sample
+        >>> example = examples.gaussian(2)
+        >>> result = sample(example.log_prob, example.initial, vectorize=True, rng=0)
+        >>> summary = result.summary()
+        >>> summary.names, list(summary.table)
+        (['x0', 'x1'], ['mean', 'standard_error', 'std', 'q16', 'q50', 'q84'])
         """
         mean = self.mean()
         quantiles = self.quantile([0.16, 0.5, 0.84])

@@ -255,6 +255,18 @@ class CoupledSampler:
         Result
             Unbiased for an ``n_replicates`` fixed in advance; extending a run after
             looking at it keeps consistency, not exact unbiasedness.
+
+        Examples
+        --------
+        A second call runs 50 more replicates and returns the result of all 100:
+
+        >>> from telescopic import CoupledSampler, examples
+        >>> example = examples.gaussian(2)
+        >>> sampler = CoupledSampler(
+        ...     example.log_prob, example.initial, vectorize=True, rng=0
+        ... )
+        >>> sampler.run(50).n_replicates, sampler.run(50).n_replicates
+        (50, 100)
         """
         n_replicates = integer("n_replicates", n_replicates, minimum=1)
         given = self._check(k, m, lag, thin, max_iter)
