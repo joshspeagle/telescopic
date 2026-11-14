@@ -1,4 +1,4 @@
-commit 97992d9-dirty; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+commit f4d03ba; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
 command: python notes/experiments/x123/package_equivalence.py
 family k at seeds 230000 + 10 k + (0..9); columns: lines, gaps and tolerances identical; decisions identical (registered, package record, package warning); unusable lines and skipped points identical; warnings of the registered (N); compared lines
 [  0] A N(0, 1e-08^2 I) d=5, matched                                             | 10 10 10 | N  0 | lines 80
