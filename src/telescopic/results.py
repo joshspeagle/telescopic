@@ -13,7 +13,6 @@ from typing import IO, Any
 
 import numpy as np
 import numpy.typing as npt
-from scipy import stats
 
 from telescopic import diagnostics, engine
 from telescopic._types import (
@@ -229,6 +228,10 @@ class Result:
         level = real("level", level, 0, 1)
         self._require(2)
         values = self.measure.per_replicate(h)
+        # Imported at first use, which keeps import telescopic, and so a pool worker's
+        # start, free of scipy.stats.
+        from scipy import stats
+
         value, error = values.mean(axis=0), np.asarray(stats.sem(values, axis=0))
         # Student's t, not the normal quantile, whose intervals undercover at small R.
         t = stats.t.ppf((1 + level) / 2, self.n_replicates - 1)
@@ -481,6 +484,9 @@ class Result:
     @functools.cached_property
     def _diagnostics(self) -> dict[str, Any]:
         # Computed once: each run's warnings, the summary and check all read it.
+        # Imported at first use, which keeps import telescopic free of scipy.stats.
+        from scipy import stats
+
         # Over every pair, censored ones (inf) above the others, as in the pilot of k.
         quantiles = np.quantile(self.meeting_times, [0.5, 0.9, 0.99, 1], method="inverted_cdf")
         tail_index = np.nan

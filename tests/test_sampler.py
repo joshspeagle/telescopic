@@ -1,8 +1,11 @@
 import importlib
 import inspect
 import itertools
+import os
 import re
 import runpy
+import subprocess
+import sys
 import tempfile
 import warnings
 from importlib import resources
@@ -449,6 +452,28 @@ def test_a_documented_module_exports_every_class_and_function_it_defines(name):
 def test_the_package_is_marked_as_typed():
     # PEP 561: without the marker, a user's type checker treats telescopic as untyped.
     assert (resources.files("telescopic") / "py.typed").is_file()
+
+
+def test_import_does_not_load_scipy_stats_optimize_or_integrate():
+    # Each worker of a process pool imports the package before its first chunk, and these
+    # three subpackages took most of that import's time. A fresh interpreter, since this
+    # one has imported them, on this one's copy of the package. It also couples a pair,
+    # whose test for SciPy's Dirichlet must not import scipy.stats.
+    code = """
+import sys
+from telescopic import couplings, examples, testing
+gamma = examples._Gamma(2.0, 1.0)
+couplings.maximal([gamma], [gamma], testing.random_draws(1, 0))
+print(sorted(set(sys.modules) & set(sys.argv[1:])))
+"""
+    loaded = subprocess.run(
+        [sys.executable, "-c", code, "scipy.stats", "scipy.optimize", "scipy.integrate"],
+        capture_output=True,
+        text=True,
+        check=True,
+        env={**os.environ, "PYTHONPATH": str(Path(telescopic.__file__).parents[1])},
+    ).stdout
+    assert loaded == "[]\n"
 
 
 def test_chains_cannot_start_where_the_gradient_is_not_finite():

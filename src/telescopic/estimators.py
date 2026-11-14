@@ -6,7 +6,6 @@ from math import gcd
 
 import numpy as np
 import numpy.typing as npt
-from scipy.optimize import isotonic_regression
 
 from telescopic._types import FloatArray, IntArray, averaging, integer, integral, real_array
 
@@ -208,6 +207,9 @@ def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike)
             f"weights must sum to 1, not {np.sum(weights)}: divide the pooled weights of R "
             "replicates by R"
         )
+    # Imported at first use, which keeps import telescopic free of scipy.optimize.
+    from scipy.optimize import isotonic_regression
+
     unique, inverse = np.unique(values, return_inverse=True)
     mass = np.bincount(inverse, weights=weights)
     cdf = np.clip(isotonic_regression(np.cumsum(mass)).x, 0.0, 1.0)
