@@ -11,7 +11,7 @@ import numpy.typing as npt
 from numpy.random import Generator
 
 from telescopic._random import Draws
-from telescopic._types import FloatArray, read_only, real
+from telescopic._types import BoolArray, FloatArray, read_only, real
 from telescopic.couplings import maximal
 from telescopic.kernels.base import Kernel, State, evaluate, evaluate_pair
 from telescopic.target import Target
@@ -153,33 +153,41 @@ class Gibbs(Kernel):
         common = np.linalg.norm(x - y, axis=1) > self._switch
         for b, block in enumerate(self.blocks):
             points_x, points_y = read_only(x), read_only(y)
-            outside = np.ones(x.shape[1], dtype=bool)
-            outside[block] = False
-            same = np.all(x[:, outside] == y[:, outside], axis=1)
-            new_x: list[Any] = [None] * len(x)
-            new_y: list[Any] = [None] * len(x)
-            # Identical conditionals: one draw for both chains (spec section 5.7).
-            for row in same.nonzero()[0].tolist():
-                drawn = self.conditional(points_x[row], b).rvs(random_state=draws.generator(row))
-                new_x[row] = new_y[row] = drawn
-            for rows, couple in (
-                ((~same & common).nonzero()[0], partial(_common, size=len(block))),
-                ((~same & ~common).nonzero()[0], partial(_maximal, eta=self.eta)),
-            ):
-                if len(rows):
-                    drawn_x, drawn_y = couple(
-                        [self.conditional(points_x[row], b) for row in rows],
-                        [self.conditional(points_y[row], b) for row in rows],
-                        draws.subset(rows),
-                    )
-                    for row, value_x, value_y in zip(rows.tolist(), drawn_x, drawn_y, strict=True):
-                        new_x[row], new_y[row] = value_x, value_y
+            new_x, new_y = self._couple(b, points_x, points_y, common, draws)
             x[:, block] = _block(new_x, b, points_x, len(block))
             y[:, block] = _block(new_y, b, points_y, len(block))
         identical = np.all(x == y, axis=1)
         return evaluate_pair(
             partial(evaluate, target, need_grad=state_x.grad is not None), x, y, identical
         )
+
+    def _couple(
+        self, b: int, x: FloatArray, y: FloatArray, common: BoolArray, draws: Draws
+    ) -> tuple[list[Any], list[Any]]:
+        # The coupled draws of block b for each pair of rows of x and y.
+        outside = np.ones(x.shape[1], dtype=bool)
+        outside[self.blocks[b]] = False
+        same = np.all(x[:, outside] == y[:, outside], axis=1)
+        new_x: list[Any] = [None] * len(x)
+        new_y: list[Any] = [None] * len(x)
+        # Identical conditionals: one draw for both chains (spec section 5.7).
+        for row in same.nonzero()[0].tolist():
+            new_x[row] = new_y[row] = self.conditional(x[row], b).rvs(
+                random_state=draws.generator(row)
+            )
+        for rows, couple in (
+            ((~same & common).nonzero()[0], partial(_common, size=len(self.blocks[b]))),
+            ((~same & ~common).nonzero()[0], partial(_maximal, eta=self.eta)),
+        ):
+            if len(rows):
+                drawn_x, drawn_y = couple(
+                    [self.conditional(x[row], b) for row in rows],
+                    [self.conditional(y[row], b) for row in rows],
+                    draws.subset(rows),
+                )
+                for row, value_x, value_y in zip(rows.tolist(), drawn_x, drawn_y, strict=True):
+                    new_x[row], new_y[row] = value_x, value_y
+        return new_x, new_y
 
     def __repr__(self) -> str:
         return (
