@@ -46,7 +46,7 @@ point by point.
 3. Gibbs (p1-05). Three coupled sweeps of `Gibbs.coupled_step` with the maximal
    coupling, one-coordinate blocks of the conditionals of an AR(1) chain
    (x_i | rest ~ N(0.5 (x_(i-1) + x_(i+1)) / 1.25, 1 / 1.25), a small class with `rvs`
-   and `logpdf`), at d = 20 and 200, 16 and 256 rows, with pairs that differ in every
+   and `logpdf`), at d = 20 and 200, 1, 4, 16 and 256 rows, with pairs that differ in every
    coordinate, in half of them, or nowhere: milliseconds per three sweeps, and whether
    x and y are bitwise equal before and after.
 4. Pilot (p1-06). `adaptive_metropolis` at d = 2 and 20 (2,000 and 4,000 steps, the
@@ -289,7 +289,7 @@ def conditional(x, b):
 outputs = {}
 for d in (20, 200):
     kernel = Gibbs(conditional, [np.array([i]) for i in range(d)])
-    for n in (16, 256):
+    for n in (1, 4, 16, 256):
         x0 = np.random.default_rng(7).standard_normal((n, d))
         for differ, offset in (("every", np.ones(d)), ("half", np.arange(d) % 2), ("none", np.zeros(d))):
             y0 = x0 + offset
