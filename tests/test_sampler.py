@@ -1,3 +1,4 @@
+import importlib
 import inspect
 import itertools
 import re
@@ -414,18 +415,27 @@ def test_the_package_exports_what_the_readme_uses():
     assert used | {"__version__"} <= set(telescopic.__all__)
 
 
-@pytest.mark.parametrize(
-    "name",
-    re.findall(
-        r"^\.\. automodule:: (telescopic\.\w+)\n\s+:members:$",
-        (Path(__file__).parents[1] / "docs" / "api.md").read_text(),
-        re.MULTILINE,
-    ),
+# The modules that docs/api.md documents with all their members: an automodule directive
+# with a bare :members: among its options.
+DOCUMENTED_MODULES = re.findall(
+    r"^\.\. automodule:: (telescopic[\w.]*)\n(?:[ \t]+:.*\n)*?[ \t]+:members:[ \t]*$",
+    (Path(__file__).parents[1] / "docs" / "api.md").read_text(),
+    re.MULTILINE,
 )
+
+
+def test_the_api_reference_documents_the_modules_with_their_members():
+    # A module that the pattern above stops finding would drop out of the next test.
+    assert len(DOCUMENTED_MODULES) >= 10, DOCUMENTED_MODULES
+
+
+@pytest.mark.parametrize("name", DOCUMENTED_MODULES)
 def test_a_documented_module_exports_every_class_and_function_it_defines(name):
     # The API reference shows the names of a module's __all__, so one left out is missing.
-    # telescopic.plotting needs matplotlib.
-    module = pytest.importorskip(name)
+    try:
+        module = importlib.import_module(name)
+    except ImportError as error:  # telescopic.plotting without matplotlib
+        pytest.skip(str(error))
     defined = {
         key
         for key, value in vars(module).items()
