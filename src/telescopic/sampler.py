@@ -21,6 +21,8 @@ from telescopic.target import Target
 from telescopic.tuning import TuningReport, choose_k
 from telescopic.warnings import ConvergenceWarning, InputWarning, warn
 
+__all__ = ["CoupledSampler", "sample"]
+
 KERNELS: dict[str, Callable[[], Kernel]] = {
     "auto": RandomWalk,
     "rwmh": RandomWalk,

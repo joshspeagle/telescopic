@@ -11,6 +11,17 @@ from telescopic._types import coordinates, integer
 from telescopic.engine import Replicates
 from telescopic.results import Result
 
+__all__ = [
+    "CHAIN_X",
+    "CHAIN_Y",
+    "MET",
+    "corner",
+    "marginals",
+    "meeting_times",
+    "paths",
+    "tv_bound",
+]
+
 try:
     import matplotlib.pyplot as plt
     from matplotlib.axes import Axes
