@@ -1,10 +1,12 @@
 """The setup of a measurement, as one line for the head of an experiment's output (issue #85).
 
 CLAUDE.md asks every measurement to record its commit, machine, thread settings and
-library versions. `setup()` returns them on one line: the commit of the package that was
-imported (`git describe --always --dirty`, run in the package's folder), the processor
-model and the number of logical cores, without a hostname, the thread variables of the
-OpenMP and BLAS libraries that are set, and the versions of Python, NumPy and SciPy.
+library versions. `setup()` returns them on one line: the commit at the head of the
+repository that holds the imported package (`git describe --always --dirty`, run in the
+package's folder, so "dirty" means a tracked change anywhere in that repository), the
+processor model and the number of logical cores, without a hostname, the thread variables
+of the OpenMP and BLAS libraries that are set, and the versions of Python, NumPy and SciPy.
+It raises when the package was not imported from a git repository, as an installed copy.
 
 Use, in a script of this folder run as `python notes/experiments/<name>.py`:
   from i85_setup import setup
