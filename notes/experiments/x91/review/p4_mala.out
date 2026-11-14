@@ -1,0 +1,10 @@
+gaussian10 target 0.574 step 1.1039 ; drift contraction per step eps^2/2 = 0.6093, so about 2 iterations per e-fold of the gap
+gaussian10 target 0.99 step 0.3405 ; drift contraction per step eps^2/2 = 0.0580, so about 17 iterations per e-fold of the gap
+banana U[-5,5]^2 target 0.574 step 0.3155 ; drift contraction per step eps^2/2 = 0.0498, so about 20 iterations per e-fold of the gap
+banana U[-5,5]^2 target 0.99 step 0.0541 ; drift contraction per step eps^2/2 = 0.0015, so about 684 iterations per e-fold of the gap
+logistic target 0.574 step 1.1818 ; drift contraction per step eps^2/2 = 0.6984, so about 1 iterations per e-fold of the gap
+logistic target 0.99 step 0.3619 ; drift contraction per step eps^2/2 = 0.0655, so about 15 iterations per e-fold of the gap
+funnel: 4829007 gradient rows per second at a batch of 200
+  CF at 42 leapfrog steps: 100 pairs unmet to the cap of 10,000 cost 17 s; if half meet early 9 s
+  CF at 99 leapfrog steps: 100 pairs unmet to the cap of 10,000 cost 41 s; if half meet early 21 s
+  CF at 180 leapfrog steps: 100 pairs unmet to the cap of 10,000 cost 75 s; if half meet early 37 s

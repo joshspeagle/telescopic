@@ -1,0 +1,60 @@
+=== delta 0.16 band 0.3
+(10, 10) {'kept': 55, 'kept_onres(>0.999)': 17, 'moved': 45, 'moved_offres(<0.99)': 14} exact>0.999 before 29 after 17; >0.99 before 67 after 36; post max 1.00000
+(10, 3) {'kept': 50, 'moved': 50, 'kept_onres(>0.999)': 40} exact>0.999 before 73 after 40; >0.99 before 100 after 50; post max 1.00000
+(10, 5) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 1 after 1; post max 0.99805
+(2, 1) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.43814
+(2, 10) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.97569
+(2, 2) {'moved': 47, 'kept': 53, 'kept_onres(>0.999)': 17, 'moved_offres(<0.99)': 2} exact>0.999 before 38 after 17; >0.99 before 93 after 48; post max 1.00000
+(2, 3) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.84745
+(2, 5) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 1 after 1; post max 0.99131
+(2, None) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.43673
+=== delta 0.2 band 0.3
+(10, 10) {'kept': 47, 'kept_onres(>0.999)': 14, 'moved': 53, 'moved_offres(<0.99)': 15} exact>0.999 before 29 after 14; >0.99 before 67 after 29; post max 1.00000
+(10, 3) {'kept': 29, 'moved': 71, 'kept_onres(>0.999)': 25} exact>0.999 before 73 after 25; >0.99 before 100 after 29; post max 1.00000
+(10, 5) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 1 after 1; post max 0.99805
+(2, 1) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.43814
+(2, 10) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.97569
+(2, 2) {'moved': 67, 'kept': 33, 'kept_onres(>0.999)': 13, 'moved_offres(<0.99)': 3} exact>0.999 before 38 after 13; >0.99 before 93 after 29; post max 1.00000
+(2, 3) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.84745
+(2, 5) {'kept': 99, 'moved': 1, 'moved_offres(<0.99)': 1} exact>0.999 before 0 after 0; >0.99 before 1 after 1; post max 0.99131
+(2, None) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.43673
+=== delta 0.3 band 0.3
+(10, 10) {'kept': 26, 'kept_onres(>0.999)': 9, 'moved': 74, 'moved_offres(<0.99)': 24} exact>0.999 before 29 after 9; >0.99 before 67 after 18; post max 0.99998
+(10, 3) {'moved': 98, 'kept': 2, 'kept_onres(>0.999)': 2} exact>0.999 before 73 after 2; >0.99 before 100 after 2; post max 1.00000
+(10, 5) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 1 after 1; post max 0.99805
+(2, 1) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.43814
+(2, 10) {'kept': 99, 'moved': 1, 'moved_offres(<0.99)': 1} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.97569
+(2, 2) {'moved': 89, 'kept': 11, 'moved_offres(<0.99)': 6, 'kept_onres(>0.999)': 2} exact>0.999 before 38 after 2; >0.99 before 93 after 10; post max 0.99996
+(2, 3) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.84745
+(2, 5) {'kept': 99, 'moved': 1, 'moved_offres(<0.99)': 1} exact>0.999 before 0 after 0; >0.99 before 1 after 1; post max 0.99131
+(2, None) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.43673
+=== delta 0.451 band 0.3
+(10, 10) {'moved': 93, 'moved_offres(<0.99)': 31, 'kept': 7, 'kept_onres(>0.999)': 4} exact>0.999 before 29 after 4; >0.99 before 67 after 5; post max 0.99998
+(10, 3) {'moved': 100} exact>0.999 before 73 after 0; >0.99 before 100 after 0; post max 0.82910
+(10, 5) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 1 after 1; post max 0.99805
+(2, 1) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.43814
+(2, 10) {'kept': 98, 'moved': 2, 'moved_offres(<0.99)': 2} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.91595
+(2, 2) {'moved': 100, 'moved_offres(<0.99)': 7} exact>0.999 before 38 after 0; >0.99 before 93 after 0; post max 0.59191
+(2, 3) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.84745
+(2, 5) {'kept': 95, 'moved': 5, 'moved_offres(<0.99)': 5} exact>0.999 before 0 after 0; >0.99 before 1 after 1; post max 0.99131
+(2, None) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.43673
+=== delta 0.6 band 0.3
+(10, 10) {'moved': 99, 'moved_offres(<0.99)': 32, 'kept': 1} exact>0.999 before 29 after 0; >0.99 before 67 after 0; post max 0.98173
+(10, 3) {'moved': 100} exact>0.999 before 73 after 0; >0.99 before 100 after 0; post max 0.74341
+(10, 5) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 1 after 1; post max 0.99805
+(2, 1) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.43814
+(2, 10) {'kept': 95, 'moved': 5, 'moved_offres(<0.99)': 5} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.91595
+(2, 2) {'moved': 100, 'moved_offres(<0.99)': 7} exact>0.999 before 38 after 0; >0.99 before 93 after 0; post max 0.49419
+(2, 3) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.84745
+(2, 5) {'kept': 83, 'moved': 17, 'moved_offres(<0.99)': 17} exact>0.999 before 0 after 0; >0.99 before 1 after 1; post max 0.99131
+(2, None) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.43673
+=== delta 0.75 band 0.3
+(10, 10) {'moved': 100, 'moved_offres(<0.99)': 33} exact>0.999 before 29 after 0; >0.99 before 67 after 0; post max 0.64608
+(10, 3) {'moved': 100} exact>0.999 before 73 after 0; >0.99 before 100 after 0; post max 0.64246
+(10, 5) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 1 after 1; post max 0.99805
+(2, 1) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.43814
+(2, 10) {'kept': 88, 'fallback': 11, 'moved_offres(<0.99)': 12, 'moved': 1} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.97569
+(2, 2) {'moved': 100, 'moved_offres(<0.99)': 7} exact>0.999 before 38 after 0; >0.99 before 93 after 0; post max 0.38861
+(2, 3) {'kept': 91, 'moved': 9, 'moved_offres(<0.99)': 9} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.84745
+(2, 5) {'moved': 34, 'moved_offres(<0.99)': 33, 'kept': 66} exact>0.999 before 0 after 0; >0.99 before 1 after 0; post max 0.96266
+(2, None) {'kept': 100} exact>0.999 before 0 after 0; >0.99 before 0 after 0; post max 0.43673

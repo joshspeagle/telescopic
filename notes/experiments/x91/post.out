@@ -1,0 +1,12 @@
+('unequal', 10) 30 kept 0 moved 30 fallback 0 | package >0.999 2 >0.9998 1 | guard >0.999 0 >0.9998 0 | guard post median 0.880
+('unequal', 3) 30 kept 0 moved 30 fallback 0 | package >0.999 0 >0.9998 0 | guard >0.999 0 >0.9998 0 | guard post median 0.887
+('unequal', None) 30 kept 0 moved 0 fallback 30 | package >0.999 7 >0.9998 2 | guard >0.999 7 >0.9998 2 | guard post median 0.997
+(10, 10) 100 kept 7 moved 93 fallback 0 | package >0.999 29 >0.9998 13 | guard >0.999 4 >0.9998 2 | guard post median 0.742
+(10, 3) 100 kept 0 moved 100 fallback 0 | package >0.999 73 >0.9998 42 | guard >0.999 0 >0.9998 0 | guard post median 0.729
+(10, 5) 100 kept 100 moved 0 fallback 0 | package >0.999 0 >0.9998 0 | guard >0.999 0 >0.9998 0 | guard post median 0.925
+(2, 1) 100 kept 100 moved 0 fallback 0 | package >0.999 0 >0.9998 0 | guard >0.999 0 >0.9998 0 | guard post median 0.358
+(2, 10) 100 kept 98 moved 2 fallback 0 | package >0.999 0 >0.9998 0 | guard >0.999 0 >0.9998 0 | guard post median 0.554
+(2, 2) 100 kept 0 moved 100 fallback 0 | package >0.999 38 >0.9998 23 | guard >0.999 0 >0.9998 0 | guard post median 0.454
+(2, 3) 100 kept 100 moved 0 fallback 0 | package >0.999 0 >0.9998 0 | guard >0.999 0 >0.9998 0 | guard post median 0.695
+(2, 5) 100 kept 95 moved 5 fallback 0 | package >0.999 0 >0.9998 0 | guard >0.999 0 >0.9998 0 | guard post median 0.817
+(2, None) 100 kept 100 moved 0 fallback 0 | package >0.999 0 >0.9998 0 | guard >0.999 0 >0.9998 0 | guard post median 0.358

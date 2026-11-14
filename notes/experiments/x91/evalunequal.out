@@ -1,0 +1,16 @@
+=== delta 0.451 band 0.3
+None {'fallback': 30} exact max factor before: >0.999 7, >0.99 28; after: >0.999 7 >0.99 28, after median 0.9969 max 1.000000
+   eps before->after (n): [(0.317, 0.317, 4), (0.313, 0.313, 4), (0.311, 0.311, 4), (0.304, 0.304, 4), (0.306, 0.306, 4), (0.303, 0.303, 4), (0.307, 0.307, 4), (0.319, 0.319, 4), (0.314, 0.314, 4), (0.315, 0.315, 4), (0.307, 0.307, 4), (0.308, 0.308, 4)]
+3 {'moved': 30} exact max factor before: >0.999 0, >0.99 9; after: >0.999 0 >0.99 0, after median 0.8868 max 0.907636
+   eps before->after (n): [(0.327, 0.166, 3), (0.321, 0.15, 3), (0.325, 0.166, 3), (0.32, 0.163, 3), (0.323, 0.158, 3), (0.322, 0.163, 3), (0.327, 0.162, 3), (0.328, 0.166, 3), (0.325, 0.16, 3), (0.327, 0.161, 3), (0.325, 0.162, 3), (0.323, 0.15, 3)]
+10 {'moved': 30} exact max factor before: >0.999 2, >0.99 30; after: >0.999 0 >0.99 0, after median 0.8800 max 0.902020
+   eps before->after (n): [(0.331, 0.051, 10), (0.323, 0.046, 10), (0.324, 0.051, 10), (0.324, 0.05, 10), (0.329, 0.049, 10), (0.317, 0.05, 10), (0.328, 0.05, 10), (0.327, 0.051, 10), (0.33, 0.049, 10), (0.329, 0.05, 10), (0.326, 0.05, 10), (0.317, 0.046, 10)]
+=== delta 0.451 band 0.15
+None {'fallback': 30} exact max factor before: >0.999 7, >0.99 28; after: >0.999 7 >0.99 28, after median 0.9969 max 1.000000
+3 {'moved': 30} exact max factor before: >0.999 0, >0.99 9; after: >0.999 0 >0.99 0, after median 0.8561 max 0.882567
+10 {'moved': 30} exact max factor before: >0.999 2, >0.99 30; after: >0.999 0 >0.99 0, after median 0.8476 max 0.875512
+=== delta 0.451 band 0.0
+None {'fallback': 29, 'moved': 1} exact max factor before: >0.999 7, >0.99 28; after: >0.999 7 >0.99 27, after median 0.9969 max 1.000000
+3 {'moved': 30} exact max factor before: >0.999 0, >0.99 9; after: >0.999 1 >0.99 3, after median 0.8612 max 0.999863
+10 {'moved': 30} exact max factor before: >0.999 2, >0.99 30; after: >0.999 0 >0.99 2, after median 0.8518 max 0.998919
+pilot freq max rel error: median 0.085 max 0.156 tune sec mean 0.41

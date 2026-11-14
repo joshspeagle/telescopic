@@ -1,0 +1,40 @@
+== per-seed median meeting time and inefficiency (h = x0), log-scale sd between seeds; i137_nongaussian (5 seeds)
+('banana', 2) base median tau sd(log) 0.100  ineff sd(log) 2.619  robust sd(log) 0.892
+('banana', 2) c median tau sd(log) 0.078  ineff sd(log) 0.389  robust sd(log) 0.427
+('banana', 5) base median tau sd(log) 0.285  ineff sd(log) 3.830  robust sd(log) 4.630
+('banana', 5) c median tau sd(log) 0.113  ineff sd(log) 0.243  robust sd(log) 0.161
+('mixture', 2) base median tau sd(log) 0.115  ineff sd(log) 0.037  robust sd(log) 0.013
+('mixture', 2) c median tau sd(log) 0.384  ineff sd(log) 0.074  robust sd(log) 0.086
+== Gaussian table: per-seed median meeting time sd(log), 30 seeds (cap 1e4), P and remedy c, configs where every seed met
+d=2 n=None P: n=30 sd(log median tau) 0.081; sd(log grads/pair) 0.064
+d=2 n=None J5: n=30 sd(log median tau) 0.090; sd(log grads/pair) 0.068
+d=2 n=1 P: n=30 sd(log median tau) 0.078; sd(log grads/pair) 0.061
+d=2 n=1 J5: n=30 sd(log median tau) 0.094; sd(log grads/pair) 0.067
+d=2 n=2 J5: n=30 sd(log median tau) 0.078; sd(log grads/pair) 0.064
+d=2 n=3 P: n=30 sd(log median tau) 0.159; sd(log grads/pair) 0.134
+d=2 n=3 J5: n=30 sd(log median tau) 0.066; sd(log grads/pair) 0.050
+d=2 n=5 P: n=30 sd(log median tau) 0.594; sd(log grads/pair) 0.573
+d=2 n=5 J5: n=30 sd(log median tau) 0.075; sd(log grads/pair) 0.067
+d=2 n=10 P: n=30 sd(log median tau) 0.584; sd(log grads/pair) 0.556
+d=2 n=10 J5: n=30 sd(log median tau) 0.072; sd(log grads/pair) 0.062
+d=10 n=None P: n=30 sd(log median tau) 0.083; sd(log grads/pair) 0.081
+d=10 n=None J5: n=30 sd(log median tau) 0.083; sd(log grads/pair) 0.066
+d=10 n=1 P: n=30 sd(log median tau) 0.061; sd(log grads/pair) 0.051
+d=10 n=1 J5: n=30 sd(log median tau) 0.057; sd(log grads/pair) 0.050
+d=10 n=2 P: n=30 sd(log median tau) 0.080; sd(log grads/pair) 0.081
+d=10 n=2 J5: n=30 sd(log median tau) 0.083; sd(log grads/pair) 0.064
+d=10 n=3 J5: n=30 sd(log median tau) 0.072; sd(log grads/pair) 0.059
+d=10 n=5 P: n=30 sd(log median tau) 0.688; sd(log grads/pair) 0.680
+d=10 n=5 J5: n=30 sd(log median tau) 0.043; sd(log grads/pair) 0.042
+d=10 n=10 J5: n=30 sd(log median tau) 0.060; sd(log grads/pair) 0.051
+== median-cost criterion: fail if geometric-mean ratio > 1.20; P(fail) at true ratios 1.0, 1.1, 1.2, 1.3, 1.4, 1.5
+banana n=2 (P .10, J5 .08) S=10 se 0.040 [np.float64(0.0), np.float64(0.016), np.float64(0.5), np.float64(0.976), np.float64(1.0), np.float64(1.0)]
+banana n=2 (P .10, J5 .08) S=20 se 0.029 [np.float64(0.0), np.float64(0.001), np.float64(0.5), np.float64(0.997), np.float64(1.0), np.float64(1.0)]
+banana n=5 (P .28, J5 .11) S=10 se 0.095 [np.float64(0.028), np.float64(0.18), np.float64(0.5), np.float64(0.8), np.float64(0.947), np.float64(0.991)]
+banana n=5 (P .28, J5 .11) S=20 se 0.067 [np.float64(0.003), np.float64(0.098), np.float64(0.5), np.float64(0.883), np.float64(0.989), np.float64(1.0)]
+mixture n=2 (P .115, J5 .46) S=10 se 0.150 [np.float64(0.112), np.float64(0.281), np.float64(0.5), np.float64(0.703), np.float64(0.848), np.float64(0.932)]
+mixture n=2 (P .115, J5 .46) S=20 se 0.106 [np.float64(0.043), np.float64(0.206), np.float64(0.5), np.float64(0.775), np.float64(0.927), np.float64(0.982)]
+gaussian (0.06,0.06) S=10 se 0.027 [np.float64(0.0), np.float64(0.001), np.float64(0.5), np.float64(0.999), np.float64(1.0), np.float64(1.0)]
+gaussian (0.06,0.06) S=20 se 0.019 [np.float64(0.0), np.float64(0.0), np.float64(0.5), np.float64(1.0), np.float64(1.0), np.float64(1.0)]
+worst-case .30/.30 S=10 se 0.134 [np.float64(0.087), np.float64(0.258), np.float64(0.5), np.float64(0.725), np.float64(0.875), np.float64(0.952)]
+worst-case .30/.30 S=20 se 0.095 [np.float64(0.027), np.float64(0.18), np.float64(0.5), np.float64(0.801), np.float64(0.948), np.float64(0.991)]

@@ -1,0 +1,57 @@
+tunings 990 differences between the two implementations: 0
+('g10', 10) {'moved': 93, 'pre>0.999': np.int64(29), 'post>0.999': np.int64(4), 'pre>0.9998': np.int64(13), 'post>0.9998': np.int64(2), 'pre>0.99984': np.int64(11), 'post>0.99984': np.int64(2), 'cost_x': 1.0, 'kept': 7}
+('g10', 3) {'moved': 100, 'pre>0.999': np.int64(73), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(42), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(38), 'post>0.99984': np.int64(0), 'cost_x': 1.0}
+('g10', 5) {'kept': 100, 'pre>0.999': np.int64(0), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(0), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(0), 'post>0.99984': np.int64(0), 'cost_x': 1.0}
+('g2', 1) {'kept': 100, 'pre>0.999': np.int64(0), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(0), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(0), 'post>0.99984': np.int64(0), 'cost_x': 1.0}
+('g2', 10) {'kept': 98, 'pre>0.999': np.int64(0), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(0), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(0), 'post>0.99984': np.int64(0), 'cost_x': 1.0, 'moved': 2}
+('g2', 2) {'moved': 100, 'pre>0.999': np.int64(38), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(23), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(21), 'post>0.99984': np.int64(0), 'cost_x': 1.0}
+('g2', 3) {'kept': 100, 'pre>0.999': np.int64(0), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(0), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(0), 'post>0.99984': np.int64(0), 'cost_x': 1.0}
+('g2', 5) {'kept': 95, 'pre>0.999': np.int64(0), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(0), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(0), 'post>0.99984': np.int64(0), 'cost_x': 1.0, 'moved': 5}
+('g2', None) {'kept': 100, 'pre>0.999': np.int64(0), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(0), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(0), 'post>0.99984': np.int64(0), 'cost_x': 1.0}
+('uneq', 10) {'moved': 30, 'pre>0.999': np.int64(2), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(1), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(1), 'post>0.99984': np.int64(0), 'cost_x': 1.0}
+('uneq', 3) {'moved': 30, 'pre>0.999': np.int64(0), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(0), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(0), 'post>0.99984': np.int64(0), 'cost_x': 1.0}
+('uneq', None) {'fallback': 30, 'pre>0.999': np.int64(7), 'post>0.999': np.int64(4), 'pre>0.9998': np.int64(2), 'post>0.9998': np.int64(3), 'pre>0.99984': np.int64(2), 'post>0.99984': np.int64(3), 'cost_x': 5.75}
+uneq default: n before -> after: Counter({(4, 4): 22, (4, 3): 3, (4, 23): 3, (4, 5): 2})
+uneq default, tunings with post factor > pre factor: 7 of 30
+  seed 0 eps 0.3168 -> 0.3411 factor 0.989774 -> 0.999954
+  seed 1 eps 0.3127 -> 0.3394 factor 0.995200 -> 0.999969
+  seed 3 eps 0.3037 -> 0.2806 factor 1.000000 -> 0.968742
+  seed 5 eps 0.3026 -> 0.3187 factor 0.999918 -> 0.986574
+  seed 16 eps 0.3108 -> 0.2443 factor 0.997000 -> 0.999911
+(a) G vs old guard, stored i137 tunings at b0b8f71, seeds 0-29
+  (2, 2) G equals old guard at 30 of 30; G keeps 0; old guard moved 30
+  (10, 3) G equals old guard at 30 of 30; G keeps 0; old guard moved 30
+  (10, 10) G equals old guard at 29 of 30; G keeps 1; old guard moved 30
+  (2, 3) G equals old guard at 0 of 30; G keeps 30; old guard moved 30
+  (2, 5) G equals old guard at 2 of 30; G keeps 28; old guard moved 30
+  (2, 10) G equals old guard at 1 of 30; G keeps 29; old guard moved 30
+  (10, 5) G equals old guard at 0 of 30; G keeps 30; old guard moved 30
+(b) tunings (seeds 0-99, stored) that G moves in cells where P never fails; P's pilot at those seeds if < 30
+   cell median of medians 45.2, k range 85-161
+  (2, 5) seed 25 eps 1.2417 -> 0.4088 exact factor 0.9578 P median 211.5 k 403
+  (2, 5) seed 26 eps 1.2018 -> 0.4089 exact factor 0.8895 P median 98.5 k 181
+  (2, 5) seed 30 eps 1.2455 -> 0.4088 exact factor 0.7593 
+  (2, 5) seed 73 eps 1.2456 -> 0.4088 exact factor 0.7908 
+  (2, 5) seed 78 eps 1.2321 -> 0.4089 exact factor 0.8635 
+   cell median of medians 66.2, k range 104-2477
+  (2, 10) seed 21 eps 1.3835 -> 0.2063 exact factor 0.9757 P median 394.5 k 806
+  (2, 10) seed 61 eps 1.3985 -> 0.2063 exact factor 0.8070 
+   cell median of medians 39.2, k range 62-806
+   cell median of medians 183.0, k range 121-1792
+(c) J5 (remedy c) over P: ratio of geometric means of (seed median tau x gradients per iteration), 30 seeds, cap 1e4
+  d=2 n=None rho_M 1.061 se(log) 0.022 sd P 0.081 J5 0.090  P(fail M | true ratio = this estimate, 30 new seeds) 0.000
+  d=2 n=1 rho_M 1.058 se(log) 0.022 sd P 0.078 J5 0.094  P(fail M | true ratio = this estimate, 30 new seeds) 0.000
+  d=2 n=3 rho_M 0.887 se(log) 0.031 sd P 0.159 J5 0.066  P(fail M | true ratio = this estimate, 30 new seeds) 0.000
+  d=2 n=5 rho_M 0.501 se(log) 0.109 sd P 0.594 J5 0.075  P(fail M | true ratio = this estimate, 30 new seeds) 0.000
+  d=2 n=10 rho_M 0.835 se(log) 0.107 sd P 0.584 J5 0.072  P(fail M | true ratio = this estimate, 30 new seeds) 0.000
+  d=10 n=None rho_M 1.145 se(log) 0.022 sd P 0.083 J5 0.083  P(fail M | true ratio = this estimate, 30 new seeds) 0.015
+  d=10 n=1 rho_M 1.089 se(log) 0.015 sd P 0.061 J5 0.057  P(fail M | true ratio = this estimate, 30 new seeds) 0.000
+  d=10 n=2 rho_M 1.166 se(log) 0.021 sd P 0.080 J5 0.083  P(fail M | true ratio = this estimate, 30 new seeds) 0.089
+  d=10 n=5 rho_M 0.248 se(log) 0.126 sd P 0.688 J5 0.043  P(fail M | true ratio = this estimate, 30 new seeds) 0.000
+  P(J5 passes M on all 9 cells of part A if the true ratios are these estimates) = 0.898
+(d) P at cap 1e4: unmet per failing seed (k not chosen), resonant cells
+  (2, 2) failing seeds 12 unmet: [5, 8, 73, 73, 81, 83, 91, 97, 98, 99, 99, 99] | k of passing seeds: median 5407.5 max 8784
+  (10, 3) failing seeds 29 unmet: [5, 10, 11, 14, 24, 37, 40, 42, 44, 46, 51, 54, 54, 60, 61, 72, 88, 92, 92, 93, 96, 99, 99, 100, 100, 100, 100, 100, 100] | k of passing seeds: median 4972.0 max 4972
+  (10, 10) failing seeds 11 unmet: [4, 15, 34, 80, 87, 95, 96, 98, 99, 99, 100] | k of passing seeds: median 1870.0 max 9348
+   unequal, P default n_steps (cap 1e4): [(0, 0, 1728), (1, 0, 4314), (2, 0, 3609), (3, 99, None), (4, 84, None), (5, 98, None), (6, 0, 7692), (7, 0, 1453), (8, 0, 2595), (9, 0, 1625)]
+   unequal, guard a default n_steps (cap 1e4): [(0, 0, 1363), (1, 75, None), (2, 1, 8702), (3, 0, 3026), (4, 0, 3151), (5, 0, 1502), (6, 9, None), (7, 0, 1492), (8, 90, None), (9, 0, 3045)]
