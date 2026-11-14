@@ -37,11 +37,11 @@ CHECK_GRAD = True
 PILOT_MAX_ITER = 100_000
 # The meeting-time pilot: lag 1, with nothing stored (spec R-TUNE-2).
 PILOT_SETTINGS = engine.Settings(0, 0, 1, max_iter=PILOT_MAX_ITER, store=False)
-# The peak memory of a run and of its first estimates over the bytes the run stores: 2.0
-# to 2.5 and 2.1 to 2.5 from d = 2 to 50 for a random walk's rejection rate at thin = 1.
-# In one or two dimensions the estimates reach up to 5.3 with thin above 1 or a kernel
-# that rarely rejects, since Result.quantile sorts the atoms that are not consecutive
-# repeats (notes/experiments/i73_memory_peak.out, DECISIONS #183).
+# A bound on the peak memory of a run and of its first estimates over the bytes the run
+# stores, from d = 2 on for a random walk's rejection rate at thin = 1. In one or two
+# dimensions the estimates pass it with thin above 1 or a kernel that rarely rejects,
+# since Result.quantile sorts the atoms that are not consecutive repeats
+# (notes/experiments/i73_memory_peak.out, DECISIONS #131, #183).
 PEAK_PER_STORED = 3
 # The warnings of spec section 7.4 that a run emits as they happen, not at its end, or as
 # it ends for slow pairs on a pool.
@@ -470,7 +470,7 @@ class CoupledSampler:
 
     def _check_memory(self, settings: engine.Settings, n_replicates: int) -> None:
         # Spec R-EXEC-7: estimate the atoms and distances to store before running, and warn
-        # when a run and its first estimates, which peak at up to three times that, would
+        # when a run and its first estimates, which peak at about three times that, would
         # pass 1 GB. The pilot's meeting times stand in for those of the run, their tau - 1
         # for its tau - L; without a pilot, the run's pairs count as meeting at once.
         coupled = np.zeros(1)
