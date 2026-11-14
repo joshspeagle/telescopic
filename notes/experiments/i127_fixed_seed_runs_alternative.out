@@ -1,0 +1,6 @@
+setup: commit 122e8e3 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
+pumps maximal          tau sum   289 2d32992fbf3e84da  run tau b7db9633229236d2 atoms 1c273a202d5c8cb4
+pumps maximal eta 0.6  tau sum  4087 185bd8e03785310f  run tau 853447c6cb1acc66 atoms 7b17712b4c2832f3
+pumps crn              tau sum  3398 779e32fd0fe86e35  run tau 7ea182a8bdfa8796 atoms 545e09f60b9f4878
+pumps two-scale        tau sum   354 0754934b12477bf3  run tau 7dbbb79ded7e3254 atoms 4c9de615579c108f
+random walk            run tau 19a8a945b0d30d50 atoms 9f5aec6080e958e2
