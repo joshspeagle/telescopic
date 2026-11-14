@@ -1,0 +1,4 @@
+d = 1000, float64: 40 log_prob + 8 grad evaluations, peak 0.85 MB (107 vectors of d float64), 7.1 ms, warned False
+d = 1000, float32 grad: 48 log_prob + 16 grad evaluations, peak 0.85 MB (107 vectors of d float64), 6.8 ms, warned False
+d = 10000, float64: 40 log_prob + 8 grad evaluations, peak 8.48 MB (106 vectors of d float64), 15.8 ms, warned False
+d = 10000, float32 grad: 48 log_prob + 16 grad evaluations, peak 8.48 MB (106 vectors of d float64), 15.9 ms, warned False
