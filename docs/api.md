@@ -1,7 +1,8 @@
 # API reference
 
-Each class has a page with its attributes and methods, and each module a page with its
-functions and a table of its classes.
+Each class has a page with its attributes and methods, and so does the function
+`sample`. Each module has a page with the rest of its public names, its functions and,
+for `telescopic.plotting`, its three colors, and a table of its classes.
 
 ## Running
 
@@ -112,6 +113,7 @@ functions and a table of its classes.
    :toctree: api
    :nosignatures:
 
+   telescopic.warnings
    ~telescopic.warnings.TelescopicWarning
    ~telescopic.warnings.ConvergenceWarning
    ~telescopic.warnings.InputWarning

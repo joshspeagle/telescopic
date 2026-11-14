@@ -419,21 +419,42 @@ def test_the_package_exports_what_the_readme_uses():
     assert used | {"__version__"} <= set(telescopic.__all__)
 
 
-# The pages of the API reference: the entries of the autosummary tables of docs/api.md,
-# each of which has a generated page. A module's page shows the functions of its __all__
-# and links the pages of its classes.
+# The rows of the autosummary tables of docs/api.md, which the tests read; the strict build
+# of the documentation checks that each row generates a page. A module's page shows the
+# rest of its __all__ and links the pages of its classes.
 API_PAGES = re.findall(
     r"^ {3}~?(telescopic[\w.]*)$",
     (Path(__file__).parents[1] / "docs" / "api.md").read_text(),
     re.MULTILINE,
 )
-SUBMODULES = {f"telescopic.{module.name}" for module in pkgutil.iter_modules(telescopic.__path__)}
+SUBMODULES = {
+    f"telescopic.{module.name}"
+    for module in pkgutil.iter_modules(telescopic.__path__)
+    if not module.name.startswith("_")
+}
 DOCUMENTED_MODULES = [name for name in API_PAGES if name in SUBMODULES]
 
 
-def test_the_api_reference_documents_the_modules_with_their_members():
-    # A module that the pattern above stops finding would drop out of the next test.
-    assert len(DOCUMENTED_MODULES) >= 10, DOCUMENTED_MODULES
+def _objects_with_pages():
+    return [
+        getattr(importlib.import_module(module), attribute)
+        for module, _, attribute in (
+            page.rpartition(".") for page in API_PAGES if page not in SUBMODULES
+        )
+    ]
+
+
+def test_every_public_module_has_a_page_or_its_names_have_pages():
+    # A module without a row, such as telescopic.results, is shown by the pages of its
+    # names, which telescopic exports; a name of its __all__ without one is missing.
+    pages = _objects_with_pages()
+    missing = [
+        f"{name}.{key}"
+        for name in sorted(SUBMODULES - set(API_PAGES))
+        for key in importlib.import_module(name).__all__
+        if not any(getattr(importlib.import_module(name), key) is page for page in pages)
+    ]
+    assert not missing
 
 
 @pytest.mark.parametrize("name", DOCUMENTED_MODULES)
@@ -451,21 +472,19 @@ def test_a_documented_module_shows_every_class_and_function_it_defines(name):
         and (inspect.isclass(value) or inspect.isfunction(value))
         and value.__module__ == name
     }
+    if name == "telescopic.warnings":
+        # The helper that emits the package's warnings is internal, and stays out of __all__.
+        defined.remove("warn")
     assert defined <= set(module.__all__) <= set(vars(module))
     classes = {f"{name}.{key}" for key in module.__all__ if inspect.isclass(vars(module)[key])}
     assert classes <= set(API_PAGES)
 
 
 def test_the_api_reference_has_a_page_for_every_public_name():
-    pages = {
-        getattr(importlib.import_module(module), attribute)
-        for module, _, attribute in (
-            page.rpartition(".") for page in API_PAGES if page not in SUBMODULES
-        )
-    }
+    pages = _objects_with_pages()
     public = [getattr(telescopic, name) for name in telescopic.__all__ if name != "__version__"]
     assert {value.__name__ for value in public if inspect.ismodule(value)} <= set(API_PAGES)
-    assert {value for value in public if not inspect.ismodule(value)} <= pages
+    assert all(value in pages for value in public if not inspect.ismodule(value))
 
 
 def test_the_package_is_marked_as_typed():
