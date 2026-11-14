@@ -1,0 +1,36 @@
+  ROW | logistic n=1e4 d=5, point start at the posterior mode: wrong sign | 510060 | given 18.17 unmet 0 step 0.2643 | derivative 2.23 unmet 0 step 1.2604 | ratio 8.148 (9s)
+  ROW | logistic n=1e4 d=5, point start at the posterior mode: wrong sign | 510061 | given 15.27 unmet 0 step 0.2457 | derivative 2.03 unmet 0 step 1.2810 | ratio 7.522 (18s)
+  ROW | logistic n=1e4 d=5, point start at the posterior mode: wrong sign | 510062 | given 17.36 unmet 0 step 0.2488 | derivative 2.12 unmet 0 step 1.3246 | ratio 8.189 (28s)
+  ROW | logistic n=1e4 d=5, point start at the posterior mode: wrong sign | 510063 | given 13.74 unmet 0 step 0.2788 | derivative 1.79 unmet 0 step 1.3517 | ratio 7.676 (38s)
+  ROW | logistic n=1e4 d=5, point start at the posterior mode: wrong sign | 510064 | given 9.36 unmet 0 step 0.2694 | derivative 2.22 unmet 0 step 1.2430 | ratio 4.216 (47s)
+RESULT | logistic n=1e4 d=5, point start at the posterior mode: wrong sign | Lambda 7.113 | se 0.745 | harmful | unmet given 0/500 derivative 0/500 | step ratio 0.202 | seeds [510060, 510061, 510062, 510063, 510064]
+  ROW | logistic n=1e4 d=5, point start at the posterior mode: twice | 510070 | given 1.99 unmet 0 step 1.1453 | derivative 1.90 unmet 0 step 1.2488 | ratio 1.047 (8s)
+  ROW | logistic n=1e4 d=5, point start at the posterior mode: twice | 510071 | given 4.16 unmet 0 step 1.2104 | derivative 3.57 unmet 0 step 1.3755 | ratio 1.165 (16s)
+  ROW | logistic n=1e4 d=5, point start at the posterior mode: twice | 510072 | given 2.59 unmet 0 step 1.1648 | derivative 2.30 unmet 0 step 1.2546 | ratio 1.126 (25s)
+  ROW | logistic n=1e4 d=5, point start at the posterior mode: twice | 510073 | given 2.92 unmet 0 step 1.2033 | derivative 2.61 unmet 0 step 1.3294 | ratio 1.119 (33s)
+  ROW | logistic n=1e4 d=5, point start at the posterior mode: twice | 510074 | given 2.38 unmet 0 step 1.1666 | derivative 2.35 unmet 0 step 1.2367 | ratio 1.013 (41s)
+RESULT | logistic n=1e4 d=5, point start at the posterior mode: twice | Lambda 1.103 | se 0.028 | harmless | unmet given 0/500 derivative 0/500 | step ratio 0.915 | seeds [510070, 510071, 510072, 510073, 510074]
+  ROW | hierarchical normal d=10, every group effect started at mu: sumsq sign wrong | 510330 | given 1885.93 unmet 10 step 0.1372 | derivative 5390.06 unmet 50 step 0.6972 | ratio 0.350 (8s)
+  ROW | hierarchical normal d=10, every group effect started at mu: sumsq sign wrong | 510331 | given 1341.39 unmet 4 step 0.1080 | derivative 3660.05 unmet 31 step 0.5801 | ratio 0.366 (16s)
+  ROW | hierarchical normal d=10, every group effect started at mu: sumsq sign wrong | 510332 | given 1377.80 unmet 5 step 0.1140 | derivative 2295.03 unmet 18 step 0.5901 | ratio 0.600 (23s)
+  ROW | hierarchical normal d=10, every group effect started at mu: sumsq sign wrong | 510333 | given 1701.36 unmet 4 step 0.1186 | derivative 4838.37 unmet 45 step 0.6192 | ratio 0.352 (31s)
+  ROW | hierarchical normal d=10, every group effect started at mu: sumsq sign wrong | 510334 | given 1186.12 unmet 3 step 0.1493 | derivative 3890.88 unmet 35 step 0.6447 | ratio 0.305 (39s)
+RESULT | hierarchical normal d=10, every group effect started at mu: sumsq sign wrong | Lambda 0.373 | se 0.052 | undetermined | unmet given 26/500 derivative 179/500 | step ratio 0.200 | seeds [510330, 510331, 510332, 510333, 510334]
+  ROW | hierarchical normal d=10, every group effect started at mu: pooling sign wrong | 510370 | given 4483.31 unmet 22 step 0.0606 | derivative 1803.26 unmet 16 step 0.5779 | ratio 2.486 (7s)
+  ROW | hierarchical normal d=10, every group effect started at mu: pooling sign wrong | 510371 | given 3753.52 unmet 15 step 0.1045 | derivative 1776.82 unmet 13 step 0.5282 | ratio 2.112 (15s)
+  ROW | hierarchical normal d=10, every group effect started at mu: pooling sign wrong | 510372 | given 4462.96 unmet 22 step 0.0648 | derivative 4112.09 unmet 36 step 0.4500 | ratio 1.085 (23s)
+  ROW | hierarchical normal d=10, every group effect started at mu: pooling sign wrong | 510373 | given 4446.47 unmet 25 step 0.1220 | derivative 3104.02 unmet 27 step 0.5297 | ratio 1.432 (31s)
+  ROW | hierarchical normal d=10, every group effect started at mu: pooling sign wrong | 510374 | given 4553.41 unmet 25 step 0.0775 | derivative 5786.65 unmet 53 step 0.5532 | ratio 0.787 (40s)
+RESULT | hierarchical normal d=10, every group effect started at mu: pooling sign wrong | Lambda 1.309 | se 0.316 | undetermined | unmet given 109/500 derivative 145/500 | step ratio 0.163 | seeds [510370, 510371, 510372, 510373, 510374]
+  ROW | hierarchical normal d=10, spread start: jacobian wrong | 510280 | given 9123.04 unmet 91 step 0.5258 | derivative 9252.65 unmet 92 step 0.5643 | ratio 0.986 (10s)
+  ROW | hierarchical normal d=10, spread start: jacobian wrong | 510281 | given 9601.36 unmet 96 step 0.5196 | derivative 9700.78 unmet 97 step 0.6446 | ratio 0.990 (21s)
+  ROW | hierarchical normal d=10, spread start: jacobian wrong | 510282 | given 9305.77 unmet 93 step 0.4639 | derivative 9737.57 unmet 97 step 0.6039 | ratio 0.956 (31s)
+  ROW | hierarchical normal d=10, spread start: jacobian wrong | 510283 | given 9769.65 unmet 97 step 0.6414 | derivative 9774.20 unmet 97 step 0.5979 | ratio 1.000 (42s)
+  ROW | hierarchical normal d=10, spread start: jacobian wrong | 510284 | given 8951.63 unmet 89 step 0.4213 | derivative 9116.01 unmet 91 step 0.4730 | ratio 0.982 (53s)
+RESULT | hierarchical normal d=10, spread start: jacobian wrong | Lambda 0.983 | se 0.007 | undetermined | unmet given 466/500 derivative 474/500 | step ratio 0.894 | seeds [510280, 510281, 510282, 510283, 510284]
+  ROW | half-normal d=3 (x >= 0), start with coordinate 0 on the boundary: wrong sign | 510400 | given 39.48 unmet 0 step 0.3889 | derivative 8.25 unmet 0 step 0.9057 | ratio 4.785 (1s)
+  ROW | half-normal d=3 (x >= 0), start with coordinate 0 on the boundary: wrong sign | 510401 | given 32.17 unmet 0 step 0.3849 | derivative 7.59 unmet 0 step 0.7334 | ratio 4.238 (1s)
+  ROW | half-normal d=3 (x >= 0), start with coordinate 0 on the boundary: wrong sign | 510402 | given 39.99 unmet 0 step 0.3746 | derivative 10.12 unmet 0 step 0.7087 | ratio 3.952 (2s)
+  ROW | half-normal d=3 (x >= 0), start with coordinate 0 on the boundary: wrong sign | 510403 | given 30.41 unmet 0 step 0.3952 | derivative 8.81 unmet 0 step 0.7785 | ratio 3.452 (2s)
+  ROW | half-normal d=3 (x >= 0), start with coordinate 0 on the boundary: wrong sign | 510404 | given 35.34 unmet 0 step 0.3489 | derivative 9.33 unmet 0 step 0.7486 | ratio 3.788 (3s)
+RESULT | half-normal d=3 (x >= 0), start with coordinate 0 on the boundary: wrong sign | Lambda 4.022 | se 0.225 | harmful | unmet given 0/500 derivative 0/500 | step ratio 0.491 | seeds [510400, 510401, 510402, 510403, 510404]

@@ -1,0 +1,35 @@
+N(0,I) d=5, start on the integer lattice (round of sd 1)                       | N    0/200  H    0/200  | ratio med 7.77e-04 max 1.93e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+Laplace d=5, start on the integer lattice (round of sd 1)                      | N    0/200  H    0/200  | ratio med 1.38e-12 max 7.02e-12 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+hinge d=5, start on the integer lattice (round of sd 1)                        | N    0/200  H    0/200  | ratio med 1.67e-01 max 2.09e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+asymmetric Laplace d=5, start on the integer lattice (round of sd 1)           | N    0/200  H    0/200  | ratio med 1.43e-12 max 7.07e-12 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5, start on the integer lattice (round of sd 3)                       | N    0/200  H    0/200  | ratio med 6.56e-04 max 1.48e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+Laplace d=5, start on the integer lattice (round of sd 3)                      | N    0/200  H    0/200  | ratio med 7.23e-12 max 8.93e-11 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+hinge d=5, start on the integer lattice (round of sd 3)                        | N    0/200  H    0/200  | ratio med 2.09e-01 max 2.09e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+asymmetric Laplace d=5, start on the integer lattice (round of sd 3)           | N    0/200  H    0/200  | ratio med 6.77e-12 max 9.26e-11 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=100, start on the integer lattice (round of sd 1)                     | N    0/200  H    0/200  | ratio med 7.28e-04 max 1.72e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+Laplace d=100, start on the integer lattice (round of sd 1)                    | N    0/200  H    0/200  | ratio med 5.24e-12 max 1.04e-11 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+hinge d=100, start on the integer lattice (round of sd 1)                      | N    0/200  H    0/200  | ratio med 6.00e-02 max 1.13e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+asymmetric Laplace d=100, start on the integer lattice (round of sd 1)         | N    0/200  H    0/200  | ratio med 4.59e-12 max 1.06e-11 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=1000, start on the integer lattice (round of sd 0.5)                  | N    0/200  H    0/200  | ratio med 6.82e-04 max 1.42e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.5s
+Laplace d=1000, start on the integer lattice (round of sd 0.5)                 | N    0/200  H    0/200  | ratio med 1.01e-12 max 1.84e-12 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.6s
+hinge d=1000, start on the integer lattice (round of sd 0.5)                   | N    0/200  H    0/200  | ratio med 1.41e-02 max 2.97e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.6s
+asymmetric Laplace d=1000, start on the integer lattice (round of sd 0.5)      | N    0/200  H    0/200  | ratio med 8.03e-13 max 1.96e-12 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.6s
+N(0,I) d=20, Empirical of 0/1 vectors (50 rows)                                | N    0/200  H    0/200  | ratio med 9.69e-04 max 2.05e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+logistic n=1e4 d=5, Empirical of 0/1 vectors (20 rows)                         | N    0/100  H    0/100  | ratio med 1.89e-02 max 2.81e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 1.3s
+asymmetric Laplace d=20, Empirical of -1/0/1 vectors (50 rows)                 | N    0/200  H    0/200  | ratio med 3.00e-12 max 6.37e-12 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+ReLU network d=10, start on the integer lattice                                | N    0/200  H    0/200  | ratio med 8.56e-04 max 1.81e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+half-normal (x >= 0 allowed) d=3, start exactly on the boundary in coordinate  | N    0/200  H    0/200  | ratio med 0.00e+00 max 0.00e+00 | unusable 1600 skipped 0 nolines 200 | errors 0  | 0.3s
+half-normal d=3, start |N(0,1)| (inside)                                       | N    0/200  H    0/200  | ratio med 6.07e-04 max 1.26e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+half-normal d=3, start |N(0, 1e-5^2)| (within a few steps of the boundary)     | N    0/200  H    0/200  | ratio med 6.25e-04 max 1.31e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+exponential d=3 on x > 0, start exponential                                    | N    0/200  H    0/200  | ratio med 5.23e-04 max 1.02e-03 | unusable 1 skipped 0 nolines 0 | errors 0  | 0.3s
+exponential d=100 on x > 0, start exponential                                  | N    0/200  H    0/200  | ratio med 9.33e-04 max 2.04e-03 | unusable 1 skipped 0 nolines 0 | errors 0  | 0.3s
+exponential d=10000 on x > 0, start exponential                                | N    0/100  H    0/100  | ratio med 6.77e-04 max 1.27e-03 | unusable 84 skipped 0 nolines 0 | errors 0  | 0.7s
+N(0,I) d=3 restricted to |x_0| < 0.001, start N(0,I) in the others, uniform in | N    0/200  H    0/200  | ratio med 6.08e-04 max 1.30e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+the same slab 0.001, start N(0, I) in every coordinate (most points outside)   | N    0/200  H    0/200  | ratio med 0.00e+00 max 1.26e-06 | unusable 0 skipped 1599 nolines 199 | errors 0  | 0.2s
+N(0,I) d=3 restricted to |x_0| < 1e-05, start N(0,I) in the others, uniform in | N    0/200  H    0/200  | ratio med 6.25e-04 max 1.21e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.5s
+the same slab 1e-05, start N(0, I) in every coordinate (most points outside)   | N    0/200  H    0/200  | ratio med 0.00e+00 max 0.00e+00 | unusable 0 skipped 1600 nolines 200 | errors 0  | 0.2s
+N(0,I) d=3 restricted to |x_0| < 1e-06, start N(0,I) in the others, uniform in | N    0/200  H    0/200  | ratio med 5.72e-04 max 1.42e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+the same slab 1e-06, start N(0, I) in every coordinate (most points outside)   | N    0/200  H    0/200  | ratio med 0.00e+00 max 0.00e+00 | unusable 0 skipped 1600 nolines 200 | errors 0  | 0.2s
+N(0,I) d=3 restricted to |x_0| < 1e-07, start N(0,I) in the others, uniform in | N    0/200  H    0/200  | ratio med 5.58e-04 max 1.10e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+the same slab 1e-07, start N(0, I) in every coordinate (most points outside)   | N    0/200  H    0/200  | ratio med 0.00e+00 max 0.00e+00 | unusable 0 skipped 1600 nolines 200 | errors 0  | 0.2s
+Dirichlet on the simplex (log_prob -inf off it), start Dirichlet               | N    0/200  H    0/200  | ratio med 3.25e-02 max 3.33e-02 | unusable 1 skipped 0 nolines 0 | errors 0  | 0.3s

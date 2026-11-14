@@ -1,0 +1,16 @@
+N(0,I) d=5 + fresh noise sd 1e-12 per evaluation (independent per row)         | N    0/200  H    0/200  | ratio med 5.05e-02 max 9.39e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5 + fresh noise sd 1e-12 per call (shared by the rows of a call)      | N    0/200  H    0/200  | ratio med 5.69e-05 max 2.26e-04 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5 + fresh noise sd 1e-09 per evaluation (independent per row)         | N    0/200  H    0/200  | ratio med 5.06e-02 max 9.41e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5 + fresh noise sd 1e-09 per call (shared by the rows of a call)      | N    0/200  H    0/200  | ratio med 5.69e-08 max 2.27e-07 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5 + fresh noise sd 1e-06 per evaluation (independent per row)         | N    0/200  H    0/200  | ratio med 5.06e-02 max 9.41e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.2s
+N(0,I) d=5 + fresh noise sd 1e-06 per call (shared by the rows of a call)      | N    0/200  H    0/200  | ratio med 5.69e-11 max 2.27e-10 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.2s
+N(0,I) d=5 + fresh noise sd 0.001 per evaluation (independent per row)         | N    0/200  H    0/200  | ratio med 5.06e-02 max 9.41e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5 + fresh noise sd 0.001 per call (shared by the rows of a call)      | N    0/200  H    0/200  | ratio med 5.69e-14 max 2.27e-13 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5 + fresh noise sd 1 per evaluation (independent per row)             | N    0/200  H    0/200  | ratio med 5.19e-02 max 9.34e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5 + fresh noise sd 1 per call (shared by the rows of a call)          | N    0/200  H    0/200  | ratio med 6.50e-17 max 2.40e-16 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5 x (1 + 1e-10 noise), fresh per row                                  | N    0/200  H    0/200  | ratio med 5.13e-02 max 8.95e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5 x (1 + 1e-06 noise), fresh per row                                  | N    0/200  H    0/200  | ratio med 5.13e-02 max 8.95e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5 x (1 + 0.001 noise), fresh per row                                  | N    0/200  H    0/200  | ratio med 5.13e-02 max 8.95e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+Monte Carlo marginal likelihood, 1000 draws, fixed seed (grad of the estimate) | N    0/200  H    0/200  | ratio med 1.49e-03 max 5.41e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 1.1s
+Monte Carlo marginal likelihood, 1000 draws, fresh draws every call            | N    0/200  H    0/200  | ratio med 1.74e-06 max 7.00e-06 | unusable 0 skipped 0 nolines 0 | errors 0  | 1.3s
+Monte Carlo marginal likelihood, 100000 draws, fresh draws every call          | N    0/100  H    0/100  | ratio med 1.88e-06 max 1.10e-05 | unusable 0 skipped 0 nolines 0 | errors 0  | 26.0s

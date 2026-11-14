@@ -1,8 +1,11 @@
 # x123, second experiment: result (#123)
 
-Phase 2 ran the registered procedure of `PREREGISTRATION.md` at commit 7b2c992 (every
-output's header prints `commit 7b2c992`, not dirty), one process at a time on one core,
-with the registered seeds. Every number below is in the `.out` files beside this file.
+Phase 2 ran the registered procedure of `PREREGISTRATION.md` at commit 7b2c992 (the
+header of each of its 62 outputs prints `commit 7b2c992`, not dirty; `predictions.out`
+and `equivalence.out` are outputs of phase 1, at 32ae70b, whose package source is the
+same), one process at a time on one core, with the registered seeds. Every number below
+is in the `.out` files beside this file. The adversarial review of this result, which
+weakens what its "passes" supports, is in `review/REVIEW.md`.
 
 ## Summary
 
@@ -10,6 +13,8 @@ with the registered seeds. Every number below is in the `.out` files beside this
   families; 400 of 400 on every wrong family that is harmful and that its formula puts at
   0.999 or above (43 families of group C, and 1,000 of 1,000 on two formula checks); every
   formula check within 0.05 of its prediction; no predicted miss on a harmful family.
+  Three harmful families that its formula puts between 0.2 and 0.55 face no detection
+  bar, only the check of the formula: (N) warned on 518, 476 and 210 of 1,000 of them.
 - **(H) fails criterion 2**, as registered (criterion 4): 0 warnings on each of the 8
   harmful families of group C where its formula predicts a miss (starts tight in the
   wrong coordinate, or matched to the narrow scale), and 0 of 1,000 on the 3 harmful
