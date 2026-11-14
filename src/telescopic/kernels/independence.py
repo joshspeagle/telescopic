@@ -232,7 +232,9 @@ def _log_weights(q: Proposal, proposal: State, *states: State) -> list[FloatArra
     # would make every move to its point a rejection, and so bias the chain without an
     # error.
     x = np.concatenate([proposal.x, *(state.x for state in states)])
-    log_q = np.split(log_densities("proposal log_density", q.log_density(x), x), 1 + len(states))
+    values = log_densities("proposal log_density", q.log_density(x), x)
+    n = len(proposal.x)
+    log_q = [values[i * n : (i + 1) * n] for i in range(1 + len(states))]
     # A proposal where log q = -inf has weight -inf, so it is rejected: sample drew a point
     # that log_density gives no mass, such as a draw clipped onto the edge of an open
     # support, and a weight of +inf would accept it and never leave it.

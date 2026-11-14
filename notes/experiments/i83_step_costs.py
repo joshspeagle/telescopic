@@ -53,6 +53,9 @@ point by point.
 4. Pilot (p1-06). `adaptive_metropolis` at d = 2 and 20 (2,000 and 4,000 steps, the
    default) and d = 100 with 20,000 steps, vectorized and point by point: seconds per
    pilot, and whether the `PilotRun` is bitwise equal.
+5. Log-weights (p1-07). `_log_weights` of a coupled step at 1 and 256 rows, d = 20,
+   with a Gaussian `MultivariateT` (df = None), whose log-density p1-08 leaves as it
+   was: microseconds per call.
 
 Result (`i83_step_costs.out`, at a load average of 1.3 to 2.0 on 4 cores shared with
 other jobs).
@@ -73,6 +76,7 @@ other jobs).
    rows.
 4. Bitwise equal. 1.31 and 1.32 at d = 2 (point by point, vectorized), 1.23 and 1.34 at
    d = 20, 1.24 and 1.32 at d = 100.
+5. 1.35 (1.22 to 1.43) at 1 row, 1.06 (0.96 to 1.18) at 256 rows.
 
 Run from the repository root: OMP_NUM_THREADS=1 PYTHONPATH=src python notes/experiments/i83_step_costs.py
 """
@@ -332,6 +336,26 @@ print(json.dumps(outputs))
 """
 )
 
+# Section 5: Independence's log-weights, with a Gaussian proposal, whose log-density
+# p1-08 leaves as it was.
+LOG_WEIGHTS = (
+    COMMON
+    + """
+from telescopic import kernels
+from telescopic.kernels.base import State
+from telescopic.kernels.independence import _log_weights
+
+proposal = kernels.MultivariateT(np.zeros(20), 1.5 * examples.gaussian(20).cov, df=None)
+generator = np.random.default_rng(9)
+outputs = {}
+for n in (1, 256):
+    states = [State(generator.standard_normal((n, 20)), -generator.random(n)) for _ in range(3)]
+    call = lambda: _log_weights(proposal, *states)
+    outputs[f"log weights, {n} rows"] = {"time": 1e6 * timed(call, 2000 // n + 20)}
+print(json.dumps(outputs))
+"""
+)
+
 
 def child(script, source):
     output = subprocess.run(
@@ -443,6 +467,16 @@ def pilot(sources):
         )
 
 
+def log_weights(sources):
+    print(
+        "\n5. Independence's log-weights, d = 20: microseconds per call, median of the "
+        "rounds, and before/after per round: median (range)"
+    )
+    outputs = rounds(LOG_WEIGHTS, sources)
+    for key in outputs["after"][0]:
+        print(f"{key:21}: {compare(outputs, key)}")
+
+
 def main():
     print(setup())
     print(f"before: commit {BEFORE}; after: this checkout; children run with {THREADS}")
@@ -453,6 +487,7 @@ def main():
         reflection(sources)
         gibbs(sources)
         pilot(sources)
+        log_weights(sources)
     print(f"load average after: {tuple(round(x, 2) for x in os.getloadavg())}")
 
 
