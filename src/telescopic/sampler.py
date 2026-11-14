@@ -79,7 +79,11 @@ class CoupledSampler:
         :math:`\nabla\log\pi` with the signature of ``log_prob``. Only the kernels that
         need it, MALA and HMC, evaluate it; ``"auto"`` is random-walk Metropolis.
     vectorize : bool
-        Whether ``log_prob`` and ``grad`` take a batch of points.
+        Whether ``log_prob`` and ``grad`` take a batch of points. The kernels then also
+        compute their matrix products for a batch of chains at once, with BLAS, so a
+        replicate's last bits depend on which replicates ran beside it: a run repeated
+        with the same seed and lanes is bitwise identical, and runs of other layouts
+        agree statistically.
     kernel : Kernel or str
         A kernel, or one of ``"auto"`` and ``"rwmh"`` (random-walk Metropolis with the
         reflection-maximal coupling), ``"mala"`` and ``"hmc"`` (which need ``grad``) and
@@ -537,7 +541,11 @@ def sample(
         :math:`\nabla\log\pi` with the signature of ``log_prob``. Only the kernels that
         need it, MALA and HMC, evaluate it; ``"auto"`` is random-walk Metropolis.
     vectorize : bool
-        Whether ``log_prob`` and ``grad`` take a batch of points.
+        Whether ``log_prob`` and ``grad`` take a batch of points. The kernels then also
+        compute their matrix products for a batch of chains at once, with BLAS, so a
+        replicate's last bits depend on which replicates ran beside it: a run repeated
+        with the same seed and lanes is bitwise identical, and runs of other layouts
+        agree statistically.
     kernel : Kernel or str
         A kernel, or one of ``"auto"`` and ``"rwmh"`` (random-walk Metropolis with the
         reflection-maximal coupling), ``"mala"`` and ``"hmc"`` (which need ``grad``) and

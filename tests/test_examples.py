@@ -116,7 +116,8 @@ def test_the_funnel_variances_are_those_of_its_description():
 
 @pytest.mark.parametrize("name", EXAMPLES)
 def test_log_densities_give_a_point_the_same_bits_alone_and_in_a_batch(name):
-    # So that runs do not depend on the engine's lanes or a pool's chunks (spec D-20).
+    # So that an example gives the same values to a run that evaluates it point by point
+    # as to one that evaluates it in batches.
     example = EXAMPLES[name]
     rng = np.random.default_rng(4)
     batch = np.stack([example.initial.rvs(random_state=rng) for _ in range(64)])

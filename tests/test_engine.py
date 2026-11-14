@@ -93,6 +93,18 @@ def test_a_replicates_output_does_not_depend_on_the_lanes(coupling):
         assert_same_replicates(other, runs[0])
 
 
+@pytest.mark.parametrize("kernel", [RandomWalk(np.eye(33)), MALA(0.5, cov=np.eye(33))])
+def test_a_vectorized_run_repeats_bitwise_with_the_same_seed_and_lanes(kernel):
+    # Spec R-EXEC-2: its kernels' products are BLAS's, whose bits depend on the batch but
+    # not on chance.
+    target = Target(gaussian_log_prob, grad=lambda x: -x, vectorize=True)
+    initial = Normal(np.zeros(33), np.ones(33))
+    runs = [
+        run(target, kernel, initial, range(12), k=2, m=10, lag=1, lanes=5, rng=3) for _ in range(2)
+    ]
+    assert_same_replicates(runs[1], runs[0])
+
+
 def switching(point, block):
     # A normal conditional with ppf where the other coordinate is positive, and without
     # it elsewhere.

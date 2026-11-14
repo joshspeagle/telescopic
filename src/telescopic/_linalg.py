@@ -1,6 +1,6 @@
 """Row-independent linear algebra for kernels, and validated covariances."""
 
-# Spec R-KER-6.
+# Spec R-KER-6 and D-20.
 
 from __future__ import annotations
 
@@ -11,10 +11,18 @@ from scipy.linalg import solve_triangular
 from telescopic._types import FloatArray, real_array
 
 
-def matvec(matrix: FloatArray, vectors: FloatArray) -> FloatArray:
-    # matrix @ v for each row v of vectors. Unlike a BLAS product, einsum without
-    # optimization gives a row the same bits whatever the other rows of the batch.
-    product: FloatArray = np.einsum("kj,ij->ik", matrix, vectors)
+def matvec(matrix: FloatArray, vectors: FloatArray, blas: bool) -> FloatArray:
+    # matrix @ v for each row v of vectors, of shape (..., n, d); each (n, d) array of a
+    # stack is a separate product. Unlike a BLAS product, einsum without optimization
+    # gives a row the same bits whatever the other rows of the batch, but is several times
+    # slower beyond a few dimensions, so kernels use BLAS only for vectorized targets
+    # (DECISIONS #189).
+    if not blas:
+        product: FloatArray = np.einsum("kj,...ij->...ik", matrix, vectors)
+        return product
+    # Silent on overflow, as einsum is: kernels reject the non-finite results.
+    with np.errstate(over="ignore", invalid="ignore"):
+        product = vectors @ matrix.T
     return product
 
 

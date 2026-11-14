@@ -57,7 +57,7 @@ class MultivariateT:
         z = draws.normal(len(self.mean))
         if self.df is not None:
             z = z / np.sqrt((draws.normal(self.df) ** 2).sum(axis=1) / self.df)[:, None]
-        return self.mean + matvec(self._chol, z)
+        return self.mean + matvec(self._chol, z, False)
 
     def log_density(self, x: FloatArray) -> FloatArray:
         """Normalized log-density at the rows of ``x``.
@@ -73,7 +73,7 @@ class MultivariateT:
         """
         d = len(self.mean)
         centered = x - self.mean
-        z = matvec(self._inverse, centered)
+        z = matvec(self._inverse, centered, False)
         log_density: FloatArray
         if self.df is None:
             log_density = -0.5 * ((z**2).sum(axis=1) + self._log_det + d * math.log(2 * math.pi))
@@ -92,7 +92,7 @@ class MultivariateT:
             # not finite keeps its value.
             far = ~np.isfinite(squared) & np.isfinite(centered).all(axis=1)
             scale = np.abs(centered[far]).max(axis=1)
-            whitened = matvec(self._inverse, centered[far] / scale[:, None])
+            whitened = matvec(self._inverse, centered[far] / scale[:, None], False)
             log_kernel[far] = 2 * np.log(scale) + np.log((whitened**2).sum(axis=1)) - math.log(nu)
         log_density = (
             gammaln((nu + d) / 2)

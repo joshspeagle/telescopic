@@ -78,9 +78,10 @@ class MALA(GradientKernel):
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         chol, inverse = self._ready()
-        mean = _mean(state, chol)
-        proposal = evaluate_proposal(target, mean + matvec(chol, draws.normal(len(chol))))
-        log_alpha = _log_alpha(state, proposal, mean, chol, inverse)
+        blas = target.vectorize
+        mean = _mean(state, chol, blas)
+        proposal = evaluate_proposal(target, mean + matvec(chol, draws.normal(len(chol)), blas))
+        log_alpha = _log_alpha(state, proposal, mean, chol, inverse, blas)
         accepted = draws.log_uniform() < log_alpha
         return select(accepted, proposal, state), acceptance(log_alpha)
 
@@ -88,15 +89,20 @@ class MALA(GradientKernel):
         self, target: Target, state_x: State, state_y: State, draws: Draws
     ) -> tuple[State, State]:
         chol, inverse = self._ready()
-        mean_x, mean_y = _mean(state_x, chol), _mean(state_y, chol)
-        x, y, identical = reflection_maximal(mean_x, mean_y, chol, inverse, draws)
+        blas = target.vectorize
+        mean_x, mean_y = _mean(state_x, chol, blas), _mean(state_y, chol, blas)
+        x, y, identical = reflection_maximal(mean_x, mean_y, chol, inverse, draws, blas=blas)
         proposal_x, proposal_y = evaluate_pair(partial(evaluate_proposal, target), x, y, identical)
         log_u = draws.log_uniform()
         state_x = select(
-            log_u < _log_alpha(state_x, proposal_x, mean_x, chol, inverse), proposal_x, state_x
+            log_u < _log_alpha(state_x, proposal_x, mean_x, chol, inverse, blas),
+            proposal_x,
+            state_x,
         )
         state_y = select(
-            log_u < _log_alpha(state_y, proposal_y, mean_y, chol, inverse), proposal_y, state_y
+            log_u < _log_alpha(state_y, proposal_y, mean_y, chol, inverse, blas),
+            proposal_y,
+            state_y,
         )
         return state_x, state_y
 
@@ -130,22 +136,27 @@ class MALA(GradientKernel):
         return f"MALA(step_size={self.step_size}, cov={cov})"
 
 
-def _mean(state: State, chol: FloatArray) -> FloatArray:
+def _mean(state: State, chol: FloatArray, blas: bool) -> FloatArray:
     # The mean of q(. | x): x + (epsilon^2 / 2) Sigma grad, with chol = epsilon C.
     grad = cast(FloatArray, state.grad)
-    mean: FloatArray = state.x + 0.5 * matvec(chol, matvec(chol.T, grad))
+    mean: FloatArray = state.x + 0.5 * matvec(chol, matvec(chol.T, grad, blas), blas)
     return mean
 
 
 def _log_alpha(
-    current: State, proposal: State, forward: FloatArray, chol: FloatArray, inverse: FloatArray
+    current: State,
+    proposal: State,
+    forward: FloatArray,
+    chol: FloatArray,
+    inverse: FloatArray,
+    blas: bool,
 ) -> FloatArray:
     # log pi(x') - log pi(x) + log q(x | x') - log q(x' | x); the Gaussian constants cancel.
     # A rejected proposal (log pi = -inf) may hold non-finite positions: no warnings, and a
     # NaN ratio rejects as -inf does.
     with np.errstate(over="ignore", invalid="ignore"):
-        to = matvec(inverse, proposal.x - forward)
-        back = matvec(inverse, current.x - _mean(proposal, chol))
+        to = matvec(inverse, proposal.x - forward, blas)
+        back = matvec(inverse, current.x - _mean(proposal, chol, blas), blas)
         log_q = 0.5 * (np.einsum("ij,ij->i", to, to) - np.einsum("ij,ij->i", back, back))
         log_alpha: FloatArray = proposal.log_prob - current.log_prob + log_q
     return log_alpha

@@ -268,6 +268,21 @@ def test_equal_states_stay_equal(name):
             np.testing.assert_array_equal(state_x.grad, state_y.grad)
 
 
+@pytest.mark.parametrize("name", ["reflection", "mixture", "mala", "hmc"])
+def test_equal_states_stay_equal_where_blas_adds_rows_in_another_order(name):
+    # A vectorized target's products are BLAS's, which add the terms of some rows of a
+    # batch in another order, by their position: with OpenBLAS at d = 33, two equal rows of
+    # a batch of 6 got different bits. HMC's coupled trajectory holds both chains in one
+    # batch, so each chain's products must be a separate call of the same shape.
+    d = 33
+    kernel = kernels(dense(d))[name]
+    points = np.random.default_rng(23).standard_normal((3, d))
+    state_x, state_y = state(points, kernel.needs_grad), state(points.copy(), kernel.needs_grad)
+    for step in range(5):
+        state_x, state_y = kernel.coupled_step(TARGET, state_x, state_y, random_draws(3, step))
+        np.testing.assert_array_equal(state_x.x, state_y.x)
+
+
 @pytest.mark.parametrize("name", NAMES)
 def test_kernels_leave_their_input_states_unchanged(name):
     kernel = kernels(np.eye(2))[name]
@@ -292,9 +307,10 @@ def test_states_that_carry_gradients_get_them_at_every_new_position(name):
         np.testing.assert_array_equal(result.grad, -result.x)
 
 
-@pytest.mark.parametrize("name", NAMES)
-def test_a_rows_transition_does_not_depend_on_the_rest_of_the_batch(name):
-    # Spec R-KER-6: a BLAS product gives most rows other bits in a batch of one.
+def batch_transitions(name, target):
+    # Each row's step and coupled step from fixed random numbers, twice in one batch of 16
+    # rows and once in batches of one row, as rows of shape (3, d): the moved state, x and
+    # y; and the largest magnitude of the states and normals.
     d, n = 10, 16
     kernel = kernels(0.25 * dense(d))[name]
     rng = np.random.default_rng(15)
@@ -307,15 +323,44 @@ def test_a_rows_transition_does_not_depend_on_the_rest_of_the_batch(name):
 
     def transition(rows):
         grad = kernel.needs_grad
-        moved, _ = kernel.step(TARGET, state(x[rows], grad), draws(rows))
+        moved, _ = kernel.step(target, state(x[rows], grad), draws(rows))
         new_x, new_y = kernel.coupled_step(
-            TARGET, state(x[rows], grad), state(y[rows], grad), draws(rows)
+            target, state(x[rows], grad), state(y[rows], grad), draws(rows)
         )
         return np.stack([moved.x, new_x.x, new_y.x], axis=1)
 
-    batch = transition(np.arange(n))
-    for row in range(n):
-        np.testing.assert_array_equal(transition(np.array([row]))[0], batch[row])
+    alone = np.concatenate([transition(np.array([row])) for row in range(n)])
+    largest = max(np.abs(x).max(), np.abs(y).max(), np.abs(normals).max())
+    return transition(np.arange(n)), transition(np.arange(n)), alone, largest
+
+
+@pytest.mark.parametrize("name", NAMES)
+def test_a_rows_transition_does_not_depend_on_the_rest_of_the_batch(name):
+    # Spec R-KER-6: for a point-by-point target, a BLAS product would give most rows other
+    # bits in a batch of one.
+    batch, _, alone, _ = batch_transitions(name, Target(gaussian_log_prob, grad=lambda x: -x))
+    np.testing.assert_array_equal(alone, batch)
+
+
+@pytest.mark.parametrize("name", NAMES)
+def test_a_vectorized_targets_rows_depend_on_their_batch_only_by_rounding(name):
+    # Spec R-KER-6: for a vectorized target the products are BLAS's, whose bits depend on
+    # the batch but repeat for the same batch. A product of d terms is within
+    # gamma_d = d u / (1 - d u) of exact, relative to the sum of the terms' magnitudes
+    # (Higham 2002, eq. 3.5), in any order of addition, so two orders differ by at most
+    # 2 gamma_d L V for factors of infinity-norm at most L and inputs at most V. Carried
+    # through a chain of K products, at most 9 here (the leapfrog's), the differences
+    # add to at most 2 K gamma_d L^K V. The kernels scale C by at most 2 and C^-1 by at
+    # most 1 / 0.5.
+    batch, again, alone, largest = batch_transitions(name, TARGET)
+    np.testing.assert_array_equal(again, batch)
+    d, u, depth = 10, np.finfo(float).eps / 2, 9
+    chol = np.linalg.cholesky(0.25 * dense(d))
+    norm = 2 * max(np.linalg.norm(chol, np.inf), np.linalg.norm(np.linalg.inv(chol), np.inf))
+    gamma = d * u / (1 - d * u)
+    np.testing.assert_allclose(
+        alone, batch, rtol=0, atol=2 * depth * gamma * norm**depth * largest
+    )
 
 
 # Validation and the proposal distribution.

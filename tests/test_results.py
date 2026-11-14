@@ -22,9 +22,9 @@ TARGET = Target(gaussian_log_prob, vectorize=True)
 SETTINGS = {"k": 2, "m": 12, "lag": 2}
 
 
-def gaussian_run(indices, seed=1, **settings):
+def gaussian_run(indices, seed=1, target=TARGET, **settings):
     return run(
-        TARGET,
+        target,
         RandomWalk(np.eye(2)),
         Normal([2.0, -1.0], [1.0, 1.0]),
         indices,
@@ -373,8 +373,9 @@ def test_names_from_an_iterator_are_read_once():
 
 
 def test_merging_two_runs_equals_one_run_over_both_sets_of_replicates():
-    def part(indices, seed=4):
-        return Result(gaussian_run(indices, seed, **SETTINGS))
+    # Point by point, so that a replicate's bits do not depend on the rest of its run.
+    def part(indices):
+        return Result(gaussian_run(indices, 4, Target(gaussian_log_prob), **SETTINGS))
 
     merged, whole = part(range(5)).merge(part(range(5, 12))), part(range(12))
     np.testing.assert_array_equal(merged.meeting_times, whole.meeting_times)
