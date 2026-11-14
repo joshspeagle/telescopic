@@ -585,8 +585,10 @@ class _SlowPairs:
             self._warn(status.slowest, waiting, status.slowest_zero_density)
 
     def after(self, replicates: engine.Replicates) -> None:
-        # A pair is unmet at the threshold when it meets, or is censored, after it.
-        slow = replicates.index[replicates.stopped > self.threshold]
+        # A pair is unmet at the threshold when it meets after it, or is censored at or
+        # after it: the engine compared its chains at the cap.
+        earliest = replicates.stopped + np.isinf(replicates.meeting_time)
+        slow = replicates.index[earliest > self.threshold]
         if len(slow):
             self._warn(int(slow[0]), "", bool(np.isin(slow[0], replicates.zero_density)))
 

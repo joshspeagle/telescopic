@@ -57,9 +57,10 @@ result.plot_meeting_times();
 distance between the law of $X_t$ and the target
 ([Theory](../theory.md#distance-to-stationarity)) by its average over the replicates,
 capped at 1. By default it returns the bound at every $t$ from 0 to the last time at
-which it is positive, so that entry `t` is the bound at `t`. A censored pair counts as
-meeting at its cap, so with censored pairs the estimate is a lower bound of the one
-without a cap.
+which it is positive, so that entry `t` is the bound at `t`. A censored pair is known to
+meet after its cap, where its chains were last compared, and counts as meeting at the
+cap plus 1, so with censored pairs the estimate is a lower bound of the one without a
+cap.
 
 ```{code-cell} python
 result.tv_bound([0, result.k // 2, result.k])
@@ -94,7 +95,7 @@ result.w1_bound([0, result.k // 2, result.k])
 
 {func}`telescopic.diagnostics.tv_bound` and {func}`telescopic.diagnostics.w1_bound`
 compute the same bounds from arrays, such as meeting times of your own, with each
-censored pair given as its cap.
+censored pair given as the cap plus 1.
 
 ## The diagnostics of a run
 

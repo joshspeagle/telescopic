@@ -266,6 +266,14 @@ def test_a_slow_replicate_names_ctrl_c_only_while_its_handler_listens():
     assert "Ctrl-C" not in str(caught[0].message) + str(stopped[0].message)
 
 
+def test_a_pair_censored_at_the_threshold_warns_as_slow_after_a_run():
+    # The engine frees a censored pair's lane before its status is read, so only the
+    # check after the run sees a pair censored at t = 10^4.
+    replicates = synthetic([2, -1], [0.0], m=10, max_iter=10_000)._replicates
+    with pytest.warns(ConvergenceWarning, match="replicate 1 has not met after 10000"):
+        _SlowPairs(lag=1, m=10, kind="replicate").after(replicates)
+
+
 def test_tuning_chains_in_separate_modes_warn():
     starts = itertools.cycle([[-20.0], [20.0]])
 

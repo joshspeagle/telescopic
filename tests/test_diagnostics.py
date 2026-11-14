@@ -85,7 +85,7 @@ def test_hill_measures_the_tail_from_the_largest_value_below_it():
 
 
 def test_the_tv_bound_refuses_censored_pairs_given_as_infinite():
-    with pytest.raises(ValueError, match="censored pair as its cap"):
+    with pytest.raises(ValueError, match="censored pair as its cap plus 1"):
         tv_bound([3.0, np.inf], 1, [0])
 
 
@@ -138,9 +138,10 @@ def test_each_warning_ends_with_its_remedy(meeting_times, values, options, remed
 
 
 @pytest.mark.parametrize("met", [9, 0], ids=["some met", "none met"])
-def test_a_pair_censored_after_the_slow_threshold_is_slow(met):
-    # Where no pair met, the largest meeting time was nan, and max(nan, max_iter) nan.
-    found = issues(synthetic([2] * met + [-1] * 3, np.zeros(met), max_iter=20_000))
+def test_a_pair_censored_at_the_slow_threshold_is_slow(met):
+    # Its chains were compared at the cap, 10^4, so it was unmet there. Where no pair
+    # met, the largest meeting time was nan, and max(nan, max_iter) nan.
+    found = issues(synthetic([2] * met + [-1] * 3, np.zeros(met), max_iter=10_000))
     assert {"censored", "slow"} <= {issue.kind for issue in found}
 
 
