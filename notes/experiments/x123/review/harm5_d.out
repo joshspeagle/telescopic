@@ -1,0 +1,6 @@
+  ROW | float32 throughout, N(0,I) d=50, start sd 2: sign of coordinate 0 | 510200 | given 79.33 unmet 0 step 0.5684 | derivative 16.91 unmet 0 step 0.8392 | ratio 4.691 (4s)
+  ROW | float32 throughout, N(0,I) d=50, start sd 2: sign of coordinate 0 | 510201 | given 91.04 unmet 0 step 0.6444 | derivative 15.01 unmet 0 step 0.8406 | ratio 6.065 (9s)
+  ROW | float32 throughout, N(0,I) d=50, start sd 2: sign of coordinate 0 | 510202 | given 94.77 unmet 0 step 0.6038 | derivative 14.55 unmet 0 step 0.8325 | ratio 6.513 (13s)
+  ROW | float32 throughout, N(0,I) d=50, start sd 2: sign of coordinate 0 | 510203 | given 100.23 unmet 0 step 0.6492 | derivative 15.89 unmet 0 step 0.8350 | ratio 6.308 (18s)
+  ROW | float32 throughout, N(0,I) d=50, start sd 2: sign of coordinate 0 | 510204 | given 88.75 unmet 0 step 0.5996 | derivative 14.12 unmet 0 step 0.8442 | ratio 6.285 (22s)
+RESULT | float32 throughout, N(0,I) d=50, start sd 2: sign of coordinate 0 | Lambda 5.938 | se 0.328 | harmful | unmet given 0/500 derivative 0/500 | step ratio 0.731 | seeds [510200, 510201, 510202, 510203, 510204]

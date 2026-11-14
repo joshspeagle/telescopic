@@ -1,0 +1,6 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/harm.py proxy 7 8 --only signs of coordinates 0..9 --seeds 1 2
+proxy baseline 7: N(0,I) d=10000, start sd 2; seeds [375071]; 100 pairs, max_iter 10000; tuned step 0.3561
+  seed 375071: derivative mean tau 120.81, unmet 0 (7s)
+ROW | C | N(0,I) d=10000, start sd 2: signs of coordinates 0..9 | proxy | 375071 | 10000.000000 | 120.810000 | 100 | 0 | 0.183918 | 0.356070 | 1.12322 | ratio 82.775
+    (641s)

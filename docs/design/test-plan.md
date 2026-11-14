@@ -64,7 +64,7 @@ Most estimator bugs cannot be caught statistically. In the census, an off-by-one
 - Log-space inputs with very peaked probabilities do not underflow.
 - A uniform of 0 never draws a category of zero weight.
 
-### 2.3 `tests/test_target.py`, `tests/test_initial.py` (R-INPUT-1, R-INPUT-2)
+### 2.3 `tests/test_target.py`, `tests/test_initial.py`, `tests/test_gradient_check.py` (R-INPUT-1, R-INPUT-2, R-INPUT-3)
 
 **Target**
 - **Batching:** a vectorised and a point-by-point target agree.
@@ -73,6 +73,15 @@ Most estimator bugs cannot be caught statistically. In the census, an off-by-one
   - `-inf` passes through.
 - **Wrappers:** `args` and `kwargs` are forwarded. Counters count evaluations. Input arrays are never modified.
 - **Gradients:** `log_prob_and_grad` without a gradient raises. A gradient that is not finite in one coordinate, where the log-density is finite, is zero in every coordinate and counted once.
+
+**Gradient check** (`tests/test_gradient_check.py`; its use by the sampler in `tests/test_sampler.py`; R-INPUT-3)
+- Silent on a correct gradient, of a Gaussian and of a sum of cosines, whose differences carry a truncation error, at five seeds; silent on a constant log-density with a zero gradient, whose gaps and tolerances are 0; one `InputWarning` with the size of the disagreement and the draw, numbered from 1, on a wrong sign, a factor of 2 and a missing term; a float32 log-density with a wrong sign in one coordinate warns.
+- The tolerance where one term dominates, against its formula: 640 units in the last place of a float32 gradient of a linear log-density in $d = 1$, and of a float32 linear log-density offset by 1,000, from a start on three points.
+- Directions: a point start off any boundary is compared on 8 lines, silent with the right sign and warning with the wrong one; an empirical start with repeated rows compares along the range of its draws; a start far narrower than its distance from 0 is compared on every line.
+- 40 + 8 evaluations at $d = 5$ and $d = 1{,}000$; 48 + 16 for a float32 or complex64 log-density, and 88 + 24 for one whose dtype narrows after the first draw; a float32 gradient of a float64 log-density is silent at 8 more gradients.
+- Draws of zero density are skipped, and the record numbers the compared lines by their draws in the check's stream; a check that compares no line warns, naming steps that round away in a float32 log-density as one cause; the ratio is infinite for a gap above a tolerance of 0.
+- An error inside it keeps its type and message, the package's own complaints about a function's output included, with a note that names the check; the check installs no warning filter, and a warning of the user's functions inside it is heard.
+- The sampler runs it for a gradient kernel, a mixture with one and point by point, with `args` and `kwargs`, not for a random walk, and not with `check_grad=False`, which saves its evaluations and is validated as a flag; results are bitwise identical with and without it for MALA and HMC, tuned and given, and `sample` passes `check_grad` on, at 40 + 8 evaluations more with the check.
 
 **Initial distributions**
 - **Each input form:**
@@ -291,7 +300,7 @@ Kernel-specific tests:
 | R-THEORY-1 | docs review; 2.12 coverage and failure-mode runs |
 | R-CPL-1–3 | 2.2 |
 | R-KER-* | 2.4 (with batch invariance and draw counts); 2.12 |
-| R-INPUT-1–2 | 2.3 |
+| R-INPUT-1–3 | 2.3 |
 | R-EXEC-1–2 (streams, invariance) | 2.1; 2.6; 2.10 |
 | R-EXEC-3–4 (engine, censoring) | 2.6 |
 | R-EXEC-5–6 (parallel, interrupts) | 2.10 |

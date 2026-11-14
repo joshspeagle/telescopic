@@ -139,6 +139,125 @@ The log-density must be deterministic: the same point must always give the same 
 Pairs meet when their states are equal, and a log-density estimated by simulation breaks
 the couplings.
 
+## Checking the gradient
+
+MALA and HMC stay exact with a wrong gradient: their Metropolis tests correct any drift.
+A wrong gradient makes them slow instead, and their pairs can take hundreds of times
+longer to meet. So when {class}`telescopic.CoupledSampler` or {func}`telescopic.sample`
+is built with `grad` and a kernel that evaluates it, MALA, HMC or a mixture with one of
+them, it compares `grad` with differences of `log_prob` before tuning. At each of 8 draws
+$x$ of the initial distribution, along the direction $u$ between two further draws, it
+compares the change of $\log\pi$ that `grad` predicts, $\nabla\log\pi(x)\cdot u$, with
+central differences of `log_prob` at steps $hu$, where $h = \epsilon^{1/3}$ for the
+epsilon $\epsilon$ of the values `log_prob` returns. A line disagrees when the gap
+between the two exceeds 10 times the estimated error of the comparison: the truncation
+of the differences, from a second difference at steps $2hu$, and the rounding of
+`log_prob` and of `grad`. It costs 40 evaluations of `log_prob` and 8 of `grad` at any
+dimension, and 8 more of each when `grad` returns float32 values, and again when
+`log_prob` does; a `log_prob` whose values narrow to float32 only after the first draw
+costs a second sweep at float32. It draws 48 points of the initial distribution, in two
+passes of 24, from a random stream of its own, and it changes no result: a run is the
+same with and without it.
+
+A gradient with its sign wrong warns before any pair runs, with the size of the
+disagreement:
+
+```{code-cell} python
+:tags: [wrap-output]
+
+import warnings
+
+
+def log_prob_gaussian(x):
+    return -0.5 * np.sum((x - 1.0) ** 2, axis=-1)
+
+
+def grad_wrong_sign(x):
+    return x - 1.0
+
+
+init = telescopic.initial.Normal(np.zeros(5), 4 * np.eye(5))
+with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter("always")
+    sampler = telescopic.CoupledSampler(
+        log_prob_gaussian, init, grad=grad_wrong_sign, vectorize=True, kernel="mala", rng=0
+    )
+print(caught[0].message)
+```
+
+The warning is an `InputWarning`. The sizes are in nats along $u$, which spans the
+spread of the initial distribution. The sampler keeps what the check compared, as a
+{class}`telescopic.diagnostics.GradientCheck`, in `sampler.gradient_check`: the gap,
+the tolerance and the predicted change of each line, the draw it starts from, and the
+ratio of gap to tolerance. The check warns when a gap exceeds its tolerance, and here
+each of the 8 lines does:
+
+```{code-cell} python
+check = sampler.gradient_check
+print(f"{len(check.gap)} lines, the smallest ratio {check.ratio.min():.3g}")
+```
+
+`check_grad=False` turns the check off, and `gradient_check` is then `None`. A check
+that could compare no line warns too, since it leaves `grad` unchecked: every draw has
+zero density or a gradient that is not finite, or every line reaches zero density, as
+from a start on a boundary of the support, or takes steps that round away in the dtype
+of `log_prob`, as from a float32 `log_prob` and a start whose spread is tiny beside its
+distance from 0. An error raised inside the check, by `log_prob` or `grad` or about what
+they return, is raised as it is, with a note that it was raised in the gradient check,
+which evaluates them at draws of the initial distribution when the sampler is built.
+
+A warning means that `grad` is not the derivative of `log_prob` as computed, along the
+spread of the initial distribution, by more than the check can attribute to rounding:
+at least $10 \times 64\,\epsilon\,|\log\pi| / h = 640\,\epsilon^{2/3}|\log\pi|$ nats,
+which is $2\times10^{-8}\,|\log\pi|$ with float64 values and
+$1.5\times10^{-2}\,|\log\pi|$ with float32 ones. It does not mean that the gradient
+slows the chains. The rates below come from a test whose criteria were fixed before it
+ran, with MALA pairs measuring how much a wrong gradient slows meeting, and from an
+independent attempt to refute it:
+
+- **Exact gradients of smooth code stay quiet.** On 109 targets whose `grad` is the exact
+  derivative of `log_prob`, 300 draws of the check each, it never warned: Gaussians
+  with scales from $10^{-8}$ to $10^{8}$ and conditioning to $10^{12}$, heavy tails,
+  kinks such as a Laplace density in 10,000 dimensions, tables, and float32 values. The
+  largest ratio was 0.39.
+- **Wrong gradients warn.** Of 49 wrong gradients that slowed the meeting of MALA pairs
+  by a factor of 2 or more, it warned in every check on 46: wrong signs, factors of 2,
+  terms left out, and one wrong coordinate among 10,000. The other 3 started much
+  tighter than the target in the wrong coordinate (below).
+- **Gradients that are approximate by design warn too:** the exact gradient of a
+  log-density computed by an iterative solver at a relative tolerance of $10^{-3}$ or
+  $10^{-5}$, a gradient 1.005 times too large, a logistic regression's gradient without
+  its prior (300 of 300 each); a gradient computed in float32 and returned as float64
+  (195 to 200 of 200 on seven of ten targets, 30 of 200 on one more, none on the other
+  two); forward differences as `grad` (194 to 200 of 200 on three of four targets, none
+  of 50 on the fourth); a log-density from an adaptive ODE solver at a tolerance of
+  $10^{-6}$ with the gradient of the exact solution (100 of 100). The solver, the factor
+  1.005, the missing prior and the float32 gradient, on the two targets where it was
+  measured, slowed the meeting of MALA pairs by no measurable amount; for forward
+  differences and the ODE solver that was not measured. Such a gradient warns once per
+  sampler; pass `check_grad=False` once its accuracy is known to be enough.
+- **A correct gradient can warn on a strongly periodic or finely tabulated
+  log-density** from a wide start: with $10^5$ periods per unit across a start of
+  standard deviation 1, 48 of 200 checks warned, with $10^6$, all 200; a
+  piecewise-linear table with knots $10^{-5}$ apart, from a start of standard deviation
+  2, warned 143 times in 200.
+- **Silence is weak evidence.** The check compares at 8 draws where the chains start. It
+  saw nothing in 200 checks each of a wrong-sign gradient from a start at the mode, of a
+  gradient wrong only away from a small ball of starts, of a `log_prob` offset by
+  $-10^{10}$, and, with float32 values of `log_prob` and one coordinate's sign wrong, it
+  warned in 196 of 200 checks in 200 dimensions, 37 of 200 in 1,000 and none of 100 in
+  10,000. A start much tighter than the target in the wrong coordinate also weakens it:
+  100 times tighter in 10,000 dimensions, it warned in 518 of 1,000 checks.
+
+The rates of the first two items, of the solver, the factor 1.005 and the missing prior,
+and of the start 100 times tighter come from the test fixed in advance, run with its own
+code, which the package's check reproduces line for line; the others were measured with
+the package's check.
+
+Setup of these runs: telescopic at commit 3029130 (7b2c992 for the test fixed in
+advance), Python 3.13.18, NumPy 2.5.4 and SciPy 1.18.1, `OMP_NUM_THREADS=1`, on an Intel
+Xeon processor at 2.10 GHz with 4 logical cores.
+
 ## Constrained parameters
 
 A parameter with a bound, such as a scale $\sigma > 0$, can be sampled through an

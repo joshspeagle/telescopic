@@ -167,3 +167,48 @@ their automatic step sizes coupled; on some targets, log-concave or not, they do
 ([When the automatic step fails](../guide/kernels.md#when-the-automatic-step-fails)), and
 the step size must be given and checked against pilot meeting times
 ([Checking a step size](../guide/kernels.md#checking-a-step-size)).
+
+## A gradient that is not the derivative
+
+A sampler built with `grad` and a gradient kernel first compares `grad` with differences
+of `log_prob` at 8 draws of the initial distribution, before tuning
+([Checking the gradient](../guide/targets.md#checking-the-gradient)). A gradient that
+leaves out the prior's term, $-\beta/25$, is no longer the derivative of `log_prob`, and
+the sampler says so as it is built:
+
+```{code-cell} python
+:tags: [wrap-output]
+
+import warnings
+
+
+def grad_without_prior(beta, X, y):
+    return (y - special.expit(beta @ X.T)) @ X
+
+
+with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter("always")
+    sampler = telescopic.CoupledSampler(
+        log_prob,
+        init,
+        args=(X, y),
+        grad=grad_without_prior,
+        vectorize=True,
+        kernel="mala",
+        rng=4,
+    )
+print(caught[0].message)
+```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claim of the next paragraph.
+assert [w.category for w in caught] == [telescopic.InputWarning]
+```
+
+The warning is an `InputWarning`, and nothing else has run yet. MALA and HMC stay exact
+with any gradient, so the warning does not mean that the estimates are wrong; it says
+that the gradient is not the one of this log-density, which can slow the chains. A
+gradient that is approximate on purpose warns too, and `check_grad=False` turns the
+check off.

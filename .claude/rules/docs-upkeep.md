@@ -29,6 +29,7 @@ the same pull request. The documentation states only what the code does now.
 | `plotting.py` | `guide/results.md`, `guide/diagnostics.md` | `tutorials/how-it-works.md` | `api.md` (Diagnostics, plots and checks) |
 | `examples.py` | `guide/kernels.md` | every tutorial that uses the target | `api.md` (Examples) |
 | `testing.py` | `guide/custom-kernels.md` | | `api.md` (Diagnostics, plots and checks) |
+| `_gradient_check.py` | `guide/targets.md`, `guide/settings.md` | `tutorials/gradients.md` | `api.md` (Running; Diagnostics, plots and checks) |
 | `_types.py`, `_linalg.py` (private helpers) | the pages of the public functions whose arguments they check or whose errors they word | | |
 | `pyproject.toml` (dependencies, extras, Python versions) | `README.md`, `getting-started.md`, `CONTRIBUTING.md` | | |
 

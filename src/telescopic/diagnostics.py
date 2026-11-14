@@ -1,19 +1,21 @@
-"""Coupling diagnostics: bounds on the distance to stationarity, tail indices and warnings."""
+"""Diagnostics: bounds on the distance to stationarity, tail indices, warnings, gradient checks."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 import numpy.typing as npt
 
-from telescopic._types import FloatArray, integer, integral, real_array
+from telescopic._types import FloatArray, IntArray, integer, integral, real_array
 
 if TYPE_CHECKING:
     from telescopic.results import Result
     from telescopic.tuning import TuningReport
 
 __all__ = [
+    "GradientCheck",
     "Issue",
     "hill",
     "issues",
@@ -201,6 +203,71 @@ def variance_share(values: npt.ArrayLike) -> FloatArray:
         squares.max(axis=0), total, out=np.zeros_like(total), where=total > rounding
     )
     return share
+
+
+# Spec section 4.4.
+@dataclass(frozen=True, eq=False)
+class GradientCheck:
+    r"""What the gradient check of a sampler built with ``grad`` compared.
+
+    At each of 8 draws :math:`x` of :math:`\pi_0` the check compares, along the
+    direction :math:`u` between two further draws, the change of :math:`\log\pi` that
+    ``grad`` predicts with central differences of ``log_prob`` at steps
+    :math:`h u`, :math:`h = \epsilon^{1/3}` for the epsilon :math:`\epsilon` of the
+    dtype that ``log_prob`` returns:
+
+    .. math:: \Delta = \big|\nabla\log\pi(x)\cdot u - D_u\big|,
+       \qquad D_u = \frac{\log\pi(x + hu) - \log\pi(x - hu)}{2h},
+
+    and a line disagrees when :math:`\Delta` exceeds its tolerance, 10 times the
+    estimated error of the comparison: the truncation of the differences, from a second
+    difference at :math:`2hu`, and the rounding of ``log_prob`` and of ``grad``. All the
+    figures are in nats along :math:`u`, across the spread of :math:`\pi_0`.
+
+    Attributes
+    ----------
+    draw : ndarray of int, shape (n,)
+        Which of the 8 draws, numbered from 1, each compared line starts from.
+    gap : ndarray, shape (n,)
+        :math:`\Delta` of each line.
+    tolerance : ndarray, shape (n,)
+        The tolerance of each line.
+    predicted : ndarray, shape (n,)
+        The change :math:`\nabla\log\pi(x)\cdot u` that ``grad`` predicts on each line.
+    n_skipped : int
+        Draws skipped because the density is zero or the gradient is not finite there.
+    n_unusable : int
+        Lines not compared because they reach zero density, or because their steps round
+        away in the dtype of ``log_prob``, as with a float32 ``log_prob`` and a start whose
+        spread is tiny beside its distance from 0.
+    """
+
+    draw: IntArray
+    gap: FloatArray
+    tolerance: FloatArray
+    predicted: FloatArray
+    n_skipped: int
+    n_unusable: int
+
+    @property
+    def ratio(self) -> FloatArray:
+        """The gap of each line over its tolerance, which sizes each line's disagreement.
+
+        ``inf`` for a gap above a tolerance of 0, and 0 for a gap of 0. The check decides
+        on ``gap > tolerance`` itself, and uses the ratio only to choose the line that its
+        warning describes.
+
+        Returns
+        -------
+        ndarray, shape (n,)
+        """
+        ratio: FloatArray = np.divide(
+            self.gap,
+            self.tolerance,
+            out=np.where(self.gap > 0, np.inf, 0.0),
+            where=self.tolerance > 0,
+        )
+        return ratio
 
 
 # Spec section 7.4.

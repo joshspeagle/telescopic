@@ -10,6 +10,7 @@ from typing import Any, cast
 import numpy as np
 
 from telescopic import diagnostics, engine
+from telescopic._gradient_check import check_gradient
 from telescopic._parallel import Interrupt, check_pool, check_workers, execute, opened
 from telescopic._progress import Progress, tuning
 from telescopic._random import MAIN, PILOT, namespace_seed, replicate_generator, root_seed
@@ -31,6 +32,8 @@ KERNELS: dict[str, Callable[[], Kernel]] = {
     "independence": Independence,
 }
 PILOT_REPLICATES = 100
+# The default of check_grad on CoupledSampler and sample (DECISIONS #159).
+CHECK_GRAD = True
 PILOT_MAX_ITER = 100_000
 # The meeting-time pilot: lag 1, with nothing stored (spec R-TUNE-2).
 PILOT_SETTINGS = engine.Settings(0, 0, 1, max_iter=PILOT_MAX_ITER, store=False)
@@ -105,6 +108,14 @@ class CoupledSampler:
     progress : bool
         Show the progress of tuning, of the pilot and of each run: a tqdm bar when
         tqdm is installed, lines on stderr otherwise.
+    check_grad : bool
+        Compare ``grad`` with differences of ``log_prob`` at 8 draws of the initial
+        distribution when the sampler is built, if the kernel evaluates ``grad``, and
+        warn where they disagree (Checking the gradient, in :doc:`/guide/targets`). It
+        costs 40 evaluations of ``log_prob`` and 8 of ``grad`` for float64 values, 8 more
+        of each for a float32 ``grad`` and again for a float32 ``log_prob``, a second
+        sweep for a ``log_prob`` whose values narrow after the first draw, and 48 draws of
+        the initial distribution, and changes no result.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
         The root of every random stream.
 
@@ -112,6 +123,8 @@ class CoupledSampler:
     ----------
     kernel : Kernel
         The kernel, replaced by its tuned copy when tuned.
+    gradient_check : telescopic.diagnostics.GradientCheck or None
+        What the gradient check compared; ``None`` when it did not run.
     tuning : TuningReport or None
         The report of the tuning pilot; ``None`` before tuning or with nothing to tune.
     pilot : ndarray or None
@@ -136,10 +149,12 @@ class CoupledSampler:
         pool: Any = None,
         n_workers: int | None = None,
         progress: bool = False,
+        check_grad: bool = CHECK_GRAD,
         rng: Seed = None,
     ) -> None:
         self.pool, self.progress = check_pool(pool), flag("progress", progress)
         self.n_workers = check_workers(n_workers, self.pool)
+        check_grad = flag("check_grad", check_grad)
         self.target = Target(log_prob, grad, args=args, kwargs=kwargs, vectorize=vectorize)
         self.initial = as_initial(init)
         if isinstance(kernel, str) and kernel in KERNELS:
@@ -162,6 +177,18 @@ class CoupledSampler:
         self.pilot: FloatArray | None = None
         self._pilot_zero_density = 0  # pilot pairs started where the density is zero
         self._replicates: engine.Replicates | None = None
+        # From its own stream, before any tuning, so that it changes no result.
+        self.gradient_check: diagnostics.GradientCheck | None = None
+        if check_grad and self.kernel.needs_grad:
+            self.gradient_check = check_gradient(
+                cast(Callable[..., Any], log_prob),
+                cast(Callable[..., Any], grad),
+                self.initial,
+                self.seed,
+                args=self.target.args,
+                kwargs=self.target.kwargs,
+                vectorize=self.target.vectorize,
+            )
 
     @property
     def settings(self) -> engine.Settings | None:
@@ -482,6 +509,7 @@ def sample(
     pool: Any = None,
     n_workers: int | None = None,
     progress: bool = False,
+    check_grad: bool = CHECK_GRAD,
     rng: Seed = None,
 ) -> Result:
     r"""Unbiased estimates of expectations under a target, in one call.
@@ -534,6 +562,9 @@ def sample(
     progress : bool
         Show the progress of the pilot and of the run: a tqdm bar when tqdm is installed,
         lines on stderr otherwise.
+    check_grad : bool
+        Compare ``grad`` with differences of ``log_prob`` before tuning, if the kernel
+        evaluates ``grad``, and warn where they disagree; see :class:`CoupledSampler`.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
         The root of every random stream.
 
@@ -573,6 +604,7 @@ def sample(
         pool=pool,
         n_workers=n_workers,
         progress=progress,
+        check_grad=check_grad,
         rng=rng,
     )
     return sampler.run(n_replicates, k=k, m=m, lag=lag, thin=thin, max_iter=max_iter)

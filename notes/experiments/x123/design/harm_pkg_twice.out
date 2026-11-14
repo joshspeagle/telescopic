@@ -1,0 +1,6 @@
+N(0,I) d=50: twice the gradient, seed 219000: correct mean 15.4 (unmet 0, step 0.837); other mean 1298.3 (unmet 0, step 0.173); ratio of means 84.42, of steps 0.206; 7s
+N(0,I) d=50: twice the gradient, seed 219001: correct mean 16.5 (unmet 0, step 0.843); other mean 1550.1 (unmet 0, step 0.181); ratio of means 94.06, of steps 0.214; 8s
+N(0,I) d=50: twice the gradient, seed 219002: correct mean 15.4 (unmet 0, step 0.827); other mean 1359.2 (unmet 0, step 0.153); ratio of means 88.14, of steps 0.185; 7s
+N(0,I) d=50: sign of coordinate 0, seed 219000: correct mean 15.4 (unmet 0, step 0.837); other mean 72.7 (unmet 0, step 0.654); ratio of means 4.73, of steps 0.782; 5s
+N(0,I) d=50: sign of coordinate 0, seed 219001: correct mean 16.5 (unmet 0, step 0.843); other mean 79.1 (unmet 0, step 0.580); ratio of means 4.80, of steps 0.688; 4s
+N(0,I) d=50: sign of coordinate 0, seed 219002: correct mean 15.4 (unmet 0, step 0.827); other mean 106.1 (unmet 0, step 0.590); ratio of means 6.88, of steps 0.713; 5s

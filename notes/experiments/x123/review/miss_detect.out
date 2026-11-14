@@ -1,0 +1,43 @@
+N(0,I) d=5, point start at the mode: wrong sign                                              | wrong: N   0/200 H   0/200 ratio med 0.00e+00 nolines 0 err 0 | right: N 0/200 H 0/200 max 0.00e+00 
+N(0,I) d=5, point start at the mode: sign of coordinate 0                                    | wrong: N   0/200 H   0/200 ratio med 0.00e+00 nolines 0 err 0 | right: N 0/200 H 0/200 max 0.00e+00 
+N(0,I) d=5, point start at the mode: twice                                                   | wrong: N   0/200 H   0/200 ratio med 0.00e+00 nolines 0 err 0 | right: N 0/200 H 0/200 max 0.00e+00 
+N(0,I) d=5, start sd 2 with coordinate 0 held at 0: sign of coordinate 0                     | wrong: N   0/200 H   0/200 ratio med 6.71e-04 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.55e-03 
+N(0,I) d=5, start sd 2 with coordinate 0 held at 1: sign of coordinate 0                     | wrong: N 200/200 H 200/200 ratio med 3.56e+07 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.38e-03 
+N(0,I) d=5, start sd 2 with coordinate 0 held at 1e-3: sign of coordinate 0                  | wrong: N 200/200 H   0/200 ratio med 4.51e+01 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.40e-03 
+logistic n=1e4 d=5, point start at the posterior mode: wrong sign                            | wrong: N   0/200 H   0/200 ratio med 3.10e-02 nolines 0 err 0 | right: N 0/200 H 0/200 max 2.78e-02 
+logistic n=1e4 d=5, point start at the posterior mode: twice                                 | wrong: N   0/200 H   0/200 ratio med 2.14e-02 nolines 0 err 0 | right: N 0/200 H 0/200 max 2.78e-02 
+logistic n=1e4 d=5, start sd 1e-4 around the mode: wrong sign                                | wrong: N 153/200 H   0/200 ratio med 1.31e+00 nolines 0 err 0 | right: N 0/200 H 0/200 max 3.42e-02 
+logistic n=1e4 d=5, start sd 0.03 around the mode (about the posterior's): wrong sign        | wrong: N 200/200 H 200/200 ratio med 1.19e+05 nolines 0 err 0 | right: N 0/200 H 0/200 max 3.52e-02 
+N(0,I) d=5, start sd 0.1: gradient right for |x| < 1, wrong sign outside                     | wrong: N   0/200 H   0/200 ratio med 6.81e-04 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.36e-03 
+N(0,I) d=5, start sd 0.1: gradient right for |x| < 3, wrong sign outside                     | wrong: N   0/200 H   0/200 ratio med 6.81e-04 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.36e-03 
+N(0,I) d=5, start N(5, 0.1^2): gradient wrong sign only for |x| < 3                          | wrong: N   0/200 H   0/200 ratio med 6.17e-04 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.09e-03 
+N(0,I) d=5, start sd 0.1: gradient clipped to norm 1                                         | wrong: N   0/200 H   0/200 ratio med 6.81e-04 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.36e-03 
+N(0,I) d=5, start sd 2: gradient clipped to norm 1                                           | wrong: N 200/200 H 200/200 ratio med 7.88e+07 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.33e-03 
+N(0,I) - 1e+07 d=5, start sd 2: sign of coordinate 0                                         | wrong: N 200/200 H 200/200 ratio med 7.99e+01 nolines 0 err 0 | right: N 0/200 H 0/200 max 6.49e-04 
+N(0,I) - 1e+08 d=5, start sd 2: sign of coordinate 0                                         | wrong: N 200/200 H 200/200 ratio med 7.98e+00 nolines 0 err 0 | right: N 0/200 H 0/200 max 5.11e-04 
+N(0,I) - 1e+09 d=5, start sd 2: sign of coordinate 0                                         | wrong: N  68/200 H  68/200 ratio med 7.99e-01 nolines 0 err 0 | right: N 0/200 H 0/200 max 4.06e-04 
+N(0,I) - 1e+10 d=5, start sd 2: sign of coordinate 0                                         | wrong: N   0/200 H   0/200 ratio med 7.97e-02 nolines 0 err 0 | right: N 0/200 H 0/200 max 6.43e-04 
+float32 throughout, N(0,I) d=5, start sd 2: sign of coordinate 0                             | wrong: N 200/200 H 200/200 ratio med 1.48e+02 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.29e-03 
+float32 throughout, N(0,I) d=50, start sd 2: sign of coordinate 0                            | wrong: N 200/200 H 200/200 ratio med 1.30e+01 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.76e-03 
+float32 throughout, N(0,I) d=200, start sd 2: sign of coordinate 0                           | wrong: N 196/200 H 196/200 ratio med 3.20e+00 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.24e-03 
+float32 throughout, N(0,I) d=1000, start sd 2: sign of coordinate 0                          | wrong: N  37/200 H  37/200 ratio med 6.43e-01 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.45e-03 
+float32 throughout, N(0,I) d=10000, start sd 2: sign of coordinate 0                         | wrong: N   0/100 H   0/100 ratio med 6.78e-02 nolines 0 err 0 | right: N 0/100 H 0/100 max 1.13e-03 
+float32 throughout, N(0,I) d=1000, start sd 2: signs of coordinates 0..9                     | wrong: N 193/200 H 193/200 ratio med 1.98e+00 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.45e-03 
+float32 throughout, N(0,I) d=1000, start sd 2: grad x 1.1                                    | wrong: N 102/200 H 102/200 ratio med 1.01e+00 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.45e-03 
+N(0,I) d=5, start with all coordinates equal: wrong sign orthogonal to (1,..,1)              | wrong: N   0/200 H   0/200 ratio med 5.44e-04 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.11e-03 
+N(0,I) d=5, start on a 2-dimensional subspace: wrong sign in the other 3 directions          | wrong: N   0/200 H   0/200 ratio med 6.80e-04 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.40e-03 
+hierarchical normal d=10, spread start: jacobian wrong                                       | wrong: N 200/200 H 200/200 ratio med 1.43e+06 nolines 0 err 0 | right: N 0/200 H 0/200 max 3.12e-02 
+hierarchical normal d=10, every group effect started at mu: jacobian wrong                   | wrong: N 200/200 H 200/200 ratio med 5.20e+07 nolines 0 err 0 | right: N 0/200 H 0/200 max 4.19e-02 
+hierarchical normal d=10, log tau started within 1e-9 of 1: jacobian wrong                   | wrong: N   0/200 H   0/200 ratio med 3.18e-02 nolines 0 err 0 | right: N 0/200 H 0/200 max 2.26e-03 
+hierarchical normal d=10, log tau started at exactly 1: jacobian wrong                       | wrong: N 200/200 H 200/200 ratio med 1.78e+06 nolines 0 err 0 | right: N 0/200 H 0/200 max 2.20e-02 
+hierarchical normal d=10, spread start: sumsq sign wrong                                     | wrong: N 200/200 H 200/200 ratio med 2.01e+08 nolines 0 err 0 | right: N 0/200 H 0/200 max 3.12e-02 
+hierarchical normal d=10, every group effect started at mu: sumsq sign wrong                 | wrong: N   0/200 H   0/200 ratio med 2.35e-03 nolines 0 err 0 | right: N 0/200 H 0/200 max 4.19e-02 
+hierarchical normal d=10, log tau started within 1e-9 of 1: sumsq sign wrong                 | wrong: N 200/200 H   0/200 ratio med 2.04e+00 nolines 0 err 0 | right: N 0/200 H 0/200 max 2.26e-03 
+hierarchical normal d=10, log tau started at exactly 1: sumsq sign wrong                     | wrong: N 200/200 H 200/200 ratio med 1.27e+08 nolines 0 err 0 | right: N 0/200 H 0/200 max 2.20e-02 
+hierarchical normal d=10, spread start: pooling sign wrong                                   | wrong: N 200/200 H 200/200 ratio med 8.05e+07 nolines 0 err 0 | right: N 0/200 H 0/200 max 3.12e-02 
+hierarchical normal d=10, every group effect started at mu: pooling sign wrong               | wrong: N   0/200 H   0/200 ratio med 2.35e-03 nolines 0 err 0 | right: N 0/200 H 0/200 max 4.19e-02 
+hierarchical normal d=10, log tau started within 1e-9 of 1: pooling sign wrong               | wrong: N 200/200 H 200/200 ratio med 6.88e+07 nolines 0 err 0 | right: N 0/200 H 0/200 max 2.26e-03 
+hierarchical normal d=10, log tau started at exactly 1: pooling sign wrong                   | wrong: N 200/200 H 200/200 ratio med 5.91e+07 nolines 0 err 0 | right: N 0/200 H 0/200 max 2.20e-02 
+half-normal d=3 (x >= 0), start with coordinate 0 on the boundary: wrong sign                | wrong: N   0/200 H   0/200 ratio med 0.00e+00 nolines 200 err 0 | right: N 0/200 H 0/200 max 0.00e+00 
+N(0,I) d=5, start sd 2: float32 gradient returned as float64                                 | wrong: N 195/200 H   0/200 ratio med 2.87e+00 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.33e-03 
+rotated cond 1e4 d=10, matched: float32 gradient returned as float64                         | wrong: N 200/200 H   0/200 ratio med 1.86e+01 nolines 0 err 0 | right: N 0/200 H 0/200 max 1.01e-01 

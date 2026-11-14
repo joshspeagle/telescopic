@@ -1,0 +1,50 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/harm.py package 32 35
+package baseline 32: logistic n=1e4 d=5, start sd 0.1; seeds [370320, 370321, 370322, 370323, 370324]; 100 pairs, max_iter 10000
+  seed 370320: derivative mean tau 5.26, unmet 0, step 1.3053 (5s)
+  seed 370321: derivative mean tau 5.66, unmet 0, step 1.2877 (6s)
+  seed 370322: derivative mean tau 5.76, unmet 0, step 1.3325 (5s)
+  seed 370323: derivative mean tau 5.33, unmet 0, step 1.2949 (5s)
+  seed 370324: derivative mean tau 5.57, unmet 0, step 1.2096 (4s)
+ROW | B | logistic n=1e4 d=5: without the prior | package | 370320 | 5.370000 | 5.260000 | 0 | 0 | 1.303714 | 1.305267 | 0.0349861 | ratio 1.021
+    (5s)
+ROW | B | logistic n=1e4 d=5: without the prior | package | 370321 | 5.610000 | 5.660000 | 0 | 0 | 1.285888 | 1.287704 | 0.0351394 | ratio 0.991
+    (6s)
+ROW | B | logistic n=1e4 d=5: without the prior | package | 370322 | 5.800000 | 5.760000 | 0 | 0 | 1.335615 | 1.332548 | 0.0363583 | ratio 1.007
+    (6s)
+ROW | B | logistic n=1e4 d=5: without the prior | package | 370323 | 5.360000 | 5.330000 | 0 | 0 | 1.290744 | 1.294904 | 0.0339085 | ratio 1.006
+    (7s)
+ROW | B | logistic n=1e4 d=5: without the prior | package | 370324 | 5.570000 | 5.570000 | 0 | 0 | 1.207921 | 1.209592 | 0.033475 | ratio 1.000
+    (6s)
+package baseline 33: logistic n=1e4 d=5, start sd 10; seeds [370330, 370331, 370332, 370333, 370334]; 100 pairs, max_iter 10000
+  seed 370330: derivative mean tau 27.45, unmet 0, step 1.2436 (7s)
+  seed 370331: derivative mean tau 27.83, unmet 0, step 1.2582 (6s)
+  seed 370332: derivative mean tau 25.07, unmet 0, step 1.2961 (6s)
+  seed 370333: derivative mean tau 27.37, unmet 0, step 1.2604 (7s)
+  seed 370334: derivative mean tau 26.84, unmet 0, step 1.3219 (7s)
+ROW | B | logistic n=1e4 d=5, start sd 10: without the prior | package | 370330 | 27.830000 | 27.450000 | 0 | 0 | 1.239550 | 1.243649 | 0.0316782 | ratio 1.014
+    (9s)
+ROW | B | logistic n=1e4 d=5, start sd 10: without the prior | package | 370331 | 28.090000 | 27.830000 | 0 | 0 | 1.256614 | 1.258167 | 0.0331383 | ratio 1.009
+    (8s)
+ROW | B | logistic n=1e4 d=5, start sd 10: without the prior | package | 370332 | 25.160000 | 25.070000 | 0 | 0 | 1.297858 | 1.296104 | 0.035684 | ratio 1.004
+    (8s)
+ROW | B | logistic n=1e4 d=5, start sd 10: without the prior | package | 370333 | 27.920000 | 27.370000 | 0 | 0 | 1.253240 | 1.260408 | 0.0327213 | ratio 1.020
+    (7s)
+ROW | B | logistic n=1e4 d=5, start sd 10: without the prior | package | 370334 | 27.000000 | 26.840000 | 0 | 0 | 1.319692 | 1.321855 | 0.0353714 | ratio 1.006
+    (9s)
+package baseline 34: N(0,I) d=5, start sd 200; seeds [370340, 370341, 370342, 370343, 370344]; 100 pairs, max_iter 10000
+  seed 370340: derivative mean tau 6.97, unmet 0, step 1.3090 (0s)
+  seed 370341: derivative mean tau 6.54, unmet 0, step 1.2670 (0s)
+  seed 370342: derivative mean tau 6.05, unmet 0, step 1.2660 (0s)
+  seed 370343: derivative mean tau 6.52, unmet 0, step 1.3063 (0s)
+  seed 370344: derivative mean tau 5.98, unmet 0, step 1.3200 (0s)
+ROW | B | N(0,I) d=5, start 100x wide: grad x 1.005 | package | 370340 | 6.880000 | 6.970000 | 0 | 0 | 1.311107 | 1.309001 | 0.00709835 | ratio 0.987
+    (0s)
+ROW | B | N(0,I) d=5, start 100x wide: grad x 1.005 | package | 370341 | 6.560000 | 6.540000 | 0 | 0 | 1.268684 | 1.266999 | 0.00708959 | ratio 1.003
+    (0s)
+ROW | B | N(0,I) d=5, start 100x wide: grad x 1.005 | package | 370342 | 6.050000 | 6.050000 | 0 | 0 | 1.265961 | 1.265969 | 0.00708834 | ratio 1.000
+    (0s)
+ROW | B | N(0,I) d=5, start 100x wide: grad x 1.005 | package | 370343 | 6.480000 | 6.520000 | 0 | 0 | 1.306451 | 1.306319 | 0.00713157 | ratio 0.994
+    (0s)
+ROW | B | N(0,I) d=5, start 100x wide: grad x 1.005 | package | 370344 | 5.870000 | 5.980000 | 0 | 0 | 1.323409 | 1.319994 | 0.00707829 | ratio 0.982
+    (0s)

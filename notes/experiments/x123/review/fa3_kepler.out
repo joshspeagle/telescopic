@@ -1,0 +1,16 @@
+Kepler equation by Newton to 0.01 (stop tested over the batch), implicit-funct | N  200/200  H   64/200  | ratio med 5.42e+03 max 4.41e+04 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.5s
+Kepler equation by Newton to 0.0001 (stop tested over the batch), implicit-fun | N   72/200  H    0/200  | ratio med 5.34e-01 max 1.05e+01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.5s
+Kepler equation by Newton to 1e-08 (stop tested over the batch), implicit-func | N    0/200  H    0/200  | ratio med 8.08e-03 max 3.18e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.5s
+Kepler equation by Newton to 1e-12 (stop tested over the batch), implicit-func | N    0/200  H    0/200  | ratio med 7.77e-03 max 4.11e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.5s
+the same, not vectorized (stop per point), tol 0.01                            | N  200/200  H   64/200  | ratio med 5.42e+03 max 4.41e+04 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.6s
+the same, not vectorized (stop per point), tol 0.0001                          | N   72/200  H    0/200  | ratio med 5.34e-01 max 1.05e+01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.7s
+the same, not vectorized (stop per point), tol 1e-08                           | N    0/200  H    0/200  | ratio med 8.08e-03 max 3.18e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.8s
+root by bisection to 0.0001, implicit-function gradient                        | N    0/200  H    0/200  | ratio med 8.00e-02 max 6.21e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 1.1s
+root by bisection to 1e-08, implicit-function gradient                         | N    0/200  H    0/200  | ratio med 5.26e-02 max 8.62e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 1.5s
+root by bisection to 1e-12, implicit-function gradient                         | N    0/200  H    0/200  | ratio med 5.28e-02 max 1.05e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 2.0s
+root by bisection to 1e-15, implicit-function gradient                         | N    0/200  H    0/200  | ratio med 1.87e-02 max 3.32e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 2.3s
+sinusoid fit, time span 3e+06 (start sd 0.1 in frequency: 4.77e+04 fringes)    | N    3/200  H    3/200  | ratio med 1.95e-01 max 1.27e+00 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+sinusoid fit, time span 1e+07 (start sd 0.1 in frequency: 1.59e+05 fringes)    | N   59/200  H   59/200  | ratio med 7.09e-01 max 4.28e+00 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+sinusoid fit, time span 1e+08 (start sd 0.1 in frequency: 1.59e+06 fringes)    | N  200/200  H  200/200  | ratio med 6.86e+00 max 4.72e+01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+sinusoid fit, time span 1000, start sd 10 in frequency (1.59e+03 fringes)      | N    0/200  H    0/200  | ratio med 3.25e-02 max 3.43e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+sinusoid fit, time span 10000, start sd 10 in frequency (1.59e+04 fringes)     | N    0/200  H    0/200  | ratio med 5.91e-02 max 4.55e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s

@@ -1,0 +1,177 @@
+commit 3029130; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/package_equivalence.py
+family k at seeds 230000 + 10 k + (0..9); columns: lines, gaps and tolerances identical; decisions identical (registered, package record, package warning); unusable lines and skipped points identical; warnings of the registered (N); compared lines
+[  0] A N(0, 1e-08^2 I) d=5, matched                                             | 10 10 10 | N  0 | lines 80
+[  1] A N(0, 0.0001^2 I) d=5, matched                                            | 10 10 10 | N  0 | lines 80
+[  2] A N(0, 1^2 I) d=5, matched                                                 | 10 10 10 | N  0 | lines 80
+[  3] A N(0, 10000^2 I) d=5, matched                                             | 10 10 10 | N  0 | lines 80
+[  4] A N(0, 1e+08^2 I) d=5, matched                                             | 10 10 10 | N  0 | lines 80
+[  5] A N(0, 1e-08^2 I) d=5, wide 100x                                           | 10 10 10 | N  0 | lines 80
+[  6] A N(0, 0.0001^2 I) d=5, wide 100x                                          | 10 10 10 | N  0 | lines 80
+[  7] A N(0, 1^2 I) d=5, wide 100x                                               | 10 10 10 | N  0 | lines 80
+[  8] A N(0, 10000^2 I) d=5, wide 100x                                           | 10 10 10 | N  0 | lines 80
+[  9] A N(0, 1e+08^2 I) d=5, wide 100x                                           | 10 10 10 | N  0 | lines 80
+[ 10] A condition 10000 d=10, matched                                            | 10 10 10 | N  0 | lines 80
+[ 11] A condition 1e+08 d=10, matched                                            | 10 10 10 | N  0 | lines 80
+[ 12] A condition 1e+12 d=10, matched                                            | 10 10 10 | N  0 | lines 80
+[ 13] A condition 10000 d=10, wide sd 100                                        | 10 10 10 | N  0 | lines 80
+[ 14] A condition 1e+08 d=10, wide sd 100                                        | 10 10 10 | N  0 | lines 80
+[ 15] A condition 1e+12 d=10, wide sd 100                                        | 10 10 10 | N  0 | lines 80
+[ 16] A N(1e6, I) d=5                                                            | 10 10 10 | N  0 | lines 80
+[ 17] A N(0,I) + 1e9 d=5                                                         | 10 10 10 | N  0 | lines 80
+[ 18] A N(0,I) - 1e12 d=5                                                        | 10 10 10 | N  0 | lines 80
+[ 19] A banana                                                                   | 10 10 10 | N  0 | lines 80
+[ 20] A funnel                                                                   | 10 10 10 | N  0 | lines 80
+[ 21] A mixture                                                                  | 10 10 10 | N  0 | lines 80
+[ 22] A pumps                                                                    | 10 10 10 | N  0 | lines 80
+[ 23] A Student t3 d=1                                                           | 10 10 10 | N  0 | lines 80
+[ 24] A Student t3 d=5                                                           | 10 10 10 | N  0 | lines 80
+[ 25] A Laplace d=5                                                              | 10 10 10 | N  0 | lines 80
+[ 26] A Laplace d=100                                                            | 10 10 10 | N  0 | lines 80
+[ 27] A half-normal boundary d=3                                                 | 10 10 10 | N  0 | lines 46
+[ 28] A logistic n=1e4 d=5                                                       | 10 10 10 | N  0 | lines 80
+[ 29] A logistic n=2000 d=50                                                     | 10 10 10 | N  0 | lines 80
+[ 30] A float32 N(0,I) d=5                                                       | 10 10 10 | N  0 | lines 80
+[ 31] A float32 N(0,I) - 1e4 d=5                                                 | 10 10 10 | N  0 | lines 80
+[ 32] A float32 Student t3 d=5                                                   | 10 10 10 | N  0 | lines 80
+[ 33] A logistic computed in float32 d=5                                         | 10 10 10 | N  0 | lines 80
+[ 34] A point start N(0,I) d=5, random point                                     | 10 10 10 | N  0 | lines 80
+[ 35] A point start logistic d=5, at 0                                           | 10 10 10 | N  0 | lines 80
+[ 36] A point start Student t3 d=5, random point                                 | 10 10 10 | N  0 | lines 80
+[ 37] A scales 1e-3..1e3 d=7, matched                                            | 10 10 10 | N  0 | lines 80
+[ 38] A t3 scales 1e-3..1e3 d=7, isotropic init 2e3                              | 10 10 10 | N  0 | lines 80
+[ 39] A N(0,I) d=5, init sd 1e-12 at 1                                           | 10 10 10 | N  0 | lines 80
+[ 40] A N(0,I) d=1                                                               | 10 10 10 | N  0 | lines 80
+[ 41] A N(0,I) d=50                                                              | 10 10 10 | N  0 | lines 80
+[ 42] A N(0,I) d=1000                                                            | 10 10 10 | N  0 | lines 80
+[ 43] A Student t3 d=1000                                                        | 10 10 10 | N  0 | lines 80
+[ 44] A flat log_prob 0.0, grad 0, d=3                                           | 10 10 10 | N  0 | lines 80
+[ 45] A flat log_prob int 0, grad 0, d=3                                         | 10 10 10 | N  0 | lines 80
+[ 46] A plateau (flat top |x|<10, Gaussian shoulders) d=3, init N(0,I)           | 10 10 10 | N  0 | lines 80
+[ 47] A hinge -relu(x) - x^2/2 d=3, point start at 0                             | 10 10 10 | N  0 | lines 80
+[ 48] A hinge d=3, init N(0,I)                                                   | 10 10 10 | N  0 | lines 80
+[ 49] A asymmetric Laplace d=3, point start at 0                                 | 10 10 10 | N  0 | lines 80
+[ 50] A Laplace d=3, point start at 0                                            | 10 10 10 | N  0 | lines 80
+[ 51] A naive sum of 1e5 Gaussian terms, d=2                                     | 10 10 10 | N  0 | lines 80
+[ 52] A Poisson regression n=2e4, naive sum, d=4                                 | 10 10 10 | N  0 | lines 80
+[ 53] A Student t3 d=5, init sd 1e6                                              | 10 10 10 | N  0 | lines 80
+[ 54] A Student t3 d=1 (Cauchy-like), init sd 1e8                                | 10 10 10 | N  0 | lines 80
+[ 55] A Student t3 d=1000, init sd 1e3                                           | 10 10 10 | N  0 | lines 80
+[ 56] A rotated cond 1e12 d=50, matched                                          | 10 10 10 | N  0 | lines 80
+[ 57] A rotated cond 1e12 d=50, isotropic sd 1                                   | 10 10 10 | N  0 | lines 80
+[ 58] A rotated cond 1e12 d=100, matched                                         | 10 10 10 | N  0 | lines 80
+[ 59] A rotated cond 1e8 d=2, matched                                            | 10 10 10 | N  0 | lines 80
+[ 60] A rotated cond 1e12 d=3, matched                                           | 10 10 10 | N  0 | lines 80
+[ 61] A N(0,I) d=2                                                               | 10 10 10 | N  0 | lines 80
+[ 62] A N(0,I) d=3                                                               | 10 10 10 | N  0 | lines 80
+[ 63] A Student t3 d=2                                                           | 10 10 10 | N  0 | lines 80
+[ 64] A N(0,I) d=5, init var 0 in coords 0,1 (at 0)                              | 10 10 10 | N  0 | lines 80
+[ 65] A N(0,I) d=5, init sd 1e-150                                               | 10 10 10 | N  0 | lines 80
+[ 66] A N(0,I) d=5, Empirical of 2 points                                        | 10 10 10 | N  0 | lines 80
+[ 67] A N(0,I) d=5, point start at 0                                             | 10 10 10 | N  0 | lines 80
+[ 68] A Student t3 d=5, point start at 0                                         | 10 10 10 | N  0 | lines 80
+[ 69] A funnel, point start at 0                                                 | 10 10 10 | N  0 | lines 80
+[ 70] A banana, point start at 0                                                 | 10 10 10 | N  0 | lines 80
+[ 71] A logistic n=2000 d=50, point start at 0                                   | 10 10 10 | N  0 | lines 80
+[ 72] A float32 N(0,I) + 1e7 d=5                                                 | 10 10 10 | N  0 | lines 80
+[ 73] A float32 N(0,I) - 1e9 d=5                                                 | 10 10 10 | N  0 | lines 80
+[ 74] A float32 N(1e3, I) d=5 (all in float64, cast out)                         | 10 10 10 | N  0 | lines 80
+[ 75] A float64 log_prob, float32 grad: N(0,I) d=5                               | 10 10 10 | N  0 | lines 80
+[ 76] A float64 log_prob, float32 grad: N(1e3,I) d=5                             | 10 10 10 | N  0 | lines 80
+[ 77] A float64 log_prob, float32 grad: N(1e5,I) d=5                             | 10 10 10 | N  0 | lines 80
+[ 78] A float64 log_prob, float32 grad: N(1e6,I) d=5                             | 10 10 10 | N  0 | lines 80
+[ 79] A float64 log_prob, float32 grad: logistic n=1e4 d=5                       | 10 10 10 | N  0 | lines 80
+[ 80] A float64 log_prob, float32 grad: rotated cond 1e4 d=10                    | 10 10 10 | N  0 | lines 80
+[ 81] A float64 log_prob, float32 grad: rotated cond 1e8 d=10                    | 10 10 10 | N  0 | lines 80
+[ 82] A float64 log_prob, float32 grad: rotated cond 1e12 d=10                   | 10 10 10 | N  0 | lines 80
+[ 83] A not vectorized: N(0,I) d=5                                               | 10 10 10 | N  0 | lines 80
+[ 84] A not vectorized: logistic n=1e4 d=5                                       | 10 10 10 | N  0 | lines 80
+[ 85] A not vectorized: banana                                                   | 10 10 10 | N  0 | lines 80
+[ 86] A float32 throughout, N(0, I) d=5                                          | 10 10 10 | N  0 | lines 80
+[ 87] A float32 throughout, N(10, I) d=5                                         | 10 10 10 | N  0 | lines 80
+[ 88] A float32 throughout, N(100, I) d=5                                        | 10 10 10 | N  0 | lines 80
+[ 89] A float32 throughout, N(300, I) d=5                                        | 10 10 10 | N  0 | lines 80
+[ 90] A float32 throughout, N(1000, I) d=5                                       | 10 10 10 | N  0 | lines 80
+[ 91] A float32 throughout, N(10000, I) d=5                                      | 10 10 10 | N  0 | lines 80
+[ 92] A N(0,I) d=2000, start sd 2                                                | 10 10 10 | N  0 | lines 80
+[ 93] A N(0,I) d=5000, start sd 2                                                | 10 10 10 | N  0 | lines 80
+[ 94] A N(0,I) d=10000, start sd 2                                               | 10 10 10 | N  0 | lines 80
+[ 95] A Student t3 d=2000, start sd 2                                            | 10 10 10 | N  0 | lines 80
+[ 96] A Student t3 d=5000, start sd 2                                            | 10 10 10 | N  0 | lines 80
+[ 97] A Student t3 d=10000, start sd 2                                           | 10 10 10 | N  0 | lines 80
+[ 98] A Laplace d=2000, start sd 2                                               | 10 10 10 | N  0 | lines 80
+[ 99] A Laplace d=5000, start sd 2                                               | 10 10 10 | N  0 | lines 80
+[100] A Laplace d=10000, start sd 2                                              | 10 10 10 | N  0 | lines 80
+[101] A rotated cond 1e4 d=2000, matched                                         | 10 10 10 | N  0 | lines 80
+[102] A scales (1, 0.01 x4), start N(0, I)                                       | 10 10 10 | N  0 | lines 80
+[103] A N(0,I) d=5, start sd (0.01, 2, 2, 2, 2)                                  | 10 10 10 | N  0 | lines 80
+[104] A N(0,I) - 1e4 d=5, start sd 1e-3                                          | 10 10 10 | N  0 | lines 80
+[105] A N(0,I) d=5, start sd 1000                                                | 10 10 10 | N  0 | lines 80
+[106] A constant log_prob -3.7, grad 0, d=3                                      | 10 10 10 | N  0 | lines 80
+[107] A ReLU network, 50 units, d=10                                             | 10 10 10 | N  0 | lines 80
+[108] A piecewise-linear table of -x^2/2, spacing 0.01, d=5                      | 10 10 10 | N  0 | lines 80
+[109] B Jacobi solver rtol 1e-3 d=5 (exact gradient)                             | 10 10 10 | N 10 | lines 80
+[110] B Jacobi solver rtol 1e-5 d=5 (exact gradient)                             | 10 10 10 | N 10 | lines 80
+[111] B Jacobi solver rtol 1e-8 d=5 (exact gradient)                             | 10 10 10 | N  2 | lines 80
+[112] B N(0,I) d=5: grad x 1.005                                                 | 10 10 10 | N 10 | lines 80
+[113] B N(0,I) d=1000: grad x 1.0001                                             | 10 10 10 | N 10 | lines 80
+[114] B N(0,I) d=5: grad + 0.02                                                  | 10 10 10 | N 10 | lines 80
+[115] B logistic n=1e4 d=5: without the prior                                    | 10 10 10 | N 10 | lines 80
+[116] B logistic n=1e4 d=5, start sd 10: without the prior                       | 10 10 10 | N 10 | lines 80
+[117] B N(0,I) d=5, start 100x wide: grad x 1.005                                | 10 10 10 | N 10 | lines 80
+[118] C N(0,I) d=5: wrong sign                                                   | 10 10 10 | N 10 | lines 80
+[119] C N(0,I) d=5: twice                                                        | 10 10 10 | N 10 | lines 80
+[120] C N(0,I) d=50: twice                                                       | 10 10 10 | N 10 | lines 80
+[121] C N(0,I) d=200: twice                                                      | 10 10 10 | N 10 | lines 80
+[122] C Student t3 d=5, start sd 2: gradient of N(0, I)                          | 10 10 10 | N 10 | lines 80
+[123] C equicorrelated rho 0.9 d=10: gradient of rho 0.8                         | 10 10 10 | N 10 | lines 80
+[124] C N(0,I) d=5, start sd 1: sign of coordinate 0                             | 10 10 10 | N 10 | lines 80
+[125] C N(0,I) d=50, start sd 1: sign of coordinate 0                            | 10 10 10 | N 10 | lines 80
+[126] C N(0,I) d=200, start sd 1: sign of coordinate 0                           | 10 10 10 | N 10 | lines 80
+[127] C N(0,I) d=1000, start sd 1: sign of coordinate 0                          | 10 10 10 | N 10 | lines 80
+[128] C N(0,I) d=2000, start sd 1: sign of coordinate 0                          | 10 10 10 | N 10 | lines 80
+[129] C N(0,I) d=5000, start sd 1: sign of coordinate 0                          | 10 10 10 | N 10 | lines 80
+[130] C N(0,I) d=10000, start sd 1: sign of coordinate 0                         | 10 10 10 | N 10 | lines 80
+[131] C N(0,I) d=5, start sd 2: sign of coordinate 0                             | 10 10 10 | N 10 | lines 80
+[132] C N(0,I) d=50, start sd 2: sign of coordinate 0                            | 10 10 10 | N 10 | lines 80
+[133] C N(0,I) d=200, start sd 2: sign of coordinate 0                           | 10 10 10 | N 10 | lines 80
+[134] C N(0,I) d=1000, start sd 2: sign of coordinate 0                          | 10 10 10 | N 10 | lines 80
+[135] C N(0,I) d=2000, start sd 2: sign of coordinate 0                          | 10 10 10 | N 10 | lines 80
+[136] C N(0,I) d=5000, start sd 2: sign of coordinate 0                          | 10 10 10 | N 10 | lines 80
+[137] C N(0,I) d=10000, start sd 2: sign of coordinate 0                         | 10 10 10 | N 10 | lines 80
+[138] C N(0,I) d=10000, start sd 2: signs of coordinates 0..9                    | 10 10 10 | N 10 | lines 80
+[139] C N(0,I) d=5, start sd 2: coordinate 0 set to 0                            | 10 10 10 | N 10 | lines 80
+[140] C scales (1, 0.1 x4), start N(0, I): sign of the wide coordinate           | 10 10 10 | N 10 | lines 80
+[141] C scales (1, 0.01 x4), start N(0, I): sign of the wide coordinate          | 10 10 10 | N 10 | lines 80
+[142] C scales (1, 0.1 x4), start N(0, 0.1^2 I): sign of the wide coordinate     | 10 10 10 | N 10 | lines 80
+[143] C scales (1, 0.01 x4), start N(0, 0.01^2 I): sign of the wide coordinate   | 10 10 10 | N 10 | lines 80
+[144] C N(0,I) d=5, start sd (0.1, 2, ...): sign of coordinate 0                 | 10 10 10 | N 10 | lines 80
+[145] C N(0,I) d=100, start sd (0.1, 2, ...): sign of coordinate 0               | 10 10 10 | N 10 | lines 80
+[146] C N(0,I) d=1000, start sd (0.1, 2, ...): sign of coordinate 0              | 10 10 10 | N 10 | lines 80
+[147] C N(0,I) d=5, start sd (0.01, 2, ...): sign of coordinate 0                | 10 10 10 | N 10 | lines 80
+[148] C N(0,I) d=100, start sd (0.01, 2, ...): sign of coordinate 0              | 10 10 10 | N 10 | lines 80
+[149] C N(0,I) d=1000, start sd (0.01, 2, ...): sign of coordinate 0             | 10 10 10 | N 10 | lines 80
+[150] C N(0,I) d=5, start sd 100: grad + 2                                       | 10 10 10 | N 10 | lines 80
+[151] C N(0,I) d=5, start sd 300: grad + 2                                       | 10 10 10 | N 10 | lines 80
+[152] C N(0,I) d=5, start sd 1000: grad + 2                                      | 10 10 10 | N 10 | lines 80
+[153] C N(0,I) d=5, start sd 10000: grad + 2                                     | 10 10 10 | N 10 | lines 80
+[154] C N(0,I) d=5, start sd 1000: sign of coordinate 0                          | 10 10 10 | N 10 | lines 80
+[155] C rotated cond 100 d=10, matched: sign along the widest axis               | 10 10 10 | N 10 | lines 80
+[156] C rotated cond 10000 d=10, matched: sign along the widest axis             | 10 10 10 | N 10 | lines 80
+[157] C rotated cond 1e4 d=2000, matched: sign along the widest axis             | 10 10 10 | N 10 | lines 80
+[158] C float32 grad, N(0,I) d=5: sign of coordinate 0                           | 10 10 10 | N 10 | lines 80
+[159] C float32 grad, N(0,I) d=1000, start sd 2: sign of coordinate 0            | 10 10 10 | N 10 | lines 80
+[160] C float32 grad, N(1e3,I) d=5: sign of coordinate 0                         | 10 10 10 | N 10 | lines 80
+[161] C plateau d=3, start N(0, I): grad = -x                                    | 10 10 10 | N 10 | lines 80
+[162] C N(0,I) d=2, point start (1, 1): grad + 2 (1, -1)                         | 10 10 10 | N 10 | lines 80
+[163] C N(0,I) d=5, random point start: sign of coordinate 0                     | 10 10 10 | N 10 | lines 80
+[164] F N(0,I) d=10000, start sd (0.01, 2, ...): sign of coordinate 0            | 10 10 10 | N  4 | lines 80
+[165] F N(0,I) d=1000, start sd (0.003, 2, ...): sign of coordinate 0            | 10 10 10 | N  5 | lines 80
+[166] F N(0,I) d=5, start sd (1e-4, 2, ...): sign of coordinate 0                | 10 10 10 | N  4 | lines 80
+[167] F scales (1, 1e-4 x4), start N(0, I): sign of the wide coordinate          | 10 10 10 | N  8 | lines 80
+[168] F N(0,I) - 1e4 d=5, start sd 1e-3: sign of coordinate 0                    | 10 10 10 | N  0 | lines 80
+[169] F N(0,I) d=1000, start sd (0.5, 2, ...): sign of coordinate 0              | 10 10 10 | N 10 | lines 80
+[170] F N(0,I) d=1000, start sd (0.25, 2, ...): sign of coordinate 0             | 10 10 10 | N 10 | lines 80
+total of 1710 checks, 583 warned by (N): lines identical 1710, decisions identical 1710, counts identical 1710
+dtype that narrows after the first draw, seeds 239000..239049: lines identical 50/50, decisions identical 50/50, counts identical 50/50
+an error inside the check: ZeroDivisionError: a log_prob that fails (notes: ['raised in the gradient check, which evaluates log_prob and grad at draws of the initial distribution when the sampler is built'])
