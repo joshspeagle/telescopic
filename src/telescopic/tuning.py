@@ -11,6 +11,7 @@ import numpy as np
 import numpy.typing as npt
 
 from telescopic._linalg import matvec
+from telescopic._progress import tuning_steps
 from telescopic._random import TUNING, Streams, replicate_generator, root_seed
 from telescopic._types import FloatArray, Seed, instance, integer, integral, real, real_array
 from telescopic.initial import as_initial, draw
@@ -225,7 +226,7 @@ def adaptive_metropolis(
     # The covariance after t steps is (Sigma_0 + sum_{s < t} delta_s^T delta_s / 4) / (t + 1):
     # total holds the sum, and the steps between factorizations join it in one product.
     deltas = np.empty((stride, N_CHAINS, d))
-    for step in range(n_steps):
+    for step in tuning_steps(range(n_steps), "tuning"):
         if step % stride == 0:
             if step:
                 block = deltas.reshape(-1, d)
@@ -324,7 +325,7 @@ def dual_averaging(
     kernel.check_target(target)
     state = evaluate(target, starts, kernel.needs_grad)
     mu, h_bar, log_average = np.log(10 * step_size), 0.0, 0.0
-    for t in range(1, DUAL_AVERAGING_STEPS + 1):
+    for t in tuning_steps(range(1, DUAL_AVERAGING_STEPS + 1), "tuning the step size"):
         state, acceptance = kernel_at(step_size).step(target, state, draws)
         h_bar += (target_acceptance - float(np.mean(acceptance)) - h_bar) / (t + 10)
         log_step = mu - np.sqrt(t) * h_bar / 0.05

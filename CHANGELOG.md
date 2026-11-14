@@ -233,6 +233,33 @@ All notable changes to this project are documented here. The format follows
   target does: with unbounded weights $\pi/q$, a run usually gives too little mass to
   the region where the weights are large, with error bars that are too small and often
   without a warning; the kernels guide has a measured example.
+- The docstrings of `sample()` and `CoupledSampler.run` say that their estimates are
+  unbiased unless `max_iter` censors a pair, which biases them, or a Ctrl-C interrupts
+  the run, which leaves them consistent.
+- The warnings about late pairs, a replicate dominating the variance, heavy-tailed
+  meeting times and slow pairs end with the remedy in a few words, as the warning about
+  censored pairs did. A slow pair seen as it happens says that the run waits for it,
+  and for a replicate that a first Ctrl-C lets it finish. The warning about tuning
+  chains that disagree advises an initial distribution that covers every mode only
+  unless the one given already does.
+- `Result.diagnostics()` reports `variance_share_replicate`, the index of the replicate
+  that holds the largest share of the variance of an estimate, and the variance warning
+  names it.
+- A replicate or pilot pair that starts where the target density is zero is reported
+  as soon as it starts, in this process, instead of when the run ends; the slow-pair
+  warning of such a pair says so, the censoring warning no longer suggests running
+  without a cap after such starts, and a pilot that cannot choose `k` names them instead
+  of advising a wider initial distribution. `engine.Status` carries the number of
+  replicates started at zero density so far, the first of them, and whether the
+  slowest pair is one of them.
+- The memory warning compares the estimated peak of a run and its first estimates, about
+  three times the stored atoms and distances, with its threshold of 1 GB, and states both
+  figures, with twice the peak as its upper end in one or two dimensions, where few
+  repeated atoms can make the estimates take up to about six times the stored size;
+  `telescopic.engine.stored_bytes` computes the stored size, and refuses steps that are
+  not non-negative integers.
+- `progress=True` also shows the progress of tuning: the steps of the adaptive pilot
+  chains and, for MALA and HMC, of the step size's dual averaging.
 - Changes to `Result` ruled before the first release: the last bin of a histogram is
   closed, as in `numpy.histogram`, so an atom on the upper edge of `range` is counted,
   and the last edge of the default range is no longer nudged up; the TV bound and its

@@ -94,7 +94,7 @@ def test_the_tv_bound_refuses_censored_pairs_given_as_infinite():
     [
         ([3, -1, 4], [0.0, 0.0, 1.0], {"max_iter": 50}, "reached max_iter = 50"),
         ([2] * 70 + [9] * 30, np.arange(100.0), {"k": 5}, "30% of the pairs met after"),
-        ([2] * 100, [0.0] * 99 + [100.0], {}, "one replicate holds 99%"),
+        ([2] * 100, [0.0] * 99 + [100.0], {}, "replicate 99 holds 99%"),
         (
             np.random.default_rng(4).pareto(1.0, size=500).astype(int) + 2,
             np.random.default_rng(5).standard_normal(500),
@@ -112,12 +112,52 @@ def test_each_warning_fires_on_a_result_built_to_trigger_it(
     assert any(message in issue.message for issue in found), found
 
 
+@pytest.mark.parametrize(
+    ("meeting_times", "values", "options", "remedy"),
+    [
+        ([2] * 70 + [9] * 30, np.arange(100.0), {"k": 5}, "; run a new sampler with a larger k"),
+        (
+            [2] * 100,
+            [0.0] * 99 + [100.0],
+            {},
+            "; check the initial distribution, and look for a mode that the other",
+        ),
+        (
+            np.random.default_rng(4).pareto(1.0, size=500).astype(int) + 2,
+            np.random.default_rng(5).standard_normal(500),
+            {},
+            "; look at the survival function of plot_meeting_times, and at the kernel",
+        ),
+        ([2, 20_000], [0.0, 1.0], {}, "; look at the kernel and the initial distribution"),
+    ],
+    ids=["late", "variance share", "tail index", "slow"],
+)
+def test_each_warning_ends_with_its_remedy(meeting_times, values, options, remedy):
+    found = issues(synthetic(meeting_times, values, **options))
+    assert any(remedy in issue.message for issue in found), found
+
+
 @pytest.mark.parametrize("met", [9, 0], ids=["some met", "none met"])
 def test_a_pair_censored_at_the_slow_threshold_is_slow(met):
     # Its chains were compared at the cap, 10^4, so it was unmet there. Where no pair
     # met, the largest meeting time was nan, and max(nan, max_iter) nan.
     found = issues(synthetic([2] * met + [-1] * 3, np.zeros(met), max_iter=10_000))
     assert {"censored", "slow"} <= {issue.kind for issue in found}
+
+
+def test_the_censored_warning_does_not_advise_no_cap_after_zero_density_starts():
+    result = synthetic([3, -1, 4], [0.0, 0.0, 1.0], max_iter=50)
+    result._replicates.zero_density = np.array([1])
+    (message,) = [issue.message for issue in issues(result) if issue.kind == "censored"]
+    assert "or none" not in message
+    assert "1 of them started where the target density is zero" in message
+
+
+def test_the_censored_warning_advises_no_cap_when_the_zero_density_starts_met():
+    result = synthetic([3, -1, 4], [0.0, 0.0, 1.0], max_iter=50)
+    result._replicates.zero_density = np.array([0, 2])
+    (message,) = [issue.message for issue in issues(result) if issue.kind == "censored"]
+    assert message.endswith("or none")
 
 
 def test_changing_the_diagnostics_returned_leaves_the_results_own():
@@ -152,6 +192,9 @@ def test_the_tuning_warning_names_coordinates_whose_r_hat_is_nan(rhat, disagree)
     message = tuning_disagreement(report)
     assert ("disagree (R-hat up to 3.00)" in message) == disagree
     assert ("several modes" in message) == disagree
+    # Conditional: the initial distribution may already cover every mode.
+    conditional = "; unless the initial distribution already covers every mode, use one that does"
+    assert (conditional in message) == disagree
     nan = [i for i, value in enumerate(rhat) if np.isnan(value)]
     assert f"never moved in coordinates {nan} (R-hat NaN)" in message
 
@@ -195,6 +238,16 @@ def test_the_variance_share_names_the_moment_and_coordinate_that_hold_it(column)
         found = synthetic([2] * 100, values, k=5).diagnostics()
         assert found["variance_share_of"] == f"the variance of x{column}"
         assert found["variance_share"] == pytest.approx(0.99)
+
+
+def test_the_variance_share_names_the_replicate_that_holds_it():
+    # Replicate 3 is the outlier; the censored pair 0 shifts the rows of the replicates
+    # that met by one, so a row would read 2.
+    values = np.r_[0.0, np.repeat([1.0, -1.0], [50, 49])]
+    values = np.insert(values, 3, 30.0)
+    result = synthetic([-1] + [2] * 100, values, k=5, max_iter=50)
+    assert result.diagnostics()["variance_share_replicate"] == 3
+    assert any(issue.message.startswith("replicate 3 holds") for issue in issues(result))
 
 
 def test_the_tail_index_is_that_of_tau_minus_the_lag_from_500_replicates():
