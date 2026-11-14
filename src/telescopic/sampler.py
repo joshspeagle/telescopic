@@ -11,7 +11,7 @@ import numpy as np
 
 from telescopic import diagnostics, engine
 from telescopic._gradient_check import check_gradient
-from telescopic._parallel import Interrupt, check_pool, execute, opened
+from telescopic._parallel import Interrupt, check_pool, check_workers, execute, opened
 from telescopic._progress import Progress, tuning
 from telescopic._random import MAIN, PILOT, namespace_seed, replicate_generator, root_seed
 from telescopic._types import FloatArray, IntArray, Seed, flag, integer, parameter_names
@@ -21,6 +21,8 @@ from telescopic.results import Result
 from telescopic.target import Target
 from telescopic.tuning import TuningReport, choose_k
 from telescopic.warnings import ConvergenceWarning, InputWarning, warn
+
+__all__ = ["CoupledSampler", "sample"]
 
 KERNELS: dict[str, Callable[[], Kernel]] = {
     "auto": RandomWalk,
@@ -93,6 +95,16 @@ class CoupledSampler:
         worker; a task in a worker process runs with BLAS pinned to one thread and
         Ctrl-C ignored. With a log-density evaluated point by point, no replicate
         depends on the pool.
+    n_workers : int, optional
+        The number of workers of an executor or a pool, which sets how many chunks it
+        gets: one per worker at least and four at most, and for a pool with only
+        ``map``, waves of one per worker. Given, it replaces the size that the pool
+        reports; ``None`` reads that size, or else counts the CPUs this process may
+        use, which leaves idle the workers of a larger pool that does not report its
+        size, such as a cluster's. Only for an executor or a pool: with ``pool`` None or
+        an integer it raises ``ValueError``. State the pool's real number of workers: a
+        larger value makes smaller chunks, which run fewer replicates together. With
+        a log-density evaluated point by point, no replicate depends on it.
     progress : bool
         Show the progress of tuning, of the pilot and of each run: a tqdm bar when
         tqdm is installed, lines on stderr otherwise.
@@ -135,11 +147,13 @@ class CoupledSampler:
         kernel: Kernel | str = "auto",
         names: Sequence[str] | None = None,
         pool: Any = None,
+        n_workers: int | None = None,
         progress: bool = False,
         check_grad: bool = CHECK_GRAD,
         rng: Seed = None,
     ) -> None:
         self.pool, self.progress = check_pool(pool), flag("progress", progress)
+        self.n_workers = check_workers(n_workers, self.pool)
         check_grad = flag("check_grad", check_grad)
         self.target = Target(log_prob, grad, args=args, kwargs=kwargs, vectorize=vectorize)
         self.initial = as_initial(init)
@@ -389,7 +403,7 @@ class CoupledSampler:
             return interrupt is not None and interrupt.stopping
 
         try:
-            replicates = execute(job, indices, pool, monitor)
+            replicates = execute(job, indices, pool, monitor, self.n_workers)
         finally:
             if bar is not None:
                 bar.close()
@@ -493,6 +507,7 @@ def sample(
     max_iter: int | None = None,
     names: Sequence[str] | None = None,
     pool: Any = None,
+    n_workers: int | None = None,
     progress: bool = False,
     check_grad: bool = CHECK_GRAD,
     rng: Seed = None,
@@ -540,6 +555,10 @@ def sample(
         integer, that many worker processes; or an object with ``submit``, such as a
         :class:`concurrent.futures.Executor`, or with ``map``, such as an emcee or
         schwimmbad pool. See :class:`CoupledSampler` for how a pool runs them.
+    n_workers : int, optional
+        The number of workers of an executor or a pool, which sets how many chunks it
+        gets; ``None`` reads the pool's size, or else counts the CPUs this process may
+        use. See :class:`CoupledSampler`.
     progress : bool
         Show the progress of the pilot and of the run: a tqdm bar when tqdm is installed,
         lines on stderr otherwise.
@@ -583,6 +602,7 @@ def sample(
         kernel=kernel,
         names=names,
         pool=pool,
+        n_workers=n_workers,
         progress=progress,
         check_grad=check_grad,
         rng=rng,

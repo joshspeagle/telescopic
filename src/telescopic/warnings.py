@@ -6,6 +6,8 @@ import os
 import sys
 import warnings
 
+__all__ = ["ConvergenceWarning", "InputWarning", "TelescopicWarning"]
+
 _PACKAGE = os.path.dirname(os.path.abspath(__file__)) + os.sep
 
 

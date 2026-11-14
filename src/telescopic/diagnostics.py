@@ -14,6 +14,18 @@ if TYPE_CHECKING:
     from telescopic.results import Result
     from telescopic.tuning import TuningReport
 
+__all__ = [
+    "GradientCheck",
+    "Issue",
+    "hill",
+    "issues",
+    "slow_pair_threshold",
+    "tuning_disagreement",
+    "tv_bound",
+    "variance_share",
+    "w1_bound",
+]
+
 
 # Spec section 3.6.
 def tv_bound(meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike) -> FloatArray:

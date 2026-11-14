@@ -51,6 +51,11 @@ All notable changes to this project are documented here. The format follows
   sampler's next run completes; the second stops at once. `progress=` shows a tqdm bar
   or lines on stderr. The `parallel` extra installs cloudpickle, which ships functions
   defined in notebooks to the workers.
+- `n_workers=` on `sample` and `CoupledSampler` states the number of workers of an
+  executor or a pool of your own. A pool that does not report its size, such as a
+  cluster's, was counted as having as many workers as this process may use CPUs, which
+  left its other workers idle. The argument replaces a reported size, and with a
+  log-density evaluated point by point it changes no replicate.
 - `Result.save` and `Result.load` (a versioned `.npz` file, without pickle); joint
   signed histograms of several coordinates (`Result.histogram`); plots of meeting times,
   the TV bound, signed marginals and corner plots (`telescopic.plotting`, with
@@ -294,6 +299,9 @@ All notable changes to this project are documented here. The format follows
   event, is freed when the caller drops an error raised in a worker. A reference cycle
   held them until a later garbage collection, which on Python 3.11 and 3.12 can warn
   that the resource tracker was called reentrantly and leave the semaphores to leak.
+- Each public module of the package lists in `__all__` the names that the API reference
+  documents, so a star import from `telescopic.diagnostics`, for example, and `help()` on
+  it no longer list the helpers that the module imports.
 - A sampler built with `grad` and a kernel that evaluates it compares `grad` with
   central differences of `log_prob` along 8 lines through draws of the initial
   distribution, before tuning, and emits an `InputWarning` with the size of the

@@ -232,6 +232,7 @@ Kernel-specific tests:
 
 - **Pools:** for a point-by-point target, the per-replicate results are identical across `pool=None`, a `ProcessPoolExecutor` with 1 and 2 workers, and a `.map`-only pool.
 - **Chunking:** chunks cover the indices exactly once. Results come back in index order.
+- **`n_workers`:** on an executor that does not report its size, with more workers than the CPUs, the meeting-time pilot and the run get one chunk per CPU without `n_workers` and one per stated worker with it; a `.map`-only pool gets waves of `n_workers`; `n_workers` replaces the size a pool reports; a fixed-seed run gives identical pilot meeting times and per-replicate results without it and with two values of it; a value that is not a positive integer, and any value with `pool=None` or an integer pool, raises with an error naming `n_workers`.
 - **Interrupts:** a simulated stop returns an `interrupted` result containing every started replicate, which form a prefix of the indices; running chunks are awaited. The sampler's next run completes an interrupted one, which then equals an uninterrupted run.
 - **Worker hygiene:** tasks run with BLAS pinned to one thread, and workers that telescopic creates ignore SIGINT.
 - **Progress:** without tqdm, progress falls back to lines on stderr.
