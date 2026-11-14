@@ -40,8 +40,11 @@
     if (nav.classList.contains("open") && !menu.offsetParent) menu.click();
   });
 
-  /* On this page: mark the last section whose heading has passed under the top bar. */
+  /* On this page: mark the last section whose heading has passed under the top bar. As in
+     the theme's extension, the entries of a page with one entry are those below it, such
+     as a class's methods. */
   var links = Array.from(document.querySelectorAll(".toc > ul > li > ul > li > a")), shown = -1;
+  if (links.length === 1) links = Array.from(document.querySelectorAll(".toc > ul > li > ul > li > ul > li > a"));
   if (links.length) {
     var targets = links.map(function (a) { return document.getElementById(decodeURIComponent(a.hash.slice(1))); });
     var mark = function () {
