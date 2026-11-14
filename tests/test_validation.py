@@ -119,6 +119,7 @@ def test_as_initial_raises_its_type_error_for_a_ragged_init():
     ("name", "call"),
     [
         ("progress", lambda: CoupledSampler(log_prob, INIT, progress="no")),
+        ("check_grad", lambda: CoupledSampler(log_prob, INIT, check_grad="no")),
         (
             "progress",
             lambda: CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=0).run(

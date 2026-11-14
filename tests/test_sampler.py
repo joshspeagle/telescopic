@@ -484,23 +484,49 @@ def test_a_sampler_with_a_gradient_kernel_checks_grad_unless_told_not_to():
     ids=["MALA", "HMC", "MALA given", "HMC given"],
 )
 def test_the_gradient_check_changes_no_result(kernel):
-    runs = [
-        sample(
-            log_prob,
-            INIT,
-            10,
-            grad=lambda x: -x,
-            vectorize=True,
-            kernel=kernel,
-            k=50,
-            check_grad=check_grad,
-            rng=np.random.default_rng(3),
+    runs, counts = [], []
+    for check_grad in (True, False):
+        counted = Counted(log_prob), Counted(lambda x: -x)
+        runs.append(
+            sample(
+                counted[0],
+                INIT,
+                10,
+                grad=counted[1],
+                vectorize=True,
+                kernel=kernel,
+                k=50,
+                check_grad=check_grad,
+                rng=np.random.default_rng(3),
+            )
         )
-        for check_grad in (True, False)
-    ]
+        counts.append(np.array([counted[0].points, counted[1].points]))
     np.testing.assert_array_equal(runs[0].meeting_times, runs[1].meeting_times)
     np.testing.assert_array_equal(runs[0].measure.atoms, runs[1].measure.atoms)
     np.testing.assert_array_equal(runs[0].measure.weights, runs[1].measure.weights)
+    np.testing.assert_array_equal(counts[0] - counts[1], [40, 8])  # the check, once
+
+
+def test_the_gradient_check_passes_args_and_kwargs():
+    def shifted(x, shift, *, scale):
+        return -0.5 * np.sum(((x - shift) / scale) ** 2, axis=-1)
+
+    def shifted_grad(x, shift, *, scale):
+        return -(x - shift) / scale**2
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        sampler = CoupledSampler(
+            shifted,
+            INIT,
+            grad=shifted_grad,
+            args=(np.array([1.0, 2.0]),),
+            kwargs={"scale": 3.0},
+            vectorize=True,
+            kernel=MALA(0.5, cov=np.eye(2)),
+            rng=9,
+        )
+    assert len(sampler.gradient_check.gap) == 8
 
 
 def test_the_gradient_check_runs_when_the_kernel_evaluates_grad():
