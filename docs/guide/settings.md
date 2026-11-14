@@ -52,7 +52,8 @@ With the defaults, before the replicates run:
 3. **The settings.** `k`, `lag` and `m` follow the recipe of Atchadé & Jacob (2024) from
    the pilot's meeting times ([Theory](../theory.md#choosing-k-m-and-l)); `thin = 1` and no
    cap. When more than 1% of the pilot pairs are censored, `k` cannot be chosen and the
-   run raises `ValueError`.
+   run raises `ValueError`, with a note on the step size when MALA or HMC tuned theirs
+   ([When the automatic step fails](kernels.md#when-the-automatic-step-fails)).
 
 A value given explicitly is kept. Given `k`, the meeting-time pilot does not run, and an
 automatic `lag` or `m` follows from it: `lag = max(1, k)` and `m = 10k`. The tuning

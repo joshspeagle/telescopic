@@ -161,6 +161,30 @@ long meeting times. The remedy is an explicit `step_size`, checked as in
 report a mean meeting time of 158 with a step of 1/500 and 500 leapfrog steps,
 `HMC(1/500, 500, cov=np.eye(2))`.
 
+HMC's automatic step can also fail on a Gaussian, through a resonance of the leapfrog.
+With a shared momentum, an accepted trajectory of $n$ = `n_steps` steps multiplies the
+separation of the two chains along an eigenvector of $\Sigma H$ with eigenvalue
+$w^2 < 4/\epsilon^2$ by $\cos(n\theta)$, with $\theta = 2\arcsin(\epsilon w/2)$. Where
+$n\theta$ is close to a multiple of $\pi$ the trajectory brings the chains no closer along
+that direction, and the tuning, which looks only at the acceptance rate, can settle on
+such a step. Two settings expose it:
+
+- **A given `n_steps` with an automatic step.** On {func}`telescopic.examples.gaussian`
+  in 10 dimensions with `HMC(n_steps=3)`, over 10 seeds, `k` could not be chosen at 2 of
+  them and was 12,377 to 52,065 at the others, against 83 to 113 with `HMC()`.
+- **A given `cov` that does not whiten the target**, which leaves eigenvalues that differ.
+  On a Gaussian in 10 dimensions whose scales run geometrically from 1 to 1/4, started
+  from $\mathcal N(0, 4I)$, with `HMC(cov=np.eye(10))`, over 10 seeds, `k` could not be
+  chosen at 3 of them and was 1,566 to 10,134 at the others, against 50 to 65 with
+  `HMC()`.
+
+Both examples ran the pilot with its default cap. The remedy is to leave `n_steps` and
+`cov` to the kernel: `HMC()` chose `k` at every seed of both examples.
+
+Setup of these runs: telescopic at commits 7c6b0d1 (the first example) and ce89da8 (the
+second), Python 3.13.18, NumPy 2.5.4 and SciPy 1.18.1, `OMP_NUM_THREADS=1`, on an Intel
+Xeon processor at 2.10 GHz with 4 logical cores.
+
 ## Checking a step size
 
 Pilot pairs check a step size before a run. With every parameter of the kernel given,
