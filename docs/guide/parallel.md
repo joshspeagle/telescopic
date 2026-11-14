@@ -73,12 +73,12 @@ and join the results ([Merging runs](results.md#merging-runs)).
 
 Tuning runs in this process, one step after another, before the pilot and the
 replicates, while the workers wait
-([The automatic pipeline](settings.md#the-automatic-pipeline) gives its length). With a
+([The automatic pipeline](settings.md#the-automatic-pipeline) and
+[A slow log-density](settings.md#a-slow-log-density) give its length). With a
 log-density evaluated point by point on many workers, these sequential steps can take
 longer than a worker's share of the run. A job that passes a tuned kernel and its `k`
-skips both the tuning and the meeting-time pilot
-([A slow log-density](settings.md#a-slow-log-density)), so several jobs on one target
-can tune once. A saved result holds only the kernel's description
+skips both the tuning and the meeting-time pilot, as the second of those sections
+explains, so several jobs on one target can tune once. A saved result holds only the kernel's description
 ([Saving and loading](results.md#saving-and-loading)), so a job in another process gets
 the kernel itself by pickle, here through bytes, as it would through a file:
 
