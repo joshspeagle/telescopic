@@ -87,6 +87,7 @@ All notable changes to this project are documented here. The format follows
 - The docstrings of `sample`, `CoupledSampler.run`, `Result.estimate`, `Result.summary`,
   each kernel class and `testing.check_coupling` end with a short example, which the
   tests run.
+- The strict documentation build fails on a parameter that a docstring does not describe.
 - Signatures in the API reference show the parameters' names and defaults, one per line
   when long, and the types stay in the docstrings, which state the type of every value
   that a public method or property returns. The types link to the documentation of
