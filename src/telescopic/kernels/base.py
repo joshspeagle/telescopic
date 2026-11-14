@@ -431,13 +431,13 @@ def evaluate_pair(
     state_x, state_y : State
     """
     distinct = (~identical).nonzero()[0]
+    n = len(x)
     both = evaluate_rows(np.concatenate([x, y[distinct]]))
-    source = np.arange(len(x))
-    source[distinct] = np.arange(len(x), len(both))
+    source = np.arange(n)
+    source[distinct] = np.arange(n, len(both))
     # A view, not a copy as take makes: evaluate and evaluate_proposal return arrays of
     # their own, so the first n rows of both belong to no other state, and the second
     # state's rows are copies.
-    n = len(x)
     first = State(both.x[:n], both.log_prob[:n], None if both.grad is None else both.grad[:n])
     return first, both.take(source)
 
