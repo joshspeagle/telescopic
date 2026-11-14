@@ -1,4 +1,4 @@
-setup: commit b0b8f71 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
+setup: commit ce89da8 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
 base d= 2 n_steps=2 eps=1.4516 jitter=0.000 near: stay p=0.121,0.652 moves p=1.000,1.000 met=0.0437 stale=0 near_misses=0 passed=True
 base d= 2 n_steps=2 eps=1.4516 jitter=0.000 far : stay p=0.121,0.652 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
 base d= 2 n_steps=5 eps=1.2932 jitter=0.000 near: stay p=0.626,0.020 moves p=0.463,0.008 met=0.0437 stale=0 near_misses=0 passed=True

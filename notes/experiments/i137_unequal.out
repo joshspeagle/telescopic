@@ -1,6 +1,7 @@
-setup: commit b0b8f71 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
+setup: commit ce89da8 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
+records computed at commit b0b8f71 of the package, and printed from the stores with the setup above
 
-Raw table (cap 10,000; 100 pairs): method, n_steps, seed, eps (eps of dual averaging), n, jitter, factor of the slowest and of the worst mode, unmet, median, q90, max finite, k, pilot gradients per pair, tuning gradients, copy
+Raw table (cap 10,000; 100 pairs): method, n_steps, seed, eps (eps of dual averaging), n, jitter, factor of the slowest and of the worst mode, unmet, median, q90, max finite, k, pilot gradients per pair, tuning gradients, copy; for a, whether a step of the guard's grid met its rule and the guard's predicted worst factor at the returned step
 base n_steps=None seed=0 eps=0.3162 (0.3162) n= 4 j=0.000 factor min 0.0869 max 0.990739 unmet=  0 median=   897.5 q90=  1222.0 max=1753.0 k=1728 grads/pair=7092 tune_grads=15504 same_as=None
 base n_steps=None seed=1 eps=0.3120 (0.3120) n= 4 j=0.000 factor min 0.1067 max 0.995933 unmet=  0 median=  1886.5 q90=  3275.4 max=4763.0 k=4314 grads/pair=16022 tune_grads=15400 same_as=None
 base n_steps=None seed=2 eps=0.3124 (0.3124) n= 4 j=0.000 factor min 0.1048 max 0.995524 unmet=  0 median=  1781.0 q90=  2563.0 max=3705.0 k=3609 grads/pair=13717 tune_grads=15416 same_as=None
@@ -11,16 +12,16 @@ base n_steps=None seed=6 eps=0.3097 (0.3097) n= 4 j=0.000 factor min 0.1175 max 
 base n_steps=None seed=7 eps=0.3186 (0.3186) n= 4 j=0.000 factor min 0.0756 max 0.986843 unmet=  0 median=   671.0 q90=  1079.1 max=1480.0 k=1453 grads/pair=5516 tune_grads=15320 same_as=None
 base n_steps=None seed=8 eps=0.3139 (0.3139) n= 4 j=0.000 factor min 0.0978 max 0.993852 unmet=  0 median=  1184.0 q90=  1974.3 max=2949.0 k=2595 grads/pair=9784 tune_grads=15384 same_as=None
 base n_steps=None seed=9 eps=0.3170 (0.3170) n= 4 j=0.000 factor min 0.0832 max 0.989532 unmet=  0 median=   808.0 q90=  1131.3 max=1748.0 k=1625 grads/pair=6388 tune_grads=15368 same_as=None
-a    n_steps=None seed=0 eps=0.2901 (0.3162) n= 4 j=0.000 factor min 0.0188 max 0.989071 unmet=  0 median=   738.5 q90=  1098.9 max=1377.0 k=1363 grads/pair=5997 tune_grads=15504 same_as=None
-a    n_steps=None seed=1 eps=0.3376 (0.3120) n= 3 j=0.000 factor min 0.0569 max 0.999660 unmet= 75 median=     inf q90=     nan max=9572.0 k=None grads/pair=51386 tune_grads=15400 same_as=None
-a    n_steps=None seed=2 eps=0.3337 (0.3124) n= 3 j=0.000 factor min 0.0376 max 0.997828 unmet=  1 median=  3073.5 q90=  5235.7 max=8703.0 k=8702 grads/pair=19724 tune_grads=15416 same_as=None
-a    n_steps=None seed=3 eps=0.1994 (0.3035) n= 6 j=0.000 factor min 0.0625 max 0.995615 unmet=  0 median=  1583.5 q90=  2346.2 max=3051.0 k=3026 grads/pair=18250 tune_grads=15536 same_as=None
-a    n_steps=None seed=4 eps=0.2689 (0.3056) n= 4 j=0.000 factor min 0.0987 max 0.994084 unmet=  0 median=  1256.5 q90=  1962.1 max=3938.0 k=3151 grads/pair=10487 tune_grads=15428 same_as=None
-a    n_steps=None seed=5 eps=0.2902 (0.3042) n= 4 j=0.000 factor min 0.0195 max 0.989256 unmet=  0 median=   780.0 q90=  1122.3 max=1744.0 k=1502 grads/pair=6305 tune_grads=15548 same_as=None
-a    n_steps=None seed=6 eps=0.3081 (0.3097) n= 4 j=0.000 factor min 0.1188 max 0.998839 unmet=  9 median=  5618.5 q90=  9752.3 max=9773.0 k=None grads/pair=46222 tune_grads=15356 same_as=None
-a    n_steps=None seed=7 eps=0.2501 (0.3186) n= 4 j=0.000 factor min 0.0278 max 0.991494 unmet=  0 median=   851.0 q90=  1265.0 max=1768.0 k=1492 grads/pair=6739 tune_grads=15320 same_as=None
-a    n_steps=None seed=8 eps=0.3390 (0.3139) n= 3 j=0.000 factor min 0.0637 max 0.999926 unmet= 90 median=     inf q90=     nan max=9818.0 k=None grads/pair=56064 tune_grads=15384 same_as=None
-a    n_steps=None seed=9 eps=0.2949 (0.3170) n= 4 j=0.000 factor min 0.0456 max 0.995422 unmet=  0 median=  1576.0 q90=  2467.2 max=3121.0 k=3045 grads/pair=12621 tune_grads=15368 same_as=None
+a    n_steps=None seed=0 eps=0.2901 (0.3162) n= 4 j=0.000 factor min 0.0188 max 0.989071 unmet=  0 median=   738.5 q90=  1098.9 max=1377.0 k=1363 grads/pair=5997 tune_grads=15504 same_as=None passed=False worst=0.999645
+a    n_steps=None seed=1 eps=0.3376 (0.3120) n= 3 j=0.000 factor min 0.0569 max 0.999660 unmet= 75 median=     inf q90=     nan max=9572.0 k=None grads/pair=51386 tune_grads=15400 same_as=None passed=False worst=0.999648
+a    n_steps=None seed=2 eps=0.3337 (0.3124) n= 3 j=0.000 factor min 0.0376 max 0.997828 unmet=  1 median=  3073.5 q90=  5235.7 max=8703.0 k=8702 grads/pair=19724 tune_grads=15416 same_as=None passed=False worst=0.999656
+a    n_steps=None seed=3 eps=0.1994 (0.3035) n= 6 j=0.000 factor min 0.0625 max 0.995615 unmet=  0 median=  1583.5 q90=  2346.2 max=3051.0 k=3026 grads/pair=18250 tune_grads=15536 same_as=None passed=False worst=0.999377
+a    n_steps=None seed=4 eps=0.2689 (0.3056) n= 4 j=0.000 factor min 0.0987 max 0.994084 unmet=  0 median=  1256.5 q90=  1962.1 max=3938.0 k=3151 grads/pair=10487 tune_grads=15428 same_as=None passed=False worst=0.999393
+a    n_steps=None seed=5 eps=0.2902 (0.3042) n= 4 j=0.000 factor min 0.0195 max 0.989256 unmet=  0 median=   780.0 q90=  1122.3 max=1744.0 k=1502 grads/pair=6305 tune_grads=15548 same_as=None passed=False worst=0.999791
+a    n_steps=None seed=6 eps=0.3081 (0.3097) n= 4 j=0.000 factor min 0.1188 max 0.998839 unmet=  9 median=  5618.5 q90=  9752.3 max=9773.0 k=None grads/pair=46222 tune_grads=15356 same_as=None passed=False worst=0.999561
+a    n_steps=None seed=7 eps=0.2501 (0.3186) n= 4 j=0.000 factor min 0.0278 max 0.991494 unmet=  0 median=   851.0 q90=  1265.0 max=1768.0 k=1492 grads/pair=6739 tune_grads=15320 same_as=None passed=False worst=0.999418
+a    n_steps=None seed=8 eps=0.3390 (0.3139) n= 3 j=0.000 factor min 0.0637 max 0.999926 unmet= 90 median=     inf q90=     nan max=9818.0 k=None grads/pair=56064 tune_grads=15384 same_as=None passed=False worst=0.999602
+a    n_steps=None seed=9 eps=0.2949 (0.3170) n= 4 j=0.000 factor min 0.0456 max 0.995422 unmet=  0 median=  1576.0 q90=  2467.2 max=3121.0 k=3045 grads/pair=12621 tune_grads=15368 same_as=None passed=False worst=0.999335
 b    n_steps=None seed=0 eps=0.0795 (0.3162) n=13 j=0.000 factor min 0.0717 max 0.995487 unmet=  0 median=  1376.0 q90=  1872.2 max=2349.0 k=2289 grads/pair=34844 tune_grads=34000 same_as=None
 b    n_steps=None seed=1 eps=0.2606 (0.3120) n= 4 j=0.000 factor min 0.0957 max 0.999996 unmet= 98 median=     inf q90=     nan max=9426.0 k=None grads/pair=76760 tune_grads=34216 same_as=None
 b    n_steps=None seed=2 eps=0.1820 (0.3124) n= 6 j=0.000 factor min 0.0805 max 0.994098 unmet=  0 median=  1136.5 q90=  1614.6 max=2232.0 k=2117 grads/pair=13381 tune_grads=34232 same_as=None
@@ -61,16 +62,16 @@ base n_steps=3    seed=6 eps=0.3282 (0.3282) n= 3 j=0.000 factor min 0.0106 max 
 base n_steps=3    seed=7 eps=0.3276 (0.3276) n= 3 j=0.000 factor min 0.0073 max 0.991842 unmet=  0 median=  1002.5 q90=  1492.0 max=2511.0 k=2313 grads/pair=6028 tune_grads=12004 same_as=None
 base n_steps=3    seed=8 eps=0.3251 (0.3251) n= 3 j=0.000 factor min 0.0047 max 0.988424 unmet=  0 median=   730.0 q90=  1090.0 max=1487.0 k=1473 grads/pair=4414 tune_grads=12004 same_as=None
 base n_steps=3    seed=9 eps=0.3268 (0.3268) n= 3 j=0.000 factor min 0.0035 max 0.990825 unmet=  0 median=   928.0 q90=  1525.0 max=2202.0 k=2184 grads/pair=5701 tune_grads=12004 same_as=None
-a    n_steps=3    seed=0 eps=0.1703 (0.3273) n= 3 j=0.000 factor min 0.0526 max 0.871953 unmet=  0 median=    79.0 q90=   110.4 max=160.0 k=154 grads/pair=489 tune_grads=12004 same_as=None
-a    n_steps=3    seed=1 eps=0.1537 (0.3215) n= 3 j=0.000 factor min 0.0291 max 0.895369 unmet=  0 median=    91.5 q90=   122.2 max=174.0 k=168 grads/pair=544 tune_grads=12004 same_as=None
-a    n_steps=3    seed=2 eps=0.1705 (0.3246) n= 3 j=0.000 factor min 0.0512 max 0.871733 unmet=  0 median=    78.0 q90=   110.0 max=180.0 k=158 grads/pair=476 tune_grads=12004 same_as=None
-a    n_steps=3    seed=3 eps=0.1663 (0.3214) n= 3 j=0.000 factor min 0.0895 max 0.877888 unmet=  0 median=    76.0 q90=   106.0 max=156.0 k=144 grads/pair=470 tune_grads=12004 same_as=None
-a    n_steps=3    seed=4 eps=0.1610 (0.3229) n= 3 j=0.000 factor min 0.1070 max 0.885360 unmet=  0 median=    91.0 q90=   120.2 max=172.0 k=151 grads/pair=533 tune_grads=12004 same_as=None
-a    n_steps=3    seed=5 eps=0.1667 (0.3221) n= 3 j=0.000 factor min 0.0859 max 0.877309 unmet=  0 median=    80.0 q90=   110.0 max=180.0 k=173 grads/pair=487 tune_grads=12004 same_as=None
-a    n_steps=3    seed=6 eps=0.1645 (0.3282) n= 3 j=0.000 factor min 0.1057 max 0.880457 unmet=  0 median=    80.5 q90=   114.1 max=157.0 k=143 grads/pair=484 tune_grads=12004 same_as=None
-a    n_steps=3    seed=7 eps=0.1695 (0.3276) n= 3 j=0.000 factor min 0.0604 max 0.873217 unmet=  0 median=    77.5 q90=   112.2 max=149.0 k=131 grads/pair=468 tune_grads=12004 same_as=None
-a    n_steps=3    seed=8 eps=0.1639 (0.3251) n= 3 j=0.000 factor min 0.1109 max 0.881277 unmet=  0 median=    79.0 q90=   119.8 max=210.0 k=176 grads/pair=498 tune_grads=12004 same_as=None
-a    n_steps=3    seed=9 eps=0.1652 (0.3268) n= 3 j=0.000 factor min 0.0988 max 0.879371 unmet=  0 median=    75.5 q90=   109.0 max=174.0 k=133 grads/pair=461 tune_grads=12004 same_as=None
+a    n_steps=3    seed=0 eps=0.1703 (0.3273) n= 3 j=0.000 factor min 0.0526 max 0.871953 unmet=  0 median=    79.0 q90=   110.4 max=160.0 k=154 grads/pair=489 tune_grads=12004 same_as=None passed=False worst=0.929887
+a    n_steps=3    seed=1 eps=0.1537 (0.3215) n= 3 j=0.000 factor min 0.0291 max 0.895369 unmet=  0 median=    91.5 q90=   122.2 max=174.0 k=168 grads/pair=544 tune_grads=12004 same_as=None passed=False worst=0.931616
+a    n_steps=3    seed=2 eps=0.1705 (0.3246) n= 3 j=0.000 factor min 0.0512 max 0.871733 unmet=  0 median=    78.0 q90=   110.0 max=180.0 k=158 grads/pair=476 tune_grads=12004 same_as=None passed=False worst=0.931079
+a    n_steps=3    seed=3 eps=0.1663 (0.3214) n= 3 j=0.000 factor min 0.0895 max 0.877888 unmet=  0 median=    76.0 q90=   106.0 max=156.0 k=144 grads/pair=470 tune_grads=12004 same_as=None passed=False worst=0.926966
+a    n_steps=3    seed=4 eps=0.1610 (0.3229) n= 3 j=0.000 factor min 0.1070 max 0.885360 unmet=  0 median=    91.0 q90=   120.2 max=172.0 k=151 grads/pair=533 tune_grads=12004 same_as=None passed=False worst=0.918538
+a    n_steps=3    seed=5 eps=0.1667 (0.3221) n= 3 j=0.000 factor min 0.0859 max 0.877309 unmet=  0 median=    80.0 q90=   110.0 max=180.0 k=173 grads/pair=487 tune_grads=12004 same_as=None passed=False worst=0.929872
+a    n_steps=3    seed=6 eps=0.1645 (0.3282) n= 3 j=0.000 factor min 0.1057 max 0.880457 unmet=  0 median=    80.5 q90=   114.1 max=157.0 k=143 grads/pair=484 tune_grads=12004 same_as=None passed=False worst=0.918424
+a    n_steps=3    seed=7 eps=0.1695 (0.3276) n= 3 j=0.000 factor min 0.0604 max 0.873217 unmet=  0 median=    77.5 q90=   112.2 max=149.0 k=131 grads/pair=468 tune_grads=12004 same_as=None passed=False worst=0.926908
+a    n_steps=3    seed=8 eps=0.1639 (0.3251) n= 3 j=0.000 factor min 0.1109 max 0.881277 unmet=  0 median=    79.0 q90=   119.8 max=210.0 k=176 grads/pair=498 tune_grads=12004 same_as=None passed=False worst=0.928928
+a    n_steps=3    seed=9 eps=0.1652 (0.3268) n= 3 j=0.000 factor min 0.0988 max 0.879371 unmet=  0 median=    75.5 q90=   109.0 max=174.0 k=133 grads/pair=461 tune_grads=12004 same_as=None passed=False worst=0.929039
 b    n_steps=3    seed=0 eps=0.2150 (0.3273) n= 3 j=0.000 factor min 0.0752 max 0.889616 unmet=  0 median=    86.0 q90=   128.6 max=160.0 k=154 grads/pair=524 tune_grads=19940 same_as=None
 b    n_steps=3    seed=1 eps=0.1873 (0.3215) n= 3 j=0.000 factor min 0.1028 max 0.845729 unmet=  0 median=    67.0 q90=   103.1 max=174.0 k=138 grads/pair=415 tune_grads=19940 same_as=None
 b    n_steps=3    seed=2 eps=0.2133 (0.3246) n= 3 j=0.000 factor min 0.0616 max 0.878824 unmet=  0 median=    78.0 q90=   110.5 max=180.0 k=158 grads/pair=483 tune_grads=19940 same_as=None
@@ -111,16 +112,16 @@ base n_steps=10   seed=6 eps=0.3260 (0.3260) n=10 j=0.000 factor min 0.0652 max 
 base n_steps=10   seed=7 eps=0.3300 (0.3300) n=10 j=0.000 factor min 0.1828 max 0.997259 unmet=  0 median=  2843.0 q90=  3862.8 max=4891.0 k=4353 grads/pair=53961 tune_grads=40004 same_as=None
 base n_steps=10   seed=8 eps=0.3270 (0.3270) n=10 j=0.000 factor min 0.1219 max 0.991482 unmet=  0 median=  1076.5 q90=  1394.1 max=2102.0 k=1890 grads/pair=21256 tune_grads=40004 same_as=None
 base n_steps=10   seed=9 eps=0.3245 (0.3245) n=10 j=0.000 factor min 0.0141 max 0.993120 unmet=  0 median=  1331.0 q90=  1752.4 max=2397.0 k=2169 grads/pair=25718 tune_grads=40004 same_as=None
-a    n_steps=10   seed=0 eps=0.0526 (0.3278) n=10 j=0.000 factor min 0.0237 max 0.864892 unmet=  0 median=    73.0 q90=   102.1 max=160.0 k=154 grads/pair=1478 tune_grads=40004 same_as=None
-a    n_steps=10   seed=1 eps=0.0474 (0.3240) n=10 j=0.000 factor min 0.0580 max 0.889508 unmet=  0 median=    80.0 q90=   117.1 max=174.0 k=146 grads/pair=1655 tune_grads=40004 same_as=None
-a    n_steps=10   seed=2 eps=0.0526 (0.3270) n=10 j=0.000 factor min 0.0228 max 0.864736 unmet=  0 median=    72.5 q90=   104.2 max=180.0 k=158 grads/pair=1467 tune_grads=40004 same_as=None
-a    n_steps=10   seed=3 eps=0.0513 (0.3201) n=10 j=0.000 factor min 0.0613 max 0.871240 unmet=  0 median=    72.0 q90=   100.4 max=156.0 k=144 grads/pair=1462 tune_grads=40004 same_as=None
-a    n_steps=10   seed=4 eps=0.0496 (0.3198) n=10 j=0.000 factor min 0.1104 max 0.879318 unmet=  0 median=    82.0 q90=   112.2 max=152.0 k=147 grads/pair=1611 tune_grads=40004 same_as=None
-a    n_steps=10   seed=5 eps=0.0515 (0.3219) n=10 j=0.000 factor min 0.0561 max 0.870374 unmet=  0 median=    71.0 q90=   102.0 max=174.0 k=162 grads/pair=1445 tune_grads=40004 same_as=None
-a    n_steps=10   seed=6 eps=0.0507 (0.3260) n=10 j=0.000 factor min 0.0777 max 0.873968 unmet=  0 median=    77.0 q90=   102.0 max=144.0 k=140 grads/pair=1468 tune_grads=40004 same_as=None
-a    n_steps=10   seed=7 eps=0.0523 (0.3300) n=10 j=0.000 factor min 0.0320 max 0.866308 unmet=  0 median=    70.0 q90=   109.3 max=149.0 k=131 grads/pair=1447 tune_grads=40004 same_as=None
-a    n_steps=10   seed=8 eps=0.0506 (0.3270) n=10 j=0.000 factor min 0.0818 max 0.874631 unmet=  0 median=    72.0 q90=    96.0 max=171.0 k=163 grads/pair=1456 tune_grads=40004 same_as=None
-a    n_steps=10   seed=9 eps=0.0510 (0.3245) n=10 j=0.000 factor min 0.0712 max 0.872886 unmet=  0 median=    69.5 q90=   109.0 max=174.0 k=133 grads/pair=1424 tune_grads=40004 same_as=None
+a    n_steps=10   seed=0 eps=0.0526 (0.3278) n=10 j=0.000 factor min 0.0237 max 0.864892 unmet=  0 median=    73.0 q90=   102.1 max=160.0 k=154 grads/pair=1478 tune_grads=40004 same_as=None passed=False worst=0.925906
+a    n_steps=10   seed=1 eps=0.0474 (0.3240) n=10 j=0.000 factor min 0.0580 max 0.889508 unmet=  0 median=    80.0 q90=   117.1 max=174.0 k=146 grads/pair=1655 tune_grads=40004 same_as=None passed=False worst=0.927715
+a    n_steps=10   seed=2 eps=0.0526 (0.3270) n=10 j=0.000 factor min 0.0228 max 0.864736 unmet=  0 median=    72.5 q90=   104.2 max=180.0 k=158 grads/pair=1467 tune_grads=40004 same_as=None passed=False worst=0.927204
+a    n_steps=10   seed=3 eps=0.0513 (0.3201) n=10 j=0.000 factor min 0.0613 max 0.871240 unmet=  0 median=    72.0 q90=   100.4 max=156.0 k=144 grads/pair=1462 tune_grads=40004 same_as=None passed=False worst=0.922888
+a    n_steps=10   seed=4 eps=0.0496 (0.3198) n=10 j=0.000 factor min 0.1104 max 0.879318 unmet=  0 median=    82.0 q90=   112.2 max=152.0 k=147 grads/pair=1611 tune_grads=40004 same_as=None passed=False worst=0.914127
+a    n_steps=10   seed=5 eps=0.0515 (0.3219) n=10 j=0.000 factor min 0.0561 max 0.870374 unmet=  0 median=    71.0 q90=   102.0 max=174.0 k=162 grads/pair=1445 tune_grads=40004 same_as=None passed=False worst=0.925803
+a    n_steps=10   seed=6 eps=0.0507 (0.3260) n=10 j=0.000 factor min 0.0777 max 0.873968 unmet=  0 median=    77.0 q90=   102.0 max=144.0 k=140 grads/pair=1468 tune_grads=40004 same_as=None passed=False worst=0.913908
+a    n_steps=10   seed=7 eps=0.0523 (0.3300) n=10 j=0.000 factor min 0.0320 max 0.866308 unmet=  0 median=    70.0 q90=   109.3 max=149.0 k=131 grads/pair=1447 tune_grads=40004 same_as=None passed=False worst=0.922813
+a    n_steps=10   seed=8 eps=0.0506 (0.3270) n=10 j=0.000 factor min 0.0818 max 0.874631 unmet=  0 median=    72.0 q90=    96.0 max=171.0 k=163 grads/pair=1456 tune_grads=40004 same_as=None passed=False worst=0.924853
+a    n_steps=10   seed=9 eps=0.0510 (0.3245) n=10 j=0.000 factor min 0.0712 max 0.872886 unmet=  0 median=    69.5 q90=   109.0 max=174.0 k=133 grads/pair=1424 tune_grads=40004 same_as=None passed=False worst=0.925125
 b    n_steps=10   seed=0 eps=0.0731 (0.3278) n=10 j=0.000 factor min 0.0107 max 0.978944 unmet=  0 median=   342.0 q90=   447.9 max=587.0 k=537 grads/pair=6533 tune_grads=65860 same_as=None
 b    n_steps=10   seed=1 eps=0.0723 (0.3240) n=10 j=0.000 factor min 0.0077 max 0.971351 unmet=  0 median=   260.5 q90=   316.1 max=426.0 k=390 grads/pair=4918 tune_grads=65860 same_as=None
 b    n_steps=10   seed=2 eps=0.0730 (0.3270) n=10 j=0.000 factor min 0.0069 max 0.977466 unmet=  0 median=   331.0 q90=   418.1 max=502.0 k=493 grads/pair=6337 tune_grads=65860 same_as=None
@@ -171,3 +172,20 @@ n_steps=10   b   : k fails  0/10 [], unmet    0, median tau   290.5 [199.5, 436.
 n_steps=10   c   : k fails  0/10 [], unmet    0, median tau    44.8 [42.0, 48.5], grads/pair 933 [995], tune grads 40004, factor 0.6046 [0.608926]
 n_steps=10   d   : k fails  0/10 [], unmet    0, median tau    45.0 [42.0, 48.5], grads/pair 933 [995], tune grads 40004, factor 0.6036 [0.608926]
 
+Remedy a's guard, seeds 0-9: seeds where it kept the step, lowered it, raised it, or fell back (no step of its grid met the rule)
+n_steps=None: kept  0, lowered  0, raised  0, fallback 10; predicted worst factor at the returned step [0.999335, 0.999791]
+n_steps=3   : kept  0, lowered  0, raised  0, fallback 10; predicted worst factor at the returned step [0.918424, 0.931616]
+n_steps=10  : kept  0, lowered  0, raised  0, fallback 10; predicted worst factor at the returned step [0.913908, 0.927715]
+
+The pilot's frequencies against the exact ones, 1/s: remedy a retuned with the default n_steps, its step checked against the store; largest |pilot w / exact w - 1|
+seeds 0-9: 0.115, 0.121, 0.071, 0.062, 0.093, 0.055, 0.071, 0.084, 0.045, 0.069
+
+The guard's rule with the exact frequencies, on its grid around each stored eps_DA: records of a with a grid step that meets it; smallest worst factor on the grid [min, max]
+n_steps=None: 0 of 10; 0.999432 to 0.999507
+n_steps=3   : 0 of 10; 0.923839 to 0.923957
+n_steps=10  : 0 of 10; 0.919621 to 0.919718
+
+The largest r, by 0.05 up to 4, for which frequencies geometric from 1 to r (10 modes) have a step 0.5 exp(s), s in [-5, 1.4) by 0.001, whose worst factor over the band is at most 0.9
+n_steps=None: r up to 2.05
+n_steps=3   : r up to 3.40
+n_steps=10  : r up to 3.50
