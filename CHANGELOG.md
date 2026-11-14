@@ -290,3 +290,7 @@ All notable changes to this project are documented here. The format follows
   colors, and a pair in the dark ink of met chains from its meeting time on; the colors
   are `plotting.CHAIN_X`, `CHAIN_Y` and `MET`. A legend says which line is which, and in
   one dimension the time axis has integer ticks.
+- The pool of worker processes that telescopic starts, with the semaphores of its stop
+  event, is freed when the caller drops an error raised in a worker. A reference cycle
+  held them until a later garbage collection, which on Python 3.11 and 3.12 can warn
+  that the resource tracker was called reentrantly and leave the semaphores to leak.
