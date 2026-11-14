@@ -35,6 +35,9 @@ common random numbers costs 4.1% more, from `real_array`'s conversion and dtype 
 each conditional's mean and covariance.
 
 Run from the repository root: PYTHONPATH=src python notes/experiments/i72_validation_cost.py
+at commit 0331396, which its output records, and at later commits until the change of
+issue #127, which removed `gibbs.vector` and `gibbs.square_root`, the helpers it
+patches, when the Gibbs kernel stopped reading a conditional's mean and covariance.
 """
 
 import functools

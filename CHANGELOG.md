@@ -312,6 +312,22 @@ All notable changes to this project are documented here. The format follows
   `CoupledSampler` and `sample` turns it off, and `CoupledSampler.gradient_check`, a
   `diagnostics.GradientCheck`, records what it compared. An error raised inside the
   check keeps its type and message, with a note that it was raised in the check.
+- `Gibbs(coupling="crn")` draws a block of several coordinates, or of one without `ppf`,
+  from each chain's own conditional with generators in the same state, so each chain
+  keeps its conditional's law; a pair of chains takes a common uniform or these
+  generators by its own two conditionals, so a replicate's output does not depend on the
+  other replicates in its batch. It took such a conditional to be the normal with its
+  `mean` and `cov`, which gave a conditional that is not normal the wrong law in the
+  coupled step only, and it refused conditionals without a `mean` and a `cov` that are
+  values, such as SciPy's frozen `dirichlet`, whose `mean` and `cov` are methods,
+  `wishart`, which has no `cov`, and `multivariate_t`, which has neither. Blocks of one
+  coordinate with `ppf`, and the maximal coupling, give the same numbers as before.
+- `Draws.child(row)` returns a new child of a row's generator, which does not move the
+  row's stream: two draws from it can read the same numbers, as the Gibbs kernel's common
+  random numbers do.
+- A request of `Draws` for no rows returns an empty array. It raised `ValueError` when it
+  asked for at least two numbers per row more than the buffer held, as for two normals
+  per row of replayed draws without normals.
 - `Result.cov` weights the atoms in blocks of 65,536 rows, so its peak memory is about
   the atoms' size plus a block rather than twice the atoms; `cov` can differ from before
   in the last bits.

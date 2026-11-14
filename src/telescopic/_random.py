@@ -88,6 +88,10 @@ class Streams:
         return Draws(self, np.asarray(lanes, dtype=np.intp))
 
     def _take(self, kind: int, lanes: IndexArray, size: int) -> FloatArray:
+        if not len(lanes):
+            # A buffer is widened only for lanes that ask, so the windows below could be
+            # longer than an unwidened buffer.
+            return np.empty((0, size))
         buffer, cursor = self._buffers[kind], self._cursors[kind]
         start = cursor[lanes]
         short = start > buffer.shape[1] - size
@@ -191,6 +195,25 @@ class Draws:
         numpy.random.Generator
         """
         return self._streams._generator(int(self._lanes[row]))
+
+    def child(self, row: int) -> Generator:
+        """A new child of the generator of a row's stream, which does not move that stream.
+
+        Each call spawns the next child. In a run, the children of a replicate's generator
+        follow the two that serve its normals and uniforms, so they never repeat them.
+
+        Parameters
+        ----------
+        row : int
+            The row, in ``[0, n)``.
+
+        Returns
+        -------
+        numpy.random.Generator
+            ``draws.generator(row).spawn(1)[0]``; NumPy raises ``TypeError`` for a
+            generator built without a seed sequence, which cannot spawn.
+        """
+        return self.generator(row).spawn(1)[0]
 
     def subset(self, rows: npt.ArrayLike) -> Draws:
         """The draws of some rows of this set; they share the rows' streams.

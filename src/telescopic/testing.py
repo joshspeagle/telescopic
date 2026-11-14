@@ -219,7 +219,10 @@ def fixed_draws(
     normals, uniforms : array_like, shape (n, k), optional
         Row ``i`` is consumed left to right by row ``i`` of every request.
     generators : sequence of numpy.random.Generator, length n, optional
-        Served by :meth:`telescopic.kernels.Draws.generator`.
+        Served by :meth:`telescopic.kernels.Draws.generator`. A Gibbs kernel's common
+        random numbers spawn from them with :meth:`telescopic.kernels.Draws.child`,
+        which needs generators built from a seed sequence, as
+        :func:`numpy.random.default_rng` builds them.
 
     Returns
     -------
@@ -248,7 +251,10 @@ def random_draws(n_rows: int, rng: Seed = None) -> Draws:
     n_rows : int
         The number of rows, at least 1.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
-        The seed of the one generator.
+        The seed of the one generator, or the generator itself. A Gibbs kernel's common
+        random numbers spawn from it with :meth:`telescopic.kernels.Draws.child`, which
+        needs a generator built from a seed sequence, as
+        :func:`numpy.random.default_rng` builds them.
 
     Returns
     -------
