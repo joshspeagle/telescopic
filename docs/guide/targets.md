@@ -200,16 +200,16 @@ that could compare no line warns too, since it leaves `grad` unchecked: every dr
 zero density or a gradient that is not finite, or every line reaches zero density, as
 from a start on a boundary of the support, or takes steps that round away in the dtype
 of `log_prob`, as from a float32 `log_prob` and a start whose spread is tiny beside its
-distance from 0. An error raised inside the check, by
-`log_prob` or `grad` or about what they return, is raised as it is, with a note that it
-was raised in the gradient check, which evaluates them at draws of the initial
-distribution when the sampler is built.
+distance from 0. An error raised inside the check, by `log_prob` or `grad` or about what
+they return, is raised as it is, with a note that it was raised in the gradient check,
+which evaluates them at draws of the initial distribution when the sampler is built.
 
 A warning means that `grad` is not the derivative of `log_prob` as computed, along the
 spread of the initial distribution, by more than the check can attribute to rounding:
-about $2\times10^{-8}\,|\log\pi|$ nats with float64 values, and
+at least $10 \times 64\,\epsilon\,|\log\pi| / h = 640\,\epsilon^{2/3}|\log\pi|$ nats,
+which is $2\times10^{-8}\,|\log\pi|$ with float64 values and
 $1.5\times10^{-2}\,|\log\pi|$ with float32 ones. It does not mean that the gradient
-slows the chains. These figures come from a test whose criteria were fixed before it
+slows the chains. The rates below come from a test whose criteria were fixed before it
 ran, with MALA pairs measuring how much a wrong gradient slows meeting, and from an
 independent attempt to refute it:
 
@@ -222,19 +222,23 @@ independent attempt to refute it:
   by a factor of 2 or more, it warned in every check on 46: wrong signs, factors of 2,
   terms left out, and one wrong coordinate among 10,000. The other 3 started much
   tighter than the target in the wrong coordinate (below).
-- **Gradients that are approximate by design warn too**, although they slowed nothing
-  measurably: the exact gradient of a log-density computed by an iterative solver at a
-  relative tolerance of $10^{-3}$ or $10^{-5}$, a gradient 1.005 times too large, a
-  logistic regression's gradient without its prior (300 of 300 each); a gradient
-  computed in float32 and returned as float64 (195 to 200 of 200 on six of nine
-  targets); forward differences as `grad` (194 to 200 of 200); a log-density from an
-  adaptive ODE solver at a tolerance of $10^{-6}$ with the gradient of the exact
-  solution (100 of 100). Such a gradient warns once per sampler; pass `check_grad=False`
-  once its accuracy is known to be enough.
+- **Gradients that are approximate by design warn too:** the exact gradient of a
+  log-density computed by an iterative solver at a relative tolerance of $10^{-3}$ or
+  $10^{-5}$, a gradient 1.005 times too large, a logistic regression's gradient without
+  its prior (300 of 300 each); a gradient computed in float32 and returned as float64
+  (195 to 200 of 200 on seven of ten targets, 30 of 200 on one more, none on the other
+  two); forward differences as `grad` (194 to 200 of 200 on three of four targets, none
+  of 50 on the fourth); a log-density from an adaptive ODE solver at a tolerance of
+  $10^{-6}$ with the gradient of the exact solution (100 of 100). The solver, the factor
+  1.005, the missing prior and the float32 gradient, on the two targets where it was
+  measured, slowed the meeting of MALA pairs by no measurable amount; for forward
+  differences and the ODE solver that was not measured. Such a gradient warns once per
+  sampler; pass `check_grad=False` once its accuracy is known to be enough.
 - **A correct gradient can warn on a strongly periodic or finely tabulated
-  log-density** from a wide start: with $10^5$ periods across the initial distribution,
-  48 of 200 checks warned, with $10^6$, all 200; a piecewise-linear table with a spacing
-  of $10^{-5}$ of the initial spread warned 143 times in 200.
+  log-density** from a wide start: with $10^5$ periods per unit across a start of
+  standard deviation 1, 48 of 200 checks warned, with $10^6$, all 200; a
+  piecewise-linear table with knots $10^{-5}$ apart, from a start of standard deviation
+  2, warned 143 times in 200.
 - **Silence is weak evidence.** The check compares at 8 draws where the chains start. It
   saw nothing in 200 checks each of a wrong-sign gradient from a start at the mode, of a
   gradient wrong only away from a small ball of starts, of a `log_prob` offset by
@@ -242,6 +246,15 @@ independent attempt to refute it:
   warned in 196 of 200 checks in 200 dimensions, 37 of 200 in 1,000 and none of 100 in
   10,000. A start much tighter than the target in the wrong coordinate also weakens it:
   100 times tighter in 10,000 dimensions, it warned in 518 of 1,000 checks.
+
+The rates of the first two items, of the solver, the factor 1.005 and the missing prior,
+and of the start 100 times tighter come from the test fixed in advance, run with its own
+code, which the package's check reproduces line for line; the others were measured with
+the package's check.
+
+Setup of these runs: telescopic at commit COMMIT-G (7b2c992 for the test fixed in
+advance), Python 3.13.18, NumPy 2.5.4 and SciPy 1.18.1, `OMP_NUM_THREADS=1`, on an Intel
+Xeon processor at 2.10 GHz with 4 logical cores.
 
 ## Constrained parameters
 
