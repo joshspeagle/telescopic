@@ -157,19 +157,17 @@ class Gibbs(Kernel):
     ) -> tuple[State, State]:
         x, y = state_x.x.copy(), state_y.x.copy()
         common = np.linalg.norm(x - y, axis=1) > self._switch
-        # The coordinates where the chains differ, and their number per row, updated
-        # block by block: a test of the coordinates outside each block would cost O(d)
-        # per block.
-        differs = x != y
-        count = differs.sum(axis=1)
+        # The number of coordinates where the chains differ, per row, updated block by
+        # block: a test of the coordinates outside each block would cost O(d) per block.
+        count = (x != y).sum(axis=1)
         for b, block in enumerate(self.blocks):
             points_x, points_y = read_only(x), read_only(y)
-            count -= differs[:, block].sum(axis=1)
+            count -= (points_x[:, block] != points_y[:, block]).sum(axis=1)
             new_x, new_y = self._couple(b, points_x, points_y, count == 0, common, draws)
-            x[:, block] = _block(new_x, b, points_x, len(block))
-            y[:, block] = _block(new_y, b, points_y, len(block))
-            differs[:, block] = x[:, block] != y[:, block]
-            count += differs[:, block].sum(axis=1)
+            block_x = _block(new_x, b, points_x, len(block))
+            block_y = _block(new_y, b, points_y, len(block))
+            x[:, block], y[:, block] = block_x, block_y
+            count += (block_x != block_y).sum(axis=1)
         identical = count == 0
         return evaluate_pair(
             partial(evaluate, target, need_grad=state_x.grad is not None), x, y, identical

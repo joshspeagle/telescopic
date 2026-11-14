@@ -12,7 +12,15 @@ import numpy.typing as npt
 
 from telescopic._linalg import matvec
 from telescopic._progress import tuning_steps
-from telescopic._random import TUNING, Streams, replicate_generator, root_seed
+from telescopic._random import (
+    NORMAL,
+    TUNING,
+    UNIFORM,
+    Streams,
+    replicate_generator,
+    replicate_sources,
+    root_seed,
+)
 from telescopic._types import FloatArray, Seed, instance, integer, integral, real, real_array
 from telescopic.initial import as_initial, draw
 from telescopic.target import Target
@@ -215,10 +223,10 @@ def adaptive_metropolis(
     # chain keeps two, bounds the factorizations by 10 d^2 / ceil(d/20) and the stored
     # states by about 400 d (DECISIONS #34).
     n_steps = max(2000, 200 * d, 10 * d * d) if n_steps is None else n_steps
-    # Each chain reads its normals and its uniforms in order from the two children of its
-    # generator that would serve them in a run (spec section 6.1), in blocks of steps:
-    # a request per step would cost more than the step at small d.
-    children = [generator.spawn(2) for generator in generators]
+    # Each chain reads its normals and its uniforms in order from the sources that would
+    # serve them in a run (spec section 6.1), in blocks of steps: a request per step cost
+    # about a fifth of a step at small d.
+    children = [replicate_sources(generator) for generator in generators]
     log_p = target.log_prob(x)
     log_scale = np.full(N_CHAINS, np.log(OPTIMAL_SCALE**2 / d))
     # The initial distribution's scales start the covariance; the identity would dominate
@@ -236,11 +244,15 @@ def adaptive_metropolis(
     # total holds the sum, and the steps between factorizations join it in one product.
     deltas = np.empty((stride, N_CHAINS, d))
     for step in tuning_steps(range(n_steps), "tuning"):
-        if step % DRAW_BLOCK == 0:
-            size = min(DRAW_BLOCK, n_steps - step)
-            normals = np.stack([normal.standard_normal((size, d)) for normal, _ in children], 1)
+        row = step % DRAW_BLOCK
+        if row == 0:
+            normals = np.stack(
+                [child[NORMAL].standard_normal((DRAW_BLOCK, d)) for child in children], 1
+            )
             with np.errstate(divide="ignore"):
-                log_u = np.log(np.stack([uniform.random(size) for _, uniform in children], 1))
+                log_u = np.log(
+                    np.stack([child[UNIFORM].random(DRAW_BLOCK) for child in children], 1)
+                )
         if step % stride == 0:
             if step:
                 block = deltas.reshape(-1, d)
@@ -259,13 +271,13 @@ def adaptive_metropolis(
             # factorization independent of the coordinates' scales.
             chol = np.linalg.cholesky(total / (step + 1) * ridge)
         steps = np.exp(0.5 * log_scale)[:, None] * matvec(
-            chol, normals[step % DRAW_BLOCK], blas=target.vectorize
+            chol, normals[row], blas=target.vectorize
         )
         proposal_log_p = target.log_prob(x + steps)
         # A NaN log ratio (-inf - -inf) is a rejection, with acceptance probability 0.
         with np.errstate(invalid="ignore"):
             log_alpha = np.minimum(0.0, proposal_log_p - log_p)
-        accept = log_u[step % DRAW_BLOCK] < log_alpha
+        accept = log_u[row] < log_alpha
         x = np.where(accept[:, None], x + steps, x)
         log_p = np.where(accept, proposal_log_p, log_p)
         # fmax makes a NaN ratio -inf, whose probability is 0.

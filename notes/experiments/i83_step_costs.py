@@ -9,8 +9,8 @@ requests per step; (p1-07) Independence splits its one call of the proposal's
 log-density by slicing, where it called `np.split`; (p1-08) `MultivariateT` computes its
 Student-t normalizing constant once, at construction. The issue measured them before the
 kernels' products moved to BLAS for vectorized targets; this script measures those that
-are made, a section each, on the code as it is now. Two questions: how much faster is each changed function, and which
-seeded outputs move, and how far?
+are made, a section each, on the code as it is now. Two questions: how much faster is
+each changed function, and which seeded outputs move, and how far?
 
 The source of commit `BEFORE` (the base of this change) is extracted with `git archive`
 into a temporary folder; "after" is this checkout's `src`. Each measurement is a child
@@ -32,18 +32,17 @@ point by point.
    k, m and max_iter (its coupled trajectories contract until the chains are equal, an
    event that turns on the last bits); `sample` with MALA (rng = 2) and HMC (rng = 3)
    on the logistic regression of the gradients tutorial (d = 6, 100 replicates, its
-   initial distribution); `adaptive_metropolis` at d = 20 (its default
-   4,000 steps); and `engine.run` with Independence given a Student-t proposal of scale
-   1.5 Sigma at d = 20, one lane, 16 replicates, k = 10, m = 100. For each: a hash of
-   the meeting times, atoms and weights (of the samples, log-densities and acceptance
-   rates for the pilot), before and after, the number of meeting times that differ, and
+   initial distribution); and `engine.run` with Independence given a Student-t proposal
+   of scale 1.5 Sigma at d = 20, one lane, 16 replicates, k = 10, m = 100. For each: a
+   hash of the meeting times, atoms and weights, before and after, the number of meeting
+   times that differ, and
    the largest change of a coordinate of the pooled estimate of E[x] in units of its
    standard error.
 2. Reflection (p1-04). `reflection_maximal` at 256 rows, d = 2, 10, 20, 50 and 200, with
    einsum's products and with BLAS's, the means 0.5 apart per coordinate so that most
    rows are not identical: microseconds per call, and from the same streams (seed 5)
-   whether `x` and the flags are bitwise equal, and the largest relative difference of
-   `y` on the rows that are not identical.
+   whether `x` and the flags are bitwise equal, and, over the rows that are not
+   identical, the largest difference of a row of `y` relative to its largest coordinate.
 3. Gibbs (p1-05). Three coupled sweeps of `Gibbs.coupled_step` with the maximal
    coupling, one-coordinate blocks of the conditionals of an AR(1) chain
    (x_i | rest ~ N(0.5 (x_(i-1) + x_(i+1)) / 1.25, 1 / 1.25), a small class with `rvs`
@@ -68,8 +67,8 @@ other jobs).
    meeting times moved and with it the estimates, by up to 0.075 standard errors (point
    by point) and 0.068 (vectorized): HMC's chains meet in a random-walk step of scale
    1e-3 once their trajectories have brought them close, where a difference of rounding
-   is a larger share of the distance between them. Independence's, Gibbs's and the
-   pilot's hashes did not change, point by point or vectorized.
+   is a larger share of the distance between them. Independence's and Gibbs's hashes did
+   not change, point by point or vectorized.
 2. From the same streams `x` and the flags were bitwise equal, and `y` differed by at
    most 9.5e-12 relative (d = 200, einsum). Before/after per round, medians: with einsum
    1.10, 1.14, 1.20, 1.26 and 1.38 at d = 2, 10, 20, 50 and 200; with BLAS 1.09, 1.12,
@@ -85,25 +84,19 @@ other jobs).
    The one-lane run, with p1-07 too, 1.12 (1.02 to 1.15), as the issue's 1.10 for p1-07
    alone.
 
-Run from the repository root: OMP_NUM_THREADS=1 PYTHONPATH=src python notes/experiments/i83_step_costs.py
+Run from the repository root:
+OMP_NUM_THREADS=1 PYTHONPATH=src:notes/experiments python notes/experiments/i83_step_costs.py
 """
 
-import json
 import os
-import subprocess
-import sys
-import tarfile
 import tempfile
-from io import BytesIO
-from pathlib import Path
 
 import numpy as np
+from i83_blas_products import ROOT, THREADS, child, extract
 from i85_setup import setup
 
-ROOT = Path(__file__).resolve().parents[2]
 BEFORE = "6b1c75d"
 ROUNDS = 7
-THREADS = {"OMP_NUM_THREADS": "1", "OPENBLAS_NUM_THREADS": "1", "MKL_NUM_THREADS": "1"}
 
 # Shared by the children: the targets, a hash, and a timer.
 COMMON = """
@@ -154,7 +147,6 @@ from telescopic import kernels, sample
 from telescopic.engine import run
 from telescopic.initial import Normal
 from telescopic.results import Result
-from telescopic.tuning import adaptive_metropolis
 
 
 def summary(result):
@@ -233,10 +225,6 @@ for vectorize in (False, True):
         )
         outputs[f"sample {name}, logistic regression, {label}"] = summary(result)
     example = examples.gaussian(20)
-    pilot = adaptive_metropolis(gaussian_target(20, vectorize), example.initial, rng=0)
-    outputs[f"adaptive_metropolis, d = 20, {label}"] = {
-        "hash": digest(pilot.samples, pilot.log_prob, pilot.acceptance)
-    }
     proposal = kernels.MultivariateT(np.zeros(20), 1.5 * example.cov)
     replicates = run(
         gaussian_target(20, vectorize), kernels.Independence(proposal), example.initial,
@@ -387,26 +375,6 @@ print(json.dumps(outputs))
 )
 
 
-def child(script, source):
-    output = subprocess.run(
-        [sys.executable, "-I", "-c", script, str(source)],
-        capture_output=True,
-        text=True,
-        check=True,
-        env=os.environ | THREADS,
-    ).stdout
-    return json.loads(output)
-
-
-def extract(commit, folder):
-    archive = subprocess.run(
-        ["git", "archive", commit, "src/telescopic"], cwd=ROOT, capture_output=True, check=True
-    ).stdout
-    with tarfile.open(fileobj=BytesIO(archive)) as tar:
-        tar.extractall(folder, filter="data")
-    return Path(folder) / "src"
-
-
 def rounds(script, sources):
     # Each source's outputs over ROUNDS rounds, after one uncounted; the order alternates.
     outputs = {label: [] for label in sources}
@@ -463,11 +431,12 @@ def reflection(sources):
         identical = np.array(old["identical"])
         equal = np.array_equal(old["x"], new["x"]) and old["identical"] == new["identical"]
         y_old, y_new = np.array(old["y"])[~identical], np.array(new["y"])[~identical]
-        relative = np.max(np.abs(y_new - y_old) / np.abs(y_old)) if len(y_old) else 0.0
+        scale = np.abs(y_old).max(axis=1)
+        relative = np.max(np.abs(y_new - y_old).max(axis=1) / scale) if len(y_old) else 0.0
         print(
             f"d = {d:>3}, {'BLAS  ' if blas == 'True' else 'einsum'}: {compare(outputs, key)}; "
             f"x and flags {'equal' if equal else 'DIFFER'}, {int((~identical).sum())} rows "
-            f"not identical, y largest relative difference {relative:.1e}"
+            f"not identical, y differs by {relative:.1e} of a row's largest coordinate"
         )
 
 
@@ -497,22 +466,9 @@ def pilot(sources):
         )
 
 
-def log_weights(sources):
-    print(
-        "\n5. Independence's log-weights, d = 20: microseconds per call, median of the "
-        "rounds, and before/after per round: median (range)"
-    )
-    outputs = rounds(LOG_WEIGHTS, sources)
-    for key in outputs["after"][0]:
-        print(f"{key:21}: {compare(outputs, key)}")
-
-
-def log_density(sources):
-    print(
-        "\n6. MultivariateT, d = 20: microseconds per call (seconds for the run), median of "
-        "the rounds, and before/after per round: median (range)"
-    )
-    outputs = rounds(LOG_DENSITY, sources)
+def table(script, title, sources):
+    print(f"\n{title}, median of the rounds, and before/after per round: median (range)")
+    outputs = rounds(script, sources)
     for key in outputs["after"][0]:
         print(f"{key:21}: {compare(outputs, key)}")
 
@@ -527,8 +483,12 @@ def main():
         reflection(sources)
         gibbs(sources)
         pilot(sources)
-        log_weights(sources)
-        log_density(sources)
+        table(LOG_WEIGHTS, "5. Independence's log-weights, d = 20: microseconds per call", sources)
+        table(
+            LOG_DENSITY,
+            "6. MultivariateT, d = 20: microseconds per call (seconds for the run)",
+            sources,
+        )
     print(f"load average after: {tuple(round(x, 2) for x in os.getloadavg())}")
 
 

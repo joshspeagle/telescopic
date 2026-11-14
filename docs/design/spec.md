@@ -323,8 +323,8 @@ else:  y' = mu_y + C z - 2 (z . delta) / |delta|^2 (mu_x - mu_y)
 - The reflection is $y' = \mu_y + C(z - 2(e\cdot z)e)$ with $e = \delta/\lVert\delta\rVert$; since $Ce = (\mu_x - \mu_y)/\lVert\delta\rVert$, it reuses $Cz$, so a call takes one product with $C^{-1}$ and one with $C$ (DECISIONS #211).
 - It is maximal: $\mathbb P(x' = y') = 2\Phi(-\lVert\delta\rVert/2)$.
 - Its cost is deterministic: $d$ normals and 1 uniform.
-- $\delta = 0$ gives `identical` with probability 1, so $e$ is needed, and computed, only on rows with $\lVert\delta\rVert > 0$. The test is exact: a threshold would copy $Y = X$ for a small non-zero $\delta$ and bias $Y$'s marginal.
-- A $\delta$ that is not finite, from a drift that overflowed, always fails the test; there $e = 0$, and the reflection's term with it, so $y' = \mu_y + Cz$, which keeps $Y$'s marginal.
+- $\delta = 0$ gives `identical` with probability 1, so the reflection's coefficient $2(z\cdot\delta)/\lVert\delta\rVert^2$ is needed, and used, only on rows with $0 < \lVert\delta\rVert^2 < \infty$. The test is exact: a threshold would copy $Y = X$ for a small non-zero $\delta$ and bias $Y$'s marginal.
+- A $\delta$ that is not finite, from a drift that overflowed, or whose $\lVert\delta\rVert^2$ overflows, always fails the test; there $e = 0$, and the reflection's term with it, so $y' = \mu_y + Cz$, which keeps $Y$'s marginal.
 
 **Rejection maximal coupling** of distributions $p$ and $q$ with samplers and normalised log-densities (R-CPL-2). This is JOA20 Algorithm 2 (Thorisson):
 
