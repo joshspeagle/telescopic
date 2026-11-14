@@ -326,7 +326,7 @@ All notable changes to this project are documented here. The format follows
   row's stream: two draws from it can read the same numbers, as the Gibbs kernel's common
   random numbers do.
 - `import telescopic` no longer imports `scipy.stats`, `scipy.optimize` and
-  `scipy.integrate`: the functions that use them import them at their first call. In a
-  fresh process the import takes about a third of the processor time it took, which
-  shortens the start of each worker of a process pool; the first call that needs
-  `scipy.stats`, such as the end of the first run of `sample`, pays its import once.
+  `scipy.integrate`: the functions that use them import them at their first call. That
+  shortens the import, and with it the start of each worker of a process pool; the first
+  call that needs `scipy.stats`, such as the end of the first run of `sample`, pays its
+  import once.
