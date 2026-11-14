@@ -283,10 +283,8 @@ class Result:
         ndarray, shape (d,)
         """
         self._require(2)
-        centered, first = self._centered()
-        weights = self.measure.weights
-        second = np.einsum("i,ij,ij->j", weights, centered, centered) / self.n_replicates
-        return unbiased_variance(first, second)
+        first, second = self._moments
+        return unbiased_variance(first, second.mean(axis=0))
 
     def std(self) -> FloatArray:
         r"""Standard deviations :math:`\sqrt{\max(0, \widehat{\mathrm{Var}})}`.
@@ -504,10 +502,7 @@ class Result:
         if self.n_replicates >= 2:
             # The second moments about the atoms' mean, which the variances use: about 0,
             # far from it, they would vary with the means and hide their own spread.
-            centered, first = self._centered()
-            # Squared in place: the centered atoms are not read again.
-            second = self.measure.per_replicate(lambda _: np.square(centered, out=centered))
-            values = np.concatenate([first, second], axis=1)
+            values = np.concatenate(self._moments, axis=1)
             shares = diagnostics.variance_share(values)
             worst = int(np.argmax(shares))
             moment = "mean" if worst < self.ndim else "variance"
@@ -753,6 +748,15 @@ class Result:
         which = np.searchsorted(edges, values, side="right") - 1
         which[values == edges[-1]] = bins - 1
         return which, edges
+
+    @functools.cached_property
+    def _moments(self) -> tuple[FloatArray, FloatArray]:
+        # Each replicate's first and second moments of the atoms about their mean, (R, d)
+        # each, which var and the diagnostics share: 2 R d floats, not the N x d atoms.
+        centered, first = self._centered()
+        # Squared in place: the centered atoms are not read again.
+        second = self.measure.per_replicate(lambda _: np.square(centered, out=centered))
+        return first, second
 
     def _centered(self) -> tuple[FloatArray, FloatArray]:
         # The atoms about their mean, and each replicate's mean of them. Each replicate's

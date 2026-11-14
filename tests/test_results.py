@@ -121,6 +121,15 @@ def test_the_covariance_summed_in_row_blocks_equals_one_product(monkeypatch):
     np.testing.assert_allclose(RESULT.cov(), unbiased_covariance(first, second), rtol=1e-12)
 
 
+def test_variances_are_the_same_before_and_after_the_diagnostics():
+    # The diagnostics square the centered atoms in place, in the moments that var reads.
+    before, after = gaussian_result(), gaussian_result()
+    variances = before.var()
+    after.diagnostics()
+    np.testing.assert_array_equal(after.var(), variances)
+    np.testing.assert_array_equal(before.var(), variances)
+
+
 def test_variances_stay_exact_far_from_the_origin():
     # Moments about 0 would cancel catastrophically at an offset of 1e8 for a spread of 1.
     replicates = RESULT._replicates

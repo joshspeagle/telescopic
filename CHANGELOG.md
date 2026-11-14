@@ -315,3 +315,6 @@ All notable changes to this project are documented here. The format follows
 - `Result.cov` weights the atoms in blocks of 65,536 rows, so its peak memory is about
   the atoms' size plus a block rather than twice the atoms; `cov` can differ from before
   in the last bits.
+- `Result.var`, `Result.std` and the diagnostics share each replicate's moments,
+  computed once, so `summary()` centers the atoms once; `var` and `std` can differ from
+  before in the last bits.
