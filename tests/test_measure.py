@@ -18,6 +18,14 @@ def test_per_replicate_values_are_weighted_sums_over_each_replicates_atoms():
     )
 
 
+def test_a_replicate_without_atoms_sums_to_zero_in_its_own_position():
+    # The first and the third of five replicates hold no atom.
+    measure = SignedMeasure(MEASURE.atoms, MEASURE.weights, np.array([1, 1, 3, 3, 4]), 5)
+    np.testing.assert_allclose(
+        measure.per_replicate(lambda x: x[:, 1]), [0.0, 0.75, 0.0, 2.0, 2.0]
+    )
+
+
 @pytest.mark.parametrize("h", [lambda x: 1.0, lambda x: x[:2, 0], lambda x: x[:, :, None]])
 def test_a_test_function_of_the_wrong_shape_raises(h):
     with pytest.raises(ValueError, match="h must map"):
