@@ -434,7 +434,12 @@ def evaluate_pair(
     both = evaluate_rows(np.concatenate([x, y[distinct]]))
     source = np.arange(len(x))
     source[distinct] = np.arange(len(x), len(both))
-    return both.take(slice(0, len(x))), both.take(source)
+    # A view, not a copy as take makes: evaluate and evaluate_proposal return arrays of
+    # their own, so the first n rows of both belong to no other state, and the second
+    # state's rows are copies.
+    n = len(x)
+    first = State(both.x[:n], both.log_prob[:n], None if both.grad is None else both.grad[:n])
+    return first, both.take(source)
 
 
 def acceptance(log_alpha: FloatArray) -> FloatArray:
