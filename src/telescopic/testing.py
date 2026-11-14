@@ -117,6 +117,19 @@ def check_coupling(
     -----
     Costs one coupled step and two steps of ``n`` chains, and an evaluation of the target
     at each of their ``4n`` new positions.
+
+    Examples
+    --------
+    A random walk whose proposal has the target's covariance passes from two points close
+    enough for the pair to meet in one step:
+
+    >>> from telescopic import Target, examples, kernels
+    >>> from telescopic.testing import check_coupling
+    >>> example = examples.gaussian(2)
+    >>> kernel = kernels.RandomWalk(example.cov)
+    >>> target = Target(example.log_prob, vectorize=True)
+    >>> check_coupling(kernel, target, [0.0, 0.0], [0.5, -0.5], rng=0).passed()
+    True
     """
     instance("kernel", kernel, Kernel)
     x = real_array("x", x, "real numbers of shape (d,)")

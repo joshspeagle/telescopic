@@ -68,6 +68,21 @@ class HMC(Mixture):
     A step uses 1 uniform to choose its component, then ``d`` normals and 1 uniform; a
     coupled step uses the same, plus 1 uniform for a meeting step. A trajectory evaluates
     the log-density and its gradient ``n_steps`` times per chain.
+
+    Examples
+    --------
+    Once the step size is tuned, the default number of leapfrog steps gives a trajectory
+    of length about 1:
+
+    >>> import math
+    >>> from telescopic import examples, kernels, sample
+    >>> example = examples.gaussian(2)
+    >>> result = sample(
+    ...     example.log_prob, example.initial, grad=example.grad,
+    ...     kernel=kernels.HMC(), vectorize=True, rng=0,
+    ... )
+    >>> result.kernel.n_steps == math.ceil(1 / result.kernel.step_size)
+    True
     """
 
     def __init__(

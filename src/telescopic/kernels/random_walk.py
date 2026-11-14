@@ -57,6 +57,20 @@ class RandomWalk(Kernel):
     proposals of ``d`` normals and 1 uniform each from each pair's own generator
     (:meth:`~telescopic.kernels.Draws.generator`), two per pair on average for a pair
     apart and one for a pair that has met, then 1 uniform for both acceptances.
+
+    Examples
+    --------
+    A kernel left without ``cov`` is tuned by the sampler, which keeps the tuned copy in
+    the result and leaves the kernel passed to it as it was:
+
+    >>> from telescopic import examples, kernels, sample
+    >>> example = examples.gaussian(2)
+    >>> kernel = kernels.RandomWalk()
+    >>> result = sample(
+    ...     example.log_prob, example.initial, kernel=kernel, vectorize=True, rng=0
+    ... )
+    >>> kernel.is_tuned, result.kernel.is_tuned
+    (False, True)
     """
 
     def __init__(
