@@ -9,8 +9,8 @@ import saves, and what the first call that needs `scipy.stats` then pays.
 Each measurement runs in a fresh interpreter (`python -I`, with the source folder first
 on its path) and takes `time.process_time()` around the import, so the interpreter's own
 start is left out. Three imports are timed: telescopic from the source of commit
-`BEFORE`, extracted with `git archive` into a temporary folder; telescopic from this
-checkout's `src`; and `import numpy, scipy.linalg, scipy.special, scipy.sparse`, the
+`BEFORE`, the commit of `main` merged into this change, extracted with `git archive`
+into a temporary folder; telescopic from this checkout's `src`; and `import numpy, scipy.linalg, scipy.special, scipy.sparse`, the
 SciPy subpackages that telescopic still imports at its start, as a floor. After the
 import of this checkout's telescopic, the same interpreter times `import scipy.stats`,
 which the first call of `Result.estimate`, of the diagnostics (and so of every run of
@@ -20,13 +20,13 @@ an order that alternates between rounds. The ratio before/after of each round is
 summarized by its median and its range. Each import's line lists the public SciPy
 subpackages it left loaded, from the last round.
 
-Result (`i83_import_time.out`, nine rounds at a load average of 4.7 to 4.9 on 4 cores):
-`import telescopic` took a median of 0.616 processor seconds before and 0.234 after, a
-ratio before/after of 2.72 per round (range 1.76 to 3.15), against 0.209 for the floor.
-Before, it loaded twelve public SciPy subpackages, among them constants, fft,
-interpolate, ndimage and spatial, which `scipy.stats` imports; after, it loads only
-linalg, sparse and special (and `scipy.version`), as the floor does. The first call that
-needs `scipy.stats` then pays its import once: a median of 0.409 processor seconds.
+Result (`i83_import_time.out`, nine rounds at a load average of 2.9 to 3.5 on 4 cores):
+`import telescopic` took a median of 0.603 processor seconds before and 0.223 after, with
+a median of 2.79 for the ratio before/after of each round (range 2.22 to 3.09), against
+0.214 for the floor. Before, it left eleven public SciPy subpackages and `scipy.version`
+loaded, among them constants, fft, interpolate, ndimage and spatial; after, only linalg,
+sparse and special (and `scipy.version`), as the floor does. The first call that needs
+`scipy.stats` then pays its import once: a median of 0.362 processor seconds.
 
 Run from the repository root: OMP_NUM_THREADS=1 PYTHONPATH=src python notes/experiments/i83_import_time.py
 """

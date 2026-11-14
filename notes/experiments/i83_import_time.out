@@ -1,9 +1,9 @@
-setup: commit f1c112c of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
-before: commit 932861f; after: this checkout; 9 rounds
-load average before: (4.88, 4.65, 3.43)
-before: processor seconds median 0.616, range 0.597 to 0.813; SciPy subpackages loaded: scipy.constants, scipy.fft, scipy.integrate, scipy.interpolate, scipy.linalg, scipy.ndimage, scipy.optimize, scipy.sparse, scipy.spatial, scipy.special, scipy.stats, scipy.version
-after : processor seconds median 0.234, range 0.220 to 0.342; SciPy subpackages loaded: scipy.linalg, scipy.sparse, scipy.special, scipy.version
-floor : processor seconds median 0.209, range 0.202 to 0.242; SciPy subpackages loaded: scipy.linalg, scipy.sparse, scipy.special, scipy.version
-before/after, per round: median 2.72, range 1.76 to 3.15
-import scipy.stats after import telescopic (the first call's cost): median 0.409 s, range 0.363 to 0.504
-load average after: (4.71, 4.62, 3.45)
+setup: commit 52452d4 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
+before: commit cfaed83; after: this checkout; 9 rounds
+load average before: (2.89, 1.96, 2.54)
+before: processor seconds median 0.603, range 0.542 to 0.737; SciPy subpackages loaded: scipy.constants, scipy.fft, scipy.integrate, scipy.interpolate, scipy.linalg, scipy.ndimage, scipy.optimize, scipy.sparse, scipy.spatial, scipy.special, scipy.stats, scipy.version
+after : processor seconds median 0.223, range 0.209 to 0.264; SciPy subpackages loaded: scipy.linalg, scipy.sparse, scipy.special, scipy.version
+floor : processor seconds median 0.214, range 0.192 to 0.260; SciPy subpackages loaded: scipy.linalg, scipy.sparse, scipy.special, scipy.version
+before/after, per round: median 2.79, range 2.22 to 3.09
+import scipy.stats after import telescopic (the first call's cost): median 0.362 s, range 0.345 to 0.383
+load average after: (3.49, 2.16, 2.59)
