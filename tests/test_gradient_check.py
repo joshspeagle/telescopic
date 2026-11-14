@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 import pytest
 
+from references import Counted, gaussian_log_prob
 from telescopic._gradient_check import check_gradient
 from telescopic._random import root_seed
 from telescopic.initial import Normal, as_initial
@@ -18,16 +19,6 @@ def log_prob(x):
 
 def grad(x):
     return -(x - MEAN)
-
-
-class Counted:
-    # A vectorized function that counts the points it is evaluated at.
-    def __init__(self, function):
-        self.function, self.points = function, 0
-
-    def __call__(self, x):
-        self.points += len(x)
-        return self.function(x)
 
 
 def checked(gradient=grad, function=log_prob, init=INIT, rng=1):
@@ -62,13 +53,13 @@ def test_the_check_warns_on_a_wrong_gradient_with_the_size_of_the_disagreement(w
     message = str(caught[0].message)
     line = int(np.argmax(check.ratio))
     assert f"by {check.gap[line]:.3g} nats, {relative}" in message
-    assert f"draw {check.point[line] + 1} of 8" in message
+    assert f"draw {check.draw[line]} of 8" in message
     assert "check_grad=False" in message
 
 
 @pytest.mark.parametrize("d", [5, 1000])
 def test_the_check_costs_40_log_densities_and_8_gradients_at_any_dimension(d):
-    counted = Counted(lambda x: -0.5 * np.sum(x * x, axis=-1)), Counted(lambda x: -x)
+    counted = Counted(gaussian_log_prob), Counted(lambda x: -x)
     quiet(counted[1], counted[0], Normal(np.zeros(d), np.eye(d)))
     assert (counted[0].points, counted[1].points) == (40, 8)
 

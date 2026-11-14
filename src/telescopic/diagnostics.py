@@ -214,8 +214,8 @@ class GradientCheck:
 
     Attributes
     ----------
-    point : ndarray of int, shape (n,)
-        Which of the 8 draws, from 0, each compared line starts from.
+    draw : ndarray of int, shape (n,)
+        Which of the 8 draws, numbered from 1, each compared line starts from.
     gap : ndarray, shape (n,)
         :math:`\Delta` of each line.
     tolerance : ndarray, shape (n,)
@@ -228,7 +228,7 @@ class GradientCheck:
         Lines not compared because they reach zero density.
     """
 
-    point: IntArray
+    draw: IntArray
     gap: FloatArray
     tolerance: FloatArray
     predicted: FloatArray
@@ -237,9 +237,11 @@ class GradientCheck:
 
     @property
     def ratio(self) -> FloatArray:
-        """The gap of each line over its tolerance; the check warns where one exceeds 1.
+        """The gap of each line over its tolerance, which sizes each line's disagreement.
 
-        ``inf`` for a gap above a tolerance of 0, and 0 for a gap of 0.
+        ``inf`` for a gap above a tolerance of 0, and 0 for a gap of 0. The check decides
+        on ``gap > tolerance`` itself, and uses the ratio only to choose the line that its
+        warning describes.
 
         Returns
         -------

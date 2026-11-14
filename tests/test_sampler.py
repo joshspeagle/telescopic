@@ -10,8 +10,8 @@ import numpy as np
 import pytest
 
 import telescopic
+from references import Counted, gaussian_log_prob, synthetic
 from references import Normal as Conditional
-from references import gaussian_log_prob, synthetic
 from telescopic import CoupledSampler, __version__, sample
 from telescopic._parallel import Interrupt
 from telescopic.engine import Settings, Status
@@ -448,16 +448,6 @@ def test_a_run_warns_when_it_first_takes_a_gradient_as_zero():
     evaluated = int(re.search(pattern, message).group(1))
     assert 0 < evaluated < result.n_grad
     assert result.n_grad_zeroed > 0
-
-
-class Counted:
-    # A vectorized function that counts the points it is evaluated at.
-    def __init__(self, function):
-        self.function, self.points = function, 0
-
-    def __call__(self, x):
-        self.points += len(x)
-        return self.function(x)
 
 
 def test_a_sampler_with_a_gradient_kernel_checks_grad_unless_told_not_to():

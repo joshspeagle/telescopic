@@ -186,8 +186,9 @@ print(caught[0].message)
 The warning is an `InputWarning`. The sizes are in nats along $u$, which spans the
 spread of the initial distribution. The sampler keeps what the check compared, as a
 {class}`telescopic.diagnostics.GradientCheck`, in `sampler.gradient_check`: the gap,
-the tolerance and the predicted change of each line, and their ratio. The check warns
-when a ratio exceeds 1, and here each of the 8 lines does:
+the tolerance and the predicted change of each line, the draw it starts from, and the
+ratio of gap to tolerance. The check warns when a gap exceeds its tolerance, and here
+each of the 8 lines does:
 
 ```{code-cell} python
 check = sampler.gradient_check

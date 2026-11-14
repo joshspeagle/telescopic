@@ -3,16 +3,17 @@
 Question: ``telescopic._gradient_check.check_gradient`` moves design (N) of
 ``gradcheck.py`` into the package, without the floor of design (H) and the relative
 floors. On the same seeds, are its compared lines, their gaps and tolerances (bit for
-bit, both divided by the step ``h`` as the package records them), its decisions, its
-unusable lines and its skipped points those of ``gradcheck.noise_limited``?
+bit, both divided by the step ``h`` as the package records them, and the draws that the
+registered code numbers from 0 and the package from 1), its decisions, its unusable
+lines and its skipped points those of ``gradcheck.noise_limited``?
 
 Design: every family of every group (families.py), 10 seeds each from the unused range
 230000 to 239999 (family k of the concatenated list at 230000 + 10 k + (0..9)); each
 seed runs ``gradcheck.noise_limited`` once and ``check_gradient`` once, the latter with
-its warnings recorded, so that a decision of the package is both its record (a ratio
-above 1) and its warning. Two further probes: a log_prob whose dtype narrows to float32
-only after the first draw, where both sweep again (seeds 239000 to 239049), and a
-log_prob that raises inside the check (seed 239100).
+its warnings recorded, so that a decision of the package is both its record (a gap
+above its tolerance) and its warning. Two further probes: a log_prob whose dtype narrows
+to float32 only after the first draw, where both sweep again (seeds 239000 to 239049),
+and a log_prob that raises inside the check (seed 239100).
 
 Run: python notes/experiments/x123/package_equivalence.py
 
@@ -57,13 +58,14 @@ def compare(case, seed, vectorize):
         registered = G.noise_limited(*case, seed, vectorize=vectorize)
     record, messages = package(case, seed, vectorize)
     lines_registered = [
-        (line.point, line.gap / line.step, line.tolerance / line.step) for line in registered.lines
+        (line.point + 1, line.gap / line.step, line.tolerance / line.step)
+        for line in registered.lines
     ]
     lines_package = [
         (int(p), float(g), float(t))
-        for p, g, t in zip(record.point, record.gap, record.tolerance, strict=True)
+        for p, g, t in zip(record.draw, record.gap, record.tolerance, strict=True)
     ]
-    warned = bool(len(record.gap)) and bool(record.ratio.max() > 1)
+    warned = bool((record.gap > record.tolerance).any())
     warning = any(m.startswith("grad disagrees") for m in messages)
     nothing = any(m.startswith("the gradient check compared no line") for m in messages)
     same_lines = lines_registered == lines_package

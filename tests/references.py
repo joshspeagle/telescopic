@@ -76,6 +76,16 @@ class Normal:
         return self.mean + self.sd * special.ndtri(u)
 
 
+class Counted:
+    # A vectorized function that counts the points it is evaluated at.
+    def __init__(self, function):
+        self.function, self.points = function, 0
+
+    def __call__(self, x):
+        self.points += len(x)
+        return self.function(x)
+
+
 def gaussian_log_prob(x):
     # The standard normal log-density, up to a constant, of a point or of rows of points.
     return -0.5 * np.sum(np.square(x), axis=-1)
