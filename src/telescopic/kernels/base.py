@@ -325,11 +325,11 @@ class GradientKernel(Kernel):
         kernel.step_size = real("step_size", step_size, 0, np.inf)
         return kernel
 
-    def _with_cov(self, cov: FloatArray) -> GradientKernel:
-        raise NotImplementedError
+    @abstractmethod
+    def _with_cov(self, cov: FloatArray) -> GradientKernel: ...
 
-    def _first_step_size(self, d: int) -> float:
-        raise NotImplementedError
+    @abstractmethod
+    def _first_step_size(self, d: int) -> float: ...
 
     def _tuned(
         self, target: Target, initial: Any, pilot: PilotRun, rng: Seed
