@@ -123,7 +123,8 @@ regression whose `log_prob` and `grad` repeated a third of their arithmetic, it 
 form of the functions, every ratio of which was below 0.85. On a logistic regression
 whose costly part, a logarithm or an exponential of each observation, is not shared,
 the time ratios of three of the four configurations ranged across 1, so the saving of
-calls did not show in the time.
+calls did not show in the time there; MALA point by point took 0.905 times as long
+(0.879 to 0.978).
 
 With JAX, `jax.value_and_grad` gives such a function, for one point, and
 `jax.vmap` of it one for a batch:
@@ -235,7 +236,9 @@ not call `log_prob`; its warnings then name the gradient and the log-density of
 `log_prob_and_grad`. It evaluates `log_prob_and_grad` at most at the points where a
 check of `log_prob` and `grad` returning the same dtypes evaluates `log_prob`: 40 for
 float64 values, and for narrower ones sometimes fewer, since it reads the gradient's
-dtype at draws of zero density too.
+dtype at draws of zero density too. The exception is a gradient narrower than float64
+only where the value is `-inf`, which the check of two functions never sees: the
+combined check then evaluates a few more points and compares with a wider tolerance.
 
 A gradient with its sign wrong warns before any pair runs, with the size of the
 disagreement:
@@ -285,7 +288,7 @@ about what they return, is raised as it is, with a note that it was raised in th
 gradient check, which evaluates them at draws of the initial distribution when the
 sampler is built.
 
-A warning means that `grad` is not the derivative of `log_prob` as computed, along the
+A warning means that the gradient is not the derivative of the log-density as computed, along the
 spread of the initial distribution, by more than the check can attribute to rounding:
 at least $10 \times 64\,\epsilon\,|\log\pi| / h = 640\,\epsilon^{2/3}|\log\pi|$ nats,
 which is $2\times10^{-8}\,|\log\pi|$ with float64 values and

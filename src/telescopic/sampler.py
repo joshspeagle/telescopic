@@ -125,7 +125,8 @@ class CoupledSampler:
         values, 8 more of each for a float32 ``grad`` and again for a float32
         ``log_prob``, and a second sweep for a ``log_prob`` whose values narrow after the
         first draw; with ``log_prob_and_grad``, 40 evaluations of it for float64 values,
-        and for narrower ones at most as many as of ``log_prob`` with the same dtypes.
+        and for narrower ones at most as many as of ``log_prob`` with the same dtypes,
+        unless its gradient is narrower only where its value is ``-inf``.
         It draws 48 points of the initial distribution and changes no result.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
         The root of every random stream.
@@ -739,7 +740,7 @@ class _ZeroedGradients:
                 "gradients that were not finite where the log-density is were taken as 0 "
                 f"in {zeroed} of {evaluated} evaluations of the {self.kind}s: MALA and HMC "
                 "stay exact but lose their drift there, which slows the chains and can keep "
-                "HMC pairs from meeting; compute grad in log space, as with "
+                "HMC pairs from meeting; compute the gradient in log space, as with "
                 "scipy.special.logsumexp, or check it",
                 InputWarning,
             )
