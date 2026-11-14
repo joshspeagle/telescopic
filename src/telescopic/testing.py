@@ -15,6 +15,8 @@ from telescopic._types import FloatArray, Seed, instance, integer, real, real_ar
 from telescopic.kernels.base import Kernel, State, evaluate
 from telescopic.target import Target
 
+__all__ = ["CouplingReport", "check_coupling", "fixed_draws", "random_draws"]
+
 # Random one-dimensional projections on which check_coupling compares the moved values.
 PROJECTIONS = 5
 

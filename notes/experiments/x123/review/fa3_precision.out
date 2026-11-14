@@ -1,0 +1,33 @@
+N(0, I) d=5 computed in float32, both returned as float64                      | N    0/200  H    0/200  | ratio med 5.17e-02 max 1.87e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(1, I) d=5 computed in float32, both returned as float64                      | N    0/200  H    0/200  | ratio med 5.27e-02 max 1.26e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(10, I) d=5 computed in float32, both returned as float64                     | N    0/200  H    0/200  | ratio med 4.85e-02 max 8.56e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(100, I) d=5 computed in float32, both returned as float64                    | N    0/200  H    0/200  | ratio med 5.11e-02 max 1.04e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(1000, I) d=5 computed in float32, both returned as float64                   | N    0/200  H    0/200  | ratio med 5.47e-02 max 1.45e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(10000, I) d=5 computed in float32, both returned as float64                  | N   23/200  H   23/200  | ratio med 8.49e-02 max 1.17e+08 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0, I) d=5 computed in float32: log_prob returned as float64, grad as float32 | N    0/200  H    0/200  | ratio med 5.16e-02 max 1.86e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0, I) d=5 computed in float32: log_prob returned as float32, grad as float64 | N    0/200  H    0/200  | ratio med 6.94e-04 max 1.31e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(100, I) d=5 computed in float32: log_prob returned as float64, grad as float | N    0/200  H    0/200  | ratio med 5.11e-02 max 1.04e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(100, I) d=5 computed in float32: log_prob returned as float32, grad as float | N    0/200  H    0/200  | ratio med 7.01e-04 max 1.45e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(1000, I) d=5 computed in float32: log_prob returned as float64, grad as floa | N    0/200  H    0/200  | ratio med 5.47e-02 max 1.45e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(1000, I) d=5 computed in float32: log_prob returned as float32, grad as floa | N    0/200  H    0/200  | ratio med 6.67e-04 max 1.33e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0, I) d=5 float32 inside, per point, returned through float(...)             | N    0/200  H    0/200  | ratio med 5.17e-02 max 1.87e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(100, I) d=5 float32 inside, per point, returned through float(...)           | N    0/200  H    0/200  | ratio med 5.11e-02 max 1.04e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+N(1000, I) d=5 float32 inside, per point, returned through float(...)          | N    0/200  H    0/200  | ratio med 5.47e-02 max 1.45e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+logistic n=1e4 d=5 computed in float32, both returned as float64               | N    0/100  H    0/100  | ratio med 2.11e-02 max 5.40e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 1.0s
+Student t3 d=50: float64 log_prob, gradient computed from float32 x, returned  | N   11/200  H    0/200  | ratio med 4.62e-01 max 1.65e+00 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+float64 log_prob, float32 grad: Student t3 d=50                                | N    0/200  H    0/200  | ratio med 3.23e-04 max 1.12e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+float64 log_prob, float32 grad: scales 1e-3..1e3 d=7 matched                   | N    0/200  H    0/200  | ratio med 4.41e-04 max 9.13e-04 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+float64 log_prob, float32 grad: scales 1e-6..1e6 d=13 matched                  | N    0/200  H    0/200  | ratio med 3.45e-04 max 6.24e-04 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+float64 log_prob, float32 grad: N(1e8, I) d=5                                  | N    0/200  H    0/200  | ratio med 3.18e-03 max 6.10e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+float64 log_prob, float32 grad: logistic n=2000 d=50                           | N    0/100  H    0/100  | ratio med 1.28e-04 max 2.68e-04 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.6s
+float64 log_prob, float32 grad: Poisson regression n=2e4                       | N    0/100  H    0/100  | ratio med 7.33e-04 max 1.61e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 1.1s
+float64 log_prob, float32 grad: naive sum of 1e5 terms                         | N    0/50   H    0/50   | ratio med 6.27e-03 max 1.37e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 1.7s
+float64 log_prob, float32 grad: funnel                                         | N    0/200  H    0/200  | ratio med 1.63e-03 max 1.18e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+float64 log_prob, float32 grad: banana                                         | N    0/200  H    0/200  | ratio med 1.93e-03 max 2.09e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+float64 log_prob, float32 grad: N(0,I) d=10000 start sd 2                      | N    0/100  H    0/100  | ratio med 9.07e-06 max 1.50e-05 | unusable 0 skipped 0 nolines 0 | errors 0  | 1.1s
+float64 log_prob, float32 grad: rotated cond 1e4 d=200 matched                 | N    0/200  H    0/200  | ratio med 5.01e-05 max 1.08e-04 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.9s
+float64 log_prob, float16 grad: N(0,I) d=5                                     | N    0/200  H    0/200  | ratio med 3.65e-04 max 5.91e-04 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+float16 throughout: N(0,I) d=5                                                 | N    0/200  H    0/200  | ratio med 3.60e-04 max 6.37e-04 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.5s
+longdouble log_prob and grad: N(0,I) d=5                                       | N    0/200  H    0/200  | ratio med 6.97e-04 max 1.33e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+binomial likelihood with counts of 1e15 (|log_prob| ~ 1e15), start matched (sd | N    0/200  H    0/200  | ratio med 5.84e-04 max 1.72e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+the same, start sd 1                                                           | N    0/200  H    0/200  | ratio med 8.07e-04 max 2.30e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s

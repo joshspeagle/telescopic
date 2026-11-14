@@ -1,0 +1,3 @@
+d = 1000, correct gradient: step 0.523, meeting times mean 44.1, median 39, unmet 0/100 (2s)
+d = 1000, wrong sign of coordinate 0: step 0.464, meeting times mean 422.7, median 343.5, unmet 0/100 (4s)
+d = 1000: ratio of mean meeting times 9.58 +- 0.84; ratio of steps 0.886

@@ -1,0 +1,9 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/cost.py
+seeds [390000, 390001, 390002, 390003, 390004]; bounds: 60 log_prob, 25 grad, 20 vectors of d float64
+d =   1000, float64           : evaluations (log_prob, grad, dtypes) [(40, 8, 'float64', 'float64')]; peak 0.124 MB = 15.4 vectors of d; median time 3.3 ms; within the bounds: True
+d =   1000, float32 grad      : evaluations (log_prob, grad, dtypes) [(48, 16, 'float64', 'float32')]; peak 0.127 MB = 15.9 vectors of d; median time 3.5 ms; within the bounds: True
+d =   1000, float32 throughout: evaluations (log_prob, grad, dtypes) [(56, 24, 'float32', 'float32')]; peak 0.129 MB = 16.1 vectors of d; median time 3.9 ms; within the bounds: True
+d =  10000, float64           : evaluations (log_prob, grad, dtypes) [(40, 8, 'float64', 'float64')]; peak 1.073 MB = 13.4 vectors of d; median time 10.0 ms; within the bounds: True
+d =  10000, float32 grad      : evaluations (log_prob, grad, dtypes) [(48, 16, 'float64', 'float32')]; peak 1.153 MB = 14.4 vectors of d; median time 10.0 ms; within the bounds: True
+d =  10000, float32 throughout: evaluations (log_prob, grad, dtypes) [(56, 24, 'float32', 'float32')]; peak 1.154 MB = 14.4 vectors of d; median time 11.1 ms; within the bounds: True

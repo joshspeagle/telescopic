@@ -11,6 +11,8 @@ import numpy.typing as npt
 from telescopic._types import FloatArray, flag, log_densities, read_only, real_objects, shown
 from telescopic.warnings import InputWarning, warn
 
+__all__ = ["Target"]
+
 
 # Spec section 5.7 (log_prob None) and R-INPUT-1.
 class Target:

@@ -1,0 +1,6 @@
+C_N32 0.015501966 h32 0.0049215658
+d=5: formula line rate 0.9603, check rate 1.0000
+d=50: formula line rate 0.7347, check rate 1.0000
+d=200: formula line rate 0.3840, check rate 0.9793
+d=1000: formula line rate 0.0261, check rate 0.1906
+d=10000: formula line rate 0.0000, check rate 0.0000

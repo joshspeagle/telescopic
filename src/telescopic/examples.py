@@ -15,6 +15,8 @@ from scipy import integrate, special
 from telescopic._types import Distribution, FloatArray, integer, real
 from telescopic.initial import Normal, Uniform
 
+__all__ = ["Example", "banana", "funnel", "gaussian", "mixture", "pumps"]
+
 
 # Spec section 9.
 @dataclass(frozen=True, eq=False)

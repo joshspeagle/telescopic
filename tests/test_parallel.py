@@ -109,6 +109,86 @@ def test_a_map_pool_that_reports_its_size_gets_waves_of_that_size():
     assert pool.waves == [2, 2, 2, 2]
 
 
+class Unsized:
+    # An executor that does not report its size, as a cluster's may.
+    def __init__(self, executor):
+        self.submit = executor.submit
+
+
+def one_cpu(monkeypatch):
+    monkeypatch.setattr(_parallel.os, "process_cpu_count", lambda: 1, raising=False)
+    monkeypatch.setattr(_parallel.os, "cpu_count", lambda: 1)
+
+
+@pytest.mark.parametrize(("n_workers", "chunks"), [(None, 1), (4, 4)])
+def test_n_workers_sizes_the_pilot_and_the_run_on_a_pool_that_hides_its_size(
+    n_workers, chunks, monkeypatch
+):
+    # 100 pilot pairs, then 100 replicates: one chunk per worker each, the workers counted
+    # by the CPUs (1) unless n_workers says otherwise.
+    one_cpu(monkeypatch)
+    with Counting(4) as threads:
+        sampler = telescopic.CoupledSampler(
+            gaussian_log_prob,
+            INIT,
+            kernel=RandomWalk(np.eye(2)),
+            pool=Unsized(threads),
+            n_workers=n_workers,
+            rng=0,
+        )
+        sampler.meeting_times(100)
+        sampler.run(100)
+    assert threads.chunks == [100 // chunks] * 2 * chunks
+
+
+def test_n_workers_sizes_the_waves_of_a_map_pool_that_hides_its_size(monkeypatch):
+    # 2,000 replicates on 2 stated workers: 8 chunks of at most a full set of lanes, in
+    # waves of 2. Sized by the 1 CPU they would be 4 chunks in waves of 1.
+    one_cpu(monkeypatch)
+    pool = Serial()
+    execute(job(), np.arange(2_000), pool, never, n_workers=2)
+    assert pool.waves == [2, 2, 2, 2]
+
+
+def test_n_workers_wins_over_the_size_a_pool_reports():
+    with Counting(2) as executor:
+        execute(job(), np.arange(200), executor, never, n_workers=4)
+    assert executor.chunks == [50] * 4
+
+
+def test_results_do_not_depend_on_n_workers():
+    runs = [
+        telescopic.sample(gaussian_log_prob, INIT, 20, pool=Serial(), n_workers=n, rng=6)
+        for n in (None, 1, 5)
+    ]
+    for other in runs[1:]:
+        np.testing.assert_array_equal(other.pilot, runs[0].pilot)
+        assert_same_replicates(other._replicates, runs[0]._replicates)
+
+
+@pytest.mark.parametrize(
+    ("pool", "n_workers", "error", "message"),
+    [
+        (Serial(), 0, ValueError, "n_workers must be at least 1, not 0"),
+        (Serial(), 2.0, TypeError, "n_workers must be None or a positive integer, not 2.0"),
+        (Serial(), True, TypeError, "n_workers must be None or a positive integer, not True"),
+        (None, 2, ValueError, "n_workers is for an executor or a pool.*pool=None runs"),
+        (2, 2, ValueError, "n_workers is for an executor or a pool.*pool=2 is already"),
+        (np.int64(2), 2, ValueError, "n_workers is for an executor or a pool.*pool=2 is already"),
+    ],
+)
+def test_invalid_n_workers_raise(pool, n_workers, error, message):
+    with pytest.raises(error, match=message):
+        telescopic.CoupledSampler(gaussian_log_prob, INIT, pool=pool, n_workers=n_workers)
+
+
+def test_n_workers_as_a_numpy_integer_is_the_integer():
+    sampler = telescopic.CoupledSampler(
+        gaussian_log_prob, INIT, pool=Serial(), n_workers=np.int64(2)
+    )
+    assert type(sampler.n_workers) is int
+
+
 def checked_log_prob(x, threads, ignores_ctrl_c):
     # Raises unless BLAS runs `threads` threads and Ctrl-C is ignored or not, as asked.
     info = threadpoolctl.threadpool_info()
@@ -224,8 +304,7 @@ def test_a_stop_on_a_pool_keeps_the_finished_chunks(pool, at_once, monkeypatch):
     # A stop before any chunk starts, or once one has finished: chunks not started are
     # dropped, except the first, and the result lacks requested replicates. One worker, so
     # that the 4 chunks run one at a time.
-    monkeypatch.setattr(_parallel.os, "process_cpu_count", lambda: 1, raising=False)
-    monkeypatch.setattr(_parallel.os, "cpu_count", lambda: 1)
+    one_cpu(monkeypatch)
     indices = np.arange(1_000)
     with ThreadPoolExecutor(1) as thread:
         if at_once and pool == "threads":

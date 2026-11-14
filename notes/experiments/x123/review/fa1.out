@@ -1,0 +1,47 @@
+== periodic terms: fringes across a start of sd 1 (families.fringes, amp 5), d=1 and d=5
+fringes 100 periods, d=1                                                       | N    0/200  H    0/200  | ratio med 3.33e-02 max 3.33e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+fringes 1000 periods, d=1                                                      | N    0/200  H    0/200  | ratio med 3.29e-02 max 3.35e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+fringes 3000 periods, d=1                                                      | N    0/200  H    0/200  | ratio med 3.23e-02 max 3.54e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+fringes 10000 periods, d=1                                                     | N    0/200  H    0/200  | ratio med 3.35e-02 max 5.69e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+fringes 30000 periods, d=1                                                     | N    2/200  H    2/200  | ratio med 9.68e-02 max 2.12e+00 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+fringes 100000 periods, d=1                                                    | N   48/200  H   48/200  | ratio med 6.67e-01 max 7.10e+00 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+fringes 1e+06 periods, d=1                                                     | N  200/200  H  200/200  | ratio med 6.58e+00 max 4.35e+01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+fringes 1000 periods, d=5                                                      | N    0/200  H    0/200  | ratio med 3.27e-02 max 3.34e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+fringes 10000 periods, d=5                                                     | N    0/200  H    0/200  | ratio med 3.63e-02 max 7.90e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+fringes 100000 periods, d=5                                                    | N   24/200  H   24/200  | ratio med 5.84e-01 max 3.33e+00 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+sinusoid fit, time span 100 (start sd 0.1 in frequency: 1.59 fringes)          | N    0/200  H    0/200  | ratio med 3.20e-02 max 3.34e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+sinusoid fit, time span 1000 (start sd 0.1 in frequency: 15.9 fringes)         | N    0/200  H    0/200  | ratio med 3.33e-02 max 3.36e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+sinusoid fit, time span 10000 (start sd 0.1 in frequency: 159 fringes)         | N    0/200  H    0/200  | ratio med 3.32e-02 max 3.33e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+sinusoid fit, time span 100000 (start sd 0.1 in frequency: 1.59e+03 fringes)   | N    0/200  H    0/200  | ratio med 3.23e-02 max 3.64e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+sinusoid fit, time span 1e+06 (start sd 0.1 in frequency: 1.59e+04 fringes)    | N    0/200  H    0/200  | ratio med 5.63e-02 max 7.49e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+== quantized / tabulated log-densities (grad = derivative of the smooth function)
+N(0,I) d=5, log_prob rounded to multiples of 1e-12                             | N    0/200  H    0/200  | ratio med 5.24e-02 max 1.22e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5, log_prob rounded to multiples of 1e-09                             | N    0/200  H    0/200  | ratio med 5.10e-02 max 1.16e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5, log_prob rounded to multiples of 1e-06                             | N    0/200  H    0/200  | ratio med 5.24e-02 max 9.73e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5, log_prob rounded to multiples of 0.001                             | N   28/200  H   28/200  | ratio med 7.92e-02 max 2.68e+08 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5, log_prob through float('%.6g' % value)                             | N    0/200  H    0/200  | ratio med 5.48e-02 max 5.07e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5, log_prob through float('%.10g' % value)                            | N    0/200  H    0/200  | ratio med 5.18e-02 max 5.71e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5, log_prob through float('%.14g' % value)                            | N    0/200  H    0/200  | ratio med 5.02e-02 max 1.03e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+piecewise-constant table of -x^2/2, spacing 0.01, d=5, grad 0                  | N    0/200  H    0/200  | ratio med 0.00e+00 max 8.22e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+piecewise-constant table of -x^2/2, spacing 0.01, d=5, grad -x                 | N  162/200  H  162/200  | ratio med 1.07e+08 max 4.88e+08 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+piecewise-constant table of -x^2/2, spacing 0.0001, d=5, grad 0                | N    0/200  H    0/200  | ratio med 9.15e-02 max 2.89e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+piecewise-constant table of -x^2/2, spacing 0.0001, d=5, grad -x               | N    0/200  H    0/200  | ratio med 6.64e-02 max 1.84e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+piecewise-constant table of -x^2/2, spacing 1e-06, d=5, grad 0                 | N  200/200  H  200/200  | ratio med 5.73e+00 max 1.77e+01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.2s
+piecewise-constant table of -x^2/2, spacing 1e-06, d=5, grad -x                | N    0/200  H    0/200  | ratio med 5.12e-02 max 1.03e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+piecewise-linear table of -x^2/2, spacing 0.001, d=5                           | N    0/200  H    0/200  | ratio med 7.24e-02 max 4.13e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+piecewise-linear table of -x^2/2, spacing 0.0001, d=5                          | N    0/200  H    0/200  | ratio med 1.68e-01 max 5.40e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+piecewise-linear table of -x^2/2, spacing 1e-05, d=5                           | N  143/200  H    0/200  | ratio med 1.32e+00 max 5.60e+00 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+piecewise-linear table of -x^2/2, spacing 0.001, d=50                          | N    0/200  H    0/200  | ratio med 1.75e-01 max 6.65e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+piecewise-linear table of -x^2/2, spacing 0.0001, d=50                         | N    0/200  H    0/200  | ratio med 1.96e-01 max 5.05e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.4s
+piecewise-linear table of -x^2/2, spacing 0.001, d=500                         | N    0/200  H    0/200  | ratio med 1.81e-01 max 8.10e-01 | unusable 0 skipped 0 nolines 0 | errors 0  | 1.5s
+== large |log_prob|
+N(0,I) d=5 + 1e+12                                                             | N    0/200  H    0/200  | ratio med 3.14e-04 max 4.26e-04 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.2s
+N(0,I) d=5 + -1e+15                                                            | N    0/200  H    0/200  | ratio med 9.67e-07 max 4.38e-04 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0,I) d=5 + 1e+18                                                             | N    0/200  H    0/200  | ratio med 9.67e-10 max 2.57e-09 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.2s
+N(0,I) d=5 + -1e+300                                                           | N    0/200  H    0/200  | ratio med 9.67e-292 max 2.57e-291 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0, 1e-6^2 I) d=5, start sd 1 (|log_prob| ~ 1e12)                             | N    0/200  H    0/200  | ratio med 8.58e-04 max 2.73e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+N(0, 1e-9^2 I) d=50, start sd 1 (|log_prob| ~ 1e19)                            | N    0/200  H    0/200  | ratio med 8.68e-04 max 1.76e-03 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+== d = 1
+N(0,1) d=1, start sd 2                                                         | N    0/200  H    0/200  | ratio med 3.92e-04 max 7.32e-04 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+Laplace d=1                                                                    | N    0/200  H    0/200  | ratio med 0.00e+00 max 0.00e+00 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s
+fringes 100, d=1                                                               | N    0/200  H    0/200  | ratio med 3.33e-02 max 3.33e-02 | unusable 0 skipped 0 nolines 0 | errors 0  | 0.3s

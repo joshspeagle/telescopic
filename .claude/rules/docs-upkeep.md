@@ -29,6 +29,7 @@ the same pull request. The documentation states only what the code does now.
 | `plotting.py` | `guide/results.md`, `guide/diagnostics.md` | `tutorials/how-it-works.md` | `api.md` (Diagnostics, plots and checks) |
 | `examples.py` | `guide/kernels.md` | every tutorial that uses the target | `api.md` (Examples) |
 | `testing.py` | `guide/custom-kernels.md` | | `api.md` (Diagnostics, plots and checks) |
+| `_gradient_check.py` | `guide/targets.md`, `guide/settings.md` | `tutorials/gradients.md` | `api.md` (Running; Diagnostics, plots and checks) |
 | `_types.py`, `_linalg.py` (private helpers) | the pages of the public functions whose arguments they check or whose errors they word | | |
 | `pyproject.toml` (dependencies, extras, Python versions) | `README.md`, `getting-started.md`, `CONTRIBUTING.md` | | |
 
@@ -41,10 +42,11 @@ page is listed in one of them.
 
 1. **Pages.** Update the mapped pages, and the README when its example or its list of
    guarantees is affected.
-2. **API reference.** A new public name is added to `docs/api.md` under its section, and
-   to `__all__` in `src/telescopic/__init__.py` or `src/telescopic/kernels/__init__.py`
-   when it is exported there. The strict build fails on a reference that
-   resolves to nothing.
+2. **API reference.** A new public name is added to `docs/api.md` under its section, to
+   the `__all__` of its module (for `telescopic.kernels`, of the package), which is what
+   the reference shows of a module documented with `:members:`, and to `__all__` in
+   `src/telescopic/__init__.py` when it is exported there. The strict build fails on a
+   reference that resolves to nothing.
 3. **The specification.** A change that departs from `docs/design/spec.md` edits it in
    the same commit and records the decision in `notes/DECISIONS.md`.
 4. **Numbers.** A figure quoted in the documentation comes from a script in

@@ -12,6 +12,8 @@ from scipy.sparse import csr_array
 
 from telescopic._types import FloatArray, IntArray, integer, integral, read_only, values_of
 
+__all__ = ["SignedMeasure"]
+
 
 # Spec R-EST-6 and R-OUT-2.
 @dataclass(frozen=True, eq=False)

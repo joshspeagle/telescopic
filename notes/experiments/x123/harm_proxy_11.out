@@ -1,0 +1,50 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/harm.py proxy 11 14
+proxy baseline 11: N(0,I) d=1000, start sd (0.003, 2, ...); seeds [375110, 375111, 375112, 375113, 375114]; 100 pairs, max_iter 10000; tuned step 0.5220
+  seed 375110: derivative mean tau 42.57, unmet 0 (0s)
+  seed 375111: derivative mean tau 41.21, unmet 0 (0s)
+  seed 375112: derivative mean tau 41.66, unmet 0 (0s)
+  seed 375113: derivative mean tau 43.37, unmet 0 (0s)
+  seed 375114: derivative mean tau 42.69, unmet 0 (0s)
+ROW | F | N(0,I) d=1000, start sd (0.003, 2, ...): sign of coordinate 0 | proxy | 375110 | 242.860000 | 42.570000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.705
+    (1s)
+ROW | F | N(0,I) d=1000, start sd (0.003, 2, ...): sign of coordinate 0 | proxy | 375111 | 291.280000 | 41.210000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 7.068
+    (1s)
+ROW | F | N(0,I) d=1000, start sd (0.003, 2, ...): sign of coordinate 0 | proxy | 375112 | 247.810000 | 41.660000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.948
+    (1s)
+ROW | F | N(0,I) d=1000, start sd (0.003, 2, ...): sign of coordinate 0 | proxy | 375113 | 238.690000 | 43.370000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.504
+    (1s)
+ROW | F | N(0,I) d=1000, start sd (0.003, 2, ...): sign of coordinate 0 | proxy | 375114 | 227.070000 | 42.690000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.319
+    (1s)
+proxy baseline 12: N(0,I) d=1000, start sd (0.5, 2, ...); seeds [375120, 375121, 375122, 375123, 375124]; 100 pairs, max_iter 10000; tuned step 0.5220
+  seed 375120: derivative mean tau 41.30, unmet 0 (0s)
+  seed 375121: derivative mean tau 42.84, unmet 0 (0s)
+  seed 375122: derivative mean tau 44.59, unmet 0 (0s)
+  seed 375123: derivative mean tau 42.98, unmet 0 (0s)
+  seed 375124: derivative mean tau 43.65, unmet 0 (0s)
+ROW | F | N(0,I) d=1000, start sd (0.5, 2, ...): sign of coordinate 0 | proxy | 375120 | 269.800000 | 41.300000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 6.533
+    (1s)
+ROW | F | N(0,I) d=1000, start sd (0.5, 2, ...): sign of coordinate 0 | proxy | 375121 | 290.130000 | 42.840000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 6.772
+    (1s)
+ROW | F | N(0,I) d=1000, start sd (0.5, 2, ...): sign of coordinate 0 | proxy | 375122 | 241.540000 | 44.590000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.417
+    (1s)
+ROW | F | N(0,I) d=1000, start sd (0.5, 2, ...): sign of coordinate 0 | proxy | 375123 | 283.540000 | 42.980000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 6.597
+    (1s)
+ROW | F | N(0,I) d=1000, start sd (0.5, 2, ...): sign of coordinate 0 | proxy | 375124 | 245.690000 | 43.650000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.629
+    (1s)
+proxy baseline 13: N(0,I) d=1000, start sd (0.25, 2, ...); seeds [375130, 375131, 375132, 375133, 375134]; 100 pairs, max_iter 10000; tuned step 0.5220
+  seed 375130: derivative mean tau 41.78, unmet 0 (0s)
+  seed 375131: derivative mean tau 42.48, unmet 0 (0s)
+  seed 375132: derivative mean tau 43.61, unmet 0 (0s)
+  seed 375133: derivative mean tau 43.68, unmet 0 (0s)
+  seed 375134: derivative mean tau 43.69, unmet 0 (0s)
+ROW | F | N(0,I) d=1000, start sd (0.25, 2, ...): sign of coordinate 0 | proxy | 375130 | 240.550000 | 41.780000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.758
+    (1s)
+ROW | F | N(0,I) d=1000, start sd (0.25, 2, ...): sign of coordinate 0 | proxy | 375131 | 219.520000 | 42.480000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.168
+    (1s)
+ROW | F | N(0,I) d=1000, start sd (0.25, 2, ...): sign of coordinate 0 | proxy | 375132 | 229.220000 | 43.610000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.256
+    (1s)
+ROW | F | N(0,I) d=1000, start sd (0.25, 2, ...): sign of coordinate 0 | proxy | 375133 | 259.710000 | 43.680000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.946
+    (1s)
+ROW | F | N(0,I) d=1000, start sd (0.25, 2, ...): sign of coordinate 0 | proxy | 375134 | 249.730000 | 43.690000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.716
+    (1s)

@@ -34,7 +34,10 @@ the draws differ, the offset of the second from its mean mirrors that of the fir
   tune.
 - **MALA and HMC** need the gradient. A step evaluates the log-density and the gradient
   once (MALA) or `n_steps` times (HMC). Their automatic step sizes can fail to couple
-  ([When the automatic step fails](#when-the-automatic-step-fails)).
+  ([When the automatic step fails](#when-the-automatic-step-fails)). A wrong gradient
+  leaves them exact but slow, so a sampler built with one compares `grad` with
+  differences of `log_prob` first
+  ([Checking the gradient](targets.md#checking-the-gradient)).
 - **The independence kernel** suits a target that a Student-$t$ approximates well, such
   as a posterior close to Gaussian.
 - **Gibbs** suits models whose full conditionals are known, such as conjugate

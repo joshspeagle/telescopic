@@ -1,0 +1,50 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/harm.py package 29 32
+package baseline 29: Jacobi solver rtol 1e-3 d=5, with the gradient of log_prob as computed; seeds [370290, 370291, 370292, 370293, 370294]; 100 pairs, max_iter 10000
+  seed 370290: derivative mean tau 3.23, unmet 0, step 1.2609 (1s)
+  seed 370291: derivative mean tau 3.02, unmet 0, step 1.2562 (1s)
+  seed 370292: derivative mean tau 2.88, unmet 0, step 1.2237 (1s)
+  seed 370293: derivative mean tau 3.09, unmet 0, step 1.2806 (2s)
+  seed 370294: derivative mean tau 3.05, unmet 0, step 1.2616 (2s)
+ROW | B | Jacobi solver rtol 1e-3 d=5 (exact gradient) | package | 370290 | 3.230000 | 3.230000 | 0 | 0 | 1.260929 | 1.260933 | 0.000327956 | ratio 1.000
+    (1s)
+ROW | B | Jacobi solver rtol 1e-3 d=5 (exact gradient) | package | 370291 | 3.020000 | 3.020000 | 0 | 0 | 1.256199 | 1.256218 | 0.000351143 | ratio 1.000
+    (1s)
+ROW | B | Jacobi solver rtol 1e-3 d=5 (exact gradient) | package | 370292 | 2.880000 | 2.880000 | 0 | 0 | 1.223731 | 1.223717 | 0.000337619 | ratio 1.000
+    (1s)
+ROW | B | Jacobi solver rtol 1e-3 d=5 (exact gradient) | package | 370293 | 3.090000 | 3.090000 | 0 | 0 | 1.280620 | 1.280561 | 0.000348506 | ratio 1.000
+    (1s)
+ROW | B | Jacobi solver rtol 1e-3 d=5 (exact gradient) | package | 370294 | 3.050000 | 3.050000 | 0 | 0 | 1.261601 | 1.261632 | 0.000338661 | ratio 1.000
+    (1s)
+package baseline 30: Jacobi solver rtol 1e-5 d=5, with the gradient of log_prob as computed; seeds [370300, 370301, 370302, 370303, 370304]; 100 pairs, max_iter 10000
+  seed 370300: derivative mean tau 3.32, unmet 0, step 1.2618 (3s)
+  seed 370301: derivative mean tau 3.39, unmet 0, step 1.3095 (3s)
+  seed 370302: derivative mean tau 3.03, unmet 0, step 1.3400 (2s)
+  seed 370303: derivative mean tau 3.20, unmet 0, step 1.2862 (2s)
+  seed 370304: derivative mean tau 3.01, unmet 0, step 1.2959 (2s)
+ROW | B | Jacobi solver rtol 1e-5 d=5 (exact gradient) | package | 370300 | 3.320000 | 3.320000 | 0 | 0 | 1.261830 | 1.261830 | 3.49421e-06 | ratio 1.000
+    (2s)
+ROW | B | Jacobi solver rtol 1e-5 d=5 (exact gradient) | package | 370301 | 3.390000 | 3.390000 | 0 | 0 | 1.309497 | 1.309505 | 3.45306e-06 | ratio 1.000
+    (2s)
+ROW | B | Jacobi solver rtol 1e-5 d=5 (exact gradient) | package | 370302 | 3.030000 | 3.030000 | 0 | 0 | 1.340031 | 1.340031 | 3.53769e-06 | ratio 1.000
+    (2s)
+ROW | B | Jacobi solver rtol 1e-5 d=5 (exact gradient) | package | 370303 | 3.200000 | 3.200000 | 0 | 0 | 1.286187 | 1.286187 | 3.46691e-06 | ratio 1.000
+    (2s)
+ROW | B | Jacobi solver rtol 1e-5 d=5 (exact gradient) | package | 370304 | 3.010000 | 3.010000 | 0 | 0 | 1.295862 | 1.295862 | 3.60007e-06 | ratio 1.000
+    (2s)
+package baseline 31: Jacobi solver rtol 1e-8 d=5, with the gradient of log_prob as computed; seeds [370310, 370311, 370312, 370313, 370314]; 100 pairs, max_iter 10000
+  seed 370310: derivative mean tau 3.29, unmet 0, step 1.2515 (3s)
+  seed 370311: derivative mean tau 3.26, unmet 0, step 1.2949 (3s)
+  seed 370312: derivative mean tau 3.27, unmet 0, step 1.2687 (3s)
+  seed 370313: derivative mean tau 3.10, unmet 0, step 1.2938 (3s)
+  seed 370314: derivative mean tau 2.96, unmet 0, step 1.2558 (3s)
+ROW | B | Jacobi solver rtol 1e-8 d=5 (exact gradient) | package | 370310 | 3.290000 | 3.290000 | 0 | 0 | 1.251545 | 1.251545 | 3.40077e-09 | ratio 1.000
+    (3s)
+ROW | B | Jacobi solver rtol 1e-8 d=5 (exact gradient) | package | 370311 | 3.260000 | 3.260000 | 0 | 0 | 1.294884 | 1.294884 | 3.45933e-09 | ratio 1.000
+    (2s)
+ROW | B | Jacobi solver rtol 1e-8 d=5 (exact gradient) | package | 370312 | 3.270000 | 3.270000 | 0 | 0 | 1.268748 | 1.268748 | 3.38186e-09 | ratio 1.000
+    (3s)
+ROW | B | Jacobi solver rtol 1e-8 d=5 (exact gradient) | package | 370313 | 3.100000 | 3.100000 | 0 | 0 | 1.293789 | 1.293782 | 3.52999e-09 | ratio 1.000
+    (2s)
+ROW | B | Jacobi solver rtol 1e-8 d=5 (exact gradient) | package | 370314 | 2.960000 | 2.960000 | 0 | 0 | 1.255764 | 1.255764 | 3.36676e-09 | ratio 1.000
+    (3s)

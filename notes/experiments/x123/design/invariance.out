@@ -1,0 +1,25 @@
+wrong sign of coordinate 0
+  (N) x -> A x + b (condition 100)                               decisions differ on 0/50 seeds; largest relative change of the ratio 1.8e-01
+  (N) log_prob -> 8 log_prob                                     decisions differ on 0/50 seeds; largest relative change of the ratio 0.0e+00
+  (N) log_prob -> 7.3 log_prob                                   decisions differ on 0/50 seeds; largest relative change of the ratio 5.6e-03
+  (N) log_prob -> log_prob + 1e6                                 decisions differ on 0/50 seeds; largest relative change of the ratio 1.0e+00
+  (H) x -> A x + b (condition 100)                               decisions differ on 0/50 seeds; largest relative change of the ratio 3.2e-09
+  (H) log_prob -> 8 log_prob                                     decisions differ on 31/50 seeds; largest relative change of the ratio 7.0e+00
+  (H) log_prob -> 7.3 log_prob                                   decisions differ on 31/50 seeds; largest relative change of the ratio 6.3e+00
+  (H) log_prob -> log_prob + 1e6                                 decisions differ on 0/50 seeds; largest relative change of the ratio 1.7e-05
+correct gradient
+  (N) x -> A x + b (condition 100)                               decisions differ on 0/50 seeds; largest relative change of the ratio 0.0e+00
+  (N) log_prob -> 8 log_prob                                     decisions differ on 0/50 seeds; largest relative change of the ratio 0.0e+00
+  (N) log_prob -> 7.3 log_prob                                   decisions differ on 0/50 seeds; largest relative change of the ratio 0.0e+00
+  (N) log_prob -> log_prob + 1e6                                 decisions differ on 0/50 seeds; largest relative change of the ratio 0.0e+00
+  (H) x -> A x + b (condition 100)                               decisions differ on 0/50 seeds; largest relative change of the ratio 0.0e+00
+  (H) log_prob -> 8 log_prob                                     decisions differ on 0/50 seeds; largest relative change of the ratio 0.0e+00
+  (H) log_prob -> 7.3 log_prob                                   decisions differ on 0/50 seeds; largest relative change of the ratio 0.0e+00
+  (H) log_prob -> log_prob + 1e6                                 decisions differ on 0/50 seeds; largest relative change of the ratio 0.0e+00
+(H) under log_prob -> c log_prob on a small error: N(0,I) d=5 from N(0, I), grad + 0.03
+  c = 1: (N) warned 50/50, (H) warned 0/50
+  c = 10: (N) warned 50/50, (H) warned 50/50
+  c = 100: (N) warned 50/50, (H) warned 50/50
+log_prob exactly constant on the lines (flat top |x| < 10 with Gaussian shoulders, d = 3, from N(0, I))
+  grad = 0 (correct): (N) warned 0/50, (H) warned 0/50
+  grad = -x (wrong): (N) warned 50/50, (H) warned 50/50

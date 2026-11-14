@@ -1,0 +1,86 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/harm.py proxy 14 18
+proxy baseline 14: N(0,I) d=50, start sd 1 (validation); seeds [375140, 375141, 375142, 375143, 375144]; 100 pairs, max_iter 10000; tuned step 0.8623
+  seed 375140: derivative mean tau 9.33, unmet 0 (0s)
+  seed 375141: derivative mean tau 9.85, unmet 0 (0s)
+  seed 375142: derivative mean tau 10.31, unmet 0 (0s)
+  seed 375143: derivative mean tau 10.39, unmet 0 (0s)
+  seed 375144: derivative mean tau 10.74, unmet 0 (0s)
+ROW | C | N(0,I) d=50, start sd 1: sign of coordinate 0 | proxy validation | 375140 | 39.520000 | 9.330000 | 0 | 0 | 0.636043 | 0.862277 | 0.853377 | ratio 4.236
+    (0s)
+ROW | C | N(0,I) d=50, start sd 1: sign of coordinate 0 | proxy validation | 375141 | 36.840000 | 9.850000 | 0 | 0 | 0.636043 | 0.862277 | 0.853377 | ratio 3.740
+    (0s)
+ROW | C | N(0,I) d=50, start sd 1: sign of coordinate 0 | proxy validation | 375142 | 33.600000 | 10.310000 | 0 | 0 | 0.636043 | 0.862277 | 0.853377 | ratio 3.259
+    (0s)
+ROW | C | N(0,I) d=50, start sd 1: sign of coordinate 0 | proxy validation | 375143 | 35.860000 | 10.390000 | 0 | 0 | 0.636043 | 0.862277 | 0.853377 | ratio 3.451
+    (0s)
+ROW | C | N(0,I) d=50, start sd 1: sign of coordinate 0 | proxy validation | 375144 | 34.010000 | 10.740000 | 0 | 0 | 0.636043 | 0.862277 | 0.853377 | ratio 3.167
+    (0s)
+proxy baseline 15: N(0,I) d=50, start sd 2 (validation); seeds [375150, 375151, 375152, 375153, 375154]; 100 pairs, max_iter 10000; tuned step 0.8623
+  seed 375150: derivative mean tau 9.62, unmet 0 (0s)
+  seed 375151: derivative mean tau 9.08, unmet 0 (0s)
+  seed 375152: derivative mean tau 9.63, unmet 0 (0s)
+  seed 375153: derivative mean tau 9.99, unmet 0 (0s)
+  seed 375154: derivative mean tau 8.94, unmet 0 (0s)
+ROW | C | N(0,I) d=50, start sd 2: sign of coordinate 0 | proxy validation | 375150 | 70.450000 | 9.620000 | 0 | 0 | 0.636043 | 0.862277 | 0.853377 | ratio 7.323
+    (0s)
+ROW | C | N(0,I) d=50, start sd 2: sign of coordinate 0 | proxy validation | 375151 | 85.160000 | 9.080000 | 0 | 0 | 0.636043 | 0.862277 | 0.853377 | ratio 9.379
+    (0s)
+ROW | C | N(0,I) d=50, start sd 2: sign of coordinate 0 | proxy validation | 375152 | 79.760000 | 9.630000 | 0 | 0 | 0.636043 | 0.862277 | 0.853377 | ratio 8.282
+    (0s)
+ROW | C | N(0,I) d=50, start sd 2: sign of coordinate 0 | proxy validation | 375153 | 72.510000 | 9.990000 | 0 | 0 | 0.636043 | 0.862277 | 0.853377 | ratio 7.258
+    (0s)
+ROW | C | N(0,I) d=50, start sd 2: sign of coordinate 0 | proxy validation | 375154 | 79.120000 | 8.940000 | 0 | 0 | 0.636043 | 0.862277 | 0.853377 | ratio 8.850
+    (0s)
+ROW | C | N(0,I) d=50: twice | proxy validation | 375150 | 1202.340000 | 9.620000 | 0 | 0 | 0.164132 | 0.862277 | 3.05392 | ratio 124.983
+    (1s)
+ROW | C | N(0,I) d=50: twice | proxy validation | 375151 | 1237.020000 | 9.080000 | 0 | 0 | 0.164132 | 0.862277 | 3.05392 | ratio 136.236
+    (1s)
+ROW | C | N(0,I) d=50: twice | proxy validation | 375152 | 1187.350000 | 9.630000 | 0 | 0 | 0.164132 | 0.862277 | 3.05392 | ratio 123.297
+    (1s)
+ROW | C | N(0,I) d=50: twice | proxy validation | 375153 | 1221.030000 | 9.990000 | 0 | 0 | 0.164132 | 0.862277 | 3.05392 | ratio 122.225
+    (1s)
+ROW | C | N(0,I) d=50: twice | proxy validation | 375154 | 1230.240000 | 8.940000 | 0 | 0 | 0.164132 | 0.862277 | 3.05392 | ratio 137.611
+    (1s)
+proxy baseline 16: N(0,I) d=200, start sd 1 (validation); seeds [375160, 375161, 375162, 375163, 375164]; 100 pairs, max_iter 10000; tuned step 0.6840
+  seed 375160: derivative mean tau 22.12, unmet 0 (0s)
+  seed 375161: derivative mean tau 20.44, unmet 0 (0s)
+  seed 375162: derivative mean tau 20.64, unmet 0 (0s)
+  seed 375163: derivative mean tau 21.08, unmet 0 (0s)
+  seed 375164: derivative mean tau 21.28, unmet 0 (0s)
+ROW | C | N(0,I) d=200, start sd 1: sign of coordinate 0 | proxy validation | 375160 | 76.490000 | 22.120000 | 0 | 0 | 0.559284 | 0.683986 | 0.685894 | ratio 3.458
+    (0s)
+ROW | C | N(0,I) d=200, start sd 1: sign of coordinate 0 | proxy validation | 375161 | 69.800000 | 20.440000 | 0 | 0 | 0.559284 | 0.683986 | 0.685894 | ratio 3.415
+    (0s)
+ROW | C | N(0,I) d=200, start sd 1: sign of coordinate 0 | proxy validation | 375162 | 75.530000 | 20.640000 | 0 | 0 | 0.559284 | 0.683986 | 0.685894 | ratio 3.659
+    (0s)
+ROW | C | N(0,I) d=200, start sd 1: sign of coordinate 0 | proxy validation | 375163 | 82.810000 | 21.080000 | 0 | 0 | 0.559284 | 0.683986 | 0.685894 | ratio 3.928
+    (0s)
+ROW | C | N(0,I) d=200, start sd 1: sign of coordinate 0 | proxy validation | 375164 | 72.050000 | 21.280000 | 0 | 0 | 0.559284 | 0.683986 | 0.685894 | ratio 3.386
+    (0s)
+proxy baseline 17: N(0,I) d=200, start sd 2 (validation); seeds [375170, 375171, 375172, 375173, 375174]; 100 pairs, max_iter 10000; tuned step 0.6840
+  seed 375170: derivative mean tau 19.82, unmet 0 (0s)
+  seed 375171: derivative mean tau 19.15, unmet 0 (0s)
+  seed 375172: derivative mean tau 19.31, unmet 0 (0s)
+  seed 375173: derivative mean tau 18.81, unmet 0 (0s)
+  seed 375174: derivative mean tau 18.78, unmet 0 (0s)
+ROW | C | N(0,I) d=200, start sd 2: sign of coordinate 0 | proxy validation | 375170 | 150.670000 | 19.820000 | 0 | 0 | 0.559284 | 0.683986 | 0.685894 | ratio 7.602
+    (0s)
+ROW | C | N(0,I) d=200, start sd 2: sign of coordinate 0 | proxy validation | 375171 | 128.370000 | 19.150000 | 0 | 0 | 0.559284 | 0.683986 | 0.685894 | ratio 6.703
+    (0s)
+ROW | C | N(0,I) d=200, start sd 2: sign of coordinate 0 | proxy validation | 375172 | 135.440000 | 19.310000 | 0 | 0 | 0.559284 | 0.683986 | 0.685894 | ratio 7.014
+    (0s)
+ROW | C | N(0,I) d=200, start sd 2: sign of coordinate 0 | proxy validation | 375173 | 161.970000 | 18.810000 | 0 | 0 | 0.559284 | 0.683986 | 0.685894 | ratio 8.611
+    (0s)
+ROW | C | N(0,I) d=200, start sd 2: sign of coordinate 0 | proxy validation | 375174 | 146.340000 | 18.780000 | 0 | 0 | 0.559284 | 0.683986 | 0.685894 | ratio 7.792
+    (0s)
+ROW | C | N(0,I) d=200: twice | proxy validation | 375170 | 5123.730000 | 19.820000 | 0 | 0 | 0.079660 | 0.683986 | 4.83762 | ratio 258.513
+    (6s)
+ROW | C | N(0,I) d=200: twice | proxy validation | 375171 | 4987.640000 | 19.150000 | 0 | 0 | 0.079660 | 0.683986 | 4.83762 | ratio 260.451
+    (5s)
+ROW | C | N(0,I) d=200: twice | proxy validation | 375172 | 5103.490000 | 19.310000 | 0 | 0 | 0.079660 | 0.683986 | 4.83762 | ratio 264.293
+    (6s)
+ROW | C | N(0,I) d=200: twice | proxy validation | 375173 | 5405.220000 | 18.810000 | 2 | 0 | 0.079660 | 0.683986 | 4.83762 | ratio 287.359
+    (6s)
+ROW | C | N(0,I) d=200: twice | proxy validation | 375174 | 5201.270000 | 18.780000 | 0 | 0 | 0.079660 | 0.683986 | 4.83762 | ratio 276.958
+    (6s)

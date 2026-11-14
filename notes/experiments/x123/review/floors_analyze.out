@@ -1,0 +1,106 @@
+fresh seeds, (N) rate: B {'Jacobi solver rtol 1e-3 d=5 ': np.float64(1.0), 'Jacobi solver rtol 1e-5 d=5 ': np.float64(1.0), 'Jacobi solver rtol 1e-8 d=5 ': np.float64(0.0), 'N(0,I) d=5: grad x 1.005': np.float64(1.0), 'N(0,I) d=1000: grad x 1.0001': np.float64(1.0), 'N(0,I) d=5: grad + 0.02': np.float64(1.0), 'logistic n=1e4 d=5: without ': np.float64(1.0), 'logistic n=1e4 d=5, start sd': np.float64(1.0), 'N(0,I) d=5, start 100x wide:': np.float64(1.0)}
+harmful families used: 49 of which (N) rate >= 0.99: 46
+
+For each B family that (N) warns on: the floor (statistic, rule) that silences it in >= 95% of checks at the least cost.
+cost = harmful families (of 46 that (N) detects) whose detection falls below 0.975, and the lowest detection
+B Jacobi solver rtol 1e-3 d=5 (exact gradient)         best: gap/h (nats over u, the floor of H) / any line, threshold 0.00811: loses 4 families, lowest detection 0.00 on 'scales (1, 0.01 x4), start N(0, 0.01^2 I): sign of'
+B Jacobi solver rtol 1e-5 d=5 (exact gradient)         best: gap/h (nats over u, the floor of H) / any line, threshold 8.39e-05: loses 0 families, lowest detection 0.99 on 'N(0,I) d=5, start sd (0.01, 2, ...): sign of coord'
+B N(0,I) d=5: grad x 1.005                             best: gap/h (nats over u, the floor of H) / any line, threshold 0.188: loses 9 families, lowest detection 0.00 on 'scales (1, 0.1 x4), start N(0, 0.1^2 I): sign of t'
+B N(0,I) d=1000: grad x 1.0001                         best: gap/(h |log_prob|) / any line, threshold 2.49e-05: loses 3 families, lowest detection 0.00 on 'N(0,I) d=100, start sd (0.01, 2, ...): sign of coo'
+B N(0,I) d=5: grad + 0.02                              best: gap/h (nats over u, the floor of H) / any line, threshold 0.34: loses 9 families, lowest detection 0.00 on 'scales (1, 0.1 x4), start N(0, 0.1^2 I): sign of t'
+B logistic n=1e4 d=5: without the prior                best: gap/(h |log_prob|) / any line, threshold 1.35e-05: loses 3 families, lowest detection 0.00 on 'N(0,I) d=100, start sd (0.01, 2, ...): sign of coo'
+B logistic n=1e4 d=5, start sd 10: without the prior   best: gap/|g o v| (registered rho) / any line, threshold 0.0183: loses 19 families, lowest detection 0.00 on 'scales (1, 0.01 x4), start N(0, I): sign of the wi'
+B N(0,I) d=5, start 100x wide: grad x 1.005            best: gap/|g.v| / any line, threshold 0.00498: loses 12 families, lowest detection 0.00 on 'N(0,I) d=100, start sd (0.01, 2, ...): sign of coo'
+
+Silencing ALL of those B families at once (>= 95% of checks of each): cost per statistic and rule
+  gap/tolerance (a larger S)           any line       threshold     5e+06: loses 33 of 46; zero detection on 24; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/tolerance (a larger S)           two lines      threshold  1.87e+06: loses 31 of 46; zero detection on 25; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/tolerance (a larger S)           half the lines threshold  7.66e+05: loses 34 of 46; zero detection on 25; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/tolerance (a larger S)           all lines      threshold  2.39e+05: loses 44 of 46; zero detection on 27; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/(h |log_prob|)                   any line       threshold     0.118: loses 31 of 46; zero detection on 22; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/(h |log_prob|)                   two lines      threshold     0.044: loses 29 of 46; zero detection on 23; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/(h |log_prob|)                   half the lines threshold    0.0181: loses 32 of 46; zero detection on 23; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/(h |log_prob|)                   all lines      threshold   0.00562: loses 44 of 46; zero detection on 25; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/|g o v| (registered rho)         any line       threshold    0.0478: loses 27 of 46; zero detection on 12; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/|g o v| (registered rho)         two lines      threshold    0.0263: loses 27 of 46; zero detection on 13; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/|g o v| (registered rho)         half the lines threshold    0.0169: loses 29 of 46; zero detection on 14; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/|g o v| (registered rho)         all lines      threshold   0.00564: loses 45 of 46; zero detection on 16; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/|g.v|                            any line       threshold     0.739: loses 39 of 46; zero detection on 9; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/|g.v|                            two lines      threshold     0.181: loses 30 of 46; zero detection on 12; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/|g.v|                            half the lines threshold    0.0312: loses 29 of 46; zero detection on 12; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/|g.v|                            all lines      threshold   0.00529: loses 40 of 46; zero detection on 14; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/|difference quotient|            any line       threshold      1.48: loses 42 of 46; zero detection on 10; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/|difference quotient|            two lines      threshold     0.193: loses 31 of 46; zero detection on 12; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/|difference quotient|            half the lines threshold    0.0304: loses 29 of 46; zero detection on 12; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/|difference quotient|            all lines      threshold   0.00526: loses 40 of 46; zero detection on 14; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/max(|g.v|,|D|)                   any line       threshold     0.625: loses 38 of 46; zero detection on 10; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/max(|g.v|,|D|)                   two lines      threshold     0.181: loses 30 of 46; zero detection on 12; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/max(|g.v|,|D|)                   half the lines threshold    0.0303: loses 29 of 46; zero detection on 12; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/max(|g.v|,|D|)                   all lines      threshold   0.00526: loses 40 of 46; zero detection on 14; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/h (nats over u, the floor of H)  any line       threshold  2.04e+03: loses 43 of 46; zero detection on 42; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/h (nats over u, the floor of H)  two lines      threshold  1.45e+03: loses 43 of 46; zero detection on 42; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/h (nats over u, the floor of H)  half the lines threshold       783: loses 43 of 46; zero detection on 41; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/h (nats over u, the floor of H)  all lines      threshold       243: loses 45 of 46; zero detection on 41; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/(h sqrt|log_prob|)               any line       threshold      5.11: loses 43 of 46; zero detection on 28; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/(h sqrt|log_prob|)               two lines      threshold      4.01: loses 43 of 46; zero detection on 28; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/(h sqrt|log_prob|)               half the lines threshold      2.37: loses 44 of 46; zero detection on 28; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+  gap/(h sqrt|log_prob|)               all lines      threshold     0.772: loses 44 of 46; zero detection on 32; lowest [(np.float64(0.0), 'N(0,I) d=100, start sd (0.01, 2, ...): s'), (np.float64(0.0), 'N(0,I) d=100, start sd (0.1, 2, ...): si')]
+
+Silencing all B families except the two worst-separated (grad + 0.02; logistic from sd 10):
+  gap/tolerance (a larger S)           any line       threshold  1.26e+06: loses 30 of 46; zero detection on 22
+  gap/tolerance (a larger S)           two lines      threshold  6.28e+05: loses 30 of 46; zero detection on 21
+  gap/tolerance (a larger S)           all lines      threshold  1.21e+05: loses 44 of 46; zero detection on 26
+  gap/(h |log_prob|)                   any line       threshold    0.0296: loses 28 of 46; zero detection on 19
+  gap/(h |log_prob|)                   two lines      threshold    0.0149: loses 28 of 46; zero detection on 18
+  gap/(h |log_prob|)                   all lines      threshold   0.00285: loses 44 of 46; zero detection on 24
+  gap/|g o v| (registered rho)         any line       threshold   0.00962: loses 16 of 46; zero detection on 9
+  gap/|g o v| (registered rho)         two lines      threshold   0.00815: loses 19 of 46; zero detection on 10
+  gap/|g o v| (registered rho)         all lines      threshold   0.00318: loses 44 of 46; zero detection on 14
+  gap/|g.v|                            any line       threshold    0.0321: loses 19 of 46; zero detection on 3
+  gap/|g.v|                            two lines      threshold   0.00498: loses 12 of 46; zero detection on 6
+  gap/|g.v|                            all lines      threshold   0.00498: loses 40 of 46; zero detection on 14
+  gap/|difference quotient|            any line       threshold     0.031: loses 17 of 46; zero detection on 3
+  gap/|difference quotient|            two lines      threshold     0.005: loses 12 of 46; zero detection on 6
+  gap/|difference quotient|            all lines      threshold     0.005: loses 40 of 46; zero detection on 14
+  gap/max(|g.v|,|D|)                   any line       threshold     0.031: loses 18 of 46; zero detection on 3
+  gap/max(|g.v|,|D|)                   two lines      threshold   0.00498: loses 12 of 46; zero detection on 6
+  gap/max(|g.v|,|D|)                   all lines      threshold   0.00498: loses 40 of 46; zero detection on 14
+  gap/h (nats over u, the floor of H)  any line       threshold  2.04e+03: loses 43 of 46; zero detection on 42
+  gap/h (nats over u, the floor of H)  two lines      threshold  1.45e+03: loses 43 of 46; zero detection on 42
+  gap/h (nats over u, the floor of H)  all lines      threshold       243: loses 45 of 46; zero detection on 41
+  gap/(h sqrt|log_prob|)               any line       threshold      5.11: loses 43 of 46; zero detection on 28
+  gap/(h sqrt|log_prob|)               two lines      threshold      4.01: loses 43 of 46; zero detection on 28
+  gap/(h sqrt|log_prob|)               all lines      threshold     0.772: loses 44 of 46; zero detection on 32
+
+Pairwise: the harmful family hardest to separate from each B family (best J = silence(B) + detect(harmful) - 1 over every statistic, rule and threshold)
+B Jacobi solver rtol 1e-3 d=5 (exact gradient)       hardest: 'N(0,I) d=5, start sd (0.01, 2, ...): sign of coordinate 0' best J 0.00 with ('gap/tolerance (a larger S)', 'any line')
+B Jacobi solver rtol 1e-5 d=5 (exact gradient)       hardest: 'N(0,I) d=2, point start (1, 1): grad + 2 (1, -1)' best J 0.99 with ('gap/tolerance (a larger S)', 'any line')
+B N(0,I) d=5: grad x 1.005                           hardest: 'N(0,I) d=100, start sd (0.01, 2, ...): sign of coordinate ' best J 0.00 with ('gap/tolerance (a larger S)', 'any line')
+B N(0,I) d=1000: grad x 1.0001                       hardest: 'N(0,I) d=1000, start sd (0.01, 2, ...): sign of coordinate' best J 0.09 with ('gap/|g.v|', 'any line')
+B N(0,I) d=5: grad + 0.02                            hardest: 'scales (1, 0.01 x4), start N(0, 0.01^2 I): sign of the wid' best J 0.00 with ('gap/tolerance (a larger S)', 'any line')
+B logistic n=1e4 d=5: without the prior              hardest: 'N(0,I) d=100, start sd (0.01, 2, ...): sign of coordinate ' best J 0.00 with ('gap/tolerance (a larger S)', 'any line')
+B logistic n=1e4 d=5, start sd 10: without the prior hardest: 'scales (1, 0.01 x4), start N(0, I): sign of the wide coord' best J 0.00 with ('gap/tolerance (a larger S)', 'any line')
+B N(0,I) d=5, start 100x wide: grad x 1.005          hardest: 'N(0,I) d=100, start sd (0.01, 2, ...): sign of coordinate ' best J 0.00 with ('gap/tolerance (a larger S)', 'any line')
+
+Median over checks of the largest line value (lines that warn under N):
+family                                                           gap/tolerance          gap/(h          gap/|g       gap/|g.v|  gap/|differenc  gap/max(|g.v|,           gap/h          gap/(h
+B Jacobi solver rtol 1e-3 d=5 (exact gradient)                        2.92e+04        0.000692        0.000559         0.00135         0.00135         0.00135         0.00362         0.00147
+B Jacobi solver rtol 1e-5 d=5 (exact gradient)                             348         8.2e-06        5.74e-06        1.42e-05        1.42e-05        1.42e-05        4.34e-05        1.73e-05
+B N(0,I) d=5: grad x 1.005                                            5.97e+05           0.014         0.00797         0.00498           0.005         0.00498            0.11           0.035
+B N(0,I) d=1000: grad x 1.0001                                             670        1.57e-05        0.000176          0.0001          0.0001          0.0001          0.0318        0.000711
+B N(0,I) d=5: grad + 0.02                                             1.72e+06          0.0404          0.0253          0.0729          0.0775           0.072           0.217          0.0837
+B logistic n=1e4 d=5: without the prior                                    311        8.33e-06        0.000161        0.000478        0.000478        0.000478          0.0578         0.00069
+B logistic n=1e4 d=5, start sd 10: without the prior                  2.81e+05         0.00743          0.0109          0.0182          0.0185          0.0182             575            2.01
+B N(0,I) d=5, start 100x wide: grad x 1.005                           5.37e+05          0.0127         0.00773         0.00498           0.005         0.00498         1.3e+03            3.66
+C equicorrelated rho 0.9 d=10: gradient of rho 0.8                    3.58e+07           0.859            1.11            3.33            1.29            0.99            4.06            1.78
+C N(0,I) d=10000, start sd 1: sign of coordinate 0                    4.77e+04         0.00112          0.0398           0.127           0.117           0.115            5.62          0.0793
+C N(0,I) d=5, start sd 2: sign of coordinate 0                        9.98e+07            2.36            1.76            4.42            4.56            1.55            20.6             6.2
+C N(0,I) d=5, start sd 2: coordinate 0 set to 0                       5.58e+07            1.32             1.8            4.27            2.74            1.25              10            3.38
+C scales (1, 0.01 x4), start N(0, 0.01^2 I): sign of the wide         2.47e+04        0.000582        0.000339        0.000794        0.000795        0.000794        0.000485        0.000451
+C N(0,I) d=5, start sd (0.1, 2, ...): sign of coordinate 0            5.09e+05           0.012         0.00899          0.0236          0.0236          0.0234          0.0604          0.0243
+C N(0,I) d=100, start sd (0.1, 2, ...): sign of coordinate 0          9.92e+03        0.000234        0.000851         0.00299         0.00298         0.00298          0.0454         0.00318
+C N(0,I) d=1000, start sd (0.1, 2, ...): sign of coordinate 0            1e+03        2.37e-05         0.00027        0.000874        0.000873        0.000873          0.0478         0.00107
+C N(0,I) d=5, start sd (0.01, 2, ...): sign of coordinate 0           4.49e+03        0.000106        6.32e-05         0.00019         0.00019         0.00019        0.000425        0.000205
+C N(0,I) d=100, start sd (0.01, 2, ...): sign of coordinate 0              119        2.82e-06        9.86e-06        3.39e-05        3.39e-05        3.39e-05        0.000543        3.81e-05
+C N(0,I) d=1000, start sd (0.01, 2, ...): sign of coordinate              10.9        2.57e-07        2.83e-06        9.98e-06        9.98e-06        9.98e-06        0.000509        1.15e-05
+C N(0,I) d=5, start sd 10000: grad + 2                                3.45e+04        0.000813        0.000549         0.00191          0.0019          0.0019        1.04e+05            8.15

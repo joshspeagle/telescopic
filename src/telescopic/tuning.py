@@ -20,6 +20,8 @@ from telescopic.target import Target
 if TYPE_CHECKING:
     from telescopic.kernels.base import Kernel
 
+__all__ = ["PilotRun", "TuningReport", "adaptive_metropolis", "choose_k", "dual_averaging"]
+
 TARGET_ACCEPTANCE = 0.234
 # The random-walk scale 2.38 / sqrt(d) of Roberts, Gelman & Gilks (1997), used by
 # RandomWalk by default and by the pilot chains at their start.

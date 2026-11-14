@@ -1,0 +1,18 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/harm.py package 14 15
+package baseline 14: N(0,I) d=100, start sd (0.1, 2, ...); seeds [370140, 370141, 370142, 370143, 370144]; 100 pairs, max_iter 10000
+  seed 370140: derivative mean tau 21.34, unmet 0, step 0.7541 (11s)
+  seed 370141: derivative mean tau 22.87, unmet 0, step 0.7384 (12s)
+  seed 370142: derivative mean tau 22.82, unmet 0, step 0.7448 (10s)
+  seed 370143: derivative mean tau 21.66, unmet 0, step 0.7486 (11s)
+  seed 370144: derivative mean tau 21.16, unmet 0, step 0.7502 (10s)
+ROW | C | N(0,I) d=100, start sd (0.1, 2, ...): sign of coordinate 0 | package | 370140 | 70.400000 | 21.340000 | 0 | 0 | 0.603141 | 0.754054 | 0.68536 | ratio 3.299
+    (11s)
+ROW | C | N(0,I) d=100, start sd (0.1, 2, ...): sign of coordinate 0 | package | 370141 | 70.370000 | 22.870000 | 0 | 0 | 0.561338 | 0.738351 | 0.705508 | ratio 3.077
+    (11s)
+ROW | C | N(0,I) d=100, start sd (0.1, 2, ...): sign of coordinate 0 | package | 370142 | 77.740000 | 22.820000 | 0 | 0 | 0.579815 | 0.744837 | 0.725831 | ratio 3.407
+    (11s)
+ROW | C | N(0,I) d=100, start sd (0.1, 2, ...): sign of coordinate 0 | package | 370143 | 61.320000 | 21.660000 | 0 | 0 | 0.605335 | 0.748581 | 0.638709 | ratio 2.831
+    (12s)
+ROW | C | N(0,I) d=100, start sd (0.1, 2, ...): sign of coordinate 0 | package | 370144 | 72.730000 | 21.160000 | 0 | 0 | 0.602185 | 0.750244 | 0.648083 | ratio 3.437
+    (11s)

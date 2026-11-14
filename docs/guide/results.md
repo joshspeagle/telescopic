@@ -48,7 +48,7 @@ A few of the pairs met after `k + lag`, so a few replicates carry bias correctio
 | `names`, `ndim` | the parameter names and the dimension $d$ |
 | `measure` | the replicates' signed measures |
 | `index`, `meeting_times`, `costs` | for every replicate, censored ones included: its index, its meeting time (`inf` if censored) and its kernel applications |
-| `n_log_prob`, `n_grad`, `wall_time` | the evaluations of the log-density and of its gradient, and the seconds, of the replicates, without tuning and the meeting-time pilot |
+| `n_log_prob`, `n_grad`, `wall_time` | the evaluations of the log-density and of its gradient, and the seconds, of the replicates, without tuning, the meeting-time pilot and the gradient check, which runs when the sampler is built |
 | `kernel`, `initial` | the frozen kernel and the initial distribution |
 | `tuning`, `pilot` | the report of the tuning chains, and the meeting times of the lag-1 pilot pairs that chose `k`; `None` when not run |
 | `seed` | the root `numpy.random.SeedSequence`, which reproduces the run |

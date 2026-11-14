@@ -1,0 +1,6 @@
+rotated condition 10000 d=10: float32 gradient, seed 219000: correct mean 5.5 (unmet 0, step 1.107); other mean 5.5 (unmet 0, step 1.107); ratio of means 1.00, of steps 1.000; 1s
+rotated condition 10000 d=10: float32 gradient, seed 219001: correct mean 5.6 (unmet 0, step 1.124); other mean 5.6 (unmet 0, step 1.124); ratio of means 1.00, of steps 1.000; 1s
+rotated condition 10000 d=10: float32 gradient, seed 219002: correct mean 4.7 (unmet 0, step 1.116); other mean 4.7 (unmet 0, step 1.116); ratio of means 1.00, of steps 1.000; 1s
+rotated condition 1e+08 d=10: float32 gradient, seed 219000: correct mean 7472.9 (unmet 63, step 0.771); other mean 7546.6 (unmet 65, step 0.772); ratio of means 1.01, of steps 1.001; 10s
+rotated condition 1e+08 d=10: float32 gradient, seed 219001: correct mean 7088.3 (unmet 56, step 0.688); other mean 7021.4 (unmet 55, step 0.687); ratio of means 0.99, of steps 0.999; 9s
+rotated condition 1e+08 d=10: float32 gradient, seed 219002: correct mean 2209.2 (unmet 1, step 0.928); other mean 2234.3 (unmet 2, step 0.928); ratio of means 1.01, of steps 1.000; 6s

@@ -1,0 +1,8 @@
+group all32: family f at seeds 209300 + 100 f + (0..99); P = 8
+[ 0] float32 throughout, N(0, I) d=5                                  | N   0/100 ratio med/max 7.01e-04/1.26e-03 | H   0/100 ratio med/max 3.60e-04/1.03e-03 | unusable 0 skipped 0 evals 56+24
+[ 1] float32 throughout, N(10, I) d=5                                 | N   0/100 ratio med/max 7.32e-04/1.36e-03 | H   0/100 ratio med/max 3.79e-04/1.25e-03 | unusable 0 skipped 0 evals 56+24
+[ 2] float32 throughout, N(100, I) d=5                                | N   0/100 ratio med/max 6.80e-04/1.39e-03 | H   0/100 ratio med/max 3.48e-04/1.06e-03 | unusable 0 skipped 0 evals 56+24
+[ 3] float32 throughout, N(300, I) d=5                                | N   0/100 ratio med/max 5.68e-04/1.08e-03 | H   0/100 ratio med/max 3.22e-04/9.22e-04 | unusable 0 skipped 0 evals 56+24
+[ 4] float32 throughout, N(1000, I) d=5                               | N   0/100 ratio med/max 4.64e-04/9.24e-04 | H   0/100 ratio med/max 3.26e-04/7.85e-04 | unusable 0 skipped 0 evals 56+24
+[ 5] float32 throughout, N(10000, I) d=5                              | N   0/100 ratio med/max 0.00e+00/2.84e-04 | H   0/100 ratio med/max 0.00e+00/2.84e-04 | unusable 0 skipped 0 evals 56+24
+total warnings: N 0, H 0 of 600

@@ -1,0 +1,27 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/run_checks.py C 23 46
+group C; P = 8; columns: seeds | N | H | (N) with r=1e-06 r=0.0001 r=0.01 | ratio N med/max, H max | unusable, skipped | evaluations | errors | time
+[ 23] scales (1, 0.01 x4), start N(0, I): sign of the wide coordinate          349200..349599 | N  400/400 | H  400/400 |  400  381    0 | 1.87e+04/4.46e+05 6.48e+01 | 0 0 | 40+8 | 0 | 0.7s
+[ 24] scales (1, 0.1 x4), start N(0, 0.1^2 I): sign of the wide coordinate     349600..349999 | N  400/400 | H    0/400 |  400  400  374 | 1.85e+06/4.65e+07 7.30e-01 | 0 0 | 40+8 | 0 | 0.8s
+[ 25] scales (1, 0.01 x4), start N(0, 0.01^2 I): sign of the wide coordinate   350000..350399 | N  400/400 | H    0/400 |  400  380    1 | 1.78e+04/6.00e+05 4.72e-03 | 0 0 | 40+8 | 0 | 0.6s
+[ 26] N(0,I) d=5, start sd (0.1, 2, ...): sign of coordinate 0                 350400..350799 | N  400/400 | H    0/400 |  400  400  160 | 4.99e+05/8.30e+06 5.14e-01 | 0 0 | 40+8 | 0 | 0.6s
+[ 27] N(0,I) d=100, start sd (0.1, 2, ...): sign of coordinate 0               350800..351199 | N  400/400 | H    0/400 |  400  400    0 | 1.07e+04/5.79e+04 6.84e-01 | 0 0 | 40+8 | 0 | 0.6s
+[ 28] N(0,I) d=1000, start sd (0.1, 2, ...): sign of coordinate 0              351200..351599 | N  400/400 | H    0/400 |  400  379    0 | 1.06e+03/3.88e+03 5.16e-01 | 0 0 | 40+8 | 0 | 1.2s
+[ 29] N(0,I) d=5, start sd (0.01, 2, ...): sign of coordinate 0                351600..351999 | N  400/400 | H    0/400 |  400  159    0 | 4.90e+03/8.87e+04 6.78e-03 | 0 0 | 40+8 | 0 | 0.8s
+[ 30] N(0,I) d=100, start sd (0.01, 2, ...): sign of coordinate 0              352000..352399 | N  400/400 | H    0/400 |  400    0    0 | 1.08e+02/3.72e+02 4.82e-03 | 0 0 | 40+8 | 0 | 0.7s
+[ 31] N(0,I) d=1000, start sd (0.01, 2, ...): sign of coordinate 0             352400..352799 | N  400/400 | H    0/400 |  385    0    0 | 1.03e+01/4.70e+01 6.19e-03 | 0 0 | 40+8 | 0 | 1.0s
+[ 32] N(0,I) d=5, start sd 100: grad + 2                                       352800..353199 | N  400/400 | H  400/400 |  400  400  400 | 3.37e+06/6.36e+07 6.56e+03 | 0 0 | 40+8 | 0 | 0.6s
+[ 33] N(0,I) d=5, start sd 300: grad + 2                                       353200..353599 | N  400/400 | H  400/400 |  400  400  359 | 1.13e+06/2.92e+07 2.13e+04 | 0 0 | 40+8 | 0 | 0.7s
+[ 34] N(0,I) d=5, start sd 1000: grad + 2                                      353600..353999 | N  400/400 | H  400/400 |  400  400   43 | 3.32e+05/6.08e+06 6.54e+04 | 0 0 | 40+8 | 0 | 0.6s
+[ 35] N(0,I) d=5, start sd 10000: grad + 2                                     354000..354399 | N  400/400 | H  400/400 |  400  400    0 | 3.19e+04/1.35e+06 4.78e+05 | 0 0 | 40+8 | 0 | 0.6s
+[ 36] N(0,I) d=5, start sd 1000: sign of coordinate 0                          354400..354799 | N  400/400 | H  400/400 |  400  400  400 | 1.04e+08/5.55e+08 6.10e+07 | 0 0 | 40+8 | 0 | 0.6s
+[ 37] rotated cond 100 d=10, matched: sign along the widest axis               354800..355199 | N  400/400 | H  400/400 |  400  400  400 | 4.40e+07/1.78e+08 2.29e+02 | 0 0 | 40+8 | 0 | 0.7s
+[ 38] rotated cond 10000 d=10, matched: sign along the widest axis             355200..355599 | N  400/400 | H  400/400 |  400  400  400 | 2.76e+07/1.12e+08 2.90e+02 | 0 0 | 40+8 | 0 | 0.6s
+[ 39] rotated cond 1e4 d=2000, matched: sign along the widest axis             355600..355999 | N  400/400 | H  400/400 |  400  400  122 | 1.79e+05/7.35e+05 2.44e+02 | 0 0 | 40+8 | 0 | 115.5s
+[ 40] float32 grad, N(0,I) d=5: sign of coordinate 0                           356000..356399 | N  400/400 | H  400/400 |  400  400  400 | 1.36e+04/2.60e+04 2.46e+02 | 0 0 | 48+16 | 0 | 0.8s
+[ 41] float32 grad, N(0,I) d=1000, start sd 2: sign of coordinate 0            356400..356799 | N  400/400 | H  400/400 |  400  400  400 | 7.02e+01/3.08e+02 2.45e+02 | 0 0 | 48+16 | 0 | 1.4s
+[ 42] float32 grad, N(1e3,I) d=5: sign of coordinate 0                         356800..357199 | N  400/400 | H  400/400 |  400  400  400 | 3.57e+02/1.43e+03 1.91e+02 | 0 0 | 48+16 | 0 | 0.8s
+[ 43] plateau d=3, start N(0, I): grad = -x                                    357200..357599 | N  400/400 | H  400/400 |  400  400  400 | 4.39e+12/7.04e+12 3.68e+01 | 0 0 | 40+8 | 0 | 0.7s
+[ 44] N(0,I) d=2, point start (1, 1): grad + 2 (1, -1)                         357600..357999 | N  400/400 | H  400/400 |  400  400  400 | 1.70e+08/1.70e+08 1.13e+01 | 0 0 | 40+8 | 0 | 0.6s
+[ 45] N(0,I) d=5, random point start: sign of coordinate 0                     358000..358399 | N  400/400 | H  335/400 |  400  399  372 | 2.09e+07/1.64e+08 1.85e+02 | 0 0 | 40+8 | 0 | 0.7s
+total over 9200 checks: N 9200, H 5935, r=1e-06 9185, r=0.0001 8098, r=0.01 5031

@@ -1,0 +1,123 @@
+[  0] N(0, 1e-08^2 I) d=5, matched                                       worst rel discrepancy over 3 draws 1.34e-14
+[  1] N(0, 0.0001^2 I) d=5, matched                                      worst rel discrepancy over 3 draws 3.41e-15
+[  2] N(0, 1^2 I) d=5, matched                                           worst rel discrepancy over 3 draws 3.59e-15
+[  3] N(0, 10000^2 I) d=5, matched                                       worst rel discrepancy over 3 draws 2.18e-14
+[  4] N(0, 1e+08^2 I) d=5, matched                                       worst rel discrepancy over 3 draws 4.83e-15
+[  5] N(0, 1e-08^2 I) d=5, wide 100x                                     worst rel discrepancy over 3 draws 2.00e-14
+[  6] N(0, 0.0001^2 I) d=5, wide 100x                                    worst rel discrepancy over 3 draws 7.48e-15
+[  7] N(0, 1^2 I) d=5, wide 100x                                         worst rel discrepancy over 3 draws 1.03e-14
+[  8] N(0, 10000^2 I) d=5, wide 100x                                     worst rel discrepancy over 3 draws 1.27e-14
+[  9] N(0, 1e+08^2 I) d=5, wide 100x                                     worst rel discrepancy over 3 draws 2.31e-15
+[ 10] condition 10000 d=10, matched                                      worst rel discrepancy over 3 draws 3.48e-14
+[ 11] condition 1e+08 d=10, matched                                      worst rel discrepancy over 3 draws 1.80e-12
+[ 12] condition 1e+12 d=10, matched                                      worst rel discrepancy over 3 draws 8.66e-11
+[ 13] condition 10000 d=10, wide sd 100                                  worst rel discrepancy over 3 draws 2.03e-14
+[ 14] condition 1e+08 d=10, wide sd 100                                  worst rel discrepancy over 3 draws 4.33e-15
+[ 15] condition 1e+12 d=10, wide sd 100                                  worst rel discrepancy over 3 draws 1.20e-14
+[ 16] N(1e6, I) d=5                                                      worst rel discrepancy over 3 draws 1.12e-09
+[ 17] N(0,I) + 1e9 d=5                                                   worst rel discrepancy over 3 draws 6.17e-07
+[ 18] N(0,I) - 1e12 d=5                                                  worst rel discrepancy over 3 draws 5.70e-04
+[ 19] banana                                                             worst rel discrepancy over 3 draws 1.45e-14
+[ 20] funnel                                                             worst rel discrepancy over 3 draws 5.55e-13
+[ 21] mixture                                                            worst rel discrepancy over 3 draws 1.45e-14
+[ 22] pumps                                                              worst rel discrepancy over 3 draws 6.98e-13
+[ 23] Student t3 d=1                                                     worst rel discrepancy over 3 draws 1.52e-13
+[ 24] Student t3 d=5                                                     worst rel discrepancy over 3 draws 1.47e-12
+[ 25] Laplace d=5                                                        worst rel discrepancy over 3 draws 9.02e-15
+[ 26] Laplace d=100                                                      worst rel discrepancy over 3 draws 2.74e-14
+[ 27] half-normal boundary d=3                                           worst rel discrepancy over 3 draws 1.63e-14
+[ 28] logistic n=1e4 d=5                                                 worst rel discrepancy over 3 draws 6.03e-12
+[ 29] logistic n=2000 d=50                                               worst rel discrepancy over 3 draws 5.19e-12
+[ 30] float32 N(0,I) d=5                                                 worst rel discrepancy over 3 draws 7.24e-07
+[ 31] float32 N(0,I) - 1e4 d=5                                           worst rel discrepancy over 3 draws 2.84e-03
+[ 32] float32 Student t3 d=5                                             worst rel discrepancy over 3 draws 6.23e-06
+[ 33] logistic computed in float32 d=5                                   worst rel discrepancy over 3 draws 2.51e-03
+[ 34] point start N(0,I) d=5, random point                               worst rel discrepancy over 3 draws 1.68e-14
+[ 35] point start logistic d=5, at 0                                     worst rel discrepancy over 3 draws 7.33e-13
+[ 36] point start Student t3 d=5, random point                           worst rel discrepancy over 3 draws 1.50e-13
+[ 37] scales 1e-3..1e3 d=7, matched                                      worst rel discrepancy over 3 draws 1.16e-14
+[ 38] t3 scales 1e-3..1e3 d=7, isotropic init 2e3                        worst rel discrepancy over 3 draws 8.83e-12
+[ 39] N(0,I) d=5, init sd 1e-12 at 1                                     worst rel discrepancy over 3 draws 4.65e-03
+[ 40] N(0,I) d=1                                                         worst rel discrepancy over 3 draws 2.99e-15
+[ 41] N(0,I) d=50                                                        worst rel discrepancy over 3 draws 1.86e-14
+[ 42] N(0,I) d=1000                                                      worst rel discrepancy over 3 draws 4.01e-15
+[ 43] Student t3 d=1000                                                  worst rel discrepancy over 3 draws 4.82e-13
+[ 44] flat log_prob 0.0, grad 0, d=3                                     worst rel discrepancy over 3 draws 0.00e+00
+[ 45] flat log_prob int 0, grad 0, d=3                                   worst rel discrepancy over 3 draws 0.00e+00
+[ 46] plateau (flat top |x|<10, Gaussian shoulders) d=3, init N(0,I)     worst rel discrepancy over 3 draws 0.00e+00
+[ 47] hinge -relu(x) - x^2/2 d=3, point start at 0                       worst rel discrepancy over 3 draws 1.06e+300
+[ 48] hinge d=3, init N(0,I)                                             worst rel discrepancy over 3 draws 5.51e-15
+[ 49] asymmetric Laplace d=3, point start at 0                           worst rel discrepancy over 3 draws 1.00e-16
+[ 50] Laplace d=3, point start at 0                                      worst rel discrepancy over 3 draws 0.00e+00
+[ 51] naive sum of 1e5 Gaussian terms, d=2                               worst rel discrepancy over 3 draws 6.33e-10
+[ 52] Poisson regression n=2e4, naive sum, d=4                           worst rel discrepancy over 3 draws 3.20e-11
+[ 53] Student t3 d=5, init sd 1e6                                        worst rel discrepancy over 3 draws 1.88e-12
+[ 54] Student t3 d=1 (Cauchy-like), init sd 1e8                          worst rel discrepancy over 3 draws 2.53e-12
+[ 55] Student t3 d=1000, init sd 1e3                                     worst rel discrepancy over 3 draws 1.42e-12
+[ 56] rotated cond 1e12 d=50, matched                                    worst rel discrepancy over 3 draws 2.88e-11
+[ 57] rotated cond 1e12 d=50, isotropic sd 1                             worst rel discrepancy over 3 draws 9.84e-15
+[ 58] rotated cond 1e12 d=100, matched                                   worst rel discrepancy over 3 draws 1.87e-09
+[ 59] rotated cond 1e8 d=2, matched                                      worst rel discrepancy over 3 draws 3.88e-11
+[ 60] rotated cond 1e12 d=3, matched                                     worst rel discrepancy over 3 draws 5.24e-09
+[ 61] N(0,I) d=2                                                         worst rel discrepancy over 3 draws 1.57e-15
+[ 62] N(0,I) d=3                                                         worst rel discrepancy over 3 draws 6.95e-15
+[ 63] Student t3 d=2                                                     worst rel discrepancy over 3 draws 1.51e-12
+[ 64] N(0,I) d=5, init var 0 in coords 0,1 (at 0)                        worst rel discrepancy over 3 draws 4.32e-15
+[ 65] N(0,I) d=5, init sd 1e-150                                         worst rel discrepancy over 3 draws 6.74e-15
+[ 66] N(0,I) d=5, Empirical of 2 points                                  worst rel discrepancy over 3 draws 3.80e-14
+[ 67] N(0,I) d=5, point start at 0                                       worst rel discrepancy over 3 draws 0.00e+00
+[ 68] Student t3 d=5, point start at 0                                   worst rel discrepancy over 3 draws 0.00e+00
+[ 69] funnel, point start at 0                                           worst rel discrepancy over 3 draws 0.00e+00
+[ 70] banana, point start at 0                                           worst rel discrepancy over 3 draws 4.41e-15
+[ 71] logistic n=2000 d=50, point start at 0                             worst rel discrepancy over 3 draws 7.15e-14
+[ 72] float32 N(0,I) + 1e7 d=5                                           worst rel discrepancy over 3 draws 8.04e-01
+[ 73] float32 N(0,I) - 1e9 d=5                                           worst rel discrepancy over 3 draws 7.51e-01
+[ 74] float32 N(1e3, I) d=5 (all in float64, cast out)                   worst rel discrepancy over 3 draws 1.53e-06
+[ 75] float64 log_prob, float32 grad: N(0,I) d=5                         worst rel discrepancy over 3 draws 1.71e-08
+[ 76] float64 log_prob, float32 grad: N(1e3,I) d=5                       worst rel discrepancy over 3 draws 8.03e-06
+[ 77] float64 log_prob, float32 grad: N(1e5,I) d=5                       worst rel discrepancy over 3 draws 1.40e-03
+[ 78] float64 log_prob, float32 grad: N(1e6,I) d=5                       worst rel discrepancy over 3 draws 2.89e-02
+[ 79] float64 log_prob, float32 grad: logistic n=1e4 d=5                 worst rel discrepancy over 3 draws 2.07e-08
+[ 80] float64 log_prob, float32 grad: rotated cond 1e4 d=10              worst rel discrepancy over 3 draws 1.96e-07
+[ 81] float64 log_prob, float32 grad: rotated cond 1e8 d=10              worst rel discrepancy over 3 draws 8.79e-05
+[ 82] float64 log_prob, float32 grad: rotated cond 1e12 d=10             worst rel discrepancy over 3 draws 9.44e-03
+[ 83] not vectorized: N(0,I) d=5                                         worst rel discrepancy over 3 draws 6.81e-15
+[ 84] not vectorized: logistic n=1e4 d=5                                 worst rel discrepancy over 3 draws 7.74e-13
+[ 85] not vectorized: banana                                             worst rel discrepancy over 3 draws 4.55e-14
+[ 86] float32 throughout, N(0, I) d=5                                    worst rel discrepancy over 3 draws 4.73e-06
+[ 87] float32 throughout, N(10, I) d=5                                   worst rel discrepancy over 3 draws 4.16e-06
+[ 88] float32 throughout, N(100, I) d=5                                  worst rel discrepancy over 3 draws 7.46e-05
+[ 89] float32 throughout, N(300, I) d=5                                  worst rel discrepancy over 3 draws 9.91e-05
+[ 90] float32 throughout, N(1000, I) d=5                                 worst rel discrepancy over 3 draws 5.61e-04
+[ 91] float32 throughout, N(10000, I) d=5                                worst rel discrepancy over 3 draws 7.86e-03
+[ 92] N(0,I) d=2000, start sd 2                                          worst rel discrepancy over 3 draws 5.52e-15
+[ 93] N(0,I) d=5000, start sd 2                                          worst rel discrepancy over 3 draws 1.29e-14
+[ 94] N(0,I) d=10000, start sd 2                                         worst rel discrepancy over 3 draws 5.53e-15
+[ 95] Student t3 d=2000, start sd 2                                      worst rel discrepancy over 3 draws 4.70e-13
+[ 96] Student t3 d=5000, start sd 2                                      worst rel discrepancy over 3 draws 6.71e-13
+[ 97] Student t3 d=10000, start sd 2                                     worst rel discrepancy over 3 draws 5.86e-13
+[ 98] Laplace d=2000, start sd 2                                         worst rel discrepancy over 3 draws 2.20e-12
+[ 99] Laplace d=5000, start sd 2                                         worst rel discrepancy over 3 draws 4.27e-12
+[100] Laplace d=10000, start sd 2                                        worst rel discrepancy over 3 draws 5.61e-12
+[101] rotated cond 1e4 d=2000, matched                                   worst rel discrepancy over 3 draws 3.43e-14
+[102] scales (1, 0.01 x4), start N(0, I)                                 worst rel discrepancy over 3 draws 2.64e-14
+[103] N(0,I) d=5, start sd (0.01, 2, 2, 2, 2)                            worst rel discrepancy over 3 draws 2.90e-15
+[104] N(0,I) - 1e4 d=5, start sd 1e-3                                    worst rel discrepancy over 3 draws 1.59e-05
+[105] N(0,I) d=5, start sd 1000                                          worst rel discrepancy over 3 draws 1.31e-14
+[106] constant log_prob -3.7, grad 0, d=3                                worst rel discrepancy over 3 draws 7.40e+285
+[107] ReLU network, 50 units, d=10                                       worst rel discrepancy over 3 draws 5.52e-14
+[108] piecewise-linear table of -x^2/2, spacing 0.01, d=5                worst rel discrepancy over 3 draws 7.74e-13
+largest: [(np.float64(1.0619250380189198e+300), 47, 'hinge -relu(x) - x^2/2 d=3, point start at 0'), (np.float64(7.401486830834377e+285), 106, 'constant log_prob -3.7, grad 0, d=3'), (np.float64(0.8038526270909981), 72, 'float32 N(0,I) + 1e7 d=5'), (np.float64(0.7513798922685422), 73, 'float32 N(0,I) - 1e9 d=5'), (np.float64(0.028938149840268303), 78, 'float64 log_prob, float32 grad: N(1e6,I) d=5'), (np.float64(0.009442711461203847), 82, 'float64 log_prob, float32 grad: rotated cond 1e12 d=10'), (np.float64(0.007855900523844557), 91, 'float32 throughout, N(10000, I) d=5'), (np.float64(0.0046531175883381005), 39, 'N(0,I) d=5, init sd 1e-12 at 1'), (np.float64(0.0028420300914375183), 31, 'float32 N(0,I) - 1e4 d=5'), (np.float64(0.0025070776436289847), 33, 'logistic computed in float32 d=5'), (np.float64(0.0013972378838102738), 77, 'float64 log_prob, float32 grad: N(1e5,I) d=5'), (np.float64(0.0005695059741087366), 18, 'N(0,I) - 1e12 d=5')]
+wrong sign: e + 2g -> 0.0
+twice: e - g -> 0.0
+flip0: e0 - 2x0, others -> 0.0 0.0
+zero0: 0.0 0.0
+plus2: 4.440892098500626e-16
+tight flip0: 0.0 0.0
+rotated: wrong = reflect along widest axis -> 0.0 axis variance 1.0000000000000002 max eig 0.9999999999999996
+x1.005: 0.0
++0.02: 4.2674197509029455e-16
+no prior: e - x -> 2.2248869413488137e-13
+jacobi rtol 0.001: exact-grad.u 1.2638058235 jacobi_gradient.u 1.2638784412 numeric 1.2638784411
+jacobi rtol 1e-05: exact-grad.u 1.2638058235 jacobi_gradient.u 1.2638066593 numeric 1.2638066588
+jacobi rtol 1e-08: exact-grad.u 1.2638058235 jacobi_gradient.u 1.2638058244 numeric 1.2638058238

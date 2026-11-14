@@ -1,0 +1,60 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/harm.py package 1 4
+package baseline 1: N(0,I) d=5, start sd 1; seeds [370010, 370011, 370012, 370013, 370014]; 100 pairs, max_iter 10000
+  seed 370010: derivative mean tau 3.55, unmet 0, step 1.3763 (0s)
+  seed 370011: derivative mean tau 3.64, unmet 0, step 1.2705 (0s)
+  seed 370012: derivative mean tau 3.29, unmet 0, step 1.2924 (0s)
+  seed 370013: derivative mean tau 3.36, unmet 0, step 1.2510 (0s)
+  seed 370014: derivative mean tau 3.45, unmet 0, step 1.2732 (0s)
+ROW | C | N(0,I) d=5, start sd 1: sign of coordinate 0 | package | 370010 | 11.900000 | 3.550000 | 0 | 0 | 0.756935 | 1.376333 | 1.26955 | ratio 3.352
+    (0s)
+ROW | C | N(0,I) d=5, start sd 1: sign of coordinate 0 | package | 370011 | 14.730000 | 3.640000 | 0 | 0 | 0.661808 | 1.270481 | 1.32401 | ratio 4.047
+    (0s)
+ROW | C | N(0,I) d=5, start sd 1: sign of coordinate 0 | package | 370012 | 15.100000 | 3.290000 | 0 | 0 | 0.773790 | 1.292372 | 1.27077 | ratio 4.590
+    (0s)
+ROW | C | N(0,I) d=5, start sd 1: sign of coordinate 0 | package | 370013 | 15.100000 | 3.360000 | 0 | 0 | 0.705084 | 1.251020 | 1.22705 | ratio 4.494
+    (0s)
+ROW | C | N(0,I) d=5, start sd 1: sign of coordinate 0 | package | 370014 | 13.200000 | 3.450000 | 0 | 0 | 0.692026 | 1.273197 | 1.29603 | ratio 3.826
+    (0s)
+package baseline 2: N(0,I) d=50, start sd 2; seeds [370020, 370021, 370022, 370023, 370024]; 100 pairs, max_iter 10000
+  seed 370020: derivative mean tau 16.17, unmet 0, step 0.8334 (2s)
+  seed 370021: derivative mean tau 15.24, unmet 0, step 0.8429 (2s)
+  seed 370022: derivative mean tau 17.40, unmet 0, step 0.8391 (2s)
+  seed 370023: derivative mean tau 15.69, unmet 0, step 0.8465 (2s)
+  seed 370024: derivative mean tau 17.11, unmet 0, step 0.8331 (2s)
+ROW | C | N(0,I) d=50: twice | package | 370020 | 1372.900000 | 16.170000 | 0 | 0 | 0.170910 | 0.833372 | 2.89091 | ratio 84.904
+    (5s)
+ROW | C | N(0,I) d=50: twice | package | 370021 | 1348.910000 | 15.240000 | 0 | 0 | 0.157755 | 0.842930 | 2.91084 | ratio 88.511
+    (5s)
+ROW | C | N(0,I) d=50: twice | package | 370022 | 1364.630000 | 17.400000 | 0 | 0 | 0.166207 | 0.839090 | 2.88903 | ratio 78.427
+    (5s)
+ROW | C | N(0,I) d=50: twice | package | 370023 | 1397.100000 | 15.690000 | 0 | 0 | 0.177267 | 0.846453 | 2.89407 | ratio 89.044
+    (5s)
+ROW | C | N(0,I) d=50: twice | package | 370024 | 1406.670000 | 17.110000 | 0 | 0 | 0.169410 | 0.833058 | 2.91002 | ratio 82.213
+    (5s)
+ROW | C | N(0,I) d=50, start sd 2: sign of coordinate 0 | package | 370020 | 91.900000 | 16.170000 | 0 | 0 | 0.619966 | 0.833372 | 0.813876 | ratio 5.683
+    (2s)
+ROW | C | N(0,I) d=50, start sd 2: sign of coordinate 0 | package | 370021 | 78.560000 | 15.240000 | 0 | 0 | 0.630030 | 0.842930 | 0.804862 | ratio 5.155
+    (2s)
+ROW | C | N(0,I) d=50, start sd 2: sign of coordinate 0 | package | 370022 | 74.030000 | 17.400000 | 0 | 0 | 0.618650 | 0.839090 | 0.805987 | ratio 4.255
+    (3s)
+ROW | C | N(0,I) d=50, start sd 2: sign of coordinate 0 | package | 370023 | 88.730000 | 15.690000 | 0 | 0 | 0.626860 | 0.846453 | 0.810398 | ratio 5.655
+    (2s)
+ROW | C | N(0,I) d=50, start sd 2: sign of coordinate 0 | package | 370024 | 76.380000 | 17.110000 | 0 | 0 | 0.582904 | 0.833058 | 0.84361 | ratio 4.464
+    (2s)
+package baseline 3: N(0,I) d=50, start sd 1; seeds [370030, 370031, 370032, 370033, 370034]; 100 pairs, max_iter 10000
+  seed 370030: derivative mean tau 14.73, unmet 0, step 0.8389 (2s)
+  seed 370031: derivative mean tau 14.67, unmet 0, step 0.8405 (2s)
+  seed 370032: derivative mean tau 16.06, unmet 0, step 0.8270 (2s)
+  seed 370033: derivative mean tau 14.06, unmet 0, step 0.8576 (2s)
+  seed 370034: derivative mean tau 15.83, unmet 0, step 0.8317 (2s)
+ROW | C | N(0,I) d=50, start sd 1: sign of coordinate 0 | package | 370030 | 43.790000 | 14.730000 | 0 | 0 | 0.581123 | 0.838890 | 0.802415 | ratio 2.973
+    (2s)
+ROW | C | N(0,I) d=50, start sd 1: sign of coordinate 0 | package | 370031 | 43.530000 | 14.670000 | 0 | 0 | 0.663353 | 0.840480 | 0.78693 | ratio 2.967
+    (2s)
+ROW | C | N(0,I) d=50, start sd 1: sign of coordinate 0 | package | 370032 | 50.930000 | 16.060000 | 0 | 0 | 0.599875 | 0.827031 | 0.830798 | ratio 3.171
+    (2s)
+ROW | C | N(0,I) d=50, start sd 1: sign of coordinate 0 | package | 370033 | 50.310000 | 14.060000 | 0 | 0 | 0.597035 | 0.857595 | 0.857209 | ratio 3.578
+    (2s)
+ROW | C | N(0,I) d=50, start sd 1: sign of coordinate 0 | package | 370034 | 46.600000 | 15.830000 | 0 | 0 | 0.620583 | 0.831740 | 0.802888 | ratio 2.944
+    (2s)

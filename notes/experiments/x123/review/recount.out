@@ -1,0 +1,138 @@
+HEADER not 7b2c992: equivalence.out commit 32ae70b; 
+HEADER not 7b2c992: predictions.out commit 32ae70b; 
+registered commands: 62
+summary command files: 51
+outputs not from a registered phase-2 command: ['equivalence.out', 'predictions.out']
+A families 109 checks 32700 N 0 H 0 errors 0 unusable 0 skipped 956 r6/r4/r2 0 0 0
+B families 9 checks 2700 N 2401 H 615 errors 0 unusable 0 skipped 0 r6/r4/r2 2400 2047 466
+C families 46 checks 18400 N 18400 H 15135 errors 0 unusable 0 skipped 0 r6/r4/r2 18385 17298 14202
+F families 7 checks 7000 N 4001 H 2181 errors 0 unusable 0 skipped 0 r6/r4/r2 2368 2000 222
+A max N per family 0 max H 0 top ratios: [(0.392, 'Laplace d=10000, start sd 2'), (0.221, 'condition 1e+12 d=10, matched'), (0.209, 'piecewise-linear table of -x^2/2, spacing 0.01, d=5'), (0.209, 'Laplace d=5000, start sd 2'), (0.202, 'condition 1e+08 d=10, matched')]
+family rows in registration: 171
+predictions: 62
+harm families: 67
+summary rows 67 mismatches 0
+
+harm classes: family | sampler | Lambda (se) | registered | t-interval(4 df) | log-ratio t | proxy deflated 1.63, bar 2 | all-5-seeds | unmet | per-seed ratios
+C | N(0,I) d=5: wrong sign                                         | package |   57.106 (  0.946) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 57.85 54.18 56.82 60.05 56.91
+C | N(0,I) d=5: twice                                              | package |    1.141 (  0.021) | harmless  | harmless  | harmless  | harmless  | harmless  |   0 | 1.21 1.17 1.12 1.13 1.08
+C | N(0,I) d=5, start sd 2: sign of coordinate 0                   | package |   12.407 (  1.456) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 9.14 9.84 12.42 12.43 17.43
+C | N(0,I) d=5, start sd 2: coordinate 0 set to 0                  | package |    2.214 (  0.023) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 2.22 2.19 2.14 2.24 2.28
+C | float32 grad, N(0,I) d=5: sign of coordinate 0                 | package |   13.079 (  1.545) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 9.06 10.92 14.27 12.20 18.07
+B | N(0,I) d=5: grad x 1.005                                       | package |    0.993 (  0.004) | harmless  | harmless  | harmless  | harmless  | harmless  |   0 | 1.00 0.98 1.00 1.00 0.99
+B | N(0,I) d=5: grad + 0.02                                        | package |    0.996 (  0.006) | harmless  | harmless  | harmless  | harmless  | harmless  |   0 | 0.98 0.99 1.01 1.01 0.99
+C | N(0,I) d=5, start sd 1: sign of coordinate 0                   | package |    4.050 (  0.226) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 3.35 4.05 4.59 4.49 3.83
+C | N(0,I) d=50: twice                                             | package |   84.429 (  1.987) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 84.90 88.51 78.43 89.04 82.21
+C | N(0,I) d=50, start sd 2: sign of coordinate 0                  | package |    5.019 (  0.296) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 5.68 5.15 4.25 5.66 4.46
+C | N(0,I) d=50, start sd 1: sign of coordinate 0                  | package |    3.121 (  0.120) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 2.97 2.97 3.17 3.58 2.94
+C | N(0,I) d=200: twice                                            | package |  197.343 (  3.672) | harmful   | harmful   | harmful   | harmful   | harmful   |  53 | 193.79 197.31 211.44 190.18 194.70
+C | N(0,I) d=200, start sd 2: sign of coordinate 0                 | package |    4.982 (  0.163) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 4.47 5.21 5.43 4.84 4.99
+C | N(0,I) d=200, start sd 1: sign of coordinate 0                 | package |    3.136 (  0.039) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 3.01 3.13 3.22 3.11 3.22
+C | Student t3 d=5, start sd 2: gradient of N(0, I)                | package |   26.058 (  5.135) | harmful   | harmful   | harmful   | harmful   | harmful   |   6 | 26.61 31.00 37.86 26.55 6.99
+C | equicorrelated rho 0.9 d=10: gradient of rho 0.8               | package |    2.731 (  0.149) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 2.93 3.19 2.33 2.69 2.57
+C | scales (1, 0.1 x4), start N(0, I): sign of the wide coordinate | package |   12.159 (  0.652) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 14.03 10.57 12.82 12.82 10.88
+C | scales (1, 0.01 x4), start N(0, I): sign of the wide coordinat | package |  657.571 (284.796) | harmful   | unclassed | harmful   | unclassed | harmful   | 372 | 1651.48 1488.17 1141.11 1573.56 107.95  <-- differs
+C | scales (1, 0.1 x4), start N(0, 0.1^2 I): sign of the wide coor | package |    2.558 (  0.184) | harmful   | harmful   | harmful   | harmful   | unclassed |   0 | 2.81 2.80 2.90 2.37 1.92  <-- differs
+C | scales (1, 0.01 x4), start N(0, 0.01^2 I): sign of the wide co | package |    2.858 (  0.221) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 2.30 3.59 2.55 3.01 2.84
+C | N(0,I) d=5, start sd (0.1, 2, ...): sign of coordinate 0       | package |    4.183 (  0.276) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 3.61 4.62 3.76 3.94 5.06
+C | N(0,I) d=5, start sd (0.01, 2, ...): sign of coordinate 0      | package |    3.626 (  0.233) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 2.84 4.19 4.00 3.53 3.61
+C | N(0,I) d=100, start sd (0.1, 2, ...): sign of coordinate 0     | package |    3.209 (  0.114) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 3.30 3.08 3.41 2.83 3.44
+C | N(0,I) d=100, start sd (0.01, 2, ...): sign of coordinate 0    | package |    2.358 (  0.096) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 2.22 2.11 2.47 2.33 2.66
+C | N(0,I) d=5, start sd 100: grad + 2                             | package |  293.633 ( 37.490) | harmful   | harmful   | harmful   | harmful   | harmful   |  41 | 429.70 215.93 274.82 237.21 300.12
+C | N(0,I) d=5, start sd 300: grad + 2                             | package |  239.481 ( 24.710) | harmful   | harmful   | harmful   | harmful   | harmful   |  30 | 235.08 217.20 243.12 331.46 182.46
+C | N(0,I) d=5, start sd 1000: grad + 2                            | package |  156.093 ( 46.391) | harmful   | harmful   | harmful   | harmful   | harmful   |  49 | 111.45 203.97 87.94 65.00 316.77
+C | N(0,I) d=5, start sd 1000: sign of coordinate 0                | package |  786.658 ( 79.338) | harmful   | harmful   | harmful   | harmful   | harmful   | 500 | 1086.96 802.57 591.02 826.45 776.40
+C | N(0,I) d=5, start sd 10000: grad + 2                           | package |  112.784 ( 49.118) | harmful   | unclassed | harmful   | unclassed | harmful   |  91 | 46.36 38.88 188.26 84.44 295.79  <-- differs
+C | rotated cond 100 d=10, matched: sign along the widest axis     | package |    8.682 (  0.829) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 8.23 7.03 10.89 10.56 7.10
+C | rotated cond 10000 d=10, matched: sign along the widest axis   | package |    9.537 (  0.648) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 11.97 8.41 9.14 9.94 8.59
+C | float32 grad, N(1e3,I) d=5: sign of coordinate 0               | package |   19.857 (  6.182) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 44.07 17.14 17.01 9.90 11.87
+C | plateau d=3, start N(0, I): grad = -x                          | package |  208.516 ( 21.841) | harmful   | harmful   | harmful   | harmful   | harmful   |  42 | 287.85 222.98 219.03 161.27 179.36
+C | N(0,I) d=2, point start (1, 1): grad + 2 (1, -1)               | package |    3.552 (  0.523) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 3.33 5.60 3.22 2.58 3.11
+C | N(0,I) d=5, random point start: sign of coordinate 0           | package |    1.430 (  0.292) | unclassed | unclassed | unclassed | unclassed | unclassed |   0 | 0.59 0.71 2.18 1.30 1.59
+F | N(0,I) d=5, start sd (1e-4, 2, ...): sign of coordinate 0      | package |    3.941 (  0.260) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 4.42 4.56 3.12 3.70 4.02
+F | scales (1, 1e-4 x4), start N(0, I): sign of the wide coordinat | package |    7.218 ( 22.054) | unclassed | unclassed | harmful   | unclassed | unclassed | 499 | 93.27 1.67 77.75 114.14 15.58  <-- differs
+F | N(0,I) - 1e4 d=5, start sd 1e-3: sign of coordinate 0          | package |    1.239 (  0.088) | harmless  | harmless  | harmless  | harmless  | harmless  |   0 | 1.27 1.37 1.45 0.96 1.12
+B | Jacobi solver rtol 1e-3 d=5 (exact gradient)                   | package |    1.000 (  0.000) | harmless  | harmless  | harmless  | harmless  | harmless  |   0 | 1.00 1.00 1.00 1.00 1.00
+B | Jacobi solver rtol 1e-5 d=5 (exact gradient)                   | package |    1.000 (  0.000) | harmless  | harmless  | harmless  | harmless  | harmless  |   0 | 1.00 1.00 1.00 1.00 1.00
+B | Jacobi solver rtol 1e-8 d=5 (exact gradient)                   | package |    1.000 (  0.000) | harmless  | harmless  | harmless  | harmless  | harmless  |   0 | 1.00 1.00 1.00 1.00 1.00
+B | logistic n=1e4 d=5: without the prior                          | package |    1.005 (  0.005) | harmless  | harmless  | harmless  | harmless  | harmless  |   0 | 1.02 0.99 1.01 1.01 1.00
+B | logistic n=1e4 d=5, start sd 10: without the prior             | package |    1.011 (  0.003) | harmless  | harmless  | harmless  | harmless  | harmless  |   0 | 1.01 1.01 1.00 1.02 1.01
+B | N(0,I) d=5, start 100x wide: grad x 1.005                      | package |    0.993 (  0.004) | harmless  | harmless  | harmless  | harmless  | harmless  |   0 | 0.99 1.00 1.00 0.99 0.98
+C | N(0,I) d=1000, start sd 1: sign of coordinate 0                | proxy   |    5.020 (  0.121) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 5.15 5.41 4.75 4.80 4.99
+C | N(0,I) d=1000, start sd 2: sign of coordinate 0                | proxy   |    8.723 (  0.184) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 9.16 9.03 8.85 8.21 8.39
+C | float32 grad, N(0,I) d=1000, start sd 2: sign of coordinate 0  | proxy   |    8.474 (  0.224) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 8.71 8.03 9.18 8.53 7.97
+B | N(0,I) d=1000: grad x 1.0001                                   | proxy   |    0.990 (  0.008) | harmless  | harmless  | harmless  | harmless  | harmless  |   0 | 1.00 0.98 1.02 0.99 0.97
+C | N(0,I) d=2000, start sd 1: sign of coordinate 0                | proxy   |    5.649 (  0.250) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 5.45 5.63 6.53 5.72 4.99
+C | N(0,I) d=2000, start sd 2: sign of coordinate 0                | proxy   |    9.476 (  0.183) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 9.29 9.97 9.79 8.95 9.37
+C | N(0,I) d=5000, start sd 1: sign of coordinate 0                | proxy   |    7.585 (  0.309) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 7.81 6.77 7.43 8.63 7.30
+C | N(0,I) d=5000, start sd 2: sign of coordinate 0                | proxy   |   11.177 (  0.134) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 11.00 11.53 11.23 11.37 10.78
+C | N(0,I) d=10000, start sd 1: sign of coordinate 0               | proxy   |    9.295 (  0.322) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 10.19 9.72 9.22 9.08 8.27
+C | N(0,I) d=10000, start sd 2: sign of coordinate 0               | proxy   |   12.954 (  0.242) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 13.70 13.30 12.75 12.76 12.30
+C | N(0,I) d=10000, start sd 2: signs of coordinates 0..9          | proxy   |   82.499 (  1.040) | harmful   | harmful   | harmful   | harmful   | harmful   | 500 | 85.84 82.77 79.65 83.28 81.21
+C | N(0,I) d=1000, start sd (0.1, 2, ...): sign of coordinate 0    | proxy   |    6.005 (  0.450) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 5.11 5.89 6.61 7.45 5.12
+C | N(0,I) d=1000, start sd (0.01, 2, ...): sign of coordinate 0   | proxy   |    5.911 (  0.137) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 5.68 5.54 5.93 6.21 6.23
+F | N(0,I) d=10000, start sd (0.01, 2, ...): sign of coordinate 0  | proxy   |   10.324 (  0.300) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 9.21 10.81 10.65 10.78 10.20
+F | N(0,I) d=1000, start sd (0.003, 2, ...): sign of coordinate 0  | proxy   |    5.899 (  0.308) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 5.70 7.07 5.95 5.50 5.32
+F | N(0,I) d=1000, start sd (0.5, 2, ...): sign of coordinate 0    | proxy   |    6.179 (  0.277) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 6.53 6.77 5.42 6.60 5.63
+F | N(0,I) d=1000, start sd (0.25, 2, ...): sign of coordinate 0   | proxy   |    5.569 (  0.151) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 5.76 5.17 5.26 5.95 5.72
+C | N(0,I) d=50, start sd 1: sign of coordinate 0                  | proxy v |    3.553 (  0.193) | harmful   | harmful   | harmful   | unclassed | harmful   |   0 | 4.24 3.74 3.26 3.45 3.17  <-- differs
+C | N(0,I) d=50, start sd 2: sign of coordinate 0                  | proxy v |    8.189 (  0.417) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 7.32 9.38 8.28 7.26 8.85
+C | N(0,I) d=50: twice                                             | proxy v |  128.607 (  3.324) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 124.98 136.24 123.30 122.23 137.61
+C | N(0,I) d=200, start sd 1: sign of coordinate 0                 | proxy v |    3.568 (  0.102) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 3.46 3.41 3.66 3.93 3.39
+C | N(0,I) d=200, start sd 2: sign of coordinate 0                 | proxy v |    7.539 (  0.331) | harmful   | harmful   | harmful   | harmful   | harmful   |   0 | 7.60 6.70 7.01 8.61 7.79
+C | N(0,I) d=200: twice                                            | proxy v |  269.337 (  5.497) | harmful   | harmful   | harmful   | harmful   | harmful   |   2 | 258.51 260.45 264.29 287.36 276.96
+
+classes=reg design N: criterion 2 families 45 (C 43, F 2), all pass True, min rate 1.0000; predicted misses on harmful 0 confirm True counts []
+   harmful families with predicted rate in (0.001, 0.999), outside criteria 2 and 4: [('C', 'N(0,I) d=2, point start (1, 1): grad + 2 (1, ', 0.9961, 1.0), ('F', 'N(0,I) d=10000, start sd (0.01, 2, ...): sign', 0.541, 0.518), ('F', 'N(0,I) d=1000, start sd (0.003, 2, ...): sign', 0.4635, 0.476), ('F', 'N(0,I) d=5, start sd (1e-4, 2, ...): sign of ', 0.2087, 0.21)]
+
+classes=reg design H: criterion 2 families 35 (C 35, F 0), all pass True, min rate 1.0000; predicted misses on harmful 11 confirm True counts [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+   harmful families with predicted rate in (0.001, 0.999), outside criteria 2 and 4: [('C', 'N(0,I) d=2, point start (1, 1): grad + 2 (1, ', 0.9961, 1.0), ('F', 'N(0,I) d=1000, start sd (0.5, 2, ...): sign o', 0.9853, 0.981), ('F', 'N(0,I) d=1000, start sd (0.25, 2, ...): sign ', 0.3997, 0.403)]
+
+classes=t design N: criterion 2 families 43 (C 41, F 2), all pass True, min rate 1.0000; predicted misses on harmful 0 confirm True counts []
+   harmful families with predicted rate in (0.001, 0.999), outside criteria 2 and 4: [('C', 'N(0,I) d=2, point start (1, 1): grad + 2 (1, ', 0.9961, 1.0), ('F', 'N(0,I) d=10000, start sd (0.01, 2, ...): sign', 0.541, 0.518), ('F', 'N(0,I) d=1000, start sd (0.003, 2, ...): sign', 0.4635, 0.476), ('F', 'N(0,I) d=5, start sd (1e-4, 2, ...): sign of ', 0.2087, 0.21)]
+
+classes=t design H: criterion 2 families 33 (C 33, F 0), all pass True, min rate 1.0000; predicted misses on harmful 11 confirm True counts [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+   harmful families with predicted rate in (0.001, 0.999), outside criteria 2 and 4: [('C', 'N(0,I) d=2, point start (1, 1): grad + 2 (1, ', 0.9961, 1.0), ('F', 'N(0,I) d=1000, start sd (0.5, 2, ...): sign o', 0.9853, 0.981), ('F', 'N(0,I) d=1000, start sd (0.25, 2, ...): sign ', 0.3997, 0.403)]
+
+classes=log design N: criterion 2 families 45 (C 43, F 2), all pass True, min rate 1.0000; predicted misses on harmful 0 confirm True counts []
+   harmful families with predicted rate in (0.001, 0.999), outside criteria 2 and 4: [('C', 'N(0,I) d=2, point start (1, 1): grad + 2 (1, ', 0.9961, 1.0), ('F', 'N(0,I) d=10000, start sd (0.01, 2, ...): sign', 0.541, 0.518), ('F', 'N(0,I) d=1000, start sd (0.003, 2, ...): sign', 0.4635, 0.476), ('F', 'N(0,I) d=5, start sd (1e-4, 2, ...): sign of ', 0.2087, 0.21), ('F', 'scales (1, 1e-4 x4), start N(0, I): sign of t', 0.8053, 0.797)]
+
+classes=log design H: criterion 2 families 35 (C 35, F 0), all pass True, min rate 1.0000; predicted misses on harmful 11 confirm True counts [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+   harmful families with predicted rate in (0.001, 0.999), outside criteria 2 and 4: [('C', 'N(0,I) d=2, point start (1, 1): grad + 2 (1, ', 0.9961, 1.0), ('F', 'scales (1, 1e-4 x4), start N(0, I): sign of t', 0.8039, 0.797), ('F', 'N(0,I) d=1000, start sd (0.5, 2, ...): sign o', 0.9853, 0.981), ('F', 'N(0,I) d=1000, start sd (0.25, 2, ...): sign ', 0.3997, 0.403)]
+
+classes=defl design N: criterion 2 families 43 (C 41, F 2), all pass True, min rate 1.0000; predicted misses on harmful 0 confirm True counts []
+   harmful families with predicted rate in (0.001, 0.999), outside criteria 2 and 4: [('C', 'N(0,I) d=2, point start (1, 1): grad + 2 (1, ', 0.9961, 1.0), ('F', 'N(0,I) d=10000, start sd (0.01, 2, ...): sign', 0.541, 0.518), ('F', 'N(0,I) d=1000, start sd (0.003, 2, ...): sign', 0.4635, 0.476), ('F', 'N(0,I) d=5, start sd (1e-4, 2, ...): sign of ', 0.2087, 0.21)]
+
+classes=defl design H: criterion 2 families 33 (C 33, F 0), all pass True, min rate 1.0000; predicted misses on harmful 11 confirm True counts [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+   harmful families with predicted rate in (0.001, 0.999), outside criteria 2 and 4: [('C', 'N(0,I) d=2, point start (1, 1): grad + 2 (1, ', 0.9961, 1.0), ('F', 'N(0,I) d=1000, start sd (0.5, 2, ...): sign o', 0.9853, 0.981), ('F', 'N(0,I) d=1000, start sd (0.25, 2, ...): sign ', 0.3997, 0.403)]
+
+classes=mn design N: criterion 2 families 44 (C 42, F 2), all pass True, min rate 1.0000; predicted misses on harmful 0 confirm True counts []
+   harmful families with predicted rate in (0.001, 0.999), outside criteria 2 and 4: [('C', 'N(0,I) d=2, point start (1, 1): grad + 2 (1, ', 0.9961, 1.0), ('F', 'N(0,I) d=10000, start sd (0.01, 2, ...): sign', 0.541, 0.518), ('F', 'N(0,I) d=1000, start sd (0.003, 2, ...): sign', 0.4635, 0.476), ('F', 'N(0,I) d=5, start sd (1e-4, 2, ...): sign of ', 0.2087, 0.21)]
+
+classes=mn design H: criterion 2 families 35 (C 35, F 0), all pass True, min rate 1.0000; predicted misses on harmful 10 confirm True counts [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+   harmful families with predicted rate in (0.001, 0.999), outside criteria 2 and 4: [('C', 'N(0,I) d=2, point start (1, 1): grad + 2 (1, ', 0.9961, 1.0), ('F', 'N(0,I) d=1000, start sd (0.5, 2, ...): sign o', 0.9853, 0.981), ('F', 'N(0,I) d=1000, start sd (0.25, 2, ...): sign ', 0.3997, 0.403)]
+
+F N(0,I) d=10000, start sd (0.01, 2, ...): sign of coordinate  N 0.518 pred 0.5410 diff -0.023 | H 0.000 pred 0.0000 diff +0.000
+F N(0,I) d=1000, start sd (0.003, 2, ...): sign of coordinate  N 0.476 pred 0.4635 diff +0.012 | H 0.000 pred 0.0000 diff +0.000
+F N(0,I) d=5, start sd (1e-4, 2, ...): sign of coordinate 0    N 0.210 pred 0.2087 diff +0.001 | H 0.000 pred 0.0000 diff +0.000
+F scales (1, 1e-4 x4), start N(0, I): sign of the wide coordin N 0.797 pred 0.8053 diff -0.008 | H 0.797 pred 0.8039 diff -0.007
+F N(0,I) - 1e4 d=5, start sd 1e-3: sign of coordinate 0        N 0.000 pred 0.0000 diff +0.000 | H 0.000 pred 0.0000 diff +0.000
+F N(0,I) d=1000, start sd (0.5, 2, ...): sign of coordinate 0  N 1.000 pred 1.0000 diff +0.000 | H 0.981 pred 0.9853 diff -0.004
+F N(0,I) d=1000, start sd (0.25, 2, ...): sign of coordinate 0 N 1.000 pred 1.0000 diff +0.000 | H 0.403 pred 0.3997 diff +0.003
+B Jacobi solver rtol 1e-8 d=5 (exact gradient)            N 1/300 pred 0.0188 z -1.97
+B N(0,I) d=5: grad + 0.02                                 H 15/300 pred 0.0402 z +0.86
+C N(0,I) d=2, point start (1, 1): grad + 2 (1, -1)        N 400/400 pred 0.9961 z +1.25
+C N(0,I) d=2, point start (1, 1): grad + 2 (1, -1)        H 400/400 pred 0.9961 z +1.25
+C N(0,I) d=5, random point start: sign of coordinate 0    H 335/400 pred 0.8337 z +0.20
+
+validation N(0,I) d=50, start sd 1: sign of coordinate 0 proxy 3.553 package 3.121 ratio 1.138
+validation N(0,I) d=50, start sd 2: sign of coordinate 0 proxy 8.189 package 5.019 ratio 1.632
+validation N(0,I) d=50: twice proxy 128.607 package 84.429 ratio 1.523
+validation N(0,I) d=200, start sd 1: sign of coordinate 0 proxy 3.568 package 3.136 ratio 1.138
+validation N(0,I) d=200, start sd 2: sign of coordinate 0 proxy 7.539 package 4.982 ratio 1.513
+validation N(0,I) d=200: twice proxy 269.337 package 197.343 ratio 1.365
+
+harmful families of C and F: 49
+design N: warns on every check of 46 (C 44, F 2), on no check of 0, in between on 3 at rates [0.518, 0.476, 0.21]
+design H: warns on every check of 36 (C 36, F 0), on no check of 11, in between on 2 at rates [0.981, 0.403]
+families of C and F classed by the proxy: 16

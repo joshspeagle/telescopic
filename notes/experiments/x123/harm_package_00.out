@@ -1,0 +1,78 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/harm.py package 0 1
+package baseline 0: N(0,I) d=5, start sd 2; seeds [370000, 370001, 370002, 370003, 370004]; 100 pairs, max_iter 10000
+  seed 370000: derivative mean tau 3.25, unmet 0, step 1.2948 (0s)
+  seed 370001: derivative mean tau 3.33, unmet 0, step 1.2346 (0s)
+  seed 370002: derivative mean tau 3.41, unmet 0, step 1.2772 (0s)
+  seed 370003: derivative mean tau 3.08, unmet 0, step 1.2554 (0s)
+  seed 370004: derivative mean tau 3.79, unmet 0, step 1.2781 (0s)
+ROW | C | N(0,I) d=5: wrong sign | package | 370000 | 188.020000 | 3.250000 | 0 | 0 | 0.264617 | 1.294828 | 2.89025 | ratio 57.852
+    (0s)
+ROW | C | N(0,I) d=5: wrong sign | package | 370001 | 180.410000 | 3.330000 | 0 | 0 | 0.275033 | 1.234609 | 2.83165 | ratio 54.177
+    (0s)
+ROW | C | N(0,I) d=5: wrong sign | package | 370002 | 193.750000 | 3.410000 | 0 | 0 | 0.276223 | 1.277215 | 2.81146 | ratio 56.818
+    (0s)
+ROW | C | N(0,I) d=5: wrong sign | package | 370003 | 184.940000 | 3.080000 | 0 | 0 | 0.246665 | 1.255366 | 2.81623 | ratio 60.045
+    (0s)
+ROW | C | N(0,I) d=5: wrong sign | package | 370004 | 215.690000 | 3.790000 | 0 | 0 | 0.250108 | 1.278095 | 2.82159 | ratio 56.910
+    (0s)
+ROW | C | N(0,I) d=5: twice | package | 370000 | 3.930000 | 3.250000 | 0 | 0 | 1.174280 | 1.294828 | 1.44512 | ratio 1.209
+    (0s)
+ROW | C | N(0,I) d=5: twice | package | 370001 | 3.890000 | 3.330000 | 0 | 0 | 1.150487 | 1.234609 | 1.41582 | ratio 1.168
+    (0s)
+ROW | C | N(0,I) d=5: twice | package | 370002 | 3.810000 | 3.410000 | 0 | 0 | 1.185060 | 1.277215 | 1.40573 | ratio 1.117
+    (0s)
+ROW | C | N(0,I) d=5: twice | package | 370003 | 3.490000 | 3.080000 | 0 | 0 | 1.157901 | 1.255366 | 1.40812 | ratio 1.133
+    (0s)
+ROW | C | N(0,I) d=5: twice | package | 370004 | 4.110000 | 3.790000 | 0 | 0 | 1.167741 | 1.278095 | 1.4108 | ratio 1.084
+    (0s)
+ROW | C | N(0,I) d=5, start sd 2: sign of coordinate 0 | package | 370000 | 29.690000 | 3.250000 | 0 | 0 | 0.738747 | 1.294828 | 1.19757 | ratio 9.135
+    (0s)
+ROW | C | N(0,I) d=5, start sd 2: sign of coordinate 0 | package | 370001 | 32.780000 | 3.330000 | 0 | 0 | 0.694071 | 1.234609 | 1.24782 | ratio 9.844
+    (0s)
+ROW | C | N(0,I) d=5, start sd 2: sign of coordinate 0 | package | 370002 | 42.360000 | 3.410000 | 0 | 0 | 0.740149 | 1.277215 | 1.21992 | ratio 12.422
+    (0s)
+ROW | C | N(0,I) d=5, start sd 2: sign of coordinate 0 | package | 370003 | 38.290000 | 3.080000 | 0 | 0 | 0.671041 | 1.255366 | 1.33919 | ratio 12.432
+    (0s)
+ROW | C | N(0,I) d=5, start sd 2: sign of coordinate 0 | package | 370004 | 66.060000 | 3.790000 | 0 | 0 | 0.689147 | 1.278095 | 1.27071 | ratio 17.430
+    (1s)
+ROW | C | N(0,I) d=5, start sd 2: coordinate 0 set to 0 | package | 370000 | 7.210000 | 3.250000 | 0 | 0 | 1.112123 | 1.294828 | 0.598786 | ratio 2.218
+    (0s)
+ROW | C | N(0,I) d=5, start sd 2: coordinate 0 set to 0 | package | 370001 | 7.300000 | 3.330000 | 0 | 0 | 1.046765 | 1.234609 | 0.623912 | ratio 2.192
+    (0s)
+ROW | C | N(0,I) d=5, start sd 2: coordinate 0 set to 0 | package | 370002 | 7.300000 | 3.410000 | 0 | 0 | 1.116971 | 1.277215 | 0.609958 | ratio 2.141
+    (0s)
+ROW | C | N(0,I) d=5, start sd 2: coordinate 0 set to 0 | package | 370003 | 6.890000 | 3.080000 | 0 | 0 | 1.062651 | 1.255366 | 0.669597 | ratio 2.237
+    (0s)
+ROW | C | N(0,I) d=5, start sd 2: coordinate 0 set to 0 | package | 370004 | 8.630000 | 3.790000 | 0 | 0 | 1.098224 | 1.278095 | 0.635357 | ratio 2.277
+    (0s)
+ROW | C | float32 grad, N(0,I) d=5: sign of coordinate 0 | package | 370000 | 29.440000 | 3.250000 | 0 | 0 | 0.741745 | 1.294828 | 1.19757 | ratio 9.058
+    (0s)
+ROW | C | float32 grad, N(0,I) d=5: sign of coordinate 0 | package | 370001 | 36.370000 | 3.330000 | 0 | 0 | 0.660605 | 1.234609 | 1.24782 | ratio 10.922
+    (0s)
+ROW | C | float32 grad, N(0,I) d=5: sign of coordinate 0 | package | 370002 | 48.660000 | 3.410000 | 0 | 0 | 0.771012 | 1.277215 | 1.21992 | ratio 14.270
+    (0s)
+ROW | C | float32 grad, N(0,I) d=5: sign of coordinate 0 | package | 370003 | 37.570000 | 3.080000 | 0 | 0 | 0.664707 | 1.255366 | 1.33919 | ratio 12.198
+    (0s)
+ROW | C | float32 grad, N(0,I) d=5: sign of coordinate 0 | package | 370004 | 68.470000 | 3.790000 | 0 | 0 | 0.661178 | 1.278095 | 1.27071 | ratio 18.066
+    (1s)
+ROW | B | N(0,I) d=5: grad x 1.005 | package | 370000 | 3.250000 | 3.250000 | 0 | 0 | 1.295987 | 1.294828 | 0.00722561 | ratio 1.000
+    (0s)
+ROW | B | N(0,I) d=5: grad x 1.005 | package | 370001 | 3.270000 | 3.330000 | 0 | 0 | 1.238135 | 1.234609 | 0.00707911 | ratio 0.982
+    (0s)
+ROW | B | N(0,I) d=5: grad x 1.005 | package | 370002 | 3.410000 | 3.410000 | 0 | 0 | 1.279323 | 1.277215 | 0.00702865 | ratio 1.000
+    (0s)
+ROW | B | N(0,I) d=5: grad x 1.005 | package | 370003 | 3.070000 | 3.080000 | 0 | 0 | 1.256933 | 1.255366 | 0.00704059 | ratio 0.997
+    (0s)
+ROW | B | N(0,I) d=5: grad x 1.005 | package | 370004 | 3.740000 | 3.790000 | 0 | 0 | 1.278424 | 1.278095 | 0.00705398 | ratio 0.987
+    (0s)
+ROW | B | N(0,I) d=5: grad + 0.02 | package | 370000 | 3.190000 | 3.250000 | 0 | 0 | 1.292275 | 1.294828 | 0.0293155 | ratio 0.982
+    (0s)
+ROW | B | N(0,I) d=5: grad + 0.02 | package | 370001 | 3.290000 | 3.330000 | 0 | 0 | 1.239333 | 1.234609 | 0.0284059 | ratio 0.988
+    (0s)
+ROW | B | N(0,I) d=5: grad + 0.02 | package | 370002 | 3.460000 | 3.410000 | 0 | 0 | 1.273828 | 1.277215 | 0.0294185 | ratio 1.015
+    (0s)
+ROW | B | N(0,I) d=5: grad + 0.02 | package | 370003 | 3.100000 | 3.080000 | 0 | 0 | 1.254037 | 1.255366 | 0.0289749 | ratio 1.006
+    (0s)
+ROW | B | N(0,I) d=5: grad + 0.02 | package | 370004 | 3.750000 | 3.790000 | 0 | 0 | 1.269193 | 1.278095 | 0.029201 | ratio 0.989
+    (0s)
