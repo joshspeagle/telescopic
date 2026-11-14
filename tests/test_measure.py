@@ -18,6 +18,14 @@ def test_per_replicate_values_are_weighted_sums_over_each_replicates_atoms():
     )
 
 
+def test_a_replicate_without_atoms_sums_to_zero_in_its_own_position():
+    # The first and the third of five replicates hold no atom.
+    measure = SignedMeasure(MEASURE.atoms, MEASURE.weights, np.array([1, 1, 3, 3, 4]), 5)
+    np.testing.assert_allclose(
+        measure.per_replicate(lambda x: x[:, 1]), [0.0, 0.75, 0.0, 2.0, 2.0]
+    )
+
+
 @pytest.mark.parametrize("h", [lambda x: 1.0, lambda x: x[:2, 0], lambda x: x[:, :, None]])
 def test_a_test_function_of_the_wrong_shape_raises(h):
     with pytest.raises(ValueError, match="h must map"):
@@ -56,6 +64,13 @@ def test_signed_measure_refuses_replicate_indices_that_are_not_integers_in_range
     # 1.5 was truncated to replicate 1, and 5 or -1 raised SciPy's message about a matrix.
     with pytest.raises(ValueError, match=message):
         SignedMeasure(np.ones((3, 1)), np.ones(3), np.array(replicate), 2)
+
+
+def test_signed_measure_rejects_unsorted_replicate():
+    # The sums are built from each replicate's range of consecutive atoms, so an unsorted
+    # replicate would assign atoms to the wrong replicates.
+    with pytest.raises(ValueError, match="replicate must be in nondecreasing order"):
+        SignedMeasure(np.ones((3, 1)), np.ones(3), np.array([1, 0, 1]), 2)
 
 
 @pytest.mark.parametrize(

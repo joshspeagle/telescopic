@@ -8,19 +8,23 @@ with k = 200, m = 2000 and R replicates, then `cov()` and `summary()`. The first
 take s = 1 and v = 4 at `thin` = 1 and R = 200 (the issue's setting at d = 50); the next
 take `thin` 2 and 10, with R raised so that the stored size stays near the first cases';
 the last take s = v = 0.01, a walk that rarely rejects. `tracemalloc` traces NumPy's
-allocations; each peak is above what the process held before `run()`. "stored" is the
+allocations; each peak is above what the process held before `run()`, with SciPy's
+`stats` and `optimize` imported beforehand, since the run and its estimates import them
+at first use, once in a process. "stored" is the
 `nbytes` of the six columns that `engine.stored_bytes` counts, and "estimate" that
 function on the run's own meeting times; one case takes `k` from the sampler's pilot,
 whose meeting times stand in for the run's in the sampler's estimate.
 
 Result (in the .out file beside this script): `stored_bytes` on the run's meeting times
 equals the stored bytes, and on the pilot's 0.998 of them. At `thin` = 1 with s = 1, the
-run's peak is 2.0 to 2.7 times the stored size and the estimates' 2.9 to 3.0 times from
-d = 2 to 50, and 3.8 times at d = 1, where the `Result`'s own 24 bytes per atom (its
-replicate index and, after the first estimate, two more columns) weigh most against the
-24 stored. With `thin` above 1, or the walk that rarely rejects, the estimates peak at up
-to about 6 times at d = 1 and 5 at d = 2, and about 3 at d = 10: `Result.quantile` sorts
-the atoms that are not consecutive repeats, and these runs repeat few.
+run's peak is 2.0 to 2.7 times the stored size and the estimates' 2.0 to 2.5 times from
+d = 2 to 50, and 3.3 times at d = 1, where the `Result`'s own 16 bytes per atom (its
+replicate index and, after the first estimate, the column indices of its sums) weigh
+most against the 24 stored. With `thin` above 1, or the walk that rarely rejects, the
+estimates peak at up to about 5.3 times at d = 1 and 4.2 at d = 2, and about 2.0 at
+d = 10: `Result.quantile` sorts the atoms that are not consecutive repeats, and these
+runs repeat few. Before issue #75, which lowered the peaks of `cov` and `quantile` and
+the sums' bytes, the estimates peaked at 2.9 to 3.0, 3.8, 5.9, 4.9 and 2.8 times.
 
 Run: python notes/experiments/i73_memory_peak.py
 """
@@ -50,6 +54,9 @@ sampler = CoupledSampler(log_prob, Normal(np.zeros(d), spread * np.eye(d)), vect
 if k == "auto":
     sampler.meeting_times(100)
 warnings.simplefilter("ignore")
+# Imported before tracing: the run and its estimates import them at first use, once in a
+# process, which is not memory of the run.
+import scipy.optimize, scipy.stats
 tracemalloc.start()
 base = tracemalloc.get_traced_memory()[0]
 result = sampler.run(n, k=k, m=2000 if k != "auto" else "auto", thin=thin)
