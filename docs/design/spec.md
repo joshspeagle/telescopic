@@ -318,12 +318,13 @@ All three work on batches and in log space.
 delta = C^{-1} (mu_x - mu_y)                      # C^{-1} precomputed by the kernel
 z ~ N(0, I);  u ~ U(0, 1);  x' = mu_x + C z
 if log u < -(z . delta) - |delta|^2 / 2:  identical; y' = x'      # a copy, never recomputed
-else:  e = delta / |delta|;  z_y = z - 2 (e . z) e;  y' = mu_y + C z_y
+else:  y' = mu_y + C z - 2 (z . delta) / |delta|^2 (mu_x - mu_y)
 ```
+- The reflection is $y' = \mu_y + C(z - 2(e\cdot z)e)$ with $e = \delta/\lVert\delta\rVert$; since $Ce = (\mu_x - \mu_y)/\lVert\delta\rVert$, it reuses $Cz$, so a call takes one product with $C^{-1}$ and one with $C$ (DECISIONS #211).
 - It is maximal: $\mathbb P(x' = y') = 2\Phi(-\lVert\delta\rVert/2)$.
 - Its cost is deterministic: $d$ normals and 1 uniform.
-- $\delta = 0$ gives `identical` with probability 1, so $e$ is needed, and computed, only on rows with $\lVert\delta\rVert > 0$. The test is exact: a threshold would copy $Y = X$ for a small non-zero $\delta$ and bias $Y$'s marginal.
-- A $\delta$ that is not finite, from a drift that overflowed, always fails the test; there $e = 0$, so $y' = \mu_y + Cz$, which keeps $Y$'s marginal.
+- $\delta = 0$ gives `identical` with probability 1, so the reflection's coefficient $2(z\cdot\delta)/\lVert\delta\rVert^2$ is needed, and used, only on rows with $0 < \lVert\delta\rVert^2 < \infty$. The test is exact: a threshold would copy $Y = X$ for a small non-zero $\delta$ and bias $Y$'s marginal.
+- A $\delta$ that is not finite, from a drift that overflowed, or whose $\lVert\delta\rVert^2$ overflows, always fails the test; there $e = 0$, and the reflection's term with it, so $y' = \mu_y + Cz$, which keeps $Y$'s marginal.
 
 **Rejection maximal coupling** of distributions $p$ and $q$ with samplers and normalised log-densities (R-CPL-2). This is JOA20 Algorithm 2 (Thorisson):
 
@@ -362,7 +363,7 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 - `"maximal"`: rejection maximal coupling with independent residuals, for comparison and teaching. Its meeting times grow exponentially with $d$ (JOA20 §4.2), and the documentation says so.
 
 **Tuning (R-TUNE-1):**
-- **Pilot:** 4 adaptive Metropolis chains from $\pi_0$, each running $\max(2000, 200d, 10d^2)$ steps; beyond 20 dimensions they refactor the covariance and keep their states every $\lceil d/20\rceil$ steps (DECISIONS #34). Each chain adapts its own global scale by Robbins–Monro steps of size $(t+1)^{-0.6}$ toward acceptance 0.234 (Andrieu & Thoms 2008). The chains share one proposal covariance: the running mean and covariance, with step $1/(t+1)$, of all their states, started from the variances of 100 draws from $\pi_0$ (Haario et al. 2001; pooled as in Craiu, Rosenthal & Yang 2009; DECISIONS #7).
+- **Pilot:** 4 adaptive Metropolis chains from $\pi_0$, each running $\max(2000, 200d, 10d^2)$ steps; beyond 20 dimensions they refactor the covariance and keep their states every $\lceil d/20\rceil$ steps (DECISIONS #34). Each chain adapts its own global scale by Robbins–Monro steps of size $(t+1)^{-0.6}$ toward acceptance 0.234 (Andrieu & Thoms 2008). The chains share one proposal covariance: the running mean and covariance, with step $1/(t+1)$, of all their states, started from the variances of 100 draws from $\pi_0$ (Haario et al. 2001; pooled as in Craiu, Rosenthal & Yang 2009; DECISIONS #7). Chain $c$ reads its normals and uniforms in order from the two children of its generator, replicate $c$ of the tuning namespace, as a run's replicate does (§6.1), drawn 256 steps at a time (DECISIONS #213).
 - **Covariance:** pooled over the second halves of the chains, plus $10^{-10}$ times each coordinate's variance on the diagonal, or $10^{-10}$ for a coordinate of variance 0. The pilot's own factorisations add $10^{-12}$ times each variance (DECISIONS #47).
 - **Scale:** $2.38/\sqrt d$, `RandomWalk`'s default (DECISIONS #7).
 - **Divergence:** where the target is flat in some direction, the scales can grow until the running sum of the covariance overflows, as it also does for a proper target whose scales are near the float64 limit (about $10^{153}$); the pilot then raises `ValueError` saying that the tuning chains diverged and the target may be improper or its scales near that limit (DECISIONS #112).

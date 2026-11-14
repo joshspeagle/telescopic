@@ -55,6 +55,12 @@ def replicate_generator(root: SeedSequence, namespace: int, index: int) -> Gener
     return Generator(PCG64DXSM(_seed(root, namespace, index)))
 
 
+def replicate_sources(generator: Generator) -> list[Generator]:
+    # The two children of a replicate's generator, indexed by NORMAL and UNIFORM, that
+    # serve its normals and its uniforms in order (spec section 6.1).
+    return generator.spawn(2)
+
+
 def _seed(root: SeedSequence, *key: int) -> SeedSequence:
     # The seed below the root under the branch of replicate streams and then key.
     return SeedSequence(
@@ -78,9 +84,9 @@ class Streams:
         self._sources: list[list[Generator]] = [[] for _ in range(n_lanes)]
 
     def assign(self, lane: int, generator: Generator) -> None:
-        # A new replicate enters the lane; its buffers read generator.spawn(2).
+        # A new replicate enters the lane; its buffers read its sources.
         self._generators[lane] = generator
-        self._sources[lane] = generator.spawn(2)
+        self._sources[lane] = replicate_sources(generator)
         for buffer, cursor in zip(self._buffers, self._cursors, strict=True):
             cursor[lane] = buffer.shape[1]
 

@@ -1026,6 +1026,49 @@ def gibbs_state(points):
     return State(points, np.zeros(len(points)))
 
 
+class StandardNormals:
+    # A block's conditional of independent standard normals, whatever the point.
+    def __init__(self, size):
+        self.size = size
+
+    def rvs(self, random_state):
+        return random_state.standard_normal(self.size)
+
+    def logpdf(self, value):
+        return -0.5 * np.sum(np.square(value))
+
+
+@pytest.mark.parametrize(
+    ("blocks", "expected"),
+    [([[0], [1], [2]], [20, 10, 10]), ([[0, 1], [2]], [10, 10])],
+)
+def test_gibbs_pairs_that_agree_outside_a_block_draw_it_once(blocks, expected):
+    # The pairs differ in coordinates 0 and 1. With one-coordinate blocks they meet in
+    # block 0, whose conditional is the same for both chains, and the later blocks see
+    # chains that agree outside them; with blocks [0, 1] and [2] they agree outside the
+    # first block from the start. Agreeing pairs build one conditional per row, and the
+    # pairs that met are evaluated once.
+    calls = np.zeros(len(blocks), dtype=int)
+    evaluated = []
+
+    def conditional(point, b):
+        calls[b] += 1
+        return StandardNormals(len(blocks[b]))
+
+    def log_prob(x):
+        evaluated.append(len(x))
+        return np.zeros(len(x))
+
+    x = np.zeros((10, 3))
+    y = x + np.array([1.0, 1.0, 0.0])
+    new_x, new_y = Gibbs(conditional, blocks).coupled_step(
+        Target(log_prob, vectorize=True), gibbs_state(x), gibbs_state(y), random_draws(10, 54)
+    )
+    np.testing.assert_array_equal(calls, expected)
+    np.testing.assert_array_equal(new_x.x, new_y.x)
+    assert sum(evaluated) == 10
+
+
 def test_maximal_gibbs_couplings_draw_each_chain_from_its_conditionals():
     n = 4000
     kernel = Gibbs(conditional, [[0], [1]], eta=0.7)

@@ -41,6 +41,14 @@ class MultivariateT:
         self.df = None if df is None else integer("df", df, expected, minimum=1)
         self._inverse = inverse_lower(self._chol)
         self._log_det = 2.0 * np.log(np.diag(self._chol)).sum()
+        if self.df is not None:
+            # The Student-t normalizing constant, grouped as log_density adds it.
+            d, nu = len(self.mean), self.df
+            self._log_constant: float = (
+                gammaln((nu + d) / 2)
+                - gammaln(nu / 2)
+                - 0.5 * (d * math.log(nu * math.pi) + self._log_det)
+            )
 
     def sample(self, draws: Draws) -> FloatArray:
         """One draw per row of ``draws``; uses ``d + df`` normals per row.
@@ -94,12 +102,7 @@ class MultivariateT:
             scale = np.abs(centered[far]).max(axis=1)
             whitened = matvec(self._inverse, centered[far] / scale[:, None], blas=False)
             log_kernel[far] = 2 * np.log(scale) + np.log((whitened**2).sum(axis=1)) - math.log(nu)
-        log_density = (
-            gammaln((nu + d) / 2)
-            - gammaln(nu / 2)
-            - 0.5 * (d * math.log(nu * math.pi) + self._log_det)
-            - 0.5 * (nu + d) * log_kernel
-        )
+        log_density = self._log_constant - 0.5 * (nu + d) * log_kernel
         return log_density
 
     def __repr__(self) -> str:
@@ -232,7 +235,7 @@ def _log_weights(q: Proposal, proposal: State, *states: State) -> list[FloatArra
     # would make every move to its point a rejection, and so bias the chain without an
     # error.
     x = np.concatenate([proposal.x, *(state.x for state in states)])
-    log_q = np.split(log_densities("proposal log_density", q.log_density(x), x), 1 + len(states))
+    log_q = log_densities("proposal log_density", q.log_density(x), x).reshape(1 + len(states), -1)
     # A proposal where log q = -inf has weight -inf, so it is rejected: sample drew a point
     # that log_density gives no mass, such as a draw clipped onto the edge of an open
     # support, and a weight of +inf would accept it and never leave it.

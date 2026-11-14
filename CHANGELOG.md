@@ -386,3 +386,17 @@ All notable changes to this project are documented here. The format follows
   write a kernel; Reference adds the fields of a result and the warnings. The addresses
   `getting-started`, `tutorials/beside-emcee`, `guide/targets`, `guide/results` and
   `guide/diagnostics` are gone.
+- `couplings.reflection_maximal`, which the coupled steps of RandomWalk, MALA and HMC
+  call, reflects with one product with the covariance factor instead of two: a call at
+  256 rows took 1.08 to 1.38 times less time at d = 2 to 200. Seeded outputs of their
+  coupled runs change: in the last bits for RandomWalk and MALA used alone; for kernels
+  whose chains come close without meeting, such as HMC or a `Mixture` with a contracting
+  component, a meeting time can move, and with it a replicate's estimates (one of 100 on
+  a logistic regression of 6 dimensions with HMC, which moved the estimates by up to
+  0.075 standard errors).
+- The tuning pilot draws its normals and uniforms 256 steps at a time instead of at
+  every step, which made it 1.24 to 1.32 times faster on a Gaussian target at d = 2 to
+  100. Its outputs are unchanged.
+- `Independence` computes its weights with fewer operations per step, and a Student-t
+  `MultivariateT` its normalizing constant once: a one-lane run with a Student-t
+  proposal at d = 20 took 1.12 times less time. Its outputs are unchanged.

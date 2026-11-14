@@ -33,7 +33,7 @@ def reflection_maximal(
     :math:`x = \mu_x + Cz`, the pair is identical when
     :math:`\log u < -z\cdot\delta - \lVert\delta\rVert^2/2`; otherwise
     :math:`y = \mu_y + C(z - 2(e\cdot z)e)` with :math:`e = \delta/\lVert\delta\rVert`, or
-    :math:`e = 0` where :math:`\lVert\delta\rVert` is 0 or not finite
+    :math:`e = 0` where :math:`\lVert\delta\rVert^2` is 0 or not finite
     (Jacob, O'Leary & Atchadé 2020, section 4.1). The coupling is maximal:
     :math:`P(x = y) = 2\Phi(-\lVert\delta\rVert/2)`.
 
@@ -64,16 +64,24 @@ def reflection_maximal(
     log_u = draws.log_uniform()
     # Infinite means, from a drift that overflowed, can give inf - inf = NaN, which fails
     # the test as it should.
-    with np.errstate(invalid="ignore"):
-        delta = matvec(inverse, mu_x - mu_y, blas=blas)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        difference = mu_x - mu_y
+        delta = matvec(inverse, difference, blas=blas)
         squared = np.einsum("ij,ij->i", delta, delta)
-        identical = log_u < -np.einsum("ij,ij->i", z, delta) - 0.5 * squared
-    norm = np.sqrt(squared)[:, None]
-    # e = 0 where the norm is 0 or not finite: y is then mu_y + C z, which keeps its law.
-    e = np.divide(delta, norm, out=np.zeros_like(delta), where=(norm > 0) & (norm < np.inf))
-    reflected = z - 2.0 * np.einsum("ij,ij->i", e, z)[:, None] * e
-    x = mu_x + matvec(chol, z, blas=blas)
-    y = np.where(identical[:, None], x, mu_y + matvec(chol, reflected, blas=blas))
+        along = np.einsum("ij,ij->i", z, delta)
+        identical = log_u < -along - 0.5 * squared
+        coefficient = 2.0 * along / squared
+    # C e = (mu_x - mu_y) / |delta|, so C(z - 2(e.z)e) = Cz - 2(z.delta)/|delta|^2
+    # (mu_x - mu_y), which reuses Cz. e = 0 where |delta|^2 is 0 or not finite, so the
+    # shift is 0 there and y is mu_y + Cz, which keeps its law; the mask also keeps
+    # 0 * inf out where mu_x - mu_y is not finite.
+    finite = (squared > 0) & (squared < np.inf)
+    shift = np.multiply(
+        coefficient[:, None], difference, out=np.zeros_like(difference), where=finite[:, None]
+    )
+    step = matvec(chol, z, blas=blas)
+    x = mu_x + step
+    y = np.where(identical[:, None], x, mu_y + step - shift)
     return x, y, identical
 
 

@@ -212,12 +212,13 @@ for name, y in [("close", close), ("far", far)]:
 scale = np.sqrt(1 - 0.9**2)
 assert moved.x[0, 0] == 0.9 * 2.0 + scale * 0.5
 assert pairs["close"][0].x[0, 0] == pairs["close"][1].x[0, 0]
-assert pairs["far"][1].x[0, 0] == 0.9 * 3.0 - scale * 0.5
+by_hand = 0.9 * 3.0 - scale * 0.5
+assert abs(pairs["far"][1].x[0, 0] - by_hand) <= 2 * np.spacing(by_hand)
 ```
 
 The step equals the computation by hand. The close pair meets, and the distant one moves
 by reflected normals: in one dimension, the second chain moves by $-z$ where the first
-moves by $z$.
+moves by $z$, to rounding.
 
 Last, a run on a target with known expectations, here $E[x] = 0$ and $E[x^2] = 1$,
 checks the kernel as the sampler uses it:

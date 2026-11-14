@@ -6,12 +6,22 @@ import pytest
 from scipy import linalg
 
 import references
-from telescopic import examples
+from telescopic import examples, tuning
+from telescopic._random import (
+    NORMAL,
+    TUNING,
+    UNIFORM,
+    Streams,
+    replicate_generator,
+    replicate_sources,
+    root_seed,
+)
 from telescopic.initial import Normal
 from telescopic.kernels import HMC, MALA, Independence, Kernel, Mixture, RandomWalk
 from telescopic.target import Target
 from telescopic.testing import random_draws
 from telescopic.tuning import (
+    N_CHAINS,
     TARGET_ACCEPTANCE,
     PilotRun,
     adaptive_metropolis,
@@ -102,6 +112,59 @@ def test_the_pilot_does_not_depend_on_the_scales_of_the_coordinates():
     np.testing.assert_array_equal(scaled.acceptance, unit.acceptance)
 
 
+class Lane:
+    # One kind of numbers of a run's Streams lane, behind the generator method that the
+    # pilot calls for it, read one step at a time.
+    def __init__(self, draws, kind):
+        self.draws, self.kind = draws, kind
+
+    def standard_normal(self, shape):
+        assert self.kind == NORMAL
+        return np.concatenate([self.draws.normal(shape[1]) for _ in range(shape[0])])
+
+    def random(self, size):
+        assert self.kind == UNIFORM
+        return np.concatenate([self.draws.uniform() for _ in range(size)])
+
+
+def lanes(generator):
+    streams = Streams(1)
+    streams.assign(0, generator)
+    return [Lane(streams.view([0]), kind) for kind in (NORMAL, UNIFORM)]
+
+
+def test_the_pilot_reads_each_chains_numbers_as_a_run_reads_a_replicates(monkeypatch):
+    # 600 steps cross two blocks of draws and end inside a third.
+    blocks = adaptive_metropolis(TARGET, START, rng=8, n_steps=600)
+    monkeypatch.setattr(tuning, "replicate_sources", lanes)
+    steps = adaptive_metropolis(TARGET, START, rng=8, n_steps=600)
+    np.testing.assert_array_equal(blocks.samples, steps.samples)
+    np.testing.assert_array_equal(blocks.log_prob, steps.log_prob)
+    np.testing.assert_array_equal(blocks.acceptance, steps.acceptance)
+
+
+def test_each_pilot_chain_steps_with_the_normals_of_its_own_replicate():
+    # At the first step the proposal's factor is diagonal and every chain has the same
+    # scale, so each chain's move divided by the first normals of replicate c of the
+    # tuning namespace is one vector for every chain only if chain c reads replicate c.
+    points = []
+
+    def log_prob(x):
+        points.append(x.copy())
+        return -0.5 * np.sum(x**2, axis=1)
+
+    adaptive_metropolis(Target(log_prob, vectorize=True), START, rng=8, n_steps=200)
+    root = root_seed(8)
+    normals = np.array(
+        [
+            replicate_sources(replicate_generator(root, TUNING, c))[NORMAL].standard_normal(5)
+            for c in range(N_CHAINS)
+        ]
+    )
+    ratios = (points[1] - points[0]) / normals
+    np.testing.assert_allclose(ratios, np.broadcast_to(ratios[0], ratios.shape), rtol=1e-12)
+
+
 def test_the_pilot_refuses_draws_whose_dimension_changes():
     lengths = itertools.cycle([2, 3])
     with pytest.raises(ValueError, match=r"drew shape \(3,\), not \(2,\)"):
@@ -161,7 +224,7 @@ def test_rhat_is_that_of_gelman_et_al():
 
 
 def test_reports_of_different_pilots_compare_without_error():
-    first, second = (adaptive_metropolis(TARGET, START, seed, n_steps=10) for seed in (5, 6))
+    first, second = (adaptive_metropolis(TARGET, START, seed, n_steps=200) for seed in (5, 6))
     assert first.report() != second.report()
 
 
