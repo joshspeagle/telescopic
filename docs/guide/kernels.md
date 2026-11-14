@@ -79,6 +79,9 @@ The tuned parameters then describe that mode alone, and the chains' $\hat R$ sta
 1, so the warning about disagreeing tuning chains
 ([Diagnostics and warnings](diagnostics.md#disagreeing-tuning-chains-tuning)) is silent.
 
+Setup of these runs: telescopic at commit d014ac1, Python 3.13.18, NumPy 2.5.4 and SciPy
+1.18.1, `OMP_NUM_THREADS=1`, on an Intel Xeon processor at 2.10 GHz with 4 logical cores.
+
 ## Random walk
 
 {class}`telescopic.kernels.RandomWalk` proposes $x' = x + \lambda Cz$, with $CC^\top$ =
@@ -300,6 +303,9 @@ and none was that far above, and 142 runs raised no warning, 135 of them with an
 estimate that low. With a Student-$t$ proposal with 3 degrees of freedom in place of the
 normal, whose weights are bounded, the median was 0.999 and 1.5% of the estimates were
 that low.
+
+Setup of these runs: telescopic at commit d014ac1, Python 3.13.18, NumPy 2.5.4 and SciPy
+1.18.1, `OMP_NUM_THREADS=1`, on an Intel Xeon processor at 2.10 GHz with 4 logical cores.
 
 ## Gibbs
 

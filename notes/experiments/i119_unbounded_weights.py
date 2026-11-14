@@ -39,13 +39,10 @@ the tail almost never occur in a run, and when one occurs its value is large.
 Run: OMP_NUM_THREADS=1 python notes/experiments/i119_unbounded_weights.py
 """
 
-import os
-import platform
-import subprocess
 import warnings
 
 import numpy as np
-import scipy
+from i85_setup import setup
 from scipy import stats
 
 import telescopic
@@ -80,17 +77,7 @@ def log_prob(x):
     return np.where(x[:, 0] >= 0, -x[:, 0], -np.inf)
 
 
-commit = subprocess.run(
-    ["git", "describe", "--always", "--dirty"], capture_output=True, text=True, check=True
-).stdout.strip()
-threads = ", ".join(
-    f"{name}={os.environ.get(name, 'unset')}"
-    for name in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS")
-)
-print(
-    f"commit {commit}; {platform.machine()}, {os.cpu_count()} CPUs; {threads}; "
-    f"Python {platform.python_version()}, numpy {np.__version__}, scipy {scipy.__version__}"
-)
+print(setup())
 stays = []
 for x in (5.0, 6.0, 7.0):
     weight = stats.norm.cdf(1) * np.sqrt(2 * np.pi) * np.exp((x * x - 4 * x + 1) / 2)

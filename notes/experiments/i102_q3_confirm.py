@@ -62,7 +62,10 @@ Narrowed by the adversarial review, which ran this job function unchanged on fre
     these cells and this start width only.
 
 Ran against commit c961089: about an hour on two workers, plus the four jobs stopped at
-540 s.
+540 s. Rerun for issue #85 with the same rows and the same four jobs stopped: about two
+hours of job time on one core, one job per process, at commit 32ae70b; the saved rows were
+then read and the tables printed at the commit that the first line of its output records,
+whose package source is that of 32ae70b.
 
 Run: python notes/experiments/i102_q3_confirm.py
 It writes one file per job to notes/experiments/_rows/rows_q3/ and all rows to
@@ -79,6 +82,7 @@ from multiprocessing import Pool
 from pathlib import Path
 
 import numpy as np
+from i85_setup import setup
 from i102_common import ROWS
 from i102_q2_analysis import CRIT, ci, r1, r1_cost
 from i102_q2_rules import CELLS, one, path_of, saved
@@ -120,6 +124,7 @@ def fires(r):
 
 def main():
     t0 = time.time()
+    print(setup())
     jobs = [
         (name, (40 if CELLS[name][0] == "detect" else 300) + i)
         for name in CELLS

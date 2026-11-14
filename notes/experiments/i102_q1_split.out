@@ -1,3 +1,4 @@
+setup: commit d014ac1 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
 pooled copy equals telescopic.tuning.adaptive_metropolis bit for bit (d = 10, 32; seeds 0, 1)
 
 trace d=10 s=6 seed=0: step | chains with x0<0 | x0 per chain | x0 proposal sd (chain 0) | arrived
@@ -700,8 +701,6 @@ d= 2 s= 8 per-chain: split 19/20, left 2.35, jumped  4, jumps after absorption 0
 d= 2 s=12 pooled  : split 15/20, left 2.65, jumped 15, jumps after absorption 0, side flips after absorption 0, absorption median 38, all-arrived median 36, sd split 5.89 after 3.00, warn 15/20
 d= 2 s=12 per-chain: split 17/20, left 2.30, jumped  1, jumps after absorption 0, side flips after absorption 0, absorption median 10, all-arrived median 26, sd split 2.32 after 2.56, warn 17/20
 d= 2 s=20 pooled  : split 15/20, left 2.40, jumped 10, jumps after absorption 0, side flips after absorption 0, absorption median 25, all-arrived median 54, sd split 6.15 after 3.83, warn 15/20
-notes/experiments/i102_q1_split.py:174: RuntimeWarning: Mean of empty slice
-  f" sd split {np.nanmean([r['sd_split'] for r in c]):.2f} after {np.nanmean([r['sd_after'] for r in c]):.2f},"
 d= 2 s=20 per-chain: split 20/20, left 2.20, jumped  0, jumps after absorption 0, side flips after absorption 0, absorption median nan, all-arrived median 41, sd split 2.47 after nan, warn 20/20
 d= 2 s=40 pooled  : split 11/20, left 2.20, jumped  3, jumps after absorption 0, side flips after absorption 0, absorption median 24, all-arrived median 116, sd split 7.66 after 4.78, warn 11/20
 d= 2 s=40 per-chain: split 19/20, left 2.35, jumped  0, jumps after absorption 0, side flips after absorption 0, absorption median 9, all-arrived median 81, sd split 2.97 after 4.40, warn 19/20
@@ -726,4 +725,4 @@ d=32 s=20 per-chain: split 19/20, left 2.25, jumped  0, jumps after absorption 0
 d=32 s=40 pooled  : split  6/20, left 2.40, jumped  0, jumps after absorption 0, side flips after absorption 0, absorption median 16, all-arrived median 1195, sd split 3.80 after 1.29, warn  6/20
 d=32 s=40 per-chain: split 20/20, left 2.35, jumped  0, jumps after absorption 0, side flips after absorption 0, absorption median nan, all-arrived median 4934, sd split 0.81 after nan, warn 20/20
 
-wall time 273 s (shared machine; not a measurement)
+wall time 566 s (shared machine; not a measurement)
