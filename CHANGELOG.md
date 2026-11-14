@@ -337,9 +337,9 @@ All notable changes to this project are documented here. The format follows
   shortens the import, and with it the start of each worker of a process pool; the first
   call that needs `scipy.stats`, such as the end of the first run of `sample`, pays its
   import once.
-- `Result.cov` weights the atoms in blocks of 65,536 rows, so its peak memory is about
-  the atoms' size plus a block rather than twice the atoms; `cov` can differ from before
-  in the last bits.
+- `Result.cov` weights the atoms in blocks of 1 MiB, so its peak memory is about the
+  atoms' size plus a block rather than twice the atoms; `cov` can differ from before in
+  the last bits.
 - `Result.quantile` gathers one coordinate at a time instead of copying the atoms, which
   lowers its peak memory.
 - `Result.var`, `Result.std` and the diagnostics share each replicate's moments,

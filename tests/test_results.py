@@ -93,7 +93,13 @@ def test_estimates_from_too_few_replicates_that_met_raise(meeting_times, method,
         method(result)
 
 
-def test_the_covariance_combines_first_and_second_moments_coordinate_by_coordinate():
+@pytest.mark.parametrize("block", [results._BLOCK, 14])
+def test_the_covariance_combines_first_and_second_moments_coordinate_by_coordinate(
+    block, monkeypatch
+):
+    # In one block of rows, and in blocks of 7 rows, the last one partial.
+    monkeypatch.setattr(results, "_BLOCK", block)
+    assert len(RESULT.measure.weights) % 7
     first = RESULT.measure.per_replicate(lambda x: x)
     second = np.array(
         [
@@ -111,18 +117,8 @@ def test_the_covariance_combines_first_and_second_moments_coordinate_by_coordina
     np.testing.assert_allclose(RESULT.std(), np.sqrt(np.maximum(0, np.diag(covariance))))
 
 
-def test_the_covariance_summed_in_row_blocks_equals_one_product(monkeypatch):
-    # Blocks of 7 rows, the last one partial, against the product over all the atoms.
-    monkeypatch.setattr(results, "_ROWS", 7)
-    assert len(RESULT.measure.weights) % 7
-    centered, first = RESULT._centered()
-    weights = RESULT.measure.weights
-    second = centered.T @ (weights[:, None] * centered) / RESULT.n_replicates
-    np.testing.assert_allclose(RESULT.cov(), unbiased_covariance(first, second), rtol=1e-12)
-
-
 def test_variances_are_the_same_before_and_after_the_diagnostics():
-    # The diagnostics square the centered atoms in place, in the moments that var reads.
+    # var and the diagnostics read the same cached moments, which neither may change.
     before, after = gaussian_result(), gaussian_result()
     variances = before.var()
     after.diagnostics()
