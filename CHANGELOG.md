@@ -270,7 +270,7 @@ All notable changes to this project are documented here. The format follows
 - The memory warning compares the estimated peak of a run and its first estimates, about
   three times the stored atoms and distances, with its threshold of 1 GB, and states both
   figures, with twice the peak as its upper end in one or two dimensions, where few
-  repeated atoms can make the estimates take up to about six times the stored size;
+  repeated atoms can make the estimates take up to about five times the stored size;
   `telescopic.engine.stored_bytes` computes the stored size, and refuses steps that are
   not non-negative integers.
 - `progress=True` also shows the progress of tuning: the steps of the adaptive pilot

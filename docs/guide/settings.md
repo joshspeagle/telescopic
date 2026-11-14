@@ -236,7 +236,7 @@ correction, each atom of $8d + 16$ bytes (its coordinates, its weight and its
 replicate), and the $\tau - L$ distances of the 1-Wasserstein bound, 24 bytes each
 ({func}`telescopic.engine.stored_bytes`). A run takes two to three times that at its
 peak, since sorting the atoms at the end of a run makes a copy, and its first estimates
-2.1 to 2.5 times, for a random walk's rejection rate at `thin` $= 1$ from $d = 2$ on.
+2.0 to 2.5 times, for a random walk's rejection rate at `thin` $= 1$ from $d = 2$ on.
 Quantiles sort the atoms that are not consecutive repeats, so in one or two dimensions,
 with `thin` above 1 or a kernel that rarely rejects, the estimates take up to about five
 times the stored size. These figures count the arrays that NumPy allocates, as

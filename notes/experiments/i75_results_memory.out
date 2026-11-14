@@ -1,7 +1,7 @@
-setup: commit ff93ed6 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
+setup: commit 952d4fd of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
 
 gaussian(20), R = 100: R = 100, censored 0, 564,646 atoms, 90.3 MB
-  peak MB: var 94.9, cov 105.4, quantile 12.7
+  peak MB: var 94.9, cov 96.0, quantile 12.7
   sums: 8.0 bytes per atom besides the weights
   replicates.index: 96bdba67cd0b5e6d
   replicates.meeting_time: 3bf484435002ed4f
@@ -13,7 +13,7 @@ gaussian(20), R = 100: R = 100, censored 0, 564,646 atoms, 90.3 MB
   quantile: 1dbb7172b4fcb96e
   quantile of h: 3987eed7cd228a40
   mean: 8ac13428ef303f14
-  cov: bd809c6e5f6e0b9e, relative to the largest entry of the one-product form 3e-15
+  cov: e6987d825f05e7cb, relative to the largest entry of the one-product form 3.5e-15
   var: 350083e1665cfd3f, relative to the einsum form 7.5e-14
   std: 972cab9862642ebe, relative 3.8e-14
   diagnostics: 22dd65415654f04e
@@ -26,7 +26,7 @@ gaussian(20), R = 100: R = 100, censored 0, 564,646 atoms, 90.3 MB
   summary footer: 1ec9669180311cc4
 
 gaussian(20), R = 100, thin = 10: R = 100, censored 0, 56,526 atoms, 9.0 MB
-  peak MB: var 9.5, cov 18.6, quantile 4.7
+  peak MB: var 9.5, cov 10.6, quantile 4.7
   sums: 8.0 bytes per atom besides the weights
   replicates.index: 96bdba67cd0b5e6d
   replicates.meeting_time: 3bf484435002ed4f
@@ -38,7 +38,7 @@ gaussian(20), R = 100, thin = 10: R = 100, censored 0, 56,526 atoms, 9.0 MB
   quantile: 362e5ebaf48b2541
   quantile of h: fe01721be6b567dd
   mean: c32fa16e64eead46
-  cov: e615aa5399abc841, relative to the largest entry of the one-product form 0
+  cov: 8b46133cb9a77ed3, relative to the largest entry of the one-product form 1.1e-15
   var: cda007fda25b82de, relative to the einsum form 1.7e-14
   std: 5b6b84a4cb6bbe28, relative 8.8e-15
   diagnostics: 91049c05c95a1e6f

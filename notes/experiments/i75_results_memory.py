@@ -1,6 +1,6 @@
 """Memory and repeated work in a result's estimates, before and after issue #75.
 
-Question: do the changes of issue #75 to `Result` (the covariance summed in row blocks,
+Question: do the changes of issue #75 to `Result` (the covariance summed in blocks of rows,
 the per-replicate moments computed once, the quantiles gathered one column at a time),
 to `SignedMeasure` (its sums built directly in CSR form) and to `evaluate_pair` (a view
 for the first half) leave every output bitwise identical except `cov`, `var` and `std`,
@@ -26,11 +26,11 @@ Result (`i75_results_memory.out`, the output on the change, and
 `i75_results_memory_before.out`, that of this script on the package before it, at the
 commit that added the script; one machine, one thread): every hash agrees except those
 of `cov`, `var`, `std` and the summary's `std` column. `cov` moved by at
-most 3e-15 of its largest entry, and only on the run of more than 65,536 atoms, the
-block; `var` by at most 7.5e-14 and `std` by at most 3.8e-14, entry by entry. On
+most 3.5e-15 of its largest entry, and only on the two runs of more than one block of
+1 MiB; `var` by at most 7.5e-14 and `std` by at most 3.8e-14, entry by entry. On
 gaussian(20), R = 100 (564,646 atoms, 90.3 MB), the peaks fell from 103.9 to 94.9 MB for
-`var`, 189.8 to 105.4 MB for `cov` and 35.9 to 12.7 MB for `quantile`; with thin = 10
-(9.0 MB of atoms), from 13.2 to 4.7 MB for `quantile`. The sums hold 8 bytes per atom
+`var`, 189.8 to 96.0 MB for `cov` and 35.9 to 12.7 MB for `quantile`; with thin = 10
+(9.0 MB of atoms), from 19.1 to 10.6 MB for `cov` and 13.2 to 4.7 MB for `quantile`. The sums hold 8 bytes per atom
 besides the weights, from 16.
 
 Run: OMP_NUM_THREADS=1 python notes/experiments/i75_results_memory.py (about ten seconds on
