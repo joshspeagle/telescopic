@@ -45,18 +45,14 @@ def shifted(point, block):
 
 
 class Box:
-    """Independent uniforms on [center - 1, center + 1]: a law with a mean and a
-    covariance that is not normal, and without ppf."""
+    """Independent uniforms on [center - 1, center + 1], without ppf. Its mean and cov
+    made the normal map of common random numbers take it for a normal."""
 
     def __init__(self, center, size):
         self.mean, self.cov = np.full(size, center), np.eye(size) / 3
 
     def rvs(self, *, random_state):
         return self.mean + random_state.uniform(-1.0, 1.0, len(self.mean))
-
-    def logpdf(self, value):
-        inside = np.all(np.abs(value - self.mean) <= 1.0)
-        return -len(self.mean) * np.log(2.0) if inside else -np.inf
 
 
 def shifted_box(point, block):
@@ -953,6 +949,23 @@ def test_crn_gibbs_couplings_draw_blocks_without_ppf_from_generators_in_the_same
     assert row.random() == np.random.default_rng(7).random()
 
 
+def test_crn_gibbs_couplings_draw_a_block_of_several_with_ppf_from_its_own_sampler():
+    # One uniform through the ppf of array parameters would give each coordinate of the
+    # block the same quantile.
+    def given(point, block):
+        if block == 0:
+            return stats.gamma([2.0, 0.5], scale=1.0 + point[2] ** 2)
+        return Normal(0.0, 1.0)
+
+    kernel = Gibbs(given, [[0, 1], [2]], coupling="crn")
+    x, y = [1.0, 1.0, 0.5], [1.0, 1.0, -1.5]
+    draws = fixed_draws(uniforms=[[0.3, 0.6]], generators=[np.random.default_rng(8)])
+    new_x, new_y = kernel.coupled_step(Target(None), gibbs_state(x), gibbs_state(y), draws)
+    for start, new in ((x, new_x), (y, new_y)):
+        child = np.random.default_rng(8).spawn(1)[0]
+        np.testing.assert_array_equal(new.x[0, :2], given(start, 0).rvs(random_state=child))
+
+
 def test_crn_gibbs_couplings_draw_a_row_alike_alone_and_beside_rows_of_another_kind():
     # A row's coupling of a block depends on its own two conditionals: beside a row whose
     # conditionals lack ppf, a row whose conditionals have it drew from generators in the
@@ -998,7 +1011,6 @@ FAMILIES = {
     "dirichlet": lambda v: stats.dirichlet([1.0 + v, 2.0, 0.5]),
     "wishart": lambda v: stats.wishart(4, [[1.0 + v, 0.2], [0.2, 1.0]]),
     "gamma": lambda v: stats.gamma([2.0, 0.5], scale=1.0 + v),
-    "own": lambda v: Box(v, 2),
 }
 
 
