@@ -106,6 +106,7 @@ class SignedMeasure:
         cell : ndarray of int, shape (N,)
             The cell of each atom, from 0 to ``n_cells - 1``, or -1 for none.
         n_cells : int
+            The number of cells.
 
         Returns
         -------

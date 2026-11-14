@@ -270,6 +270,18 @@ class CoupledSampler:
             censors a pair, which biases it and warns, or a Ctrl-C interrupts the run,
             which leaves it consistent and flagged ``interrupted``; extending a run after
             looking at it keeps consistency, not exact unbiasedness.
+
+        Examples
+        --------
+        A second call runs 25 more replicates and returns the result of all 50:
+
+        >>> from telescopic import CoupledSampler, examples
+        >>> example = examples.gaussian(2)
+        >>> sampler = CoupledSampler(
+        ...     example.log_prob, example.initial, vectorize=True, rng=0
+        ... )
+        >>> sampler.run(25).n_replicates, sampler.run(25).n_replicates
+        (25, 50)
         """
         n_replicates = integer("n_replicates", n_replicates, minimum=1)
         given = self._check(k, m, lag, thin, max_iter)
@@ -513,6 +525,20 @@ def sample(
         and warns, or a Ctrl-C interrupts the run, which leaves them consistent and flags
         the result ``interrupted``. It warns about the conditions listed under Warnings,
         in :doc:`/guide/diagnostics`.
+
+    Examples
+    --------
+    One call runs 50 replicates on a correlated Gaussian in two dimensions and estimates
+    the mean of each coordinate:
+
+    >>> from telescopic import examples, sample
+    >>> example = examples.gaussian(2)
+    >>> result = sample(
+    ...     example.log_prob, example.initial,
+    ...     n_replicates=50, vectorize=True, rng=0,
+    ... )
+    >>> result.n_replicates, result.mean().value.shape
+    (50, (2,))
     """
     # Checked before tuning: the estimates and the summary need 2 replicates that met.
     integer("n_replicates", n_replicates, minimum=2)

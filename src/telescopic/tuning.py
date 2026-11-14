@@ -168,10 +168,12 @@ def adaptive_metropolis(
     Parameters
     ----------
     target : Target
+        The target to sample.
     initial
         An object with ``rvs(random_state=generator)``, a callable ``initial(rng)`` or an
         array of points of shape ``(n, d)``, as for :func:`telescopic.initial.as_initial`.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
+        The root of the chains' random streams.
     n_steps : int, optional
         Steps per chain, at least 3; :math:`\max(2000, 200d, 10d^2)` by default.
 
@@ -297,8 +299,11 @@ def dual_averaging(
     kernel_at : callable
         Maps a step size to a kernel, cheaply: it is called at every step.
     target : Target
+        The target to sample.
     pilot : PilotRun
+        The pilot chains, whose last states start the chains.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
+        The root of the chains' random streams.
     target_acceptance : float
         In (0, 1).
     step_size : float

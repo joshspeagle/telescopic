@@ -65,6 +65,7 @@ class CouplingReport:
         Parameters
         ----------
         alpha : float
+            The level below which a p-value fails, in (0, 1).
 
         Returns
         -------
@@ -102,12 +103,14 @@ def check_coupling(
     kernel : Kernel
         A tuned kernel.
     target : Target
+        The target of the steps.
     x, y : array_like, shape (d,)
         The starting points, close enough for the coupling to meet them in one step
         sometimes: for HMC, within about its ``meeting_scale``.
     n : int
         Pairs; at least 2. More detect smaller differences.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
+        The root of the check's random streams.
 
     Returns
     -------
@@ -117,6 +120,19 @@ def check_coupling(
     -----
     Costs one coupled step and two steps of ``n`` chains, and an evaluation of the target
     at each of their ``4n`` new positions.
+
+    Examples
+    --------
+    A random walk whose proposal has the target's covariance passes from two points close
+    enough for the pair to meet in one step:
+
+    >>> from telescopic import Target, examples, kernels
+    >>> from telescopic.testing import check_coupling
+    >>> example = examples.gaussian(2)
+    >>> kernel = kernels.RandomWalk(example.cov)
+    >>> target = Target(example.log_prob, vectorize=True)
+    >>> check_coupling(kernel, target, [0.0, 0.0], [0.5, -0.5], rng=0).passed()
+    True
     """
     instance("kernel", kernel, Kernel)
     x = real_array("x", x, "real numbers of shape (d,)")
@@ -228,7 +244,9 @@ def random_draws(n_rows: int, rng: Seed = None) -> Draws:
     Parameters
     ----------
     n_rows : int
+        The number of rows, at least 1.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
+        The seed of the one generator.
 
     Returns
     -------

@@ -98,6 +98,15 @@ census of published methods and software behind the design.
 - User-facing problems raise `ValueError` or `TypeError` with a message that names the
   argument and says how to fix it. Questionable inputs emit `InputWarning`; results that
   may be unreliable emit `ConvergenceWarning`.
+- The Examples section of a docstring runs as a test (`tests/test_docstrings.py`), on the
+  package that `import telescopic` finds. An example imports what it uses, fixes `rng`,
+  runs well under a second without a warning, and prints shapes, counts, booleans or
+  settings rather than digits that another platform's random numbers would change. It
+  must print the same at other seeds: an example that runs the sampler uses fewer than
+  100 replicates, below which the replicate-variance warning does not apply, and
+  `notes/experiments/i85_docstring_examples.py` counts, for each example, the seeds at
+  which it warns or prints something else. At 1,000 seeds none does, except
+  `check_coupling`, whose `passed()` is random and fails at the rate its docstring states.
 
 ## Adding a kernel
 
