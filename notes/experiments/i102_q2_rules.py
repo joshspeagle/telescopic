@@ -68,6 +68,7 @@ from multiprocessing import Pool
 from pathlib import Path
 
 import numpy as np
+from i85_setup import setup
 from i102_common import (
     ROWS,
     gaussian,
@@ -321,6 +322,7 @@ if __name__ == "__main__":
     first_det, first_fa, tag = int(sys.argv[1]), int(sys.argv[2]), sys.argv[3]
     workers = int(sys.argv[4]) if len(sys.argv) > 4 else 3
     t0 = time.time()
+    print(setup())
     if tag == "main":
         check_identity()
     jobs = [

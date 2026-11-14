@@ -39,6 +39,7 @@ import time
 from multiprocessing import Pool
 
 import numpy as np
+from i85_setup import setup
 from i102_common import pilot, two_modes
 
 from telescopic.initial import Normal
@@ -134,6 +135,7 @@ def show_trace(d, s, seed):
 
 if __name__ == "__main__":
     t0 = time.time()
+    print(setup())
     check_copy()
     for seed in (0, 1, 2):
         show_trace(10, 6, seed)

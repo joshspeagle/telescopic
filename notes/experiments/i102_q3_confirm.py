@@ -79,6 +79,7 @@ from multiprocessing import Pool
 from pathlib import Path
 
 import numpy as np
+from i85_setup import setup
 from i102_common import ROWS
 from i102_q2_analysis import CRIT, ci, r1, r1_cost
 from i102_q2_rules import CELLS, one, path_of, saved
@@ -120,6 +121,7 @@ def fires(r):
 
 def main():
     t0 = time.time()
+    print(setup())
     jobs = [
         (name, (40 if CELLS[name][0] == "detect" else 300) + i)
         for name in CELLS

@@ -6,18 +6,23 @@ mean. On the same 200 seeds of the banana from U[-5, 5]^2 at R = 100: the covera
 95% intervals of the means and second moments, in the runs whose largest share is above
 and below 0.5, by each definition. The recorded output is a rerun with the Student-t
 intervals of issue #84, on the same runs (the shares are unchanged); with the normal
-quantile, the runs above 0.5 about the mean covered E[x0^2] at 0.892 against 0.963.
+quantile, the runs above 0.5 about the mean covered E[x0^2] at 0.892 against 0.963. Its
+first line records the setup: the commit, the machine, the thread settings and the
+versions (issue #85).
 
-Run: python notes/experiments/m11_variance_share.py
+Run: OMP_NUM_THREADS=1 python notes/experiments/m11_variance_share.py (about six minutes
+on one core)
 """
 
 import warnings
 
 import numpy as np
+from i85_setup import setup
 
 import telescopic
 from telescopic import diagnostics, examples
 
+print(setup())
 banana = examples.banana()
 truth = np.concatenate([banana.mean, np.diag(banana.cov) + banana.mean**2])
 covered, about_zero, about_mean = [], [], []
