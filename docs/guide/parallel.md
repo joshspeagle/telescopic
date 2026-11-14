@@ -174,12 +174,33 @@ index, so its output does not depend on where it runs. With a log-density evalua
 by point (`vectorize=False`, the default), the replicates are bitwise identical in any
 pool, with any number of workers and chunks, on one machine with the same NumPy and SciPy
 versions; generator algorithms, SciPy's samplers and BLAS builds can change between
-versions and machines. A vectorized log-density can differ in the last bits between batch
-layouts, so there the agreement is statistical. So can functions of your own that call
-multithreaded BLAS or LAPACK, such as a SciPy multivariate normal of 200 dimensions as
-the initial distribution, since this process keeps its BLAS threads. Limiting it to one
-thread, with `threadpoolctl.threadpool_limits(1)`, makes them agree again. We compare the first run
-above, on two workers, with the same run in this process:
+versions and machines.
+
+With a vectorized log-density (`vectorize=True`), the kernels also compute their matrix
+products for a batch of chains at once, with BLAS: whole runs of 256 replicates on a
+Gaussian target of 200 dimensions took 2.1 times less processor time with RandomWalk,
+whose pairs all ran to the iteration cap, and 3.4 times less with MALA. BLAS can round a chain's products differently with the other chains
+of its batch and with the number of BLAS threads. A vectorized run is therefore bitwise
+identical when repeated only with the same seed and settings, the same `pool` and
+`n_workers`, which set how the replicates are batched, the same BLAS build and the same
+number of BLAS threads. A vectorized run on a pool can differ from one in this process
+for two reasons: the pool runs the replicates in chunks, which are other batches unless
+it makes a single chunk, and worker processes run BLAS on one thread, which this
+process does only when limited to one, with `threadpoolctl.threadpool_limits(1)`.
+Between such runs, as between runs with other numbers of workers or chunks, merged runs
+and a sampler's later calls, a replicate can differ by rounding, and a difference of rounding can change an acceptance or the step at
+which the two chains become equal: the replicate's meeting time, and with it its whole
+output, can then differ. The estimates agree within their error bars. With HMC on a
+Gaussian of 2 dimensions, the same 64 replicates run one at a time and all at once
+differed in 17 meeting times, and the estimates of the mean from all 64 by at most 0.067
+standard errors.
+
+Functions of your own that call multithreaded BLAS or LAPACK, such as a SciPy
+multivariate normal of 200 dimensions as the initial distribution, can also differ by
+rounding between this process and workers with a log-density evaluated point by point,
+since this process keeps its BLAS threads. Limiting it to one thread makes them agree
+again. We compare the first run above, on two workers, with the same run in this
+process:
 
 ```{code-cell} python
 here = telescopic.sample(gaussian.log_prob, gaussian.initial, rng=3)

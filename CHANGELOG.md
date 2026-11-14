@@ -360,6 +360,18 @@ All notable changes to this project are documented here. The format follows
 - `SignedMeasure` requires `replicate` in nondecreasing order, each replicate's atoms
   consecutive, and raises `ValueError` otherwise; its sums share the weights and hold
   8 bytes per atom fewer.
+- With a vectorized target (`vectorize=True`), RandomWalk, MALA, HMC and the tuning
+  pilot compute their products of a batch of chains with a matrix by BLAS: whole runs of
+  256 replicates on a Gaussian of 200 dimensions took 2.1 times less processor time with
+  RandomWalk, whose pairs all ran to the iteration cap, and 3.4 times less with MALA.
+  Such a run repeats bitwise only with the same seed and settings, `pool` and
+  `n_workers`, BLAS build and number of BLAS threads; runs of other lane counts, pools,
+  merges and later calls of a sampler, and runs on workers, which use one BLAS thread,
+  against runs in a process with more, can differ by rounding, which can move a
+  replicate's meeting time and its whole output, while the estimates agree within their
+  error bars. Seeded outputs of vectorized runs change likewise. A target evaluated
+  point by point keeps every bitwise guarantee. `couplings.reflection_maximal` takes
+  `blas=True` to do the same.
 - The kernels guide names a resonance of HMC's leapfrog on Gaussians, on which a given
   `n_steps`, or a given `cov` that does not whiten the target, can put the automatic step.
   With MALA or HMC, the error raised when `k` cannot be chosen carries a note that points

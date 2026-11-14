@@ -72,8 +72,11 @@ batch = telescopic.Target(
 one.log_prob(points), batch.log_prob(points), one.n_log_prob
 ```
 
-With `vectorize=True`, a replicate's results can depend in the last bits on how the
-replicates are batched ([Parallel runs](parallel.md#reproducibility)).
+With `vectorize=True`, the kernels also compute their matrix products with BLAS, for a
+batch of chains at once, so a replicate's results can differ by rounding with how the
+replicates are batched and with the number of BLAS threads, and through an acceptance
+or a meeting that the rounding moves, in its whole output; the estimates agree within
+their error bars ([Parallel runs](parallel.md#reproducibility)).
 
 ## The value and the gradient in one call
 

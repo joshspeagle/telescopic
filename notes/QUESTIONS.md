@@ -68,3 +68,12 @@ Each item has the default that work proceeds on until Josh answers.
   frequencies span too wide a ratio; a guard that acts only near a resonance and the
   jitter both enter the pre-registered test of issue #91, whose predictions are posted on
   that issue before it runs.
+- [ ] **Row-independent products for a vectorized target.** With a vectorized target the
+  kernels compute their products by BLAS (DECISIONS #189), so a vectorized target whose
+  rows are computed independently, as the built-in examples' are, is no longer bitwise
+  invariant across lane counts, pools and merged runs, as it was before: a difference of
+  rounding can move a replicate's meeting time and its whole output, while the estimates
+  agree within their error bars (`notes/experiments/i83_blas_products.out`, section 2).
+  Should there be a way to keep the row-independent products for such a target, such as
+  an argument of `Target`? Default: none; `vectorize=False` keeps every bitwise
+  guarantee.

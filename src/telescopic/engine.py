@@ -203,10 +203,15 @@ def run(
     Each replicate draws :math:`X_0` and then :math:`Y_0` from ``initial`` with its own
     stream, runs :math:`X` alone for ``lag`` steps, then the coupled
     kernel until :math:`X_t = Y_{t-L}` under ``==``, then :math:`X` alone until :math:`t = m`.
-    A replicate's output depends only on the root seed, its index and the arguments,
-    never on the other replicates or on ``lanes``: bitwise for a log-density evaluated
-    point by point, up to rounding for a vectorized one. The engine emits
-    no warning: it records what its caller needs to warn about.
+    For a log-density evaluated point by point, a replicate's output depends only on
+    the root seed, its index and the arguments, bitwise, never on the other replicates
+    or on ``lanes``. For a vectorized one the kernels compute their products with BLAS,
+    whose rounding can depend on the replicates beside it and on the number of BLAS
+    threads: the output repeats bitwise with the same arguments, ``lanes``, BLAS build
+    and number of BLAS threads, and otherwise a replicate can differ by rounding, which
+    can move its meeting time and its whole output, while the estimates agree within
+    their error bars (Reproducibility, in :doc:`/guide/parallel`). The engine emits no
+    warning: it records what its caller needs to warn about.
 
     Parameters
     ----------
@@ -323,7 +328,9 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
     """Join the outputs of disjoint sets of replicates of one run, sorted by replicate index.
 
     The parts must share the root seed, the settings and the dimension; the requested
-    indices are the union of theirs.
+    indices are the union of theirs. For a target evaluated point by point the result is
+    bitwise that of one run of all the replicates; for a vectorized one it can differ
+    from it as a run with other ``lanes`` does (:func:`run`).
 
     Parameters
     ----------

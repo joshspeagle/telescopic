@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from scipy import stats
 
-from references import assert_same_replicates, gaussian_log_prob
+from references import assert_same_replicates, dense, gaussian_log_prob
 from telescopic._random import MAIN, replicate_generator
 from telescopic.engine import Settings, Status, merge, run, stored_bytes
 from telescopic.estimators import averaging_times, correction_coefficients
@@ -91,6 +91,18 @@ def test_a_replicates_output_does_not_depend_on_the_lanes(coupling):
     np.testing.assert_array_equal(runs[0].index, np.arange(30))
     for other in runs[1:]:
         assert_same_replicates(other, runs[0])
+
+
+@pytest.mark.parametrize("kernel", [RandomWalk(dense(33)), MALA(0.5, cov=dense(33))])
+def test_a_vectorized_run_repeats_bitwise_with_the_same_seed_and_lanes(kernel):
+    # Spec R-EXEC-2: its kernels' products are BLAS's, whose bits depend on the batch but
+    # not on chance. A dense covariance, so that the products are not exact in any order.
+    target = Target(gaussian_log_prob, grad=lambda x: -x, vectorize=True)
+    initial = Normal(np.zeros(33), np.ones(33))
+    runs = [
+        run(target, kernel, initial, range(12), k=2, m=10, lag=1, lanes=5, rng=3) for _ in range(2)
+    ]
+    assert_same_replicates(runs[1], runs[0])
 
 
 def switching(point, block):
