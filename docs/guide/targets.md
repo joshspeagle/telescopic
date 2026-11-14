@@ -119,8 +119,8 @@ What it saves depends on how much work the two functions share. On two regressio
 dimensions, a whole `sample` call with MALA or HMC, tuning included, made 0.51 to 0.73
 times as many calls of the user's functions with `log_prob_and_grad`. On a linear
 regression whose `log_prob` and `grad` repeated a third of their arithmetic, it took
-0.70 to 0.77 times as long, the medians of five timed pairs of runs for each kernel and
-form of the functions, every ratio of which was below 0.87. On a logistic regression
+0.70 to 0.82 times as long, the medians of five timed pairs of runs for each kernel and
+form of the functions, every ratio of which was below 0.85. On a logistic regression
 whose costly part, a logarithm or an exponential of each observation, is not shared,
 the time ratios of three of the four configurations ranged across 1, so the saving of
 calls did not show in the time.

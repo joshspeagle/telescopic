@@ -20,7 +20,7 @@ equal. Wrappers count the calls of each function (a call takes a batch with
 runs, alternating which goes first, on a machine that other jobs share: the script
 prints every pair's two times and their ratio, then the median and the range of the
 5 ratios, and only the ratios are read. A saving is claimed only where the range lies
-below 1. The whole script took about 23 minutes on one core.
+below 1.
 
 Result (the output beside this file): the runs with the combined function were bitwise
 those with two functions, counts included. It made 0.51 to 0.73 times as many user calls:
@@ -28,14 +28,12 @@ those with two functions, counts included. It made 0.51 to 0.73 times as many us
 batches, where tuning's 2,001 calls of `log_prob` alone are the same in both (62 to 64% of
 the combined run's calls with MALA and 29 to 30% with HMC). On the linear regression,
 whose separate functions repeat a third of their arithmetic, every configuration saved
-time: median time ratios 0.769 (range 0.757 to 0.864) for MALA and 0.731 (0.719 to
-0.815) for HMC in batches, 0.740 (0.709 to 0.767) and 0.697 (0.571 to 0.718) point by
+time: median time ratios 0.820 (range 0.794 to 0.848) for MALA and 0.759 (0.714 to
+0.773) for HMC in batches, 0.736 (0.671 to 0.836) and 0.699 (0.680 to 0.737) point by
 point. On the logistic regression, whose transcendental functions are not shared, three
-of the four ranges include 1, so no saving is measured there: MALA 0.898 (0.852 to
-1.054) and HMC 0.989 (0.932 to 1.012) in batches, MALA 0.962 (0.955 to 1.022) point by
-point; HMC point by point, 0.926 (0.853 to 0.952), saved a little. Other jobs loaded
-the machine: the ratio of 0.571 comes from a pair whose separate run took 88 s where
-the others took 65 to 70 s.
+of the four ranges include 1, so no saving is measured there: MALA 0.978 (0.833 to
+1.001) and HMC 0.988 (0.967 to 1.096) in batches, HMC 0.946 (0.899 to 1.010) point by
+point; MALA point by point, 0.905 (0.879 to 0.978), saved a little.
 
 Run from the repository: python notes/experiments/i75_value_and_grad.py
 """
