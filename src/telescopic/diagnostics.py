@@ -225,7 +225,9 @@ class GradientCheck:
     n_skipped : int
         Draws skipped because the density is zero or the gradient is not finite there.
     n_unusable : int
-        Lines not compared because they reach zero density.
+        Lines not compared because they reach zero density, or because their steps round
+        away in the dtype of ``log_prob``, as with a float32 ``log_prob`` and a start whose
+        spread is tiny beside its distance from 0.
     """
 
     draw: IntArray

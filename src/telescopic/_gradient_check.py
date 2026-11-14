@@ -255,8 +255,11 @@ def _message(check: GradientCheck) -> str | None:
             f"the gradient check compared no line, so grad is unchecked: of its {POINTS} "
             f"draws of the initial distribution, {check.n_skipped} had zero density or a "
             f"gradient that is not finite, and the lines from the other {check.n_unusable} "
-            "reached zero density, as from a start on a boundary of the support; draw the "
-            "initial distribution where the density is positive and grad is finite"
+            "reached zero density, as from a start on a boundary of the support, or took "
+            "steps that round away in the dtype of log_prob, as from a float32 log_prob and a "
+            "start whose spread is tiny beside its distance from 0; draw the initial "
+            "distribution where the density is positive and grad is finite, and wide enough "
+            "for the precision of log_prob, or return float64 values from log_prob"
         )
     disagree = check.gap > check.tolerance
     if not disagree.any():

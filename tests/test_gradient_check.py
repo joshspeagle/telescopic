@@ -148,3 +148,16 @@ def test_the_check_changes_no_warning_filter_and_hides_no_warning():
         seen.append(list(warnings.filters))
     assert all(during == filters for during in seen)
     assert len(caught) == len(seen) - 1
+
+
+def test_a_check_whose_steps_round_away_in_a_float32_log_density_names_that_cause():
+    # The steps along lines from a start of spread 1e-3 at 1e6 are below float32's
+    # resolution there, about 0.06; the warning said only that lines reached zero density.
+    def log_prob32(x):
+        return (-0.5 * np.sum((x - 1e6) ** 2, axis=-1)).astype(np.float32)
+
+    with pytest.warns(InputWarning, match="steps that round away in the dtype of log_prob"):
+        check = checked(
+            lambda x: -(x - 1e6), log_prob32, Normal(np.full(3, 1e6), 1e-6 * np.eye(3))
+        )
+    assert (len(check.gap), check.n_unusable, check.n_skipped) == (0, 8, 0)
