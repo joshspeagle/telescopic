@@ -6,7 +6,7 @@ import pytest
 from scipy import linalg
 
 import references
-from telescopic import examples
+from telescopic import examples, tuning
 from telescopic.initial import Normal
 from telescopic.kernels import HMC, MALA, Independence, Kernel, Mixture, RandomWalk
 from telescopic.target import Target
@@ -100,6 +100,16 @@ def test_the_pilot_does_not_depend_on_the_scales_of_the_coordinates():
     # Equal up to rounding, about 1e-14 here.
     np.testing.assert_allclose(scaled.cov / np.outer(scales, scales), unit.cov, rtol=1e-9)
     np.testing.assert_array_equal(scaled.acceptance, unit.acceptance)
+
+
+def test_the_pilot_reads_the_same_numbers_in_blocks_as_step_by_step(monkeypatch):
+    # 600 steps cross two block boundaries and end inside a block.
+    blocks = adaptive_metropolis(TARGET, START, rng=8, n_steps=600)
+    monkeypatch.setattr(tuning, "DRAW_BLOCK", 1)
+    steps = adaptive_metropolis(TARGET, START, rng=8, n_steps=600)
+    np.testing.assert_array_equal(blocks.samples, steps.samples)
+    np.testing.assert_array_equal(blocks.log_prob, steps.log_prob)
+    np.testing.assert_array_equal(blocks.acceptance, steps.acceptance)
 
 
 def test_the_pilot_refuses_draws_whose_dimension_changes():

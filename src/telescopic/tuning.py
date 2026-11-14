@@ -30,6 +30,8 @@ N_CHAINS = 4
 # Draws from the initial distribution per pilot chain, whose first is its start.
 STARTS_PER_CHAIN = 25
 DUAL_AVERAGING_STEPS = 1000
+# Steps of the pilot chains whose random numbers are drawn at once.
+DRAW_BLOCK = 256
 
 
 # Spec R-TUNE-1 and section 5.3.
@@ -213,10 +215,10 @@ def adaptive_metropolis(
     # chain keeps two, bounds the factorizations by 10 d^2 / ceil(d/20) and the stored
     # states by about 400 d (DECISIONS #34).
     n_steps = max(2000, 200 * d, 10 * d * d) if n_steps is None else n_steps
-    streams = Streams(N_CHAINS)
-    for chain, generator in enumerate(generators):
-        streams.assign(chain, generator)
-    draws = streams.view(np.arange(N_CHAINS))
+    # Each chain reads its normals and its uniforms in order from the two children of its
+    # generator that would serve them in a run (spec section 6.1), in blocks of steps:
+    # a request per step would cost more than the step at small d.
+    children = [generator.spawn(2) for generator in generators]
     log_p = target.log_prob(x)
     log_scale = np.full(N_CHAINS, np.log(OPTIMAL_SCALE**2 / d))
     # The initial distribution's scales start the covariance; the identity would dominate
@@ -234,6 +236,11 @@ def adaptive_metropolis(
     # total holds the sum, and the steps between factorizations join it in one product.
     deltas = np.empty((stride, N_CHAINS, d))
     for step in tuning_steps(range(n_steps), "tuning"):
+        if step % DRAW_BLOCK == 0:
+            size = min(DRAW_BLOCK, n_steps - step)
+            normals = np.stack([normal.standard_normal((size, d)) for normal, _ in children], 1)
+            with np.errstate(divide="ignore"):
+                log_u = np.log(np.stack([uniform.random(size) for _, uniform in children], 1))
         if step % stride == 0:
             if step:
                 block = deltas.reshape(-1, d)
@@ -252,13 +259,13 @@ def adaptive_metropolis(
             # factorization independent of the coordinates' scales.
             chol = np.linalg.cholesky(total / (step + 1) * ridge)
         steps = np.exp(0.5 * log_scale)[:, None] * matvec(
-            chol, draws.normal(d), blas=target.vectorize
+            chol, normals[step % DRAW_BLOCK], blas=target.vectorize
         )
         proposal_log_p = target.log_prob(x + steps)
         # A NaN log ratio (-inf - -inf) is a rejection, with acceptance probability 0.
         with np.errstate(invalid="ignore"):
             log_alpha = np.minimum(0.0, proposal_log_p - log_p)
-        accept = draws.log_uniform() < log_alpha
+        accept = log_u[step % DRAW_BLOCK] < log_alpha
         x = np.where(accept[:, None], x + steps, x)
         log_p = np.where(accept, proposal_log_p, log_p)
         # fmax makes a NaN ratio -inf, whose probability is 0.

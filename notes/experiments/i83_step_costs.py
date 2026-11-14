@@ -50,6 +50,9 @@ point by point.
    and `logpdf`), at d = 20 and 200, 16 and 256 rows, with pairs that differ in every
    coordinate, in half of them, or nowhere: milliseconds per three sweeps, and whether
    x and y are bitwise equal before and after.
+4. Pilot (p1-06). `adaptive_metropolis` at d = 2 and 20 (2,000 and 4,000 steps, the
+   default) and d = 100 with 20,000 steps, vectorized and point by point: seconds per
+   pilot, and whether the `PilotRun` is bitwise equal.
 
 Result (`i83_step_costs.out`, at a load average of 1.3 to 2.0 on 4 cores shared with
 other jobs).
@@ -68,6 +71,8 @@ other jobs).
 3. Bitwise equal everywhere. At d = 20 no gain: medians 0.93 to 1.02. At d = 200, 1.06
    to 1.10 where the pairs differ and 1.20 to 1.28 where they are equal, at 16 and 256
    rows.
+4. Bitwise equal. 1.31 and 1.32 at d = 2 (point by point, vectorized), 1.23 and 1.34 at
+   d = 20, 1.24 and 1.32 at d = 100.
 
 Run from the repository root: OMP_NUM_THREADS=1 PYTHONPATH=src python notes/experiments/i83_step_costs.py
 """
@@ -306,6 +311,27 @@ print(json.dumps(outputs))
 """
 )
 
+# Section 4: the tuning pilot.
+PILOT = (
+    COMMON
+    + """
+from telescopic.tuning import adaptive_metropolis
+
+outputs = {}
+for d, n_steps in ((2, None), (20, None), (100, 20000)):
+    initial = examples.gaussian(d).initial
+    for vectorize in (False, True):
+        target = gaussian_target(d, vectorize)
+        call = lambda: adaptive_metropolis(target, initial, rng=1, n_steps=n_steps)
+        pilot = call()
+        outputs[f"{d} {vectorize}"] = {
+            "time": timed(call, 1),
+            "hash": digest(pilot.samples, pilot.log_prob, pilot.acceptance),
+        }
+print(json.dumps(outputs))
+"""
+)
+
 
 def child(script, source):
     output = subprocess.run(
@@ -405,6 +431,18 @@ def gibbs(sources):
         )
 
 
+def pilot(sources):
+    print("\n4. Pilot: seconds, median of the rounds, and before/after per round: median (range)")
+    outputs = rounds(PILOT, sources)
+    for key in outputs["after"][0]:
+        d, vectorize = key.split()
+        print(
+            f"d = {d:>3}, {'vectorized    ' if vectorize == 'True' else 'point by point'}: "
+            f"{compare(outputs, key)}; PilotRun "
+            f"{'bitwise equal' if same(outputs, key) else 'DIFFERS'}"
+        )
+
+
 def main():
     print(setup())
     print(f"before: commit {BEFORE}; after: this checkout; children run with {THREADS}")
@@ -414,6 +452,7 @@ def main():
         hashes(sources)
         reflection(sources)
         gibbs(sources)
+        pilot(sources)
     print(f"load average after: {tuple(round(x, 2) for x in os.getloadavg())}")
 
 

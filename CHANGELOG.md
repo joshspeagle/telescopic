@@ -383,3 +383,6 @@ All notable changes to this project are documented here. The format follows
   comparing every coordinate outside each block: at d = 200, three sweeps of
   one-coordinate blocks took 1.06 to 1.28 times less time; at d = 20, as long as before.
   Its outputs are unchanged.
+- The tuning pilot draws its normals and uniforms 256 steps at a time instead of at
+  every step, which made it 1.23 to 1.34 times faster on a Gaussian target at d = 2 to
+  100. Its outputs are unchanged.
