@@ -1,0 +1,108 @@
+== baseline pilot
+('issue', 2, 2) n 1 sec sum 43.0 mean 43.02 max 43.02 grads/pair mean 243563 copies 0
+('pilot', 10, 1) n 30 sec sum 10.6 mean 0.35 max 0.50 grads/pair mean 126 copies 0
+('pilot', 10, 10) n 30 sec sum 212.2 mean 7.07 max 19.82 grads/pair mean 79221 copies 0
+('pilot', 10, 2) n 30 sec sum 12.6 mean 0.42 max 0.52 grads/pair mean 123 copies 0
+('pilot', 10, 3) n 30 sec sum 214.0 mean 7.13 max 9.50 grads/pair mean 48675 copies 0
+('pilot', 10, 5) n 30 sec sum 25.2 mean 0.84 max 2.06 grads/pair mean 2496 copies 0
+('pilot', 10, None) n 30 sec sum 10.8 mean 0.36 max 0.51 grads/pair mean 123 copies 0
+('pilot', 2, 1) n 30 sec sum 8.1 mean 0.27 max 0.38 grads/pair mean 60 copies 0
+('pilot', 2, 10) n 30 sec sum 18.7 mean 0.62 max 1.17 grads/pair mean 1185 copies 0
+('pilot', 2, 2) n 30 sec sum 94.2 mean 3.14 max 5.32 grads/pair mean 18370 copies 0
+('pilot', 2, 3) n 30 sec sum 10.5 mean 0.35 max 0.45 grads/pair mean 299 copies 0
+('pilot', 2, 5) n 30 sec sum 14.0 mean 0.47 max 1.59 grads/pair mean 1023 copies 0
+('pilot', 2, None) n 30 sec sum 8.4 mean 0.28 max 0.35 grads/pair mean 60 copies 0
+== baseline tune
+(10, 1) n 100 sec sum 24.5 mean 0.25 max 0.34  copies 0
+(10, 10) n 100 sec sum 50.6 mean 0.51 max 0.68  copies 0
+(10, 2) n 100 sec sum 27.0 mean 0.27 max 0.48  copies 0
+(10, 3) n 100 sec sum 30.5 mean 0.30 max 0.46  copies 0
+(10, 5) n 100 sec sum 34.8 mean 0.35 max 0.43  copies 0
+(10, None) n 100 sec sum 28.5 mean 0.29 max 0.45  copies 0
+(2, 1) n 100 sec sum 24.4 mean 0.24 max 0.40  copies 0
+(2, 10) n 100 sec sum 56.1 mean 0.56 max 1.16  copies 0
+(2, 2) n 100 sec sum 27.2 mean 0.27 max 0.42  copies 0
+(2, 3) n 100 sec sum 30.2 mean 0.30 max 0.48  copies 0
+(2, 5) n 100 sec sum 35.1 mean 0.35 max 0.46  copies 0
+(2, None) n 100 sec sum 23.1 mean 0.23 max 0.32  copies 0
+== remedies
+('a', 10, 1) n 30 sec sum 10.6 mean 0.35 max 0.50 grads/pair mean 126 copies 30
+('a', 10, 10) n 30 sec sum 23.4 mean 0.78 max 1.17 grads/pair mean 963 copies 0
+('a', 10, 2) n 30 sec sum 12.6 mean 0.42 max 0.52 grads/pair mean 123 copies 30
+('a', 10, 3) n 30 sec sum 13.1 mean 0.44 max 0.58 grads/pair mean 308 copies 0
+('a', 10, 5) n 30 sec sum 15.3 mean 0.51 max 0.66 grads/pair mean 489 copies 0
+('a', 10, None) n 30 sec sum 10.8 mean 0.36 max 0.51 grads/pair mean 123 copies 30
+('a', 2, 1) n 30 sec sum 8.1 mean 0.27 max 0.38 grads/pair mean 60 copies 30
+('a', 2, 10) n 30 sec sum 19.0 mean 0.63 max 0.83 grads/pair mean 619 copies 0
+('a', 2, 2) n 30 sec sum 11.2 mean 0.37 max 0.56 grads/pair mean 126 copies 0
+('a', 2, 3) n 30 sec sum 11.6 mean 0.39 max 0.61 grads/pair mean 188 copies 0
+('a', 2, 5) n 30 sec sum 13.9 mean 0.46 max 0.64 grads/pair mean 312 copies 0
+('a', 2, None) n 30 sec sum 8.4 mean 0.28 max 0.35 grads/pair mean 60 copies 30
+('b', 10, 1) n 30 sec sum 9.3 mean 0.31 max 0.48 grads/pair mean 100 copies 0
+('b', 10, 10) n 30 sec sum 22.2 mean 0.74 max 1.01 grads/pair mean 864 copies 0
+('b', 10, 2) n 30 sec sum 10.3 mean 0.34 max 0.45 grads/pair mean 123 copies 0
+('b', 10, 3) n 30 sec sum 11.0 mean 0.37 max 0.46 grads/pair mean 174 copies 0
+('b', 10, 5) n 30 sec sum 13.9 mean 0.46 max 0.61 grads/pair mean 284 copies 0
+('b', 10, None) n 30 sec sum 10.5 mean 0.35 max 0.50 grads/pair mean 129 copies 0
+('b', 2, 1) n 30 sec sum 9.8 mean 0.33 max 0.54 grads/pair mean 45 copies 0
+('b', 2, 10) n 30 sec sum 16.0 mean 0.53 max 0.67 grads/pair mean 450 copies 0
+('b', 2, 2) n 30 sec sum 10.9 mean 0.36 max 0.57 grads/pair mean 68 copies 0
+('b', 2, 3) n 30 sec sum 9.6 mean 0.32 max 0.43 grads/pair mean 96 copies 0
+('b', 2, 5) n 30 sec sum 11.6 mean 0.39 max 0.46 grads/pair mean 174 copies 0
+('b', 2, None) n 30 sec sum 9.1 mean 0.30 max 0.40 grads/pair mean 68 copies 0
+('c', 10, 1) n 30 sec sum 11.7 mean 0.39 max 0.55 grads/pair mean 135 copies 0
+('c', 10, 10) n 30 sec sum 24.6 mean 0.82 max 1.16 grads/pair mean 908 copies 0
+('c', 10, 2) n 30 sec sum 11.6 mean 0.39 max 0.57 grads/pair mean 138 copies 0
+('c', 10, 3) n 30 sec sum 12.6 mean 0.42 max 0.56 grads/pair mean 244 copies 0
+('c', 10, 5) n 30 sec sum 16.4 mean 0.55 max 1.07 grads/pair mean 512 copies 0
+('c', 10, None) n 30 sec sum 11.2 mean 0.37 max 0.52 grads/pair mean 135 copies 0
+('c', 2, 1) n 30 sec sum 8.9 mean 0.30 max 0.39 grads/pair mean 62 copies 0
+('c', 2, 10) n 30 sec sum 21.7 mean 0.72 max 1.00 grads/pair mean 784 copies 0
+('c', 2, 2) n 30 sec sum 10.5 mean 0.35 max 0.48 grads/pair mean 137 copies 0
+('c', 2, 3) n 30 sec sum 12.5 mean 0.42 max 0.57 grads/pair mean 263 copies 0
+('c', 2, 5) n 30 sec sum 15.2 mean 0.51 max 0.69 grads/pair mean 394 copies 0
+('c', 2, None) n 30 sec sum 10.2 mean 0.34 max 0.50 grads/pair mean 62 copies 0
+('d', 10, 1) n 30 sec sum 11.7 mean 0.39 max 0.55 grads/pair mean 135 copies 30
+('d', 10, 10) n 30 sec sum 19.4 mean 0.65 max 0.77 grads/pair mean 917 copies 0
+('d', 10, 2) n 30 sec sum 11.6 mean 0.39 max 0.57 grads/pair mean 138 copies 30
+('d', 10, 3) n 30 sec sum 12.6 mean 0.42 max 0.56 grads/pair mean 244 copies 30
+('d', 10, 5) n 30 sec sum 15.8 mean 0.53 max 0.73 grads/pair mean 492 copies 0
+('d', 10, None) n 30 sec sum 11.2 mean 0.37 max 0.52 grads/pair mean 135 copies 30
+('d', 2, 1) n 30 sec sum 8.9 mean 0.30 max 0.39 grads/pair mean 62 copies 30
+('d', 2, 10) n 30 sec sum 20.3 mean 0.68 max 1.02 grads/pair mean 767 copies 0
+('d', 2, 2) n 30 sec sum 10.5 mean 0.35 max 0.48 grads/pair mean 137 copies 30
+('d', 2, 3) n 30 sec sum 12.5 mean 0.42 max 0.58 grads/pair mean 267 copies 0
+('d', 2, 5) n 30 sec sum 15.1 mean 0.50 max 0.74 grads/pair mean 370 copies 0
+('d', 2, None) n 30 sec sum 10.2 mean 0.34 max 0.50 grads/pair mean 62 copies 30
+== unequal
+('a', 10) n 10 sec sum 7.3 mean 0.73 max 0.96 grads/pair mean 1491 copies 0
+('a', 3) n 10 sec sum 4.7 mean 0.47 max 0.59 grads/pair mean 491 copies 0
+('a', None) n 10 sec sum 45.8 mean 4.58 max 11.20 grads/pair mean 23380 copies 0
+('b', 10) n 10 sec sum 11.1 mean 1.11 max 1.66 grads/pair mean 5634 copies 0
+('b', 3) n 10 sec sum 5.1 mean 0.51 max 1.36 grads/pair mean 838 copies 0
+('b', None) n 10 sec sum 33.9 mean 3.39 max 8.44 grads/pair mean 24634 copies 0
+('base', 10) n 10 sec sum 40.1 mean 4.01 max 7.20 grads/pair mean 35959 copies 0
+('base', 3) n 10 sec sum 12.6 mean 1.26 max 1.64 grads/pair mean 4533 copies 0
+('base', None) n 10 sec sum 47.9 mean 4.79 max 9.98 grads/pair mean 31147 copies 0
+('c', 10) n 10 sec sum 7.0 mean 0.70 max 0.86 grads/pair mean 929 copies 0
+('c', 3) n 10 sec sum 4.2 mean 0.42 max 0.67 grads/pair mean 255 copies 0
+('c', None) n 10 sec sum 4.6 mean 0.46 max 0.62 grads/pair mean 362 copies 0
+('d', 10) n 10 sec sum 6.9 mean 0.69 max 0.86 grads/pair mean 935 copies 7
+('d', 3) n 10 sec sum 4.2 mean 0.42 max 0.67 grads/pair mean 255 copies 10
+('d', None) n 10 sec sum 4.6 mean 0.46 max 0.62 grads/pair mean 362 copies 10
+== nongauss
+('banana', 'a', 2) n 5 sec sum 111.4 mean 22.28 max 56.90  copies 3
+('banana', 'a', 5) n 5 sec sum 443.2 mean 88.64 max 134.00  copies 5
+('banana', 'b', 2) n 5 sec sum 42.2 mean 8.44 max 17.30  copies 0
+('banana', 'b', 5) n 5 sec sum 10.4 mean 2.08 max 2.70  copies 0
+('banana', 'base', 2) n 5 sec sum 91.7 mean 18.34 max 56.90  copies 0
+('banana', 'base', 5) n 5 sec sum 443.2 mean 88.64 max 134.00  copies 0
+('banana', 'c', 2) n 5 sec sum 42.2 mean 8.44 max 21.80  copies 0
+('banana', 'c', 5) n 5 sec sum 27.6 mean 5.52 max 6.20  copies 0
+('banana', 'd', 2) n 5 sec sum 42.2 mean 8.44 max 21.80  copies 5
+('banana', 'd', 5) n 5 sec sum 27.6 mean 5.52 max 6.20  copies 5
+('mixture', 'a', 2) n 5 sec sum 54.8 mean 10.96 max 13.10  copies 5
+('mixture', 'b', 2) n 5 sec sum 351.2 mean 70.24 max 97.50  copies 0
+('mixture', 'base', 2) n 5 sec sum 54.8 mean 10.96 max 13.10  copies 0
+('mixture', 'c', 2) n 5 sec sum 71.3 mean 14.26 max 16.00  copies 0
+('mixture', 'd', 2) n 5 sec sum 71.3 mean 14.26 max 16.00  copies 5

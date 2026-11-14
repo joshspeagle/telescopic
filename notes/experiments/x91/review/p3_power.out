@@ -1,0 +1,18 @@
+U: p, registration's 1-(1-p)^30, P(pooled unmet > 30), P(k not chosen at >= 1 seed and U still holds)
+  0.01  0.260  0.144  0.117
+  0.02  0.455  0.278  0.176
+  0.05  0.785  0.589  0.198
+  0.10  0.958  0.862  0.096
+V: P(fail) at true ratios of medians 1.0, 1.2, 1.3, 2, 4; lognormal seeds, sd(log) of P / arm; S seeds; 300 experiments
+   banana P 2.6 / arm 2.6 [np.float64(0.023), np.float64(0.043), np.float64(0.04), np.float64(0.063), np.float64(0.3)]
+   banana P 2.6 / J5 0.39 [np.float64(0.02), np.float64(0.053), np.float64(0.06), np.float64(0.167), np.float64(0.483)]
+   banana robust P 0.9 / arm 0.4 [np.float64(0.007), np.float64(0.053), np.float64(0.08), np.float64(0.58), np.float64(1.0)]
+   banana default P 3.8 / arm 0.24, S=10 [np.float64(0.05), np.float64(0.06), np.float64(0.083), np.float64(0.117), np.float64(0.273)]
+   mixture 0.037 / 0.074 [np.float64(0.0), np.float64(0.053), np.float64(0.97), np.float64(1.0), np.float64(1.0)]
+M: power at ratio 1.3 on the banana n=2 when the sds (0.10, 0.08, each from 5 seeds) are at the ends of their 95% intervals
+   sd x 0.60: se 0.017 power at 1.3 1.000, false failure at 1.1 0.000
+   sd x 1.00: se 0.029 power at 1.3 0.997, false failure at 1.1 0.001
+   sd x 2.87: se 0.082 power at 1.3 0.835, false failure at 1.1 0.145
+Z: two-sided P(|z|>3.5) = 4.65e-04; family-wise over 130 independent normal scores 0.059; over 84 (part C) 0.038
+   same with Student t, 19 df (20 seeds, if the pooled error were estimated between seeds): 0.268
+   P(P's own |z| > 3.5 somewhere on a 6-function cell, voiding it) 0.0028

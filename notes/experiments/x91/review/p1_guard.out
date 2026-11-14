@@ -1,0 +1,20 @@
+tunings 990 differences between the two implementations: 0
+('g10', 10) {'moved': 93, 'pre>0.999': np.int64(29), 'post>0.999': np.int64(4), 'pre>0.9998': np.int64(13), 'post>0.9998': np.int64(2), 'pre>0.99984': np.int64(11), 'post>0.99984': np.int64(2), 'cost_x': 1.0, 'kept': 7}
+('g10', 3) {'moved': 100, 'pre>0.999': np.int64(73), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(42), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(38), 'post>0.99984': np.int64(0), 'cost_x': 1.0}
+('g10', 5) {'kept': 100, 'pre>0.999': np.int64(0), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(0), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(0), 'post>0.99984': np.int64(0), 'cost_x': 1.0}
+('g2', 1) {'kept': 100, 'pre>0.999': np.int64(0), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(0), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(0), 'post>0.99984': np.int64(0), 'cost_x': 1.0}
+('g2', 10) {'kept': 98, 'pre>0.999': np.int64(0), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(0), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(0), 'post>0.99984': np.int64(0), 'cost_x': 1.0, 'moved': 2}
+('g2', 2) {'moved': 100, 'pre>0.999': np.int64(38), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(23), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(21), 'post>0.99984': np.int64(0), 'cost_x': 1.0}
+('g2', 3) {'kept': 100, 'pre>0.999': np.int64(0), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(0), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(0), 'post>0.99984': np.int64(0), 'cost_x': 1.0}
+('g2', 5) {'kept': 95, 'pre>0.999': np.int64(0), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(0), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(0), 'post>0.99984': np.int64(0), 'cost_x': 1.0, 'moved': 5}
+('g2', None) {'kept': 100, 'pre>0.999': np.int64(0), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(0), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(0), 'post>0.99984': np.int64(0), 'cost_x': 1.0}
+('uneq', 10) {'moved': 30, 'pre>0.999': np.int64(2), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(1), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(1), 'post>0.99984': np.int64(0), 'cost_x': 1.0}
+('uneq', 3) {'moved': 30, 'pre>0.999': np.int64(0), 'post>0.999': np.int64(0), 'pre>0.9998': np.int64(0), 'post>0.9998': np.int64(0), 'pre>0.99984': np.int64(0), 'post>0.99984': np.int64(0), 'cost_x': 1.0}
+('uneq', None) {'fallback': 30, 'pre>0.999': np.int64(7), 'post>0.999': np.int64(4), 'pre>0.9998': np.int64(2), 'post>0.9998': np.int64(3), 'pre>0.99984': np.int64(2), 'post>0.99984': np.int64(3), 'cost_x': 5.75}
+uneq default: n before -> after: Counter({(4, 4): 22, (4, 3): 3, (4, 23): 3, (4, 5): 2})
+uneq default, tunings with post factor > pre factor: 7 of 30
+  seed 0 eps 0.3168 -> 0.3411 factor 0.989774 -> 0.999954
+  seed 1 eps 0.3127 -> 0.3394 factor 0.995200 -> 0.999969
+  seed 3 eps 0.3037 -> 0.2806 factor 1.000000 -> 0.968742
+  seed 5 eps 0.3026 -> 0.3187 factor 0.999918 -> 0.986574
+  seed 16 eps 0.3108 -> 0.2443 factor 0.997000 -> 0.999911

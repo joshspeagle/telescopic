@@ -1,0 +1,23 @@
+gauss2 ['tau 28.2 f 0.483 grads 56', 'tau 24.8 f 0.285 grads 191'] ratio CF/P 3.38
+gauss10 ['tau 28.1 f 0.475 grads 109', 'tau 34.8 f 0.666 grads 334'] ratio CF/P 3.05
+gauss10 default J0.2 tau 25.8 f 0.357 grads 101
+gauss10 default J0.3 tau 25.0 f 0.300 grads 97
+gauss10 default J0.5 tau 26.4 f 0.389 grads 103
+gauss2 gamma 0.2: P 26, CF 67 gradients per meeting; CF/P at 0.2 2.51; CF at 0.2 over P at 0.05 1.18; CF at 0.05 over P at 0.05 3.38
+gauss10 gamma 0.2: P 47, CF 166 gradients per meeting; CF/P at 0.2 3.53; CF at 0.2 over P at 0.05 1.52; CF at 0.05 over P at 0.05 3.05
+gaussian(5) n_steps=3: 100 tunings, eps median 1.137, n [3], w range 0.839-1.176
+  P: exact factor median 0.9883, >0.99 43, >0.999 13, >0.9998 3
+  G: {'kept': 62, 'moved': 38}; after: median 0.9702, >0.999 8, >0.9998 2, max 0.999970
+  jitter worst geometric-mean factor, max over tunings: j=0.2: 0.920, j=0.3: 0.821, j=0.5: 0.592
+gaussian(5) n_steps=4: 100 tunings, eps median 0.995, n [4], w range 0.839-1.176
+  P: exact factor median 0.8016, >0.99 0, >0.999 0, >0.9998 0
+  G: {'kept': 100}; after: median 0.8016, >0.999 0, >0.9998 0, max 0.925360
+  jitter worst geometric-mean factor, max over tunings: j=0.2: 0.814, j=0.3: 0.619, j=0.5: 0.607
+gaussian(5) n_steps=6: 100 tunings, eps median 1.080, n [6], w range 0.839-1.176
+  P: exact factor median 0.9962, >0.99 75, >0.999 30, >0.9998 15
+  G: {'kept': 72, 'moved': 28}; after: median 0.9909, >0.999 21, >0.9998 11, max 0.999997
+  jitter worst geometric-mean factor, max over tunings: j=0.2: 0.658, j=0.3: 0.601, j=0.5: 0.534
+unequal d=8, s to 1/5, default: 30 tunings, eps median 0.285, n [4], w range 1.000-5.000
+  P: exact factor median 0.9979, >0.99 28, >0.999 10, >0.9998 6
+  G: {'fallback': 30}; after: median 0.9979, >0.999 10, >0.9998 6, max 0.999999
+  jitter worst geometric-mean factor, max over tunings: j=0.2: 0.921, j=0.3: 0.835, j=0.5: 0.556
