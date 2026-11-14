@@ -79,9 +79,12 @@ replicates are batched ([Parallel runs](parallel.md#reproducibility)).
 
 A function that computes the log-density and its gradient together, sharing the work of
 the two, can be passed as `log_prob_and_grad` in place of `grad`. It takes the arguments
-of `log_prob`, `args` and `kwargs` included, and returns a pair: the value, a float, and
-the gradient, of shape `(d,)`, at one point, or with `vectorize=True` the values of
-shape `(n,)` and the gradients of shape `(n, d)` of a batch. Wherever the chains of
+of `log_prob`, `args` and `kwargs` included, and returns a pair, the value first: the
+value, a float, and the gradient, of shape `(d,)`, at one point, or with
+`vectorize=True` the values of shape `(n,)` and the gradients of shape `(n, d)` of a
+batch. JAX's `value_and_grad` returns them in this order; PyTorch's
+`torch.func.grad_and_value` is documented to return the gradient first, so its pair
+must be swapped. Wherever the chains of
 MALA, HMC or a mixture with one of them need a gradient, it is called once, where with
 `grad` the target calls `log_prob` and then `grad`. Passing both `grad` and
 `log_prob_and_grad` raises `ValueError`.
@@ -89,9 +92,10 @@ MALA, HMC or a mixture with one of them need a gradient, it is called once, wher
 `log_prob` is still needed, and its values must be those of `log_prob_and_grad`: the
 evaluations that need no gradient call it, such as the steps of tuning's pilot chains.
 Each part of the pair is checked and converted as the output of `log_prob` or `grad` is,
-and an error names the function and the part. The gradient that `log_prob_and_grad`
-returns where its value is `-inf` is not used: states there carry a gradient of 0, as
-with `grad`. The counts of evaluations keep their meaning: each point counts in
+and an error names the part and the function. Where the value is `-inf`, the gradient
+must still be real numbers of the gradient's shape, but its values are not used: states
+there carry a gradient of 0, as with `grad`, so a placeholder such as zeros will do and
+`None` raises. The counts of evaluations keep their meaning: each point counts in
 `n_log_prob`, and in `n_grad` where its value is finite. For the Gaussian above, a
 function written by hand computes the standardized point once for both:
 
@@ -113,11 +117,13 @@ values, gradients, both.n_log_prob, both.n_grad
 
 What it saves depends on how much work the two functions share. On two regressions in 10
 dimensions, a whole `sample` call with MALA or HMC, tuning included, made 0.51 to 0.73
-times as many calls of the user's functions with `log_prob_and_grad`. It took 0.70 to
-0.84 times as long on a linear regression whose `log_prob` and `grad` repeated a third of
-their arithmetic, and 0.92 to 0.98 times as long on a logistic
-regression whose costly part, a logarithm or an exponential of each observation, is not
-shared.
+times as many calls of the user's functions with `log_prob_and_grad`. On a linear
+regression whose `log_prob` and `grad` repeated a third of their arithmetic, it took
+0.70 to 0.77 times as long, the medians of five timed pairs of runs for each kernel and
+form of the functions, every ratio of which was below 0.87. On a logistic regression
+whose costly part, a logarithm or an exponential of each observation, is not shared,
+the time ratios of three of the four configurations ranged across 1, so the saving of
+calls did not show in the time.
 
 With JAX, `jax.value_and_grad` gives such a function, for one point, and
 `jax.vmap` of it one for a batch:
@@ -224,9 +230,12 @@ dimension, and 8 more of each when `grad` returns float32 values, and again when
 costs a second sweep at float32. It draws 48 points of the initial distribution, in two
 passes of 24, from a random stream of its own, and it changes no result: a run is the
 same with and without it. A sampler built with `log_prob_and_grad` compares its
-gradient with differences of its own values, which are those the chains use, at the
-same points and in 40 evaluations of it, and does not call `log_prob`; its warnings
-then name the gradient and the log-density of `log_prob_and_grad`.
+gradient with differences of its own values, which are those the chains use, and does
+not call `log_prob`; its warnings then name the gradient and the log-density of
+`log_prob_and_grad`. It evaluates `log_prob_and_grad` at most at the points where a
+check of `log_prob` and `grad` returning the same dtypes evaluates `log_prob`: 40 for
+float64 values, and for narrower ones sometimes fewer, since it reads the gradient's
+dtype at draws of zero density too.
 
 A gradient with its sign wrong warns before any pair runs, with the size of the
 disagreement:
@@ -267,13 +276,14 @@ print(f"{len(check.gap)} lines, the smallest ratio {check.ratio.min():.3g}")
 ```
 
 `check_grad=False` turns the check off, and `gradient_check` is then `None`. A check
-that could compare no line warns too, since it leaves `grad` unchecked: every draw has
+that could compare no line warns too, since it leaves the gradient unchecked: every draw has
 zero density or a gradient that is not finite, or every line reaches zero density, as
 from a start on a boundary of the support, or takes steps that round away in the dtype
 of `log_prob`, as from a float32 `log_prob` and a start whose spread is tiny beside its
-distance from 0. An error raised inside the check, by `log_prob` or `grad` or about what
-they return, is raised as it is, with a note that it was raised in the gradient check,
-which evaluates them at draws of the initial distribution when the sampler is built.
+distance from 0. An error raised inside the check, by the functions it evaluates or
+about what they return, is raised as it is, with a note that it was raised in the
+gradient check, which evaluates them at draws of the initial distribution when the
+sampler is built.
 
 A warning means that `grad` is not the derivative of `log_prob` as computed, along the
 spread of the initial distribution, by more than the check can attribute to rounding:

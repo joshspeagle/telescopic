@@ -16,7 +16,13 @@ import numpy as np
 import pytest
 
 import telescopic
-from references import Counted, assert_same_replicates, gaussian_log_prob, synthetic
+from references import (
+    Counted,
+    assert_same_replicates,
+    gaussian_log_prob,
+    never_called,
+    synthetic,
+)
 from references import Normal as Conditional
 from telescopic import CoupledSampler, __version__, sample
 from telescopic._parallel import Interrupt
@@ -524,7 +530,7 @@ def test_chains_cannot_start_where_the_gradient_is_not_finite():
 
     # The gradient check, which skips such points, says first that it compared nothing.
     with (
-        pytest.raises(ValueError, match="where log_prob is finite: chains cannot start"),
+        pytest.raises(ValueError, match="where the log-density is finite: chains cannot start"),
         pytest.warns(InputWarning, match="compared no line"),
     ):
         sample(
@@ -692,3 +698,34 @@ def test_combined_callable_matches_separate_log_prob_and_grad(kernel, vectorize)
     # Points of zero density, whose gradients are not counted, and gradients taken as 0.
     assert combined.n_log_prob > combined.n_grad
     assert combined.n_grad_zeroed > 0
+
+
+# Pairs this short may meet late, which warns.
+@pytest.mark.filterwarnings("ignore::telescopic.warnings.ConvergenceWarning")
+@pytest.mark.parametrize("check_grad", [False, True], ids=["unchecked", "checked"])
+@pytest.mark.parametrize(
+    "kernel",
+    [
+        MALA(0.8, cov=np.eye(2)),
+        HMC(0.3, 5, cov=np.eye(2)),
+        Mixture([MALA(0.8, cov=np.eye(2)), RandomWalk(np.eye(2), scale=1.0)], [0.5, 0.5]),
+    ],
+    ids=["mala", "hmc", "mixture"],
+)
+def test_a_run_with_log_prob_and_grad_takes_its_values_from_it_alone(kernel, check_grad):
+    # Kernels given with their parameters, and k, m and lag, so that nothing is tuned:
+    # tuning's pilot chains are the one part of a run that calls log_prob. Every other
+    # evaluation, the gradient check's included, comes from log_prob_and_grad.
+    result = sample(
+        never_called,
+        Normal([0.0, 0.0], [1.0, 1.0]),
+        4,
+        log_prob_and_grad=lambda x: (gaussian_log_prob(x), -x),
+        kernel=kernel,
+        k=2,
+        m=4,
+        lag=2,
+        check_grad=check_grad,
+        rng=0,
+    )
+    assert result.n_log_prob == result.n_grad > 0

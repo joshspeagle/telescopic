@@ -37,8 +37,9 @@ class Target:
         same signature, returning a pair ``(value, gradient)`` of a float and shape
         ``(d,)``, or of shapes ``(n,)`` and ``(n, d)``, as from JAX's
         ``value_and_grad``. Its values must be those of ``log_prob``, which still
-        serves the evaluations that need no gradient. Its gradient where its value is
-        ``-inf`` is ignored.
+        serves the evaluations that need no gradient. Where its value is ``-inf``, its
+        gradient must still be real numbers of the gradient's shape, whose values are
+        not used: states there carry a gradient of 0.
     args : tuple or list
         Extra positional arguments passed to the functions, such as ``(data,)``.
     kwargs : mapping, optional
@@ -77,9 +78,11 @@ class Target:
                 "pass grad or log_prob_and_grad, not both: log_prob_and_grad returns the "
                 "gradient with the log-density"
             )
-        gradient = "grad" if log_prob_and_grad is None else "log_prob_and_grad"
-        if log_prob is None and functions[gradient] is not None:
-            raise ValueError(f"{gradient} needs log_prob; log_prob=None is for Gibbs kernels")
+        self._gradient = "grad" if log_prob_and_grad is None else "log_prob_and_grad"
+        if log_prob is None and functions[self._gradient] is not None:
+            raise ValueError(
+                f"{self._gradient} needs log_prob; log_prob=None is for Gibbs kernels"
+            )
         # A tuple would unpack an array's rows, or a string's letters, as extra arguments.
         if not isinstance(args, tuple | list):
             raise TypeError(
@@ -133,9 +136,8 @@ class Target:
         """
         if self._log_prob is None:
             return np.zeros(len(x))
-        values = self._call(self._log_prob, x, ())
-        self.n_log_prob += len(x)
-        return log_densities("log_prob", values, x)
+        log_prob = self._log_prob
+        return self._log_densities(_name(log_prob), "log_prob", self._outputs(log_prob, x), x)
 
     def log_prob_and_grad(
         self, x: FloatArray, *, start: bool = False
@@ -162,9 +164,12 @@ class Target:
         """
         if self._log_prob_and_grad is not None:
             values, gradients = self._value_and_grad(self._log_prob_and_grad, x)
-            inside = values > -np.inf
-            gradients[~inside] = 0.0
-            self.n_grad += int(inside.sum())
+            if np.min(values, initial=np.inf) > -np.inf:  # every point inside the support
+                self.n_grad += len(x)
+            else:
+                inside = values > -np.inf
+                gradients[~inside] = 0.0
+                self.n_grad += int(inside.sum())
         elif self._grad is None:
             raise ValueError(
                 "this target has no gradient; pass grad= or log_prob_and_grad= to use this kernel"
@@ -187,11 +192,12 @@ class Target:
                 # A MALA chain that starts there cannot leave: its moves back need the
                 # reverse proposal, which carries the full drift, to return (DECISIONS #67).
                 row = int(np.argmax(bad))
-                name = "grad" if self._log_prob_and_grad is None else "log_prob_and_grad"
+                name = self._gradient
                 raise ValueError(
                     f"{name} returned {gradients[row].tolist()} at x = {x[row].tolist()}, "
-                    f"where log_prob is finite: chains cannot start there; compute {name} "
-                    "in log space, as with scipy.special.logsumexp, or start them elsewhere"
+                    f"where the log-density is finite: chains cannot start there; compute "
+                    f"{name} in log space, as with scipy.special.logsumexp, or start them "
+                    "elsewhere"
                 )
             gradients[bad] = 0.0
             self.n_grad_zeroed += int(bad.sum())
@@ -212,23 +218,31 @@ class Target:
         self, function: Callable[..., Any], x: FloatArray
     ) -> tuple[FloatArray, FloatArray]:
         # One call of log_prob_and_grad at every row, its outputs checked as those of
-        # log_prob and grad are, each part named in the errors.
-        name, outputs = _name(function), self._outputs(function, x)
+        # log_prob and grad are, each part named in the errors with the argument, since
+        # with JAX both functions are often named f.
+        outputs = self._outputs(function, x)
+        name = getattr(function, "__name__", "log_prob_and_grad")
+        if name != "log_prob_and_grad":
+            name = f"log_prob_and_grad ({name})"
         for row, pair in enumerate([outputs] if self.vectorize else outputs):
             if not (isinstance(pair, tuple | list) and len(pair) == 2):
                 where = f"for {len(x)} points" if self.vectorize else f"at x = {x[row].tolist()}"
                 raise ValueError(
                     f"{name} returned {shown(pair)} {where}; it must return a pair "
-                    "(log-density, gradient)"
+                    "(log-density, gradient), in that order"
                 )
-        if self.vectorize:
-            values, gradients = outputs
-        else:
-            values, gradients = [pair[0] for pair in outputs], [pair[1] for pair in outputs]
-        values = self._checked(f"{name}'s log-density", values, x, ())
+        values, gradients = (
+            outputs if self.vectorize else ([v for v, _ in outputs], [g for _, g in outputs])
+        )
+        values = self._log_densities(f"the log-density of {name}", "log_prob_and_grad", values, x)
+        return values, self._checked(f"the gradient of {name}", gradients, x, (x.shape[1],))
+
+    def _log_densities(self, name: str, argument: str, values: Any, x: FloatArray) -> FloatArray:
+        # The log-densities that a function returned, checked and counted; argument names
+        # it in the error of a NaN or +inf value.
+        values = self._checked(name, values, x, ())
         self.n_log_prob += len(x)
-        values = log_densities("log_prob_and_grad", values, x)
-        return values, self._checked(f"{name}'s gradient", gradients, x, (x.shape[1],))
+        return log_densities(argument, values, x)
 
     def _checked(
         self, name: str, values: Any, x: FloatArray, event: tuple[int, ...]

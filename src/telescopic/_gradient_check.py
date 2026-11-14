@@ -1,4 +1,4 @@
-"""The gradient check: ``grad`` against central differences of ``log_prob`` along lines."""
+"""The gradient check: a gradient against central differences of its log-density along lines."""
 
 from __future__ import annotations
 
@@ -218,7 +218,8 @@ def check_gradient(
     if grad is not None:
         recorders: tuple[_Recorder, ...] = (_Recorder(log_prob), _Recorder(grad))
         target = Target(*recorders, args=args, kwargs=kwargs, vectorize=vectorize)
-        values_at, names = target.log_prob, ("log_prob and grad", "grad", "log_prob")
+        values_at = target.log_prob
+        evaluated, gradient_name, values_name = "log_prob and grad", "grad", "log_prob"
     else:
         recorders = (_Recorder(cast(Callable[..., Any], log_prob_and_grad), parts=2),)
         target = Target(
@@ -228,11 +229,9 @@ def check_gradient(
         def values_at(x: FloatArray) -> FloatArray:
             return target.log_prob_and_grad(x)[0]
 
-        names = (
-            "log_prob_and_grad",
-            "the gradient of log_prob_and_grad",
-            "the log-density of log_prob_and_grad",
-        )
+        evaluated = "log_prob_and_grad"
+        gradient_name = "the gradient of log_prob_and_grad"
+        values_name = "the log-density of log_prob_and_grad"
     target._warned_precision = True
     assumed = (8, 8)
     try:
@@ -248,7 +247,7 @@ def check_gradient(
             assumed = narrowest
     except Exception as error:
         error.add_note(
-            f"raised in the gradient check, which evaluates {names[0]} at draws of the "
+            f"raised in the gradient check, which evaluates {evaluated} at draws of the "
             "initial distribution when the sampler is built"
         )
         raise
@@ -275,7 +274,7 @@ def check_gradient(
         n_skipped=skipped,
         n_unusable=unusable,
     )
-    message = _message(record, *names[1:])
+    message = _message(record, gradient_name, values_name)
     if message:
         warn(message, InputWarning)
     return record

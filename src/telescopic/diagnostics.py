@@ -208,21 +208,23 @@ def variance_share(values: npt.ArrayLike) -> FloatArray:
 # Spec section 4.4.
 @dataclass(frozen=True, eq=False)
 class GradientCheck:
-    r"""What the gradient check of a sampler built with ``grad`` compared.
+    r"""What the gradient check of a sampler built with a gradient compared.
 
     At each of 8 draws :math:`x` of :math:`\pi_0` the check compares, along the
     direction :math:`u` between two further draws, the change of :math:`\log\pi` that
-    ``grad`` predicts with central differences of ``log_prob`` at steps
+    the gradient predicts with central differences of the log-density at steps
     :math:`h u`, :math:`h = \epsilon^{1/3}` for the epsilon :math:`\epsilon` of the
-    dtype that ``log_prob`` returns:
+    dtype of the log-density's values:
 
     .. math:: \Delta = \big|\nabla\log\pi(x)\cdot u - D_u\big|,
        \qquad D_u = \frac{\log\pi(x + hu) - \log\pi(x - hu)}{2h},
 
     and a line disagrees when :math:`\Delta` exceeds its tolerance, 10 times the
     estimated error of the comparison: the truncation of the differences, from a second
-    difference at :math:`2hu`, and the rounding of ``log_prob`` and of ``grad``. All the
-    figures are in nats along :math:`u`, across the spread of :math:`\pi_0`.
+    difference at :math:`2hu`, and the rounding of the log-density and of the gradient.
+    All the figures are in nats along :math:`u`, across the spread of :math:`\pi_0`. The
+    gradient and the log-density are ``grad`` and ``log_prob``, or the two parts of
+    ``log_prob_and_grad``.
 
     Attributes
     ----------
@@ -233,7 +235,7 @@ class GradientCheck:
     tolerance : ndarray, shape (n,)
         The tolerance of each line.
     predicted : ndarray, shape (n,)
-        The change :math:`\nabla\log\pi(x)\cdot u` that ``grad`` predicts on each line.
+        The change :math:`\nabla\log\pi(x)\cdot u` that the gradient predicts on each line.
     n_skipped : int
         Draws skipped because the density is zero or the gradient is not finite there.
     n_unusable : int

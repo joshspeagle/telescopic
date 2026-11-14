@@ -16,19 +16,26 @@ arithmetic. Each run is `sample` with everything automatic (the gradient check, 
 `log_prob` and `grad` and once with `log_prob` and `log_prob_and_grad`, whose numbers
 are the same: the script checks that the two runs' replicates and counts are bitwise
 equal. Wrappers count the calls of each function (a call takes a batch with
-`vectorize=True`, one point without). Times are the best of 3 runs of each, alternated,
-on a machine that other jobs share: only their ratio is read.
+`vectorize=True`, one point without). Each configuration runs as 5 pairs of the two
+runs, alternating which goes first, on a machine that other jobs share: the script
+prints every pair's two times and their ratio, then the median and the range of the
+5 ratios, and only the ratios are read. A saving is claimed only where the range lies
+below 1. The whole script took about 23 minutes on one core.
 
 Result (the output beside this file): the runs with the combined function were bitwise
 those with two functions, counts included. It made 0.51 to 0.73 times as many user calls:
 0.51 to 0.59 point by point, where every gradient took two calls, and 0.58 to 0.73 in
 batches, where tuning's 2,001 calls of `log_prob` alone are the same in both (62 to 64% of
-the combined run's calls with MALA and 29 to 30% with HMC). Its time follows the share of
-the arithmetic that the two functions repeat. On the logistic regression, whose
-transcendental functions are not shared, the runs took 0.92 to 0.98 times as long; on
-the linear regression, whose separate functions repeat a third of their arithmetic,
-0.70 to 0.84 times as long (MALA 0.84 and 0.75, HMC 0.82 and 0.70, in batches and point
-by point). Other jobs loaded the machine, so the time ratios are approximate.
+the combined run's calls with MALA and 29 to 30% with HMC). On the linear regression,
+whose separate functions repeat a third of their arithmetic, every configuration saved
+time: median time ratios 0.769 (range 0.757 to 0.864) for MALA and 0.731 (0.719 to
+0.815) for HMC in batches, 0.740 (0.709 to 0.767) and 0.697 (0.571 to 0.718) point by
+point. On the logistic regression, whose transcendental functions are not shared, three
+of the four ranges include 1, so no saving is measured there: MALA 0.898 (0.852 to
+1.054) and HMC 0.989 (0.932 to 1.012) in batches, MALA 0.962 (0.955 to 1.022) point by
+point; HMC point by point, 0.926 (0.853 to 0.952), saved a little. Other jobs loaded
+the machine: the ratio of 0.571 comes from a pair whose separate run took 88 s where
+the others took 65 to 70 s.
 
 Run from the repository: python notes/experiments/i75_value_and_grad.py
 """
@@ -38,12 +45,12 @@ import time
 import numpy as np
 from i85_setup import setup
 from scipy.special import expit, log_expit
-from threadpoolctl import threadpool_limits
+from threadpoolctl import threadpool_info, threadpool_limits
 
 import telescopic
 from telescopic.initial import Normal
 
-D, R, REPEATS = 10, 128, 3
+D, R, REPEATS = 10, 128, 5
 
 rng = np.random.default_rng(0)
 X = rng.standard_normal((2_000, D)) / np.sqrt(D)
@@ -122,43 +129,58 @@ def run(functions, kernel, vectorize, combined):
 
 
 def compare(functions, kernel, vectorize):
-    # The calls and best times of the two runs, after checking that they agree bitwise.
-    best = [np.inf, np.inf]
-    for _ in range(REPEATS):
-        runs = [run(functions, kernel, vectorize, combined) for combined in (False, True)]
-        for side, (_, _, seconds) in enumerate(runs):
-            best[side] = min(best[side], seconds)
-    (separate, alone, _), (combined, both, _) = runs
-    for name, value in vars(separate._replicates).items():
-        if name not in ("seed", "seconds"):
-            assert np.array_equal(value, getattr(combined._replicates, name)), name
-    return separate, alone, both, best
+    # The calls and the times of REPEATS pairs of runs, each pair alternating which run
+    # goes first, after checking that the two runs agree bitwise and that the calls are
+    # the same in every pair.
+    seconds, counts = [], set()
+    for repeat in range(REPEATS):
+        order = (False, True) if repeat % 2 == 0 else (True, False)
+        runs = {side: run(functions, kernel, vectorize, side) for side in order}
+        (separate, alone, apart), (combined, both, together) = runs[False], runs[True]
+        for name, value in vars(separate._replicates).items():
+            if name not in ("seed", "seconds"):
+                assert np.array_equal(value, getattr(combined._replicates, name)), name
+        seconds.append((apart, together))
+        counts.add((alone, both))
+    assert len(counts) == 1
+    return separate, alone, both, np.array(seconds)
 
 
 def main():
     print(setup())
-    print(f"d = {D}, R = {R}, sample() with everything automatic, best of {REPEATS} runs")
+    blas = ", ".join(f"{pool['internal_api']} {pool['num_threads']}" for pool in threadpool_info())
+    print(f"threads of the BLAS and OpenMP pools under threadpool_limits(1): {blas}")
+    print(
+        f"d = {D}, R = {R}, sample() with everything automatic; {REPEATS} pairs of runs, "
+        "alternating which goes first; time ratio = combined / separate in each pair"
+    )
     for title, functions in TARGETS.items():
         print(f"\n{title}")
         print(
             f"{'kernel':6} {'calls of':>9}  {'log_prob':>9} {'grad':>9} {'combined':>9} "
-            f"{'total':>9} {'ratio':>6}  {'seconds':>8} {'ratio':>6}"
+            f"{'total':>9} {'ratio':>6}"
         )
         for vectorize in (True, False):
             for kernel in ("mala", "hmc"):
-                separate, alone, both, best = compare(functions, kernel, vectorize)
+                separate, alone, both, seconds = compare(functions, kernel, vectorize)
                 kind = "batches" if vectorize else "points"
                 print(
-                    f"{kernel:6} {kind:>9}  {alone[0]:9,d} {alone[1]:9,d} {'':>9} "
-                    f"{sum(alone):9,d} {'':>6}  {best[0]:8.2f}"
+                    f"{kernel:6} {kind:>9}  {alone[0]:9,d} {alone[1]:9,d} {'':>9} {sum(alone):9,d}"
                 )
                 print(
                     f"{'':6} {'':>9}  {both[0]:9,d} {'':>9} {both[2]:9,d} {sum(both):9,d} "
-                    f"{sum(both) / sum(alone):6.3f}  {best[1]:8.2f} {best[1] / best[0]:6.3f}"
+                    f"{sum(both) / sum(alone):6.3f}"
                 )
                 print(
                     f"{'':6} {'':>9}  k = {separate.k}; n_log_prob {separate.n_log_prob:,d}, "
                     f"n_grad {separate.n_grad:,d} in the replicates of both runs"
+                )
+                ratios = seconds[:, 1] / seconds[:, 0]
+                pairs = ", ".join(f"{a:.2f}/{b:.2f} {b / a:.3f}" for a, b in seconds)
+                print(f"{'':6} {'':>9}  seconds separate/combined, ratio: {pairs}")
+                print(
+                    f"{'':6} {'':>9}  time ratio: median {np.median(ratios):.3f}, "
+                    f"range {ratios.min():.3f} to {ratios.max():.3f}"
                 )
 
 

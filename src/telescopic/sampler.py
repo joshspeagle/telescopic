@@ -116,14 +116,17 @@ class CoupledSampler:
         Show the progress of tuning, of the pilot and of each run: a tqdm bar when
         tqdm is installed, lines on stderr otherwise.
     check_grad : bool
-        Compare ``grad`` with differences of ``log_prob`` at 8 draws of the initial
-        distribution when the sampler is built, if the kernel evaluates ``grad``, and
-        warn where they disagree (Checking the gradient, in :doc:`/guide/targets`). It
-        costs 40 evaluations of ``log_prob`` and 8 of ``grad`` for float64 values, 8 more
-        of each for a float32 ``grad`` and again for a float32 ``log_prob``, a second
-        sweep for a ``log_prob`` whose values narrow after the first draw, and 48 draws of
-        the initial distribution, and changes no result. A ``log_prob_and_grad`` is
-        compared with differences of its own values, in 40 evaluations of it.
+        Compare the gradient with differences of the log-density at 8 draws of the
+        initial distribution when the sampler is built, if the kernel evaluates a
+        gradient, and warn where they disagree (Checking the gradient, in
+        :doc:`/guide/targets`): ``grad`` with differences of ``log_prob``, or the
+        gradient of ``log_prob_and_grad`` with differences of its own values. With
+        ``grad`` it costs 40 evaluations of ``log_prob`` and 8 of ``grad`` for float64
+        values, 8 more of each for a float32 ``grad`` and again for a float32
+        ``log_prob``, and a second sweep for a ``log_prob`` whose values narrow after the
+        first draw; with ``log_prob_and_grad``, 40 evaluations of it for float64 values,
+        and for narrower ones at most as many as of ``log_prob`` with the same dtypes.
+        It draws 48 points of the initial distribution and changes no result.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
         The root of every random stream.
 
@@ -585,8 +588,9 @@ def sample(
         Show the progress of the pilot and of the run: a tqdm bar when tqdm is installed,
         lines on stderr otherwise.
     check_grad : bool
-        Compare ``grad`` with differences of ``log_prob`` before tuning, if the kernel
-        evaluates ``grad``, and warn where they disagree; see :class:`CoupledSampler`.
+        Compare the gradient with differences of the log-density before tuning, if the
+        kernel evaluates a gradient, and warn where they disagree; see
+        :class:`CoupledSampler`.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
         The root of every random stream.
 

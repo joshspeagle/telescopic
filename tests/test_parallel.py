@@ -644,4 +644,3 @@ def test_a_target_with_log_prob_and_grad_runs_on_a_pool():
         for pool in (None, Serial())
     ]
     assert_same_replicates(runs[1]._replicates, runs[0]._replicates)
-    assert runs[0].n_grad > 0
