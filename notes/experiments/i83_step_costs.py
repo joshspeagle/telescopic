@@ -6,11 +6,12 @@ instead of two, reusing C z; (p1-05) a coupled Gibbs sweep counts the coordinate
 the chains differ, where it tested every coordinate outside each block; (p1-06) the
 tuning pilot draws its normals and uniforms in blocks of 256 steps, where it made two
 requests per step; (p1-07) Independence splits its one call of the proposal's
-log-density by slicing, where it called `np.split`; (p1-08) `MultivariateT` computes its
-Student-t normalizing constant once, at construction. The issue measured them before the
-kernels' products moved to BLAS for vectorized targets; this script measures those that
-are made, a section each, on the code as it is now. Two questions: how much faster is
-each changed function, and which seeded outputs move, and how far?
+log-density with `reshape`, where it called `np.split`; (p1-08) `MultivariateT` computes
+its Student-t normalizing constant once, at construction. The issue measured them before
+the kernels' products moved to BLAS for vectorized targets; this script measures those
+that were built, a section each, on the code of the commit that the output names. Two
+questions: how much faster is each changed function, and which seeded outputs move, and
+how far?
 
 The source of commit `BEFORE` (the base of this change) is extracted with `git archive`
 into a temporary folder; "after" is this checkout's `src`. Each measurement is a child
@@ -46,9 +47,10 @@ point by point.
 3. Gibbs (p1-05). Three coupled sweeps of `Gibbs.coupled_step` with the maximal
    coupling, one-coordinate blocks of the conditionals of an AR(1) chain
    (x_i | rest ~ N(0.5 (x_(i-1) + x_(i+1)) / 1.25, 1 / 1.25), a small class with `rvs`
-   and `logpdf`), at d = 20 and 200, 1, 4, 16 and 256 rows, with pairs that differ in every
-   coordinate, in half of them, or nowhere: milliseconds per three sweeps, and whether
-   x and y are bitwise equal before and after.
+   and `logpdf`), at d = 20 and 200, 1, 4, 16 and 256 rows, with pairs that differ in
+   every coordinate, in half of them, or nowhere: milliseconds per three sweeps, and
+   whether x and y are bitwise equal before and after. The count was kept only if no
+   configuration's median ratio fell below 0.97, a rule fixed before this run.
 4. Pilot (p1-06). `adaptive_metropolis` at d = 2 and 20 (2,000 and 4,000 steps, the
    default) and d = 100 with 20,000 steps, vectorized and point by point: seconds per
    pilot, and whether the `PilotRun` is bitwise equal.
@@ -59,8 +61,8 @@ point by point.
    rows, d = 20: microseconds per call; and the one-lane Independence run of section 1,
    point by point, whose time includes p1-07 and p1-08: seconds per run.
 
-Result (`i83_step_costs.out`, at a load average of 1.0 to 2.0 on 4 cores shared with
-other jobs).
+Result (`i83_step_costs.out`, at commit `efe9b2e`, a 1-minute load of 1.58 at the start
+and 1.06 at the end, on 4 cores shared with other jobs).
 1. RandomWalk's, MALA's and HMC's runs changed their hashes. Their meeting times were
    equal and their pooled estimates of E[x] moved by at most 5.2e-15 standard errors
    (RandomWalk at d = 60), except HMC's on the logistic regression, where one of 100
@@ -69,20 +71,22 @@ other jobs).
    1e-3 once their trajectories have brought them close, where a difference of rounding
    is a larger share of the distance between them. Independence's and Gibbs's hashes did
    not change, point by point or vectorized.
-2. From the same streams `x` and the flags were bitwise equal, and `y` differed by at
-   most 9.5e-12 relative (d = 200, einsum). Before/after per round, medians: with einsum
-   1.10, 1.14, 1.20, 1.26 and 1.38 at d = 2, 10, 20, 50 and 200; with BLAS 1.09, 1.12,
-   1.06, 1.10 and 1.23. No median is below 1, so one form serves every d.
-3. Bitwise equal everywhere. At d = 20 no gain: medians 0.96 to 1.02. At d = 200, 1.07
-   to 1.10 where the pairs differ and 1.22 to 1.31 where they are equal, at 16 and 256
-   rows.
-4. Bitwise equal. 1.28 and 1.36 at d = 2 (point by point, vectorized), 1.26 and 1.37 at
-   d = 20, 1.22 and 1.33 at d = 100.
-5. 1.33 (1.16 to 1.37) at 1 row, 1.09 (0.87 to 1.13) at 256 rows.
-6. 1.04 (0.98 to 1.07) at 1 row, 1.03 (0.92 to 1.07) at 3 rows and 0.99 (0.56 to 1.05)
-   at 512 rows: about 0.3 microseconds a call, within the spread of the rounds.
-   The one-lane run, with p1-07 too, 1.12 (1.02 to 1.15), as the issue's 1.10 for p1-07
-   alone.
+2. From the same streams `x` and the flags were bitwise equal, and the rows of `y`
+   differed by at most 2.6e-15 of their largest coordinate (d = 2). Before/after per
+   round, medians: with einsum 1.12, 1.15, 1.17, 1.25 and 1.38 at d = 2, 10, 20, 50 and
+   200; with BLAS 1.16, 1.08, 1.12, 1.12 and 1.21. No median is below 1, so one form
+   serves every d.
+3. Bitwise equal everywhere. At d = 200, 1.03 to 1.42; at d = 20, 0.84 (0.41 to 1.24) at
+   1 row with equal pairs and 0.96 (0.61 to 1.30) at 1 row with pairs that differ in half
+   the coordinates, below 0.97, and 0.98 to 1.08 elsewhere. By the rule above the count
+   was not kept: at later commits this section compares the same code.
+4. Bitwise equal. 1.26 and 1.29 at d = 2 (point by point, vectorized), 1.28 and 1.32 at
+   d = 20, 1.24 and 1.32 at d = 100.
+5. 1.27 (1.11 to 1.46) at 1 row, 1.06 (0.83 to 1.11) at 256 rows.
+6. 1.09 (0.96 to 1.16) at 1 row, 1.09 (0.62 to 1.92) at 3 rows and 1.02 (0.60 to 1.37)
+   at 512 rows: the medians' times fell by 0.92 and 0.80 microseconds at 1 and 3 rows
+   (9.22 - 8.30, 9.51 - 8.71), within the spread of the rounds. The one-lane run, with
+   p1-07 too, 1.12 (1.10 to 1.16).
 
 Run from the repository root:
 OMP_NUM_THREADS=1 PYTHONPATH=src:notes/experiments python notes/experiments/i83_step_costs.py
