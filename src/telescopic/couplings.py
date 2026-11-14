@@ -13,6 +13,8 @@ from telescopic._linalg import matvec
 from telescopic._random import Draws
 from telescopic._types import BoolArray, Distribution, FloatArray, IndexArray, real
 
+__all__ = ["discrete_maximal", "maximal", "reflection_maximal"]
+
 _DIRICHLET = type(stats.dirichlet([1.0, 1.0]))
 
 

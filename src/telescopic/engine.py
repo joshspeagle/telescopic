@@ -31,6 +31,8 @@ from telescopic.initial import as_initial, draw
 from telescopic.kernels.base import Kernel, State
 from telescopic.target import Target
 
+__all__ = ["Replicates", "Settings", "Status", "check_settings", "merge", "run", "stored_bytes"]
+
 # Replicates advanced together by default (DECISIONS #52).
 LANES = 256
 

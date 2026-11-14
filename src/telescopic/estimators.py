@@ -10,6 +10,14 @@ from scipy.optimize import isotonic_regression
 
 from telescopic._types import FloatArray, IntArray, averaging, integer, integral, real_array
 
+__all__ = [
+    "averaging_times",
+    "correction_coefficients",
+    "unbiased_covariance",
+    "unbiased_variance",
+    "weighted_quantile",
+]
+
 
 def averaging_times(k: int, m: int, thin: int) -> IntArray:
     r"""The averaging set :math:`S = \{k, k + s, k + 2s, \dots\} \cap [k, m]` for ``thin`` = s.
