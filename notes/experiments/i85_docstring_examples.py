@@ -10,12 +10,12 @@ output. The time is that of one run at the first seed of the range, after the im
 at ``rng=0``, the seed of the docstrings, for the range that starts at 0. The seeds can
 be run in pieces of a few minutes each, whose counts add up.
 
-Result (``i85_docstring_examples.out``, run in 20 pieces of 50 seeds): at 1,000 seeds no
+Result (``i85_docstring_examples.out``, run in 10 pieces of 100 seeds): at 1,000 seeds no
 example warns, and each prints its documented output, except ``check_coupling``, whose
 ``passed()`` prints False at 3 seeds, within the false-failure rate of at most about 4 in
 1,000 that its docstring states. The examples that call ``sample`` or ``run`` use fewer
 than 100 replicates, below which the replicate-variance warning does not apply. Together
-they take 2.5 s at ``rng=0``, the longest (HMC) 0.49 s.
+they take 2.3 s at ``rng=0``, the longest (HMC) 0.48 s.
 
 Run: python notes/experiments/i85_docstring_examples.py [first last], for the seeds
 from ``first`` to ``last - 1``; all 1,000 by default.
