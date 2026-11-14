@@ -210,10 +210,8 @@ def _gather(
     finally:
         for waiting in futures:
             waiting.cancel()
-        # An error raised here keeps this frame in its traceback, and its future keeps the
-        # error. Without the futures there is no cycle, so the workers' event is freed with
-        # the error, not by a later collection, which warns on Python 3.11 and 3.12 when it
-        # runs inside a call of the resource tracker.
+        # A raised error's traceback keeps this frame, and its future keeps the error:
+        # dropping the futures lets the workers go with the error, not at a later collection.
         del futures, future, waiting
     return parts
 
