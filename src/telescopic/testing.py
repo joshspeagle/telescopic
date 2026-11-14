@@ -183,6 +183,7 @@ def _compare(
     # For chains that start at point: Fisher's exact test of how often they stay put, and
     # Kolmogorov-Smirnov tests of their moves along each direction and of their lengths,
     # Bonferroni-corrected, which need two moves on a side. A NaN position gives NaN.
+    # Imported at first use, which keeps import telescopic free of scipy.stats.
     from scipy import stats
 
     stayed = [np.all(chain == point, axis=1) for chain in (coupled, single)]

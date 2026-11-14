@@ -484,6 +484,9 @@ class Result:
     @functools.cached_property
     def _diagnostics(self) -> dict[str, Any]:
         # Computed once: each run's warnings, the summary and check all read it.
+        # Imported at first use, which keeps import telescopic free of scipy.stats.
+        from scipy import stats
+
         # Over every pair, censored ones (inf) above the others, as in the pilot of k.
         quantiles = np.quantile(self.meeting_times, [0.5, 0.9, 0.99, 1], method="inverted_cdf")
         tail_index = np.nan
@@ -492,8 +495,6 @@ class Result:
             tail_index = diagnostics.hill(met - self.lag + 1, self.n_replicates // 10)
         n_late = int(np.sum(self.meeting_times - self.lag > self.k))
         n_total = len(self.meeting_times)
-        from scipy import stats
-
         upper = stats.binomtest(n_late, n_total, alternative="less").proportion_ci(0.95).high
         # The TV bound at k as an average over replicates (section 3.6), in O(R) memory:
         # diagnostics.tv_bound's survival function takes memory up to the largest time.
