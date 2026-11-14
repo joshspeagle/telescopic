@@ -328,7 +328,11 @@ class Result:
         atoms = self.measure.atoms
         first = np.concatenate([[True], np.any(atoms[1:] != atoms[:-1], axis=1)]).nonzero()[0]
         weights = np.add.reduceat(self.measure.weights, first) / self.n_replicates
-        values = atoms[first] if h is None else values_of(h, atoms[first])
+        if h is None:
+            # One column gathered at a time: a copy of the merged rows would hold most atoms.
+            columns = [weighted_quantile(atoms[first, j], weights, q) for j in range(self.ndim)]
+            return np.stack(columns, axis=-1)
+        values = values_of(h, atoms[first])
         quantiles: FloatArray = np.apply_along_axis(weighted_quantile, 0, values, weights, q)
         return quantiles
 
