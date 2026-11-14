@@ -11,7 +11,7 @@ mystnb:
 Replicates are independent, so they run in parallel without communicating. The `pool`
 argument of {func}`telescopic.sample` and {class}`telescopic.CoupledSampler` decides where
 the meeting-time pilot and the replicates run, and `n_workers` how many workers a pool of
-your own has; the kernel is tuned in this process.
+your own has; the kernel is tuned in this process ([Tuning](#tuning)).
 
 ## Pools
 
@@ -65,6 +65,46 @@ The second run ran 100 more replicates on the same workers, with the settings of
 first, and returned the result of all the replicates so far. To split a run across
 machines, run separate ranges of replicate indices with one seed and the same settings,
 and join the results ([Merging runs](results.md#merging-runs)).
+
+## Tuning
+
+Tuning runs in this process, before the pilot and the replicates, while the workers
+wait: four adaptive Metropolis chains of $\max(2000, 200d, 10d^2)$ steps each, and for
+MALA and HMC four more chains that tune the step size
+([The automatic pipeline](settings.md#the-automatic-pipeline)). With a log-density
+evaluated point by point on many workers, these sequential steps can take longer than a
+worker's share of the run. A job that passes a tuned kernel with its `k`, `m` and `lag`
+skips both the tuning and the meeting-time pilot, so several jobs on one target can tune
+once. A saved result keeps the kernel only as its description, so a job in another
+process gets the kernel itself by pickle, here through bytes, as it would through a file:
+
+```{code-cell} python
+import pickle
+
+tuned = pickle.dumps(first.kernel)  # the kernel that the first run above tuned
+job = telescopic.sample(
+    gaussian.log_prob,
+    gaussian.initial,
+    kernel=pickle.loads(tuned),
+    k=first.k,
+    m=first.m,
+    lag=first.lag,
+    rng=4,
+)
+job.tuning, job.pilot
+```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claim of the next paragraph.
+assert job.tuning is None and job.pilot is None
+assert (job.k, job.m, job.lag) == (first.k, first.m, first.lag)
+```
+
+The job ran no tuning and no pilot. Jobs with different seeds give independent results;
+jobs whose results should merge into one share a seed and run separate ranges of
+replicate indices ([Merging runs](results.md#merging-runs)).
 
 ## Chunks and workers
 
