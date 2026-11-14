@@ -393,10 +393,6 @@ All notable changes to this project are documented here. The format follows
   meet once their trajectories have brought them close, a meeting time can move, and
   with it a replicate's estimates (one of 100 on a logistic regression of 6 dimensions,
   which moved the estimates by up to 0.075 standard errors).
-- A coupled `Gibbs` sweep counts the coordinates where the two chains differ instead of
-  comparing every coordinate outside each block: at d = 200, three sweeps of
-  one-coordinate blocks took 1.07 to 1.31 times less time; at d = 20, as long as before.
-  Its outputs are unchanged.
 - The tuning pilot draws its normals and uniforms 256 steps at a time instead of at
   every step, which made it 1.22 to 1.37 times faster on a Gaussian target at d = 2 to
   100. Its outputs are unchanged.

@@ -157,33 +157,23 @@ class Gibbs(Kernel):
     ) -> tuple[State, State]:
         x, y = state_x.x.copy(), state_y.x.copy()
         common = np.linalg.norm(x - y, axis=1) > self._switch
-        # The number of coordinates where the chains differ, per row, updated block by
-        # block: a test of the coordinates outside each block would cost O(d) per block.
-        count = (x != y).sum(axis=1)
         for b, block in enumerate(self.blocks):
             points_x, points_y = read_only(x), read_only(y)
-            count -= (points_x[:, block] != points_y[:, block]).sum(axis=1)
-            new_x, new_y = self._couple(b, points_x, points_y, count == 0, common, draws)
-            block_x = _block(new_x, b, points_x, len(block))
-            block_y = _block(new_y, b, points_y, len(block))
-            x[:, block], y[:, block] = block_x, block_y
-            count += (block_x != block_y).sum(axis=1)
-        identical = count == 0
+            new_x, new_y = self._couple(b, points_x, points_y, common, draws)
+            x[:, block] = _block(new_x, b, points_x, len(block))
+            y[:, block] = _block(new_y, b, points_y, len(block))
+        identical = np.all(x == y, axis=1)
         return evaluate_pair(
             partial(evaluate, target, need_grad=state_x.grad is not None), x, y, identical
         )
 
     def _couple(
-        self,
-        b: int,
-        x: FloatArray,
-        y: FloatArray,
-        same: BoolArray,
-        common: BoolArray,
-        draws: Draws,
+        self, b: int, x: FloatArray, y: FloatArray, common: BoolArray, draws: Draws
     ) -> tuple[list[Any], list[Any]]:
-        # The coupled draws of block b for each pair of rows of x and y, which agree
-        # outside the block where same is true.
+        # The coupled draws of block b for each pair of rows of x and y.
+        outside = np.ones(x.shape[1], dtype=bool)
+        outside[self.blocks[b]] = False
+        same = np.all(x[:, outside] == y[:, outside], axis=1)
         new_x: list[Any] = [None] * len(x)
         new_y: list[Any] = [None] * len(x)
         # Identical conditionals: one draw for both chains (spec section 5.7).
