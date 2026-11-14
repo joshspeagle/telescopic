@@ -42,11 +42,12 @@ page is listed in one of them.
 
 1. **Pages.** Update the mapped pages, and the README when its example or its list of
    guarantees is affected.
-2. **API reference.** A new public name is added to `docs/api.md` under its section, to
-   the `__all__` of its module (for `telescopic.kernels`, of the package), which is what
-   the reference shows of a module documented with `:members:`, and to `__all__` in
-   `src/telescopic/__init__.py` when it is exported there. The strict build fails on a
-   reference that resolves to nothing.
+2. **API reference.** A new public name is added to the `__all__` of its module (for
+   `telescopic.kernels`, of the package), which is what a module's page shows, and to
+   `__all__` in `src/telescopic/__init__.py` when it is exported there; a new class or
+   module is also listed in its section's table in `docs/api.md`, which generates its
+   page (`CONTRIBUTING.md`, Documentation). The strict build fails on a reference that
+   resolves to nothing.
 3. **The specification.** A change that departs from `docs/design/spec.md` edits it in
    the same commit and records the decision in `notes/DECISIONS.md`.
 4. **Numbers.** A figure quoted in the documentation comes from a script in

@@ -1,6 +1,7 @@
 import importlib
 import inspect
 import itertools
+import pkgutil
 import re
 import runpy
 import tempfile
@@ -415,13 +416,16 @@ def test_the_package_exports_what_the_readme_uses():
     assert used | {"__version__"} <= set(telescopic.__all__)
 
 
-# The modules that docs/api.md documents with all their members: an automodule directive
-# with a bare :members: among its options.
-DOCUMENTED_MODULES = re.findall(
-    r"^\.\. automodule:: (telescopic[\w.]*)\n(?:[ \t]+:.*\n)*?[ \t]+:members:[ \t]*$",
+# The pages of the API reference: the entries of the autosummary tables of docs/api.md,
+# each of which has a generated page. A module's page shows the functions of its __all__
+# and links the pages of its classes.
+API_PAGES = re.findall(
+    r"^ {3}~?(telescopic[\w.]*)$",
     (Path(__file__).parents[1] / "docs" / "api.md").read_text(),
     re.MULTILINE,
 )
+SUBMODULES = {f"telescopic.{module.name}" for module in pkgutil.iter_modules(telescopic.__path__)}
+DOCUMENTED_MODULES = [name for name in API_PAGES if name in SUBMODULES]
 
 
 def test_the_api_reference_documents_the_modules_with_their_members():
@@ -430,8 +434,9 @@ def test_the_api_reference_documents_the_modules_with_their_members():
 
 
 @pytest.mark.parametrize("name", DOCUMENTED_MODULES)
-def test_a_documented_module_exports_every_class_and_function_it_defines(name):
-    # The API reference shows the names of a module's __all__, so one left out is missing.
+def test_a_documented_module_shows_every_class_and_function_it_defines(name):
+    # A name left out of __all__ is missing from its module's page, and a class of
+    # __all__ left out of the index has no page.
     try:
         module = importlib.import_module(name)
     except ImportError as error:  # telescopic.plotting without matplotlib
@@ -444,6 +449,20 @@ def test_a_documented_module_exports_every_class_and_function_it_defines(name):
         and value.__module__ == name
     }
     assert defined <= set(module.__all__) <= set(vars(module))
+    classes = {f"{name}.{key}" for key in module.__all__ if inspect.isclass(vars(module)[key])}
+    assert classes <= set(API_PAGES)
+
+
+def test_the_api_reference_has_a_page_for_every_public_name():
+    pages = {
+        getattr(importlib.import_module(module), attribute)
+        for module, _, attribute in (
+            page.rpartition(".") for page in API_PAGES if page not in SUBMODULES
+        )
+    }
+    public = [getattr(telescopic, name) for name in telescopic.__all__ if name != "__version__"]
+    assert {value.__name__ for value in public if inspect.ismodule(value)} <= set(API_PAGES)
+    assert {value for value in public if not inspect.ismodule(value)} <= pages
 
 
 def test_the_package_is_marked_as_typed():

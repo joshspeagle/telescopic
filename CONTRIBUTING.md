@@ -52,6 +52,15 @@ full build:
 TELESCOPIC_DOCS_EXECUTE=cache sphinx-build docs docs/_build/html
 ```
 
+The API reference, `docs/api.md`, is an index of autosummary tables, one per section. The
+build generates a page for each name the tables list into `docs/api/`, which is not
+committed: a class's page shows its attributes and methods, and a module's page its
+functions and the classes of its `__all__`. A new public class or module is listed in
+`docs/api.md` under its section, and a new function in its module's `__all__`; the tests
+fail when a class or module of the public namespace, or a class of a listed module's
+`__all__`, has no page. After a name is removed or renamed, delete `docs/api/`: the strict
+build fails on the stale page, which no table lists any more.
+
 The colors, fonts, sizes, marks and plot style come from one script,
 `docs/_scripts/brand.py`, whose docstring lists the files it writes. Edit the values
 there and run it; CI runs it with `--check`, which names any file that is stale:

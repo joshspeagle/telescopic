@@ -710,7 +710,7 @@ These targets are measured by `benchmarks/` and are not gating.
   - a fast tier under 2 minutes, and a `slow` statistical tier;
   - at least 90% line coverage of `src/`.
 - **Documentation:**
-  - toolchain: Sphinx, MyST-NB (tutorials executed at every build in CI and by default; a local build may reuse the cache or skip execution, DECISIONS #81), numpydoc, sphinx-copybutton, and a theme of the project's own on Sphinx's `basic` theme, whose colors, type, marks and plot style are written by one script (DECISIONS #79);
+  - toolchain: Sphinx, MyST-NB (tutorials executed at every build in CI and by default; a local build may reuse the cache or skip execution, DECISIONS #81), numpydoc, autosummary (a generated page for each public class and module, DECISIONS #184), sphinx-copybutton, and a theme of the project's own on Sphinx's `basic` theme, whose colors, type, marks and plot style are written by one script (DECISIONS #79);
   - pages: a landing page and six sections: Start (Getting started), Tutorials, How-to guides, Theory, Reference (API reference, Citing, Changelog) and Project (Contributing);
   - the design records (this specification, the plans, the design of the site's identity, the landscape report and the research notes) stay in the repository and are not built (DECISIONS #80);
   - hosting: GitHub Pages from `main`, once the site's structure is final (DECISIONS #82).

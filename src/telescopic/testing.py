@@ -27,7 +27,7 @@ NEAR_MISS_ULPS = 64
 # Spec section 5.1 and R-KER-3.
 @dataclass(frozen=True)
 class CouplingReport:
-    """The checks of :func:`check_coupling`.
+    """The checks of :func:`~telescopic.testing.check_coupling`.
 
     Attributes
     ----------

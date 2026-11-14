@@ -29,6 +29,7 @@ extensions = [
     "myst_nb",
     "numpydoc",
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
 ]
@@ -48,6 +49,14 @@ nb_execution_timeout = 300
 nb_execution_raise_on_error = True
 # Consecutive printed lines of a cell show as one output.
 nb_merge_streams = True
+
+# The API reference is docs/api.md, an index whose autosummary tables generate a page for
+# each class, function and module that they list, into docs/api/ at every build; the
+# pages are not committed. A module's page shows the names of its __all__.
+templates_path = ["_templates"]
+autosummary_ignore_module_all = False
+# The outline of a class's page lists its methods without repeating the class's name.
+toc_object_entries_show_parents = "hide"
 
 numpydoc_show_class_members = False
 # A parameter missing from a docstring's Parameters section (check PR01), or listed there
