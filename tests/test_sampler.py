@@ -424,7 +424,11 @@ def test_chains_cannot_start_where_the_gradient_is_not_finite():
     def grad(x):
         return np.where(x > 1, np.nan, -x)
 
-    with pytest.raises(ValueError, match="where log_prob is finite: chains cannot start"):
+    # The gradient check, which skips such points, says first that it compared nothing.
+    with (
+        pytest.raises(ValueError, match="where log_prob is finite: chains cannot start"),
+        pytest.warns(InputWarning, match="compared no line"),
+    ):
         sample(
             log_prob, Normal([3.0], [0.01]), 10, grad=grad, kernel=MALA(1.0, cov=np.eye(1)), k=5
         )
@@ -444,6 +448,79 @@ def test_a_run_warns_when_it_first_takes_a_gradient_as_zero():
     evaluated = int(re.search(pattern, message).group(1))
     assert 0 < evaluated < result.n_grad
     assert result.n_grad_zeroed > 0
+
+
+class Counted:
+    # A vectorized function that counts the points it is evaluated at.
+    def __init__(self, function):
+        self.function, self.points = function, 0
+
+    def __call__(self, x):
+        self.points += len(x)
+        return self.function(x)
+
+
+def test_a_sampler_with_a_gradient_kernel_checks_grad_unless_told_not_to():
+    def wrong(x):
+        return np.asarray(x)  # the sign of the standard normal's gradient flipped
+
+    kernel = MALA(0.5, cov=np.eye(2))
+    counted = Counted(log_prob), Counted(wrong)
+    with pytest.warns(InputWarning, match="grad disagrees"):
+        sampler = CoupledSampler(
+            counted[0], INIT, grad=counted[1], vectorize=True, kernel=kernel, rng=7
+        )
+    assert sampler.gradient_check.ratio.max() > 1
+    assert (counted[0].points, counted[1].points) == (40, 8)
+    counted = Counted(log_prob), Counted(wrong)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        sampler = CoupledSampler(
+            counted[0],
+            INIT,
+            grad=counted[1],
+            vectorize=True,
+            kernel=kernel,
+            check_grad=False,
+            rng=7,
+        )
+    assert sampler.gradient_check is None
+    assert (counted[0].points, counted[1].points) == (0, 0)
+
+
+@pytest.mark.parametrize(
+    "kernel",
+    [MALA(), HMC(), MALA(0.5, cov=np.eye(2)), HMC(0.3, cov=np.eye(2))],
+    ids=["MALA", "HMC", "MALA given", "HMC given"],
+)
+def test_the_gradient_check_changes_no_result(kernel):
+    runs = [
+        sample(
+            log_prob,
+            INIT,
+            10,
+            grad=lambda x: -x,
+            vectorize=True,
+            kernel=kernel,
+            k=50,
+            check_grad=check_grad,
+            rng=np.random.default_rng(3),
+        )
+        for check_grad in (True, False)
+    ]
+    np.testing.assert_array_equal(runs[0].meeting_times, runs[1].meeting_times)
+    np.testing.assert_array_equal(runs[0].measure.atoms, runs[1].measure.atoms)
+    np.testing.assert_array_equal(runs[0].measure.weights, runs[1].measure.weights)
+
+
+def test_the_gradient_check_runs_when_the_kernel_evaluates_grad():
+    given = MALA(0.5, cov=np.eye(2))
+    for kernel, vectorize in ((Mixture([KERNEL, given], [0.5, 0.5]), True), (given, False)):
+        sampler = CoupledSampler(
+            log_prob, INIT, grad=lambda x: -x, vectorize=vectorize, kernel=kernel, rng=8
+        )
+        assert len(sampler.gradient_check.gap) == 8
+    assert CoupledSampler(log_prob, INIT, grad=lambda x: -x, kernel=KERNEL).gradient_check is None
 
 
 def test_meeting_times_refuses_max_iter_none():

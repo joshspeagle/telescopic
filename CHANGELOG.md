@@ -294,3 +294,11 @@ All notable changes to this project are documented here. The format follows
   event, is freed when the caller drops an error raised in a worker. A reference cycle
   held them until a later garbage collection, which on Python 3.11 and 3.12 can warn
   that the resource tracker was called reentrantly and leave the semaphores to leak.
+- A sampler built with `grad` and a kernel that evaluates it compares `grad` with
+  central differences of `log_prob` along 8 lines through draws of the initial
+  distribution, before tuning, and emits an `InputWarning` with the size of the
+  disagreement in nats where they disagree beyond rounding, or when it could compare no
+  line. It costs 40 evaluations of `log_prob` and 8 of `grad` at any dimension, draws
+  from a random stream of its own and changes no result; `check_grad=False` on
+  `CoupledSampler` and `sample` turns it off, and `CoupledSampler.gradient_check`, a
+  `diagnostics.GradientCheck`, records what it compared.
