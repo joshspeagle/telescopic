@@ -534,9 +534,9 @@ Methods:
 **`SignedMeasure`** holds three arrays:
 - `atoms` `(N, d)`;
 - `weights` `(N,)`, each replicate's summing to 1;
-- `replicate` `(N,)`, the index into the result's replicates.
+- `replicate` `(N,)`, the index into the result's replicates, in nondecreasing order, so that each replicate's atoms are consecutive (DECISIONS #182).
 
-The constructor checks that `atoms` and `weights` have an integer or float dtype, raising `TypeError` naming the field, and the shapes, and that each `replicate` is an integer in $[0, R)$, raising `ValueError` naming the field. It stores the arrays as read-only views without copying them: its attributes cannot be written through, but the arrays passed in, such as those of the `Replicates` returned by `engine.run`, stay writable; the package never writes to them (DECISIONS #107).
+The constructor checks that `atoms` and `weights` have an integer or float dtype, raising `TypeError` naming the field, and the shapes, and that each `replicate` is an integer in $[0, R)$ and that they are in nondecreasing order, raising `ValueError` naming the field. It stores the arrays as read-only views without copying them: its attributes cannot be written through, but the arrays passed in, such as those of the `Replicates` returned by `engine.run`, stay writable; the package never writes to them (DECISIONS #107).
 
 Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 
