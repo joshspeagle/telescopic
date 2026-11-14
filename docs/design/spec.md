@@ -684,7 +684,7 @@ These targets are measured by `benchmarks/` and are not gating.
 ## 11. Engineering requirements (R-ENG)
 
 - **Packaging:** `pyproject.toml` (hatchling), `src/` layout. The distribution and import name is `telescopic`, which was free on PyPI on 2026-10-23.
-- **Licence:** MIT (QUESTIONS).
+- **Licence:** MIT (DECISIONS #150).
 - **Python:** ≥ 3.11. CI covers 3.11 to the newest release.
 - **Dependencies:**
   - core: `numpy>=1.26`, `scipy>=1.12` (for `scipy.optimize.isotonic_regression`) and `threadpoolctl`;
