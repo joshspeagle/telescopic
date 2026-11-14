@@ -44,29 +44,30 @@ import numpy as np
 from i85_setup import setup
 
 ROOT = Path(__file__).resolve().parents[2]
-BEFORE = "932861f"
+BEFORE = "4b02dc4"
 ROUNDS = 9
 
+# Times each statement in turn, and lists the subpackages loaded after the first.
 CHILD = """
 import json, sys, time
 sys.path.insert(0, sys.argv[1])
-start = time.process_time()
-exec(sys.argv[2])
-seconds = time.process_time() - start
-loaded = sorted(
-    name for name in sys.modules
-    if name.startswith("scipy.") and name.count(".") == 1 and not name[6:].startswith("_")
-)
-start = time.process_time()
-import scipy.stats
-stats_seconds = time.process_time() - start
-print(json.dumps([seconds, loaded, stats_seconds]))
+seconds, loaded = [], None
+for statement in sys.argv[2:]:
+    start = time.process_time()
+    exec(statement)
+    seconds.append(time.process_time() - start)
+    if loaded is None:
+        loaded = sorted(
+            name for name in sys.modules
+            if name.startswith("scipy.") and name.count(".") == 1 and name[6] != "_"
+        )
+print(json.dumps([seconds, loaded]))
 """
 
 
-def measure(source, statement):
+def measure(source, *statements):
     output = subprocess.run(
-        [sys.executable, "-I", "-c", CHILD, str(source), statement],
+        [sys.executable, "-I", "-c", CHILD, str(source), *statements],
         capture_output=True,
         text=True,
         check=True,
@@ -90,27 +91,26 @@ def main():
     with tempfile.TemporaryDirectory() as folder:
         imports = {
             "before": (extract(BEFORE, folder), "import telescopic"),
-            "after": (ROOT / "src", "import telescopic"),
+            "after": (ROOT / "src", "import telescopic", "import scipy.stats"),
             "floor": (ROOT / "src", "import numpy, scipy.linalg, scipy.special, scipy.sparse"),
         }
-        for source, statement in imports.values():
-            measure(source, statement)
+        for arguments in imports.values():
+            measure(*arguments)
         seconds = {name: [] for name in imports}
         first_stats, last = [], {}
         for round_ in range(ROUNDS):
             names = list(imports) if round_ % 2 == 0 else list(reversed(imports))
             for name in names:
-                time_, loaded, stats_seconds = measure(*imports[name])
-                seconds[name].append(time_)
-                last[name] = loaded, stats_seconds
+                times, last[name] = measure(*imports[name])
+                seconds[name].append(times[0])
                 if name == "after":
-                    first_stats.append(stats_seconds)
+                    first_stats.append(times[1])
     for name in imports:
         values = np.array(seconds[name])
         print(
             f"{name:6}: processor seconds median {np.median(values):.3f}, range "
             f"{values.min():.3f} to {values.max():.3f}; SciPy subpackages loaded: "
-            f"{', '.join(last[name][0])}"
+            f"{', '.join(last[name])}"
         )
     ratio = np.array(seconds["before"]) / np.array(seconds["after"])
     print(
