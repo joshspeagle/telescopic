@@ -59,21 +59,8 @@ Each item has the default that work proceeds on until Josh answers.
   where there is no resonance on 2 of 3 cells: a median meeting time of 83.1 against
   70.4 on the banana with `n_steps=2`, and an inefficiency of 57,218 against 44,339 on
   the mixture (`i137_nongaussian.out`).
-  Default: no change to the package's kernels or tuning until Josh rules on issue #137;
-  meanwhile the kernels guide and the advice of the error raised when `k` cannot be
-  chosen name this case (an automatic step with a given `n_steps`, or with a given
-  covariance that does not whiten the target). Recommended: the guard as tested is not
-  adopted, since it also lowers steps where the package already gives `k` (4 of the 12
-  Gaussian configurations, `i137_remedies.out`) and has no step to return where the
-  frequencies span too wide a ratio; a guard that acts only near a resonance and the
-  jitter both enter the pre-registered test of issue #91, whose predictions are posted on
-  that issue before it runs.
-- [ ] **Row-independent products for a vectorized target.** With a vectorized target the
-  kernels compute their products by BLAS (DECISIONS #189), so a vectorized target whose
-  rows are computed independently, as the built-in examples' are, is no longer bitwise
-  invariant across lane counts, pools and merged runs, as it was before: a difference of
-  rounding can move a replicate's meeting time and its whole output, while the estimates
-  agree within their error bars (`notes/experiments/i83_blas_products.out`, section 2).
-  Should there be a way to keep the row-independent products for such a target, such as
-  an argument of `Target`? Default: none; `vectorize=False` keeps every bitwise
-  guarantee.
+  Josh ruled on issue #137 (2026-11-14): no remedy enters the package yet. The guard as
+  tested is not adopted; a guard that acts only near a resonance and the jitter both
+  enter the pre-registered test of issue #91, with the Gaussian of unequal scales added
+  and the predictions posted on that issue before it runs (DECISIONS #199). Meanwhile the
+  kernels guide and a note on the error raised when `k` cannot be chosen name the case.
