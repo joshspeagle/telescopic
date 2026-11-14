@@ -56,6 +56,10 @@ All notable changes to this project are documented here. The format follows
   cluster's, was counted as having as many workers as this process may use CPUs, which
   left its other workers idle. The argument replaces a reported size, and with a
   log-density evaluated point by point it changes no replicate.
+- A pool's chunks hold at most 1,024 replicates. Above 4,096 replicates per worker, four
+  chunks per worker grew with the run, to 62,500 replicates each for 1,000,000 on 4
+  workers; now a worker's memory, the result it sends back and the steps of the progress
+  bar stay bounded. This process still holds every replicate.
 - `Result.save` and `Result.load` (a versioned `.npz` file, without pickle); joint
   signed histograms of several coordinates (`Result.histogram`); plots of meeting times,
   the TV bound, signed marginals and corner plots (`telescopic.plotting`, with
@@ -332,3 +336,8 @@ All notable changes to this project are documented here. The format follows
 - A request of `Draws` for no rows returns an empty array. It raised `ValueError` when it
   asked for at least two numbers per row more than the buffer held, as for two normals
   per row of replayed draws without normals.
+- `import telescopic` no longer imports `scipy.stats`, `scipy.optimize` and
+  `scipy.integrate`: the functions that use them import them at their first call. That
+  shortens the import, and with it the start of each worker of a process pool; the first
+  call that needs `scipy.stats`, such as the end of the first run of `sample`, pays its
+  import once.

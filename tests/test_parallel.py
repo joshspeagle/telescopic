@@ -102,6 +102,39 @@ def test_a_pool_gets_chunks_of_full_lanes_and_at_most_four_per_worker(n, workers
     assert max(executor.chunks) - min(executor.chunks) <= 1
 
 
+class Sampling(Counting):
+    # Records each chunk's size and runs only its first replicate, so that a large run
+    # costs one replicate per chunk.
+    def submit(self, function, piece, **options):
+        self.chunks.append(len(piece))
+        return ThreadPoolExecutor.submit(self, function, piece[:1], **options)
+
+
+@pytest.mark.parametrize(
+    ("n", "workers", "chunks"), [(4_096, 1, 4), (4_097, 1, 5), (100_000, 4, 98)]
+)
+def test_pool_chunks_never_exceed_the_replicate_cap(n, workers, chunks):
+    # The cap of 1,024 binds above 4,096 replicates per worker, where one replicate more
+    # makes a fifth chunk. Four chunks per worker of 100,000 replicates on 4 workers
+    # would hold 6,250 each, so the cap makes 98 chunks of 1,020 or 1,021.
+    with Sampling(workers) as executor:
+        execute(job(), np.arange(n), executor, never)
+    assert sum(executor.chunks) == n
+    assert len(executor.chunks) == chunks
+    assert max(executor.chunks) <= _parallel.MAX_CHUNK == 1_024
+    assert max(executor.chunks) - min(executor.chunks) <= 1
+
+
+def test_results_do_not_depend_on_the_replicate_cap(monkeypatch):
+    # 60 replicates on 2 workers make 2 chunks of 30; a cap of 8 makes 8 chunks of 7 or 8.
+    alone = execute(job(), np.arange(60), None, never)
+    monkeypatch.setattr(_parallel, "MAX_CHUNK", 8)
+    with Counting(2) as executor:
+        capped = execute(job(), np.arange(60), executor, never)
+    assert len(executor.chunks) == 8
+    assert_same_replicates(capped, alone)
+
+
 def test_a_map_pool_that_reports_its_size_gets_waves_of_that_size():
     # 2,000 replicates on 2 workers: 8 chunks, in waves of 2.
     pool = Sized()

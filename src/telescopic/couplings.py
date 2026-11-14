@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import functools
 import math
+import sys
 from typing import Any
 
 import numpy as np
-from scipy import stats
 from scipy.special import softmax
 
 from telescopic._linalg import matvec
@@ -14,8 +15,6 @@ from telescopic._random import Draws
 from telescopic._types import BoolArray, Distribution, FloatArray, IndexArray, real
 
 __all__ = ["discrete_maximal", "maximal", "reflection_maximal"]
-
-_DIRICHLET = type(stats.dirichlet([1.0, 1.0]))
 
 
 # Spec R-CPL-1.
@@ -181,7 +180,9 @@ def _log_uniform(generator: np.random.Generator) -> float:
 
 def _log_density(distribution: Any, value: Any) -> float:
     name = "logpdf" if hasattr(distribution, "logpdf") else "logpmf"
-    if isinstance(distribution, _DIRICHLET):
+    # A frozen Dirichlet exists only once scipy.stats is imported, so a process that has
+    # not imported it holds none and need not import it to check.
+    if "scipy.stats" in sys.modules and isinstance(distribution, _dirichlet_type()):
         # SciPy's dirichlet draws shape (1, k), and its logpdf reads the first axis as the
         # components: it refuses (1, k) for k > 2, and reads (1, 2) as two points.
         value = np.ravel(value)
@@ -198,6 +199,13 @@ def _log_density(distribution: Any, value: Any) -> float:
     if math.isnan(log_density):
         raise ValueError(f"{name} returned nan at {np.asarray(value).tolist()}")
     return log_density
+
+
+@functools.cache
+def _dirichlet_type() -> type[Any]:
+    from scipy import stats
+
+    return type(stats.dirichlet([1.0, 1.0]))
 
 
 def _categorical(weights: FloatArray, u: FloatArray) -> IndexArray:

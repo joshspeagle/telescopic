@@ -27,12 +27,15 @@ your own has; the kernel is tuned in this process.
   emcee takes.
 
 Starting worker processes takes time, so a pool pays off only for runs that take longer
-than the start. telescopic starts and stops only the workers of an integer pool. The
-workers of an executor or a pool of your own live as long as it does and serve every run
-given it, and you close it. The executor below spawns its workers, as telescopic does:
-forking a process that runs threads, such as a notebook's kernel or a multithreaded BLAS,
-can deadlock. With `progress=True`, the sampler shows the progress of its pilot pairs and
-of each run ([Progress](#progress)):
+than the start. Each worker starts Python and imports telescopic, which imports NumPy and
+SciPy's linear algebra, sparse arrays and special functions. The functions that need
+SciPy's statistics, optimization or integration, none of which runs in a worker, import
+them at their first call. telescopic starts and stops only the workers of an integer
+pool. The workers of an executor or a pool of your own live as long as it does and serve
+every run given it, and you close it. The executor below spawns its workers, as
+telescopic does: forking a process that runs threads, such as a notebook's kernel or a
+multithreaded BLAS, can deadlock. With `progress=True`, the sampler shows the progress of
+its pilot pairs and of each run ([Progress](#progress)):
 
 ```{code-cell} python
 import multiprocessing
@@ -70,8 +73,16 @@ and join the results ([Merging runs](results.md#merging-runs)).
 
 A pool runs chunks of consecutive replicate indices: one per worker at least, more where
 a chunk would hold more than 256 replicates, the lanes that the engine advances together,
-and four per worker at most. An executor receives every chunk at once, in index order; a
-pool with only `map` receives them in waves of one chunk per worker.
+and four per worker at most, unless a chunk would then hold more than 1,024 replicates.
+For $R$ replicates on $W$ workers, that is
+$\max(\lceil R / 1024 \rceil, \min(R, 4W, \max(W, \lceil R / 256 \rceil)))$ chunks, of
+sizes that differ by at most one. Up to 4,096 replicates per worker, the limit of 1,024
+changes nothing: 2,000 replicates on 4 workers make 8 chunks of 250. Beyond it, the
+chunks hold at most 1,024 replicates whatever the number of workers: 100,000 replicates
+on 4 workers make 98 chunks of 1,020 or 1,021, and 1,000,000 on 4 or 64 workers make 977
+of 1,023 or 1,024. An executor receives every chunk at once, in index order; a pool with
+only `map` receives them in waves of one chunk per worker, so a long run on such a pool
+takes many waves, each as long as its slowest chunk.
 
 telescopic reads the number of workers of an integer pool, a `concurrent.futures`
 executor, a `multiprocessing` pool and a schwimmbad pool. It counts any other pool as
@@ -149,7 +160,9 @@ copies of the target, the kernel and the initial distribution; tuning runs in th
 process, on your objects. Side effects of the log-density on a pool, such as a call
 counter or a cache, therefore happen on the copies and are not seen on your objects. An
 object that cannot be pickled, such as one that holds a `threading.Lock`, cannot run on a
-pool: telescopic raises `TypeError`.
+pool: telescopic raises `TypeError`. The copies travel with every chunk, once per 1,024
+replicates in a long run, so keep the data that a log-density holds small; data that it
+reads from a global of a module the workers import is not sent.
 
 With cloudpickle installed (the `parallel` extra), telescopic pickles them with
 cloudpickle, which also sends lambdas and functions defined in a notebook or a script.
@@ -233,7 +246,10 @@ chains, then the step size. On a pool, the count of replicates moves as chunks f
 ## Memory
 
 The workers send the signed measures of their replicates back to this process, which
-holds them all. [Settings](settings.md#memory-and-thinning) gives their size, the
+holds them all. A worker holds those of one chunk at a time, at most 1,024 replicates,
+and sends them back when the chunk ends, so its memory does not grow with the number of
+replicates; the memory of this process does, since it keeps every chunk's replicates and
+then joins them. [Settings](settings.md#memory-and-thinning) gives their size, the
 {class}`telescopic.InputWarning <telescopic.warnings.InputWarning>` that the sampler emits
 when the run and its first estimates would take more than 1 GB, and `thin`, which stores
 fewer.
