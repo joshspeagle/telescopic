@@ -37,11 +37,11 @@ CHECK_GRAD = True
 PILOT_MAX_ITER = 100_000
 # The meeting-time pilot: lag 1, with nothing stored (spec R-TUNE-2).
 PILOT_SETTINGS = engine.Settings(0, 0, 1, max_iter=PILOT_MAX_ITER, store=False)
-# The peak memory of a run's first estimates over the bytes the run stores: 2.9 to 3.0
-# from d = 2 to 50 for a random walk's rejection rate at thin = 1. In one or two
-# dimensions it reaches about twice that with thin above 1 or a kernel that rarely
-# rejects, since Result.quantile sorts the atoms that are not consecutive repeats
-# (notes/experiments/i73_memory_peak.out).
+# A bound on the peak memory of a run and of its first estimates over the bytes the run
+# stores, from d = 2 on for a random walk's rejection rate at thin = 1. In one or two
+# dimensions the estimates pass it with thin above 1 or a kernel that rarely rejects,
+# since Result.quantile sorts the atoms that are not consecutive repeats
+# (notes/experiments/i73_memory_peak.out, DECISIONS #131, #183).
 PEAK_PER_STORED = 3
 # The warnings of spec section 7.4 that a run emits as they happen, not at its end, or as
 # it ends for slow pairs on a pool.
