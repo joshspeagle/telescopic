@@ -1,4 +1,4 @@
-setup: commit b0b8f71-dirty of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
+setup: commit 970e3c8 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
 Part 1: mean distance between the two chains' draws of N(0, C) and N(0, C')
 C               change     e  normal map  same state  independent  flipped
 random (200)    scale   0.01      0.0076      0.0076       2.1561     0.00
@@ -18,18 +18,18 @@ Part 2: pilot meeting times in sweeps, 100 pairs for each of seeds (1, 2, 3, 4, 
 the median of each seed (pairs censored at 2000), the mean and standard deviation
 of the medians, and the time of a sweep relative to the first row of its target
 pumps                    crn       ppf       34.0    34.0    34.0    34.0    34.0  mean   34.0 sd   0.0  cost 1.00
-pumps                    crn       no ppf    34.0    34.0    34.0    34.0    34.0  mean   34.0 sd   0.0  cost 5.42
+pumps                    crn       no ppf    34.0    34.0    34.0    34.0    34.0  mean   34.0 sd   0.0  cost 4.54
 pumps                    two-scale ppf        3.0     4.0     3.0     4.0     3.0  mean    3.4 sd   0.5  cost 1.00
-pumps                    two-scale no ppf     3.0     4.0     3.0     3.0     3.0  mean    3.2 sd   0.4  cost 1.97
+pumps                    two-scale no ppf     3.0     4.0     3.0     3.0     3.0  mean    3.2 sd   0.4  cost 2.49
 Gaussian, 2 blocks of 2  crn       map       48.0    48.0    48.0    48.0    48.5  mean   48.1 sd   0.2  cost 1.00
-Gaussian, 2 blocks of 2  crn       SciPy     48.0    48.0    48.0    48.0    48.0  mean   48.0 sd   0.0  cost 9.38
+Gaussian, 2 blocks of 2  crn       SciPy     48.0    48.0    48.0    48.0    48.0  mean   48.0 sd   0.0  cost 8.74
 Gaussian, 2 blocks of 2  two-scale map        4.0     4.0     4.0     4.0     4.0  mean    4.0 sd   0.0  cost 1.00
-Gaussian, 2 blocks of 2  two-scale SciPy      4.0     4.0     4.0     4.0     4.0  mean    4.0 sd   0.0  cost 5.65
+Gaussian, 2 blocks of 2  two-scale SciPy      4.0     4.0     4.0     4.0     4.0  mean    4.0 sd   0.0  cost 7.21
 robust regression        crn       map      155.0   148.5   130.5   145.5   156.0  mean  147.1 sd  10.3  cost 1.00
-robust regression        crn       SciPy    210.0   190.5   235.5   192.0   199.0  mean  205.4 sd  18.5  cost 2.52
+robust regression        crn       SciPy    210.0   190.5   235.5   192.0   199.0  mean  205.4 sd  18.5  cost 2.24
 robust regression        two-scale map        3.5     3.0     4.0     4.0     4.0  mean    3.7 sd   0.4  cost 1.00
-robust regression        two-scale SciPy      4.0     4.0     4.0     4.0     4.0  mean    4.0 sd   0.0  cost 2.56
+robust regression        two-scale SciPy      4.0     4.0     4.0     4.0     4.0  mean    4.0 sd   0.0  cost 1.73
 normal means             crn       map       13.0    14.0    14.0    13.0    14.0  mean   13.6 sd   0.5  cost 1.00
-normal means             crn       SciPy     14.0    14.0    14.0    14.0    14.0  mean   14.0 sd   0.0  cost 4.22
+normal means             crn       SciPy     14.0    14.0    14.0    14.0    14.0  mean   14.0 sd   0.0  cost 3.79
 normal means             two-scale map        3.0     3.0     3.0     3.0     3.0  mean    3.0 sd   0.0  cost 1.00
-normal means             two-scale SciPy      3.0     3.0     3.0     3.0     3.0  mean    3.0 sd   0.0  cost 3.13
+normal means             two-scale SciPy      3.0     3.0     3.0     3.0     3.0  mean    3.0 sd   0.0  cost 2.92
