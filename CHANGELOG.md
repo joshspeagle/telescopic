@@ -312,3 +312,6 @@ All notable changes to this project are documented here. The format follows
   `CoupledSampler` and `sample` turns it off, and `CoupledSampler.gradient_check`, a
   `diagnostics.GradientCheck`, records what it compared. An error raised inside the
   check keeps its type and message, with a note that it was raised in the check.
+- `Result.cov` weights the atoms in blocks of 65,536 rows, so its peak memory is about
+  the atoms' size plus a block rather than twice the atoms; `cov` can differ from before
+  in the last bits.

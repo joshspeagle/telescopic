@@ -8,7 +8,7 @@ import pytest
 from scipy import stats
 
 from references import gaussian_log_prob, synthetic
-from telescopic import examples, sample
+from telescopic import examples, results, sample
 from telescopic.diagnostics import w1_bound
 from telescopic.engine import run
 from telescopic.estimators import unbiased_covariance, unbiased_variance, weighted_quantile
@@ -109,6 +109,16 @@ def test_the_covariance_combines_first_and_second_moments_coordinate_by_coordina
     np.testing.assert_array_equal(covariance, covariance.T)
     np.testing.assert_allclose(RESULT.var(), np.diag(covariance), rtol=1e-12)
     np.testing.assert_allclose(RESULT.std(), np.sqrt(np.maximum(0, np.diag(covariance))))
+
+
+def test_the_covariance_summed_in_row_blocks_equals_one_product(monkeypatch):
+    # Blocks of 7 rows, the last one partial, against the product over all the atoms.
+    monkeypatch.setattr(results, "_ROWS", 7)
+    assert len(RESULT.measure.weights) % 7
+    centered, first = RESULT._centered()
+    weights = RESULT.measure.weights
+    second = centered.T @ (weights[:, None] * centered) / RESULT.n_replicates
+    np.testing.assert_allclose(RESULT.cov(), unbiased_covariance(first, second), rtol=1e-12)
 
 
 def test_variances_stay_exact_far_from_the_origin():

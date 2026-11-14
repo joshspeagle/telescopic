@@ -41,6 +41,8 @@ _WRAP = textwrap.TextWrapper(
 # A float in a kernel's repr: digits with a point or an exponent, not inside a name or a
 # dotted token such as a version, 3.10.12.
 _FLOAT = re.compile(r"(?<![\w.])\d+(?:\.\d*(?:[eE][-+]?\d+)?|[eE][-+]?\d+)(?![\w.])")
+# The rows of the atoms that the covariance weights at a time (DECISIONS #180).
+_ROWS = 65_536
 
 
 def _four_figures(match: re.Match[str]) -> str:
@@ -261,8 +263,12 @@ class Result:
         self._require(2)
         centered, first = self._centered()
         weights = self.measure.weights
-        second = centered.T @ (weights[:, None] * centered) / self.n_replicates
-        return unbiased_covariance(first, second)
+        # Summed over blocks of rows, so that the weighted copy is one block, not the atoms.
+        second = np.zeros((self.ndim, self.ndim))
+        for start in range(0, len(weights), _ROWS):
+            block = centered[start : start + _ROWS]
+            second += block.T @ (weights[start : start + _ROWS, None] * block)
+        return unbiased_covariance(first, second / self.n_replicates)
 
     def var(self) -> FloatArray:
         r"""Unbiased estimates of the variances; they can be negative.
