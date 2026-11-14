@@ -1,0 +1,38 @@
+setup: commit 6b1c75d-dirty of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
+before: commit 6b1c75d; after: this checkout; children run with {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1'}
+load average before: (1.28, 1.71, 1.5)
+
+1. Fixed seeds: hash before -> after, meeting times that differ, largest change of E[x]
+sample RandomWalk, d = 10, point by point        5e2d835a066d -> 8829bcc3d58e; 0 meeting times differ; E[x] moved 1.9e-16 standard errors
+sample MALA, d = 10, point by point              ebef4f8279fc -> cefb59a4888f; 0 meeting times differ; E[x] moved 6.8e-17 standard errors
+sample Independence, d = 10, point by point      1074c133b396 -> 1074c133b396; 0 meeting times differ; E[x] moved 0.0e+00 standard errors
+sample Gibbs, pumps, point by point              938c930294dc -> 938c930294dc; 0 meeting times differ; E[x] moved 0.0e+00 standard errors
+run RandomWalk, d = 60, point by point           798e254056b2 -> 1729103a0a9c; 0 meeting times differ; E[x] moved 5.2e-15 standard errors
+run HMC, d = 2, point by point                   a619ddf98466 -> e8e8cc2accfa; 0 meeting times differ; E[x] moved 4.1e-16 standard errors
+sample MALA, logistic regression, point by point 4b120924468b -> e1d42b3eef38; 0 meeting times differ; E[x] moved 0.0e+00 standard errors
+sample HMC, logistic regression, point by point  1c320e5126a9 -> 9c6fdcfcc512; 1 meeting times differ; E[x] moved 7.5e-02 standard errors
+adaptive_metropolis, d = 20, point by point      0881c1b8346b -> 0881c1b8346b
+run Independence, d = 20, one lane, point by point 582ac333a929 -> 582ac333a929; 0 meeting times differ; E[x] moved 0.0e+00 standard errors
+sample RandomWalk, d = 10, vectorized            d59609aa2ddf -> 4e2477641e2f; 0 meeting times differ; E[x] moved 1.9e-16 standard errors
+sample MALA, d = 10, vectorized                  a2a5e9b0e2e9 -> c1b7e0557389; 0 meeting times differ; E[x] moved 1.5e-16 standard errors
+sample Independence, d = 10, vectorized          030bae10e1c7 -> 030bae10e1c7; 0 meeting times differ; E[x] moved 0.0e+00 standard errors
+sample Gibbs, pumps, vectorized                  938c930294dc -> 938c930294dc; 0 meeting times differ; E[x] moved 0.0e+00 standard errors
+run RandomWalk, d = 60, vectorized               fff604a0fd04 -> 23f675961f0f; 0 meeting times differ; E[x] moved 3.3e-15 standard errors
+run HMC, d = 2, vectorized                       d9f3e8e8ec5f -> cacf078ecdd6; 0 meeting times differ; E[x] moved 2.1e-16 standard errors
+sample MALA, logistic regression, vectorized     82a6a22c2265 -> 20d441cf2db6; 0 meeting times differ; E[x] moved 0.0e+00 standard errors
+sample HMC, logistic regression, vectorized      68c9c3b4e72e -> acbc1d3cab5c; 1 meeting times differ; E[x] moved 6.8e-02 standard errors
+adaptive_metropolis, d = 20, vectorized          bb1884aa3b2a -> bb1884aa3b2a
+run Independence, d = 20, one lane, vectorized   582ac333a929 -> 582ac333a929; 0 meeting times differ; E[x] moved 0.0e+00 standard errors
+
+2. Reflection: 256 rows; microseconds per call, median of the rounds, and before/after per round: median (range)
+d =   2, einsum:    86.21 ->    79.70, ratio 1.10 (1.02 to 1.63); x and flags equal, 62 rows not identical, y largest relative difference 3.1e-15
+d =   2, BLAS  :    82.32 ->    76.55, ratio 1.09 (1.04 to 1.72); x and flags equal, 62 rows not identical, y largest relative difference 3.1e-15
+d =  10, einsum:   181.03 ->   165.03, ratio 1.10 (1.05 to 1.25); x and flags equal, 62 rows not identical, y largest relative difference 4.8e-14
+d =  10, BLAS  :   150.22 ->   139.72, ratio 1.06 (0.98 to 1.16); x and flags equal, 62 rows not identical, y largest relative difference 1.6e-14
+d =  20, einsum:   293.93 ->   240.12, ratio 1.22 (1.12 to 1.28); x and flags equal, 61 rows not identical, y largest relative difference 3.0e-13
+d =  20, BLAS  :   210.43 ->   192.25, ratio 1.10 (0.98 to 1.63); x and flags equal, 61 rows not identical, y largest relative difference 2.0e-13
+d =  50, einsum:   793.59 ->   624.01, ratio 1.26 (1.20 to 1.90); x and flags equal, 88 rows not identical, y largest relative difference 1.0e-12
+d =  50, BLAS  :   427.47 ->   389.36, ratio 1.10 (1.01 to 1.56); x and flags equal, 88 rows not identical, y largest relative difference 5.2e-13
+d = 200, einsum:  8614.48 ->  6327.40, ratio 1.36 (1.32 to 1.46); x and flags equal, 168 rows not identical, y largest relative difference 9.5e-12
+d = 200, BLAS  :  2120.96 ->  1718.72, ratio 1.24 (1.21 to 1.29); x and flags equal, 168 rows not identical, y largest relative difference 5.6e-12
+load average after: (1.57, 2.0, 1.98)

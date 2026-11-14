@@ -65,15 +65,22 @@ def reflection_maximal(
     # Infinite means, from a drift that overflowed, can give inf - inf = NaN, which fails
     # the test as it should.
     with np.errstate(invalid="ignore"):
-        delta = matvec(inverse, mu_x - mu_y, blas=blas)
+        difference = mu_x - mu_y
+        delta = matvec(inverse, difference, blas=blas)
         squared = np.einsum("ij,ij->i", delta, delta)
-        identical = log_u < -np.einsum("ij,ij->i", z, delta) - 0.5 * squared
-    norm = np.sqrt(squared)[:, None]
-    # e = 0 where the norm is 0 or not finite: y is then mu_y + C z, which keeps its law.
-    e = np.divide(delta, norm, out=np.zeros_like(delta), where=(norm > 0) & (norm < np.inf))
-    reflected = z - 2.0 * np.einsum("ij,ij->i", e, z)[:, None] * e
-    x = mu_x + matvec(chol, z, blas=blas)
-    y = np.where(identical[:, None], x, mu_y + matvec(chol, reflected, blas=blas))
+        along = np.einsum("ij,ij->i", z, delta)
+        identical = log_u < -along - 0.5 * squared
+    # C e = (mu_x - mu_y) / |delta|, so C(z - 2(e.z)e) = Cz - 2(z.delta)/|delta|^2
+    # (mu_x - mu_y), which reuses Cz. e = 0 where |delta| is 0 or not finite: y is then
+    # mu_y + Cz, which keeps its law.
+    finite = (squared > 0) & (squared < np.inf)
+    coefficient = np.divide(2.0 * along, squared, out=np.zeros_like(squared), where=finite)
+    shift = np.multiply(
+        coefficient[:, None], difference, out=np.zeros_like(difference), where=finite[:, None]
+    )
+    step = matvec(chol, z, blas=blas)
+    x = mu_x + step
+    y = np.where(identical[:, None], x, mu_y + step - shift)
     return x, y, identical
 
 

@@ -372,3 +372,10 @@ All notable changes to this project are documented here. The format follows
   error bars. Seeded outputs of vectorized runs change likewise. A target evaluated
   point by point keeps every bitwise guarantee. `couplings.reflection_maximal` takes
   `blas=True` to do the same.
+- `couplings.reflection_maximal`, which the coupled steps of RandomWalk, MALA and HMC
+  call, reflects with one product with the covariance factor instead of two: a call at
+  256 rows took 1.06 to 1.36 times less time at d = 2 to 200. Seeded outputs of their
+  coupled runs change: in the last bits for RandomWalk and MALA; for HMC, whose chains
+  meet once their trajectories have brought them close, a meeting time can move, and
+  with it a replicate's estimates (one of 100 on a logistic regression of 6 dimensions,
+  which moved the estimates by up to 0.075 standard errors).
