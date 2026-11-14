@@ -1,0 +1,99 @@
+setup: commit ff93ed6 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
+
+gaussian(20), R = 100: R = 100, censored 0, 564,646 atoms, 90.3 MB
+  peak MB: var 94.9, cov 105.4, quantile 12.7
+  sums: 8.0 bytes per atom besides the weights
+  replicates.index: 96bdba67cd0b5e6d
+  replicates.meeting_time: 3bf484435002ed4f
+  replicates.cost: 1f4b372039cecd56
+  replicates.owner: 3765b29864d64b6d
+  replicates.atoms: a31f1c0b83915c45
+  replicates.weights: ccf90a8ad97aa10a
+  replicates.distance: 33596f70cc5cf259
+  quantile: 1dbb7172b4fcb96e
+  quantile of h: 3987eed7cd228a40
+  mean: 8ac13428ef303f14
+  cov: bd809c6e5f6e0b9e, relative to the largest entry of the one-product form 3e-15
+  var: 350083e1665cfd3f, relative to the einsum form 7.5e-14
+  std: 972cab9862642ebe, relative 3.8e-14
+  diagnostics: 22dd65415654f04e
+  summary.mean: d476e56e1e814cf5
+  summary.standard_error: 8828d18f6715e7fc
+  summary.std: 972cab9862642ebe
+  summary.q16: e9e1f29b0d944066
+  summary.q50: bd94392edbd0d6f5
+  summary.q84: feebf4502f4c370d
+  summary footer: 1ec9669180311cc4
+
+gaussian(20), R = 100, thin = 10: R = 100, censored 0, 56,526 atoms, 9.0 MB
+  peak MB: var 9.5, cov 18.6, quantile 4.7
+  sums: 8.0 bytes per atom besides the weights
+  replicates.index: 96bdba67cd0b5e6d
+  replicates.meeting_time: 3bf484435002ed4f
+  replicates.cost: 1f4b372039cecd56
+  replicates.owner: 7c0462625287d3f8
+  replicates.atoms: f4ac067dc78f9261
+  replicates.weights: a027106f11cee86a
+  replicates.distance: 33596f70cc5cf259
+  quantile: 362e5ebaf48b2541
+  quantile of h: fe01721be6b567dd
+  mean: c32fa16e64eead46
+  cov: e615aa5399abc841, relative to the largest entry of the one-product form 0
+  var: cda007fda25b82de, relative to the einsum form 1.7e-14
+  std: 5b6b84a4cb6bbe28, relative 8.8e-15
+  diagnostics: 91049c05c95a1e6f
+  summary.mean: f934d4fc36a9e41d
+  summary.standard_error: d074df2c402d5bac
+  summary.std: 5b6b84a4cb6bbe28
+  summary.q16: 283d4f1bb0973e5a
+  summary.q50: 21d65cbc9f31bb89
+  summary.q84: 9fbf0f421dae4f84
+  summary footer: 9ba901dc7254d78b
+
+gaussian(2), R = 200, MALA: R = 200, censored 0, 9,238 atoms, 0.1 MB
+  sums: 8.2 bytes per atom besides the weights
+  replicates.index: de663cfb3b82787e
+  replicates.meeting_time: ba228f1f70f9a032
+  replicates.cost: c3fbfa095cf269a0
+  replicates.owner: c9d427b462c23c1f
+  replicates.atoms: 6ea9779afccbaabe
+  replicates.weights: 10108d1d357aa18a
+  replicates.distance: 2ddbfdf4aea51916
+  quantile: 9e57bcca36ad6468
+  quantile of h: 5f7682dc32064462
+  mean: e41f9d73ab289c9b
+  cov: e6efc9140e2518ce, relative to the largest entry of the one-product form 0
+  var: bab0144f72625744, relative to the einsum form 2.8e-15
+  std: f5943c8fe2ae6f14, relative 1.4e-15
+  diagnostics: 0948a9a0c5d1ada2
+  summary.mean: 176dc3ab585b1744
+  summary.standard_error: f756a1b296e60822
+  summary.std: f5943c8fe2ae6f14
+  summary.q16: 2782767509daa55d
+  summary.q50: 7ff8113af7b60395
+  summary.q84: 2ee840edceb5299a
+  summary footer: d9671b6972491d39
+
+gaussian(2), R = 200, censored: R = 30, censored 170, 30 atoms, 0.0 MB
+  sums: 16.3 bytes per atom besides the weights
+  replicates.index: de663cfb3b82787e
+  replicates.meeting_time: 94e3bb019caa8fd6
+  replicates.cost: dc8bd56668a4f4ed
+  replicates.owner: 0c6740d0c7910c8e
+  replicates.atoms: 299d311c02f9469f
+  replicates.weights: d53cc28498cba27f
+  replicates.distance: b9005e2fc07fd99b
+  quantile: d57fa54722ecbe85
+  quantile of h: 87063f688886f51f
+  mean: 299d311c02f9469f
+  cov: cd70a6589fac7302, relative to the largest entry of the one-product form 0
+  var: 699eb16f1926727d, relative to the einsum form 0
+  std: 6ba3abf1ab0344d6, relative 0
+  diagnostics: a673f34d26b22079
+  summary.mean: 92a133d17d9f3a34
+  summary.standard_error: fd0d39046dc93647
+  summary.std: 6ba3abf1ab0344d6
+  summary.q16: f5f0024975a72811
+  summary.q50: 90f1f9d20aa64dae
+  summary.q84: 5e2e942ad99c29de
+  summary footer: b0404413a9445f0a
