@@ -68,15 +68,16 @@ and join the results ([Merging runs](results.md#merging-runs)).
 
 ## Tuning
 
-Tuning runs in this process, before the pilot and the replicates, while the workers
-wait: four adaptive Metropolis chains of $\max(2000, 200d, 10d^2)$ steps each, and for
-MALA and HMC four more chains that tune the step size
-([The automatic pipeline](settings.md#the-automatic-pipeline)). With a log-density
-evaluated point by point on many workers, these sequential steps can take longer than a
-worker's share of the run. A job that passes a tuned kernel with its `k`, `m` and `lag`
-skips both the tuning and the meeting-time pilot, so several jobs on one target can tune
-once. A saved result keeps the kernel only as its description, so a job in another
-process gets the kernel itself by pickle, here through bytes, as it would through a file:
+Tuning runs in this process, one step after another, before the pilot and the
+replicates, while the workers wait
+([The automatic pipeline](settings.md#the-automatic-pipeline) gives its length). With a
+log-density evaluated point by point on many workers, these sequential steps can take
+longer than a worker's share of the run. A job that passes a tuned kernel and its `k`
+skips both the tuning and the meeting-time pilot
+([A slow log-density](settings.md#a-slow-log-density)), so several jobs on one target
+can tune once. A saved result holds only the kernel's description
+([Saving and loading](results.md#saving-and-loading)), so a job in another process gets
+the kernel itself by pickle, here through bytes, as it would through a file:
 
 ```{code-cell} python
 import pickle
@@ -87,8 +88,6 @@ job = telescopic.sample(
     gaussian.initial,
     kernel=pickle.loads(tuned),
     k=first.k,
-    m=first.m,
-    lag=first.lag,
     rng=4,
 )
 job.tuning, job.pilot
@@ -102,9 +101,7 @@ assert job.tuning is None and job.pilot is None
 assert (job.k, job.m, job.lag) == (first.k, first.m, first.lag)
 ```
 
-The job ran no tuning and no pilot. Jobs with different seeds give independent results;
-jobs whose results should merge into one share a seed and run separate ranges of
-replicate indices ([Merging runs](results.md#merging-runs)).
+The job ran no tuning and no pilot.
 
 ## Chunks and workers
 

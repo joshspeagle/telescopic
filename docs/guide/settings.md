@@ -156,7 +156,7 @@ Tuning and the pilot can be skipped:
   of an earlier run on the same target, and `lag` and `m` follow from it.
 
 A pool runs the pilot and the replicates on several processes, but tuning runs in this
-process ([Parallel runs](parallel.md)). Passing a configured kernel and a fixed `k` skips both:
+process ([Tuning](parallel.md#tuning)). Passing a configured kernel and a fixed `k` skips both:
 
 ```{code-cell} python
 calls = 0
