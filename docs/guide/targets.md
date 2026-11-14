@@ -156,9 +156,8 @@ of the differences, from a second difference at steps $2hu$, and the rounding of
 dimension, and 8 more of each when `grad` returns float32 values, and again when
 `log_prob` does; a `log_prob` whose values narrow to float32 only after the first draw
 costs a second sweep at float32. It draws 48 points of the initial distribution, in two
-passes of 24, and holds about 16 vectors of length $d$ at its peak. It draws from a
-random stream of its own, and it changes no result: a run is the same with and without
-it.
+passes of 24, from a random stream of its own, and it changes no result: a run is the
+same with and without it.
 
 A gradient with its sign wrong warns before any pair runs, with the size of the
 disagreement:
