@@ -19,9 +19,10 @@ would be a primitive of `couplings` that returns the reflection's coefficient, l
 
 ## Same kernel (`wm_same_kernel.py`, `wm_suite.out`)
 
-- From the same states and normals, the log acceptance ratios agree to 9.9e-14 on states
-  from the target (4.6e-12 where |log q| reaches 3.8e3, 1.2e-15 relative), and no
-  accept decision differed in 204,800 single steps or 36,864 coupled pairs.
+- From the same states and normals, the log acceptance ratios agree to 1.0e-13 on states
+  from the target at the tuned step, 5.3e-13 at twice that step, and 4.6e-12 where
+  |log q| reaches 3.8e3 (1.2e-15 relative); no accept decision differed in 204,800 single
+  steps or 36,864 coupled pairs.
 - `telescopic.testing.check_coupling` passes in 15 of 15 cases; equal pairs stay bitwise
   equal for 500 coupled steps.
 - Seeded runs of `sample` at d = 50, 128 replicates, seeds 0 to 4: no meeting time
@@ -35,8 +36,9 @@ would be a primitive of `couplings` that returns the reflection's coefficient, l
 Ratios of the whitened form's time to the current form's, on a vectorized Gaussian
 target whose gradient is one dense product, 64 lanes, one BLAS thread, medians (ranges)
 of 9 interleaved rounds. The run of record is `wm_timing.out`; `wm_timing_run2.out`
-repeats it unchanged, and `wm_timing_fine.out` holds two runs of a finer interleave that
-was designed after the first two runs, as a sensitivity analysis.
+repeats it with only its filter of other processes changed, and `wm_timing_fine.out`
+holds two runs of a finer interleave that was designed after the first two runs, as a
+sensitivity analysis.
 
 | Step | d | Record | Replication | Fine 1 | Fine 2 |
 |---|---|---|---|---|---|
@@ -56,15 +58,18 @@ about 9% between blocks.
 
 The falsification test fixed before the run ("not worth adopting" if at every d the
 coupled step's median ratio is above 0.85 or its range includes 0.85) is met on the run
-of record and the replication, and not on the second fine run: on this machine the
-outcome is not stable across runs. The medians are stable at d = 50 and 100: the coupled
-step is about 11% and 19% faster, the single step 25% to 34% faster at d = 100 and 200.
-Ruling 10's threshold, a step at least 15% faster at 50 dimensions or more, is met by
-these medians.
+of record, the replication and the first fine run, and not on the second fine run: on
+this machine the outcome is not stable across runs. The medians are stable at d = 50
+and 100: the coupled step is about 11% and 19% faster, the single step 25% to 34% faster
+at d = 100 and 200. Ruling 10's threshold, a step at least 15% faster at 50 dimensions
+or more, is met by the medians of the single step at every d and of the coupled step at
+d = 100, and not by the coupled step at d = 50, 10% to 12% faster; at d = 200 the coupled
+step's median reaches it in one of the four runs.
 
-Asked on 2026-11-14 with these figures, Josh ruled to adopt the whitened form in the
-next phase, as a change he reviews, since it moves the last bits of every seeded run
-that steps MALA (decision row 216).
+Asked on 2026-11-14 with these figures, Josh read the threshold by the medians at
+d = 100 and above and ruled to adopt the whitened form in the next phase, as a change he
+reviews, since it moves the last bits of every seeded run that steps MALA (decision row
+216).
 
 ## Files
 
