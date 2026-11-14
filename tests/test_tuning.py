@@ -7,6 +7,7 @@ from scipy import linalg
 
 import references
 from telescopic import examples, tuning
+from telescopic._random import NORMAL, UNIFORM, Streams
 from telescopic.initial import Normal
 from telescopic.kernels import HMC, MALA, Independence, Kernel, Mixture, RandomWalk
 from telescopic.target import Target
@@ -102,10 +103,31 @@ def test_the_pilot_does_not_depend_on_the_scales_of_the_coordinates():
     np.testing.assert_array_equal(scaled.acceptance, unit.acceptance)
 
 
-def test_the_pilot_reads_the_same_numbers_in_blocks_as_step_by_step(monkeypatch):
-    # 600 steps cross two block boundaries and end inside a block.
+class Lane:
+    # One kind of numbers of a run's Streams lane, behind the generator method that the
+    # pilot calls for it, read one step at a time.
+    def __init__(self, draws, kind):
+        self.draws, self.kind = draws, kind
+
+    def standard_normal(self, shape):
+        assert self.kind == NORMAL
+        return np.concatenate([self.draws.normal(shape[1]) for _ in range(shape[0])])
+
+    def random(self, size):
+        assert self.kind == UNIFORM
+        return np.concatenate([self.draws.uniform() for _ in range(size)])
+
+
+def lanes(generator):
+    streams = Streams(1)
+    streams.assign(0, generator)
+    return [Lane(streams.view([0]), kind) for kind in (NORMAL, UNIFORM)]
+
+
+def test_the_pilot_reads_each_chains_numbers_as_a_run_reads_a_replicates(monkeypatch):
+    # 600 steps cross two blocks of draws and end inside a third.
     blocks = adaptive_metropolis(TARGET, START, rng=8, n_steps=600)
-    monkeypatch.setattr(tuning, "DRAW_BLOCK", 1)
+    monkeypatch.setattr(tuning, "replicate_sources", lanes)
     steps = adaptive_metropolis(TARGET, START, rng=8, n_steps=600)
     np.testing.assert_array_equal(blocks.samples, steps.samples)
     np.testing.assert_array_equal(blocks.log_prob, steps.log_prob)
@@ -171,7 +193,7 @@ def test_rhat_is_that_of_gelman_et_al():
 
 
 def test_reports_of_different_pilots_compare_without_error():
-    first, second = (adaptive_metropolis(TARGET, START, seed, n_steps=10) for seed in (5, 6))
+    first, second = (adaptive_metropolis(TARGET, START, seed, n_steps=200) for seed in (5, 6))
     assert first.report() != second.report()
 
 
