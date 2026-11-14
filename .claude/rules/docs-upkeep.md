@@ -23,10 +23,10 @@ the same pull request. The documentation states only what the code does now.
 | `target.py`, `initial.py` | `start/quickstart.md`, `start/coming-from-emcee.md`, `guide/log-density.md`, `guide/initial-distribution.md` | | `api.md` (Targets and initial distributions) |
 | `engine.py`, `_parallel.py`, `_random.py` | `guide/parallel.md`, `guide/settings.md` | `tutorials/how-it-works.md`, `tutorials/unbiased-on-average.md` | `api.md` (Building blocks) |
 | `_progress.py` | `start/install.md`, `guide/parallel.md` | | |
-| `estimators.py`, `measure.py`, `results.py` | `start/coming-from-emcee.md`, `guide/estimates.md`, `guide/plots.md` | `tutorials/how-it-works.md`, `tutorials/unbiased-on-average.md` | `theory.md`, `reference/result-fields.md`, `api.md` (Results, Building blocks) |
+| `estimators.py`, `measure.py`, `results.py` | `start/coming-from-emcee.md`, `guide/estimates.md`, `guide/plots.md`, `guide/save-load-merge.md` | `tutorials/how-it-works.md`, `tutorials/unbiased-on-average.md` | `theory.md`, `reference/result-fields.md`, `api.md` (Results, Building blocks) |
 | `_io.py` (saving and loading) | `guide/save-load-merge.md` | | `api.md` (Results) |
-| `diagnostics.py`, `warnings.py` | `guide/diagnostics.md` | `tutorials/failure-modes.md`, `tutorials/choosing-settings.md` | `theory.md`, `reference/result-fields.md`, `reference/warnings.md`, `api.md` (Diagnostics, plots and checks; Warnings) |
-| `plotting.py` | `guide/plots.md`, `guide/diagnostics.md` | `tutorials/how-it-works.md` | `api.md` (Diagnostics, plots and checks) |
+| `diagnostics.py`, `warnings.py` | `guide/meeting-times.md` | `tutorials/failure-modes.md`, `tutorials/choosing-settings.md` | `theory.md`, `reference/result-fields.md`, `reference/warnings.md`, `api.md` (Diagnostics, plots and checks; Warnings) |
+| `plotting.py` | `guide/plots.md`, `guide/meeting-times.md` | `tutorials/how-it-works.md` | `api.md` (Diagnostics, plots and checks) |
 | `examples.py` | `guide/kernels.md`, `guide/step-size.md` | every tutorial that uses the target | `api.md` (Examples) |
 | `testing.py` | `guide/custom-kernels.md` | | `api.md` (Diagnostics, plots and checks) |
 | `_gradient_check.py` | `guide/log-density.md`, `guide/settings.md` | `tutorials/gradients.md` | `api.md` (Running; Diagnostics, plots and checks) |

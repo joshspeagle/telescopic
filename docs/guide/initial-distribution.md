@@ -41,8 +41,9 @@ the initial distribution $\pi_0$, with its own random stream. `init` can be:
 The samplers pass `init` to {func}`telescopic.initial.as_initial`, which turns any of
 these forms into an object with `rvs`. The dimension `d` comes from a draw. Draws are converted to shape `(d,)`: SciPy returns
 a scalar for a normal in one dimension, and shape `(1, d)` for a Dirichlet. A draw of
-another shape, or with a non-finite coordinate, raises `ValueError`. We can run each form on the Gaussian of
-[The log-density](log-density.md#the-log-density), `log_prob_batch` with its `mean` and `sd`:
+another shape, or with a non-finite coordinate, raises `ValueError`. We can run each form on the Gaussian
+`log_prob_batch` of the [log-density guide](log-density.md#the-log-density), with its
+`mean` and `sd`:
 
 ```{code-cell} python
 points = stats.multivariate_normal(mean, np.diag(sd**2)).rvs(size=50, random_state=1)

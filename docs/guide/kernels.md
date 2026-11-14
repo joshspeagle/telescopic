@@ -61,7 +61,7 @@ sampler calls it once, before anything else runs, and keeps the tuned kernel:
 
 ```{code-cell} python
 import numpy as np
-from scipy import optimize, special, stats
+from scipy import stats
 
 import telescopic
 from telescopic import examples, kernels

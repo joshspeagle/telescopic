@@ -11,7 +11,7 @@ kernelspec:
 | walkers, which move together as an ensemble | replicates: independent pairs of chains |
 | burn-in steps, discarded | `k`, chosen from pilot meeting times; the bias left at `k` is corrected, not ignored |
 | the autocorrelation time, which sets the error bars | meeting times, which set the cost; the error bars come from independent replicates |
-| `get_chain(flat=True)` | `result.measure`: atoms whose weights can be negative; they are not samples, so plot them with their weights ([Signed measures](../guide/estimates.md#signed-measures)) |
+| `get_chain(flat=True)` | `result.measure`: atoms whose weights can be negative; they are not samples, so plot them with their weights ([Signed measures](../guide/estimates.md#signed-measures), [Plot a result](../guide/plots.md)) |
 | `log_prob_fn(theta, *args)`, `vectorize=True`, `pool=` | the same: `log_prob(theta, *args)`, `vectorize=True`, `pool=`, except that `log_prob` returns the log-density alone, without blobs; derived quantities come from `result.estimate` after the run |
 
 telescopic does not make chains mix faster. Where one chain mixes slowly, as between
@@ -181,4 +181,4 @@ telescopic's is the standard error of a mean of independent replicates, whose es
 are unbiased for any burn-in `k` ([Theory](../theory.md#guarantees-and-their-limits)). It
 is valid as the number of replicates grows, provided their variance is finite, and it
 needs no judgment of convergence: the meeting times bound the distance from
-stationarity instead ([Quickstart](quickstart.md#how-far-from-stationarity)).
+stationarity instead ([Quickstart](quickstart.md)).

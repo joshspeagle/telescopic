@@ -9,8 +9,6 @@ kernelspec:
 ```{code-cell} python
 :tags: [remove-cell]
 
-import numpy as np
-
 import telescopic
 from telescopic import examples
 
@@ -59,8 +57,8 @@ result.plot_corner();
 ```
 
 {meth}`telescopic.Result.plot_meeting_times` and {meth}`telescopic.Result.plot_tv_bound`
-are shown in [Diagnostics and warnings](diagnostics.md). Each method returns its
-matplotlib axes, and all but `plot_corner` draw on axes given as `axes` or `ax`. The
+are shown in [Read meeting times and the distance to
+stationarity](meeting-times.md). Each method returns its matplotlib axes, and all but `plot_corner` draw on axes given as `axes` or `ax`. The
 functions of {mod}`telescopic.plotting`, which `import telescopic` leaves out since it
 needs matplotlib, take the result as their first argument and do the same;
 {func}`telescopic.plotting.paths` also draws the coupled paths of a few replicates of an

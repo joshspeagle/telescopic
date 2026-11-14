@@ -32,7 +32,7 @@ estimator pairs them with a lag of 1. The lines join at the meeting time, and on
   One run taken apart: pairs that meet, and the correction that removes the bias.
 - [**My chains do not meet**](reference/warnings.md)
 
-  What the meeting times and the warnings say, and what to change.
+  What each warning says, and what to change.
 :::
 
 This example estimates the mean of a correlated Gaussian, (0, 0), and the mean of the
@@ -87,7 +87,7 @@ guide/settings
 guide/estimates
 guide/plots
 guide/save-load-merge
-guide/diagnostics
+guide/meeting-times
 guide/parallel
 guide/custom-kernels
 ```

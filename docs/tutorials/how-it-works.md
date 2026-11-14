@@ -6,7 +6,7 @@ kernelspec:
 
 # How it works
 
-The [Quickstart](../start/quickstart.md#what-a-run-does) describes a run in words. This
+The [Quickstart](../start/quickstart.md) describes a run in words. This
 page runs one by hand, on a standard normal target in one dimension with chains started
 far from it: the paths of a few pairs and one replicate's estimate taken apart;
 [Unbiased on average](unbiased-on-average.md) shows the bias that the correction removes

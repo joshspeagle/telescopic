@@ -82,8 +82,8 @@ All notable changes to this project are documented here. The format follows
   draws tqdm's text bar, in notebooks too.
 - `Result.diagnostics()` and the summary report the values behind two warnings, the tail
   index of the meeting times and the largest share of one replicate in a variance.
-- Documentation: Getting started, a user guide, six tutorials executed when the site is
-  built, a theory page, the API reference and a citing page.
+- Documentation: a Start section, how-to guides, six tutorials executed when the site is
+  built, a theory page, the API reference, reference pages and a citing page.
 - The documentation site is published at <https://joshspeagle.com/telescopic/> from each
   push to `main`.
 - The documentation site has its own theme and identity: the Focus mark, two chain colors
@@ -92,8 +92,9 @@ All notable changes to this project are documented here. The format follows
   (Start, Tutorials, How-to guides, Theory, Reference, Project). Every plot of the
   executed pages shares one style. The design records are no longer built into the site.
 - Each tutorial has one title in the sidebar, on its page and in the pager, and the
-  comparison with emcee moved to `tutorials/beside-emcee`. The tutorials are ordered as a
-  learning path, with the failure modes last, and the pager is their only "next" link.
+  comparison with emcee is part of Coming from emcee, under Start. The tutorials are
+  ordered as a learning path, with the failure modes last, and the pager is their only
+  "next" link.
 - Warnings on the executed pages print as their class and message, without the path of
   the notebook's temporary file, and wrap within the column.
 - Every figure on the executed pages has alternative text and a caption.
@@ -118,15 +119,16 @@ All notable changes to this project are documented here. The format follows
 - American spelling throughout the package, its tests and the site, with "Atchadé" spelled
   one way; codespell checks it in `scripts/verify.sh`, CI's lint job and a pre-commit
   hook.
-- Getting started writes the lag as $L$ in its equations, defines the pilots and a
+- The Quickstart writes the lag as $L$ in its equations, defines the pilots and a
   consistent estimate where it first uses them, and says how to turn on the tail check.
 - Theory opens with what it derives, writes the algorithm without the meeting time and
   defines it after, and says what the conditions of unbiasedness ask in practice before
   stating them.
-- The kernels guide defines its coupling terms before its table, and the diagnostics guide
-  says what Hill's estimate and the Clopper-Pearson bound measure and when each warning
-  is emitted; the docstring of `diagnostics.hill` gives the rule for ties.
-- Targets and initial distributions links `initial.as_initial`, which reads `init`.
+- The kernels guide defines its coupling terms before its table, and the warnings
+  reference says what Hill's estimate and the Clopper-Pearson bound measure and when
+  each warning is emitted; the docstring of `diagnostics.hill` gives the rule for ties.
+- The guide to choosing an initial distribution links `initial.as_initial`, which reads
+  `init`.
 - Fixes from an audit of the whole package: a number argument of the wrong type raises
   `TypeError`, and one out of bounds `ValueError`, naming the argument; `names` must be
   distinct strings, one per coordinate; `Kernel.check_ndim` checks a kernel's dimension;
@@ -372,10 +374,14 @@ All notable changes to this project are documented here. The format follows
   error bars. Seeded outputs of vectorized runs change likewise. A target evaluated
   point by point keeps every bitwise guarantee. `couplings.reflection_maximal` takes
   `blas=True` to do the same.
-- The kernels guide names a resonance of HMC's leapfrog on Gaussians, on which a given
-  `n_steps`, or a given `cov` that does not whiten the target, can put the automatic step.
-  With MALA or HMC, the error raised when `k` cannot be chosen carries a note that points
-  to it.
-- The section on a failing automatic step moved from the kernels guide to the guide "Check
-  and set a step size", and the note of the error raised when `k` cannot be chosen with
-  MALA or HMC names that guide.
+- The guide "Check and set a step size" names a resonance of HMC's leapfrog on
+  Gaussians, on which a given `n_steps`, or a given `cov` that does not whiten the
+  target, can put the automatic step. With MALA or HMC, the error raised when `k` cannot
+  be chosen carries a note that points to it.
+- The documentation's pages are split by task. Start holds Install, the Quickstart and
+  Coming from emcee; Unbiased on average is the second tutorial; the how-to guides write
+  the log-density, choose an initial distribution, a kernel and a step size, set the run's
+  arguments, estimate, plot, save, load and merge, read meeting times, run in parallel and
+  write a kernel; Reference adds the fields of a result and the warnings. The addresses
+  `getting-started`, `tutorials/beside-emcee`, `guide/targets`, `guide/results` and
+  `guide/diagnostics` are gone.

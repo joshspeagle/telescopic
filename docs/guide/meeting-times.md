@@ -11,8 +11,6 @@ the cost of a run. The examples use the run of
 [Estimate anything from a result](estimates.md):
 
 ```{code-cell} python
-import numpy as np
-
 import telescopic
 from telescopic import examples
 

@@ -9,8 +9,6 @@ kernelspec:
 ```{code-cell} python
 :tags: [remove-cell]
 
-import numpy as np
-
 import telescopic
 from telescopic import examples
 
@@ -73,7 +71,7 @@ The lines below it:
 - the fraction of pairs that met after `k + lag`, censored ones included, with a
   one-sided 95% upper bound: only these replicates carry a bias correction, and with
   `lag = k` the fraction is close to the bound on the total variation distance at `k`
-  ([Distance to stationarity](../guide/diagnostics.md#distance-to-stationarity));
+  ([Distance to stationarity](../guide/meeting-times.md#distance-to-stationarity));
 - the largest share of one replicate in the variance of the estimate of a coordinate's
   mean or variance, and that estimate
   ([`variance`](warnings.md#one-replicate-dominating-the-variance-variance));
@@ -89,9 +87,6 @@ parameter name (it needs the `pandas` extra):
 ```{code-cell} python
 summary.to_dict()["parameters"]["x0"]
 ```
-
-{meth}`telescopic.Result.diagnostics` returns the diagnostics of the footer as a
-dictionary ([The diagnostics of a run](#the-diagnostics-of-a-run)).
 
 ## The diagnostics of a run
 
