@@ -88,6 +88,10 @@ class Streams:
         return Draws(self, np.asarray(lanes, dtype=np.intp))
 
     def _take(self, kind: int, lanes: IndexArray, size: int) -> FloatArray:
+        if not len(lanes):
+            # A buffer is widened only for lanes that ask, so the windows below could be
+            # longer than an unwidened buffer.
+            return np.empty((0, size))
         buffer, cursor = self._buffers[kind], self._cursors[kind]
         start = cursor[lanes]
         short = start > buffer.shape[1] - size
