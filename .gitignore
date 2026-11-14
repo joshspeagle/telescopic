@@ -37,3 +37,6 @@ notes/review/hub/review-data.json
 
 # The rows that the experiments' run scripts write
 notes/experiments/_rows/
+
+# Resumable stores of experiment scripts, from which their outputs are printed
+notes/experiments/*.jsonl

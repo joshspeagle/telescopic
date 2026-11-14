@@ -26,4 +26,17 @@ Each item has the default that work proceeds on until Josh answers.
   (`notes/experiments/m10_mala_logistic.out`).
   Josh ruled on issue #89 (2026-11-13): an opt-in tuning that puts contraction first
   (issue #91), which becomes the default if its pre-registered test passes.
-  A given `n_steps` can fail on a Gaussian too (issue #137).
+  A given `n_steps` can fail on a Gaussian too (issue #137): the tuned step can land on
+  a leapfrog resonance, where one trajectory with a shared momentum multiplies the
+  distance between the chains along a mode by a factor within 1e-4 of 1 in absolute
+  value. With a given covariance that does not whiten the target, the default `n_steps`
+  fails as well: on a Gaussian of scales from 1 to 1/4 in 10 dimensions with
+  `HMC(cov=np.eye(10))`, `k` could not be chosen at 3 of 10 seeds at the package's cap,
+  reproduced by an agent that did not find it (issue #137). Of four remedies tested
+  with pre-registered criteria (`notes/experiments/i137_remedies.out`,
+  `i137_nongaussian.out`, `i137_unequal.out`), a guard that moves the tuned step off a
+  resonance passed and costs no evaluation, but does not fix the case of the given
+  covariance; a step jittered by a uniform that both chains share fixed every case and
+  cost up to 29% more per effective replicate where there is no resonance. Default: no
+  change to the package; the guard and the jitter wait for Josh's ruling on issue #137,
+  and the jitter enters the pre-registered test of issue #91.
