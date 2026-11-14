@@ -23,7 +23,7 @@ they meet ([Theory](../theory.md#the-time-averaged-estimator)).
 - `thin`, at least 1, averages every `thin`-th state from `k`
   ([Memory and thinning](#memory-and-thinning)).
 - `max_iter` censors the pairs still unmet at that time, which biases the estimates
-  ([Diagnostics and warnings](diagnostics.md#censored-pairs-censored)). It must exceed
+  ([Censored pairs](../reference/warnings.md#censored-pairs-censored)). It must exceed
   `max(lag, m)`; `None`, the default, runs every pair until it meets.
 
 Any $0 \le k \le m$, `lag` $\ge 1$ and `thin` $\ge 1$ give unbiased estimates: the
@@ -44,7 +44,7 @@ With the defaults, before the replicates run:
    covariance and keep their states only every $\lceil d/20\rceil$ steps, which bounds
    the pilot's time and memory. Chains that disagree raise a warning that the target may
    have several modes or the chains may not have converged
-   ([Diagnostics and warnings](diagnostics.md#disagreeing-tuning-chains-tuning)); chains
+   ([Disagreeing tuning chains](../reference/warnings.md#disagreeing-tuning-chains-tuning)); chains
    that agree can still all sit in one mode. A chain that accepts no proposal in its
    second half raises `ValueError`.
 2. **The meeting-time pilot.** 100 pairs with lag 1 run until they meet, or until
@@ -197,7 +197,7 @@ Every evaluation belongs to the run, and no pilot ran.
   $R = R_1 (s_1 / s)^2$ replicates for a standard error near $s$.
 - Two warnings need enough replicates: one replicate's share of the variance is checked
   from 100 replicates, and the tail of the meeting times from 500
-  ([Diagnostics and warnings](diagnostics.md)).
+  ([Warnings and errors](../reference/warnings.md)).
 
 ## Cost
 

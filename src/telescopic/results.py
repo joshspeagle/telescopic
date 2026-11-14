@@ -737,7 +737,7 @@ class Result:
     def check(self, strict: bool = False) -> None:
         """Warn about the conditions that apply to this run.
 
-        They are listed under Warnings, in :doc:`/guide/diagnostics`.
+        They are listed under Warnings, in :doc:`/reference/warnings`.
 
         Parameters
         ----------

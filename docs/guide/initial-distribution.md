@@ -82,7 +82,7 @@ variance and the cost, and decides whether the chains find every mode.
   runs one. The tuning chains are a first check, in one direction only: when their means
   spread more widely than the chains themselves, telescopic warns that the target may
   have several modes
-  ([Diagnostics and warnings](diagnostics.md#disagreeing-tuning-chains-tuning)), but
+  ([Disagreeing tuning chains](../reference/warnings.md#disagreeing-tuning-chains-tuning)), but
   chains that agree can all sit in one mode. From a start that covers every mode, pairs
   that start in different modes take longer to meet, which the meeting times show,
   unless the kernel was tuned to one mode and meets quickly inside it

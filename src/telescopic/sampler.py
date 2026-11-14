@@ -309,7 +309,7 @@ class CoupledSampler:
 
         The first call tunes the kernel, completes the pilot to 100 pairs for an automatic
         ``k``, and fixes the settings of the later calls. The result warns about the
-        conditions listed under Warnings, in :doc:`/guide/diagnostics`.
+        conditions listed under Warnings, in :doc:`/reference/warnings`.
 
         The first Ctrl-C during the replicates lets those in progress finish and returns a
         result flagged ``interrupted``; the next call runs the missing replicates first. A
@@ -623,7 +623,7 @@ def sample(
         Its estimates are unbiased unless ``max_iter`` censors a pair, which biases them
         and warns, or a Ctrl-C interrupts the run, which leaves them consistent and flags
         the result ``interrupted``. It warns about the conditions listed under Warnings,
-        in :doc:`/guide/diagnostics`.
+        in :doc:`/reference/warnings`.
 
     Examples
     --------

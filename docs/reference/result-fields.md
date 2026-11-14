@@ -24,7 +24,7 @@ result = telescopic.sample(
 
 | Attribute | Content |
 |---|---|
-| `n_replicates`, `n_censored` | $R$, the number of replicates whose pairs met, and the number of pairs censored at `max_iter` ([Diagnostics and warnings](../guide/diagnostics.md#censored-pairs-censored)) |
+| `n_replicates`, `n_censored` | $R$, the number of replicates whose pairs met, and the number of pairs censored at `max_iter` ([Censored pairs](warnings.md#censored-pairs-censored)) |
 | `k`, `m`, `lag`, `thin`, `max_iter` | the settings of the run ([Settings](../guide/settings.md)) |
 | `names`, `ndim` | the parameter names and the dimension $d$ |
 | `measure` | the replicates' signed measures |
@@ -66,8 +66,8 @@ The lines below it:
   pair, where censored pairs sort above every pair that met, and a quantile that falls
   on one shows as `>` and the cap, such as `> 12` for `max_iter=12`; from 500
   replicates, the tail index of those that met
-  ([`tail`](../guide/diagnostics.md#heavy-tailed-meeting-times-tail)); and the number of censored
-  pairs ([`censored`](../guide/diagnostics.md#censored-pairs-censored));
+  ([`tail`](warnings.md#heavy-tailed-meeting-times-tail)); and the number of censored
+  pairs ([`censored`](warnings.md#censored-pairs-censored));
 - the mean cost of a replicate in kernel applications and in seconds, and the relative
   cost, the mean cost over $m - k + 1$ ([Settings](../guide/settings.md#cost));
 - the fraction of pairs that met after `k + lag`, censored ones included, with a
@@ -76,10 +76,10 @@ The lines below it:
   ([Distance to stationarity](../guide/diagnostics.md#distance-to-stationarity));
 - the largest share of one replicate in the variance of the estimate of a coordinate's
   mean or variance, and that estimate
-  ([`variance`](../guide/diagnostics.md#one-replicate-dominating-the-variance-variance));
+  ([`variance`](warnings.md#one-replicate-dominating-the-variance-variance));
 - for an interrupted run, that its estimates are consistent but not exactly unbiased
   ([Interrupting a run](../guide/parallel.md#interrupting-a-run));
-- each warning that applies ([Warnings](../guide/diagnostics.md#warnings)).
+- each warning that applies ([Warnings](warnings.md#warnings)).
 
 `summary.table` holds the columns as arrays, and `summary.footer` the rest as a
 dictionary. {meth}`telescopic.Summary.to_dict` converts both to Python numbers, and
@@ -91,4 +91,48 @@ summary.to_dict()["parameters"]["x0"]
 ```
 
 {meth}`telescopic.Result.diagnostics` returns the diagnostics of the footer as a
-dictionary ([The diagnostics of a run](../guide/diagnostics.md#the-diagnostics-of-a-run)).
+dictionary ([The diagnostics of a run](#the-diagnostics-of-a-run)).
+
+## The diagnostics of a run
+
+{meth}`telescopic.Result.diagnostics` returns the diagnostics that the summary prints, as
+a dictionary; [The summary](#the-summary) defines each line of the summary.
+
+```{code-cell} python
+result.diagnostics()
+```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claims of the next paragraph.
+values = result.diagnostics()
+assert set(values) == {
+    "meeting_time_50", "meeting_time_90", "meeting_time_99", "meeting_time_max",
+    "censored", "tail_index", "late_fraction", "late_fraction_upper", "tv_bound_at_k",
+    "variance_share", "variance_share_of", "variance_share_replicate", "mean_cost",
+    "seconds_per_replicate", "relative_cost",
+}
+assert result.lag == result.k
+assert abs(values["late_fraction"] - values["tv_bound_at_k"]) < 0.01
+```
+
+- `meeting_time_50`, `meeting_time_90`, `meeting_time_99`, `meeting_time_max` and
+  `censored`: the quantiles of the meeting times of every pair, each an observed meeting
+  time from the sorted values, where censored pairs sort above every pair that met, and
+  the number of censored pairs. A quantile that falls on a censored pair is `inf`.
+- `tail_index`: the tail index of $\tau - L + 1$, the power $\alpha$ at which the
+  probability of a value above $t$ falls as $t^{-\alpha}$, by Hill's estimate from the
+  largest values; `nan` below 500 replicates or behind ties
+  ([`tail`](warnings.md#heavy-tailed-meeting-times-tail)).
+- `late_fraction` and `late_fraction_upper`: the fraction of pairs that met after
+  `k + lag`, censored ones included, and its one-sided 95% Clopper-Pearson upper bound,
+  an exact binomial confidence bound, which stays informative when the fraction is 0. The fraction is the leading term of
+  `tv_bound_at_k`, the TV bound at $k$, and with `lag = k` the two are close.
+- `variance_share`, `variance_share_of` and `variance_share_replicate`: the largest share
+  of one replicate in the variance of the estimate of a coordinate's mean or variance,
+  that estimate, such as `"the variance of x1"`, and the index of that replicate; `nan`,
+  `None` and `None` below 2 replicates
+  ([`variance`](warnings.md#one-replicate-dominating-the-variance-variance)).
+- `mean_cost`, `seconds_per_replicate` and `relative_cost`: the cost of a replicate
+  ([Settings](../guide/settings.md#cost)).

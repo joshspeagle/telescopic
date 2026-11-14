@@ -30,7 +30,7 @@ estimator pairs them with a lag of 1. The lines join at the meeting time, and on
 - [**How can MCMC be unbiased?**](tutorials/how-it-works.md)
 
   One run taken apart: pairs that meet, and the correction that removes the bias.
-- [**My chains do not meet**](guide/diagnostics.md)
+- [**My chains do not meet**](reference/warnings.md)
 
   What the meeting times and the warnings say, and what to change.
 :::
@@ -105,6 +105,7 @@ theory
 
 api
 reference/result-fields
+reference/warnings
 citing
 changelog
 ```

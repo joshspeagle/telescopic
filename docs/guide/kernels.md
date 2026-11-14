@@ -79,7 +79,7 @@ two-mode target of
 started from $\mathcal N(0, 100I)$, in 15 of 20 runs in 10 dimensions and 18 of 20 in 32.
 The tuned parameters then describe that mode alone, and the chains' $\hat R$ stays near
 1, so the warning about disagreeing tuning chains
-([Diagnostics and warnings](diagnostics.md#disagreeing-tuning-chains-tuning)) is silent.
+([Disagreeing tuning chains](../reference/warnings.md#disagreeing-tuning-chains-tuning)) is silent.
 
 Setup of these runs: telescopic at commit d014ac1, Python 3.13.18, NumPy 2.5.4 and SciPy
 1.18.1, `OMP_NUM_THREADS=1`, on an Intel Xeon processor at 2.10 GHz with 4 logical cores.

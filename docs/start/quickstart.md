@@ -86,7 +86,7 @@ unbiased, with its standard error, and the standard deviation and the 16th, 50th
 84th percentiles, which are **consistent**: they converge to the posterior's values as
 the number of replicates grows, but are not unbiased at a fixed number. Below it are the
 run's diagnostics and the warnings that apply: [The summary](../reference/result-fields.md#the-summary)
-defines each entry, and [Diagnostics and warnings](../guide/diagnostics.md) says what each
+defines each entry, and [Warnings and errors](../reference/warnings.md) says what each
 warning means.
 
 The check for heavy-tailed meeting times needs at least 500 replicates, so it is off at
