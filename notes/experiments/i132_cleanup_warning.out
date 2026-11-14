@@ -1,0 +1,23 @@
+commit 4d71634; Python 3.12.13
+workers freed with the error: False
+reentrant-call warnings while a new event registers: 5
+
+commit 4d71634 with changes to the package; Python 3.12.13
+workers freed with the error: True
+reentrant-call warnings while a new event registers: 0
+
+commit 4d71634; Python 3.11.18
+workers freed with the error: False
+reentrant-call warnings while a new event registers: 5
+
+commit 4d71634 with changes to the package; Python 3.11.18
+workers freed with the error: True
+reentrant-call warnings while a new event registers: 0
+
+commit 4d71634; Python 3.13.18
+workers freed with the error: False
+reentrant-call warnings while a new event registers: 0
+
+commit 4d71634 with changes to the package; Python 3.13.18
+workers freed with the error: True
+reentrant-call warnings while a new event registers: 0

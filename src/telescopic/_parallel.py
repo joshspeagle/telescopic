@@ -210,6 +210,9 @@ def _gather(
     finally:
         for waiting in futures:
             waiting.cancel()
+        # A raised error's traceback keeps this frame, and its future keeps the error:
+        # dropping the futures lets the workers go with the error, not at a later collection.
+        del futures, future, waiting
     return parts
 
 

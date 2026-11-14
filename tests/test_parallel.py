@@ -1,4 +1,5 @@
 import functools
+import gc
 import multiprocessing
 import os
 import signal
@@ -6,6 +7,7 @@ import sys
 import threading
 import time
 import warnings
+import weakref
 from concurrent.futures import Executor, Future, ProcessPoolExecutor, ThreadPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 
@@ -176,6 +178,23 @@ def nan_log_prob(x):
 def test_an_error_in_a_worker_reaches_the_caller():
     with pytest.raises(ValueError, match="log_prob returned nan"), opened(1) as workers:
         execute(job(nan_log_prob), np.arange(8), workers, never)
+
+
+def test_workers_stopped_by_an_error_are_freed_once_the_caller_drops_it():
+    # In a cycle with the error, the workers' event would wait for a collection, which
+    # warns on Python 3.11 and 3.12 when it runs inside a call of the resource tracker.
+    gc.disable()
+    try:
+        with (
+            pytest.raises(ValueError, match="log_prob returned nan") as caught,
+            opened(1) as workers,
+        ):
+            execute(job(nan_log_prob), np.arange(8), workers, never)
+        freed = weakref.ref(workers)
+        del caught, workers
+        assert freed() is None
+    finally:
+        gc.enable()
 
 
 def test_a_stop_reaches_the_replicates_of_telescopics_workers():
