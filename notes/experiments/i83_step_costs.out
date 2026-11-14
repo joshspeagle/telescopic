@@ -1,6 +1,6 @@
-setup: commit 6b1c75d-dirty of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
+setup: commit 80e4f9c of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
 before: commit 6b1c75d; after: this checkout; children run with {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1'}
-load average before: (1.28, 1.71, 1.5)
+load average before: (1.96, 1.3, 1.62)
 
 1. Fixed seeds: hash before -> after, meeting times that differ, largest change of E[x]
 sample RandomWalk, d = 10, point by point        5e2d835a066d -> 8829bcc3d58e; 0 meeting times differ; E[x] moved 1.9e-16 standard errors
@@ -25,46 +25,46 @@ adaptive_metropolis, d = 20, vectorized          bb1884aa3b2a -> bb1884aa3b2a
 run Independence, d = 20, one lane, vectorized   582ac333a929 -> 582ac333a929; 0 meeting times differ; E[x] moved 0.0e+00 standard errors
 
 2. Reflection: 256 rows; microseconds per call, median of the rounds, and before/after per round: median (range)
-d =   2, einsum:    86.21 ->    79.70, ratio 1.10 (1.02 to 1.63); x and flags equal, 62 rows not identical, y largest relative difference 3.1e-15
-d =   2, BLAS  :    82.32 ->    76.55, ratio 1.09 (1.04 to 1.72); x and flags equal, 62 rows not identical, y largest relative difference 3.1e-15
-d =  10, einsum:   181.03 ->   165.03, ratio 1.10 (1.05 to 1.25); x and flags equal, 62 rows not identical, y largest relative difference 4.8e-14
-d =  10, BLAS  :   150.22 ->   139.72, ratio 1.06 (0.98 to 1.16); x and flags equal, 62 rows not identical, y largest relative difference 1.6e-14
-d =  20, einsum:   293.93 ->   240.12, ratio 1.22 (1.12 to 1.28); x and flags equal, 61 rows not identical, y largest relative difference 3.0e-13
-d =  20, BLAS  :   210.43 ->   192.25, ratio 1.10 (0.98 to 1.63); x and flags equal, 61 rows not identical, y largest relative difference 2.0e-13
-d =  50, einsum:   793.59 ->   624.01, ratio 1.26 (1.20 to 1.90); x and flags equal, 88 rows not identical, y largest relative difference 1.0e-12
-d =  50, BLAS  :   427.47 ->   389.36, ratio 1.10 (1.01 to 1.56); x and flags equal, 88 rows not identical, y largest relative difference 5.2e-13
-d = 200, einsum:  8614.48 ->  6327.40, ratio 1.36 (1.32 to 1.46); x and flags equal, 168 rows not identical, y largest relative difference 9.5e-12
-d = 200, BLAS  :  2120.96 ->  1718.72, ratio 1.24 (1.21 to 1.29); x and flags equal, 168 rows not identical, y largest relative difference 5.6e-12
+d =   2, einsum:    85.53 ->    76.07, ratio 1.10 (1.04 to 1.16); x and flags equal, 62 rows not identical, y largest relative difference 3.1e-15
+d =   2, BLAS  :    79.91 ->    74.52, ratio 1.09 (1.05 to 1.17); x and flags equal, 62 rows not identical, y largest relative difference 3.1e-15
+d =  10, einsum:   183.56 ->   158.53, ratio 1.14 (0.76 to 1.23); x and flags equal, 62 rows not identical, y largest relative difference 4.8e-14
+d =  10, BLAS  :   153.85 ->   139.08, ratio 1.12 (1.00 to 1.16); x and flags equal, 62 rows not identical, y largest relative difference 1.6e-14
+d =  20, einsum:   289.86 ->   244.79, ratio 1.20 (1.12 to 1.34); x and flags equal, 61 rows not identical, y largest relative difference 3.0e-13
+d =  20, BLAS  :   209.72 ->   195.12, ratio 1.06 (1.00 to 1.15); x and flags equal, 61 rows not identical, y largest relative difference 2.0e-13
+d =  50, einsum:   789.38 ->   623.81, ratio 1.26 (1.19 to 1.35); x and flags equal, 88 rows not identical, y largest relative difference 1.0e-12
+d =  50, BLAS  :   427.67 ->   386.84, ratio 1.10 (1.01 to 1.17); x and flags equal, 88 rows not identical, y largest relative difference 5.2e-13
+d = 200, einsum:  8568.22 ->  6250.15, ratio 1.38 (1.33 to 1.40); x and flags equal, 168 rows not identical, y largest relative difference 9.5e-12
+d = 200, BLAS  :  2097.87 ->  1719.72, ratio 1.23 (1.15 to 1.26); x and flags equal, 168 rows not identical, y largest relative difference 5.6e-12
 
 3. Gibbs: three coupled sweeps, one-coordinate blocks; milliseconds, median of the rounds, and before/after per round: median (range)
-d =  20,  16 rows, differ in every:     7.48 ->     7.42, ratio 1.01 (0.86 to 1.23); x and y bitwise equal
-d =  20,  16 rows, differ in half :     6.50 ->     6.64, ratio 0.96 (0.94 to 1.03); x and y bitwise equal
-d =  20,  16 rows, differ in none :     2.28 ->     2.46, ratio 0.93 (0.89 to 1.01); x and y bitwise equal
-d =  20, 256 rows, differ in every:    75.88 ->    76.09, ratio 0.99 (0.94 to 1.09); x and y bitwise equal
-d =  20, 256 rows, differ in half :    61.85 ->    60.73, ratio 1.02 (0.96 to 1.07); x and y bitwise equal
-d =  20, 256 rows, differ in none :    18.30 ->    18.09, ratio 1.02 (0.99 to 1.09); x and y bitwise equal
-d = 200,  16 rows, differ in every:    82.20 ->    75.49, ratio 1.10 (1.06 to 1.12); x and y bitwise equal
-d = 200,  16 rows, differ in half :    76.16 ->    71.47, ratio 1.06 (1.02 to 1.11); x and y bitwise equal
-d = 200,  16 rows, differ in none :    27.68 ->    23.20, ratio 1.20 (1.11 to 1.26); x and y bitwise equal
-d = 200, 256 rows, differ in every:   877.70 ->   821.56, ratio 1.07 (0.99 to 1.10); x and y bitwise equal
-d = 200, 256 rows, differ in half :   810.99 ->   744.51, ratio 1.08 (1.01 to 1.22); x and y bitwise equal
-d = 200, 256 rows, differ in none :   233.52 ->   181.23, ratio 1.28 (1.18 to 1.38); x and y bitwise equal
+d =  20,  16 rows, differ in every:     7.23 ->     7.51, ratio 0.96 (0.88 to 0.99); x and y bitwise equal
+d =  20,  16 rows, differ in half :     6.52 ->     6.41, ratio 1.01 (0.95 to 1.04); x and y bitwise equal
+d =  20,  16 rows, differ in none :     2.29 ->     2.42, ratio 0.97 (0.92 to 0.98); x and y bitwise equal
+d =  20, 256 rows, differ in every:    74.39 ->    74.58, ratio 1.01 (0.93 to 1.09); x and y bitwise equal
+d =  20, 256 rows, differ in half :    61.38 ->    60.06, ratio 1.00 (0.90 to 1.10); x and y bitwise equal
+d =  20, 256 rows, differ in none :    18.33 ->    17.89, ratio 1.02 (1.00 to 1.05); x and y bitwise equal
+d = 200,  16 rows, differ in every:    82.81 ->    74.73, ratio 1.10 (1.05 to 1.11); x and y bitwise equal
+d = 200,  16 rows, differ in half :    75.82 ->    70.50, ratio 1.07 (1.03 to 1.13); x and y bitwise equal
+d = 200,  16 rows, differ in none :    27.77 ->    22.97, ratio 1.22 (1.14 to 1.29); x and y bitwise equal
+d = 200, 256 rows, differ in every:   888.68 ->   818.36, ratio 1.08 (1.01 to 1.14); x and y bitwise equal
+d = 200, 256 rows, differ in half :   813.51 ->   736.58, ratio 1.10 (1.04 to 1.18); x and y bitwise equal
+d = 200, 256 rows, differ in none :   236.11 ->   180.79, ratio 1.31 (1.20 to 1.59); x and y bitwise equal
 
 4. Pilot: seconds, median of the rounds, and before/after per round: median (range)
-d =   2, point by point:     0.15 ->     0.12, ratio 1.31 (1.16 to 1.36); PilotRun bitwise equal
-d =   2, vectorized    :     0.13 ->     0.10, ratio 1.32 (1.18 to 1.44); PilotRun bitwise equal
-d =  20, point by point:     0.33 ->     0.27, ratio 1.23 (1.20 to 1.31); PilotRun bitwise equal
-d =  20, vectorized    :     0.29 ->     0.21, ratio 1.34 (1.31 to 1.44); PilotRun bitwise equal
-d = 100, point by point:     2.29 ->     1.83, ratio 1.24 (1.19 to 1.30); PilotRun bitwise equal
-d = 100, vectorized    :     1.78 ->     1.33, ratio 1.32 (1.28 to 1.41); PilotRun bitwise equal
+d =   2, point by point:     0.15 ->     0.12, ratio 1.28 (1.22 to 1.36); PilotRun bitwise equal
+d =   2, vectorized    :     0.13 ->     0.09, ratio 1.36 (1.28 to 1.45); PilotRun bitwise equal
+d =  20, point by point:     0.33 ->     0.26, ratio 1.26 (1.22 to 1.33); PilotRun bitwise equal
+d =  20, vectorized    :     0.28 ->     0.21, ratio 1.37 (1.31 to 1.42); PilotRun bitwise equal
+d = 100, point by point:     2.30 ->     1.83, ratio 1.22 (1.19 to 1.30); PilotRun bitwise equal
+d = 100, vectorized    :     1.74 ->     1.31, ratio 1.33 (1.22 to 1.34); PilotRun bitwise equal
 
 5. Independence's log-weights, d = 20: microseconds per call, median of the rounds, and before/after per round: median (range)
-log weights, 1 rows  :    24.14 ->    17.72, ratio 1.35 (1.22 to 1.43)
-log weights, 256 rows:   182.75 ->   165.91, ratio 1.06 (0.96 to 1.18)
+log weights, 1 rows  :    23.33 ->    18.05, ratio 1.33 (1.16 to 1.37)
+log weights, 256 rows:   178.25 ->   163.19, ratio 1.09 (0.87 to 1.13)
 
 6. MultivariateT, d = 20: microseconds per call (seconds for the run), median of the rounds, and before/after per round: median (range)
-log density, 1 rows  :     9.15 ->     8.71, ratio 1.06 (0.96 to 1.15)
-log density, 3 rows  :     9.42 ->     8.69, ratio 1.09 (0.92 to 1.21)
-log density, 512 rows:   105.06 ->   106.48, ratio 1.00 (0.59 to 1.08)
-one-lane run         :     0.21 ->     0.20, ratio 1.10 (0.86 to 1.16)
-load average after: (1.57, 2.0, 1.98)
+log density, 1 rows  :     8.84 ->     8.56, ratio 1.04 (0.98 to 1.07)
+log density, 3 rows  :     9.25 ->     8.97, ratio 1.03 (0.92 to 1.07)
+log density, 512 rows:   104.24 ->   109.13, ratio 0.99 (0.56 to 1.05)
+one-lane run         :     0.21 ->     0.19, ratio 1.12 (1.02 to 1.15)
+load average after: (1.03, 1.29, 1.57)

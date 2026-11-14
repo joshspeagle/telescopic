@@ -60,7 +60,7 @@ point by point.
    rows, d = 20: microseconds per call; and the one-lane Independence run of section 1,
    point by point, whose time includes p1-07 and p1-08: seconds per run.
 
-Result (`i83_step_costs.out`, at a load average of 1.3 to 2.0 on 4 cores shared with
+Result (`i83_step_costs.out`, at a load average of 1.0 to 2.0 on 4 cores shared with
 other jobs).
 1. RandomWalk's, MALA's and HMC's runs changed their hashes. Their meeting times were
    equal and their pooled estimates of E[x] moved by at most 5.2e-15 standard errors
@@ -72,17 +72,17 @@ other jobs).
    pilot's hashes did not change, point by point or vectorized.
 2. From the same streams `x` and the flags were bitwise equal, and `y` differed by at
    most 9.5e-12 relative (d = 200, einsum). Before/after per round, medians: with einsum
-   1.10, 1.10, 1.22, 1.26 and 1.36 at d = 2, 10, 20, 50 and 200; with BLAS 1.09, 1.06,
-   1.10, 1.10 and 1.24. No median is below 1, so one form serves every d.
-3. Bitwise equal everywhere. At d = 20 no gain: medians 0.93 to 1.02. At d = 200, 1.06
-   to 1.10 where the pairs differ and 1.20 to 1.28 where they are equal, at 16 and 256
+   1.10, 1.14, 1.20, 1.26 and 1.38 at d = 2, 10, 20, 50 and 200; with BLAS 1.09, 1.12,
+   1.06, 1.10 and 1.23. No median is below 1, so one form serves every d.
+3. Bitwise equal everywhere. At d = 20 no gain: medians 0.96 to 1.02. At d = 200, 1.07
+   to 1.10 where the pairs differ and 1.22 to 1.31 where they are equal, at 16 and 256
    rows.
-4. Bitwise equal. 1.31 and 1.32 at d = 2 (point by point, vectorized), 1.23 and 1.34 at
-   d = 20, 1.24 and 1.32 at d = 100.
-5. 1.35 (1.22 to 1.43) at 1 row, 1.06 (0.96 to 1.18) at 256 rows.
-6. 1.06 (0.96 to 1.15) at 1 row, 1.09 (0.92 to 1.21) at 3 rows and 1.00 (0.59 to 1.08)
-   at 512 rows: about 0.5 to 0.7 microseconds a call, within the spread of the rounds.
-   The one-lane run, with p1-07 too, 1.10 (0.86 to 1.16), as the issue's 1.10 for p1-07
+4. Bitwise equal. 1.28 and 1.36 at d = 2 (point by point, vectorized), 1.26 and 1.37 at
+   d = 20, 1.22 and 1.33 at d = 100.
+5. 1.33 (1.16 to 1.37) at 1 row, 1.09 (0.87 to 1.13) at 256 rows.
+6. 1.04 (0.98 to 1.07) at 1 row, 1.03 (0.92 to 1.07) at 3 rows and 0.99 (0.56 to 1.05)
+   at 512 rows: about 0.3 microseconds a call, within the spread of the rounds.
+   The one-lane run, with p1-07 too, 1.12 (1.02 to 1.15), as the issue's 1.10 for p1-07
    alone.
 
 Run from the repository root: OMP_NUM_THREADS=1 PYTHONPATH=src python notes/experiments/i83_step_costs.py
