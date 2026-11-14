@@ -1,0 +1,54 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/harm.py proxy 0 2
+proxy baseline 0: N(0,I) d=1000, start sd 1; seeds [375000, 375001, 375002, 375003, 375004]; 100 pairs, max_iter 10000; tuned step 0.5220
+  seed 375000: derivative mean tau 45.75, unmet 0 (0s)
+  seed 375001: derivative mean tau 43.71, unmet 0 (0s)
+  seed 375002: derivative mean tau 43.87, unmet 0 (0s)
+  seed 375003: derivative mean tau 46.22, unmet 0 (0s)
+  seed 375004: derivative mean tau 48.33, unmet 0 (0s)
+ROW | C | N(0,I) d=1000, start sd 1: sign of coordinate 0 | proxy | 375000 | 235.740000 | 45.750000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.153
+    (1s)
+ROW | C | N(0,I) d=1000, start sd 1: sign of coordinate 0 | proxy | 375001 | 236.650000 | 43.710000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.414
+    (1s)
+ROW | C | N(0,I) d=1000, start sd 1: sign of coordinate 0 | proxy | 375002 | 208.590000 | 43.870000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 4.755
+    (1s)
+ROW | C | N(0,I) d=1000, start sd 1: sign of coordinate 0 | proxy | 375003 | 221.960000 | 46.220000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 4.802
+    (1s)
+ROW | C | N(0,I) d=1000, start sd 1: sign of coordinate 0 | proxy | 375004 | 241.100000 | 48.330000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 4.989
+    (1s)
+proxy baseline 1: N(0,I) d=1000, start sd 2; seeds [375010, 375011, 375012, 375013, 375014]; 100 pairs, max_iter 10000; tuned step 0.5220
+  seed 375010: derivative mean tau 41.81, unmet 0 (0s)
+  seed 375011: derivative mean tau 43.97, unmet 0 (0s)
+  seed 375012: derivative mean tau 41.13, unmet 0 (0s)
+  seed 375013: derivative mean tau 43.52, unmet 0 (0s)
+  seed 375014: derivative mean tau 43.92, unmet 0 (0s)
+ROW | C | N(0,I) d=1000, start sd 2: sign of coordinate 0 | proxy | 375010 | 383.110000 | 41.810000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 9.163
+    (2s)
+ROW | C | N(0,I) d=1000, start sd 2: sign of coordinate 0 | proxy | 375011 | 396.850000 | 43.970000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 9.025
+    (2s)
+ROW | C | N(0,I) d=1000, start sd 2: sign of coordinate 0 | proxy | 375012 | 364.060000 | 41.130000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 8.851
+    (2s)
+ROW | C | N(0,I) d=1000, start sd 2: sign of coordinate 0 | proxy | 375013 | 357.140000 | 43.520000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 8.206
+    (2s)
+ROW | C | N(0,I) d=1000, start sd 2: sign of coordinate 0 | proxy | 375014 | 368.670000 | 43.920000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 8.394
+    (2s)
+ROW | C | float32 grad, N(0,I) d=1000, start sd 2: sign of coordinate 0 | proxy | 375010 | 364.140000 | 41.810000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 8.709
+    (2s)
+ROW | C | float32 grad, N(0,I) d=1000, start sd 2: sign of coordinate 0 | proxy | 375011 | 353.220000 | 43.970000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 8.033
+    (2s)
+ROW | C | float32 grad, N(0,I) d=1000, start sd 2: sign of coordinate 0 | proxy | 375012 | 377.760000 | 41.130000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 9.185
+    (2s)
+ROW | C | float32 grad, N(0,I) d=1000, start sd 2: sign of coordinate 0 | proxy | 375013 | 371.090000 | 43.520000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 8.527
+    (2s)
+ROW | C | float32 grad, N(0,I) d=1000, start sd 2: sign of coordinate 0 | proxy | 375014 | 350.200000 | 43.920000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 7.974
+    (2s)
+ROW | B | N(0,I) d=1000: grad x 1.0001 | proxy | 375010 | 41.760000 | 41.810000 | 0 | 0 | 0.522226 | 0.522005 | 0.000825166 | ratio 0.999
+    (0s)
+ROW | B | N(0,I) d=1000: grad x 1.0001 | proxy | 375011 | 42.990000 | 43.970000 | 0 | 0 | 0.522226 | 0.522005 | 0.000825166 | ratio 0.978
+    (0s)
+ROW | B | N(0,I) d=1000: grad x 1.0001 | proxy | 375012 | 41.820000 | 41.130000 | 0 | 0 | 0.522226 | 0.522005 | 0.000825166 | ratio 1.017
+    (0s)
+ROW | B | N(0,I) d=1000: grad x 1.0001 | proxy | 375013 | 43.180000 | 43.520000 | 0 | 0 | 0.522226 | 0.522005 | 0.000825166 | ratio 0.992
+    (0s)
+ROW | B | N(0,I) d=1000: grad x 1.0001 | proxy | 375014 | 42.540000 | 43.920000 | 0 | 0 | 0.522226 | 0.522005 | 0.000825166 | ratio 0.969
+    (0s)

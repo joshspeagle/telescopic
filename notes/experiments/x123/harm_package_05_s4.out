@@ -1,0 +1,6 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/harm.py package 5 6 --seeds 4 5
+package baseline 5: N(0,I) d=200, start sd 1; seeds [370054]; 100 pairs, max_iter 10000
+  seed 370054: derivative mean tau 32.44, unmet 0, step 0.6552 (73s)
+ROW | C | N(0,I) d=200, start sd 1: sign of coordinate 0 | package | 370054 | 104.460000 | 32.440000 | 0 | 0 | 0.558400 | 0.655163 | 0.652646 | ratio 3.220
+    (76s)

@@ -1,0 +1,108 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/harm.py package 16 22
+package baseline 16: N(0,I) d=5, start sd 100; seeds [370160, 370161, 370162, 370163, 370164]; 100 pairs, max_iter 10000
+  seed 370160: derivative mean tau 6.17, unmet 0, step 1.3042 (0s)
+  seed 370161: derivative mean tau 5.28, unmet 0, step 1.2989 (0s)
+  seed 370162: derivative mean tau 6.43, unmet 0, step 1.2972 (0s)
+  seed 370163: derivative mean tau 6.14, unmet 0, step 1.2903 (0s)
+  seed 370164: derivative mean tau 5.88, unmet 0, step 1.3041 (0s)
+ROW | C | N(0,I) d=5, start sd 100: grad + 2 | package | 370160 | 2651.240000 | 6.170000 | 15 | 0 | 0.246135 | 1.304154 | 2.99276 | ratio 429.699
+    (3s)
+ROW | C | N(0,I) d=5, start sd 100: grad + 2 | package | 370161 | 1140.100000 | 5.280000 | 4 | 0 | 0.253650 | 1.298932 | 2.90996 | ratio 215.928
+    (3s)
+ROW | C | N(0,I) d=5, start sd 100: grad + 2 | package | 370162 | 1767.070000 | 6.430000 | 7 | 0 | 0.263100 | 1.297223 | 2.80097 | ratio 274.816
+    (3s)
+ROW | C | N(0,I) d=5, start sd 100: grad + 2 | package | 370163 | 1456.490000 | 6.140000 | 5 | 0 | 0.263167 | 1.290268 | 2.79387 | ratio 237.213
+    (3s)
+ROW | C | N(0,I) d=5, start sd 100: grad + 2 | package | 370164 | 1764.730000 | 5.880000 | 10 | 0 | 0.272588 | 1.304142 | 2.83591 | ratio 300.124
+    (3s)
+package baseline 17: N(0,I) d=5, start sd 300; seeds [370170, 370171, 370172, 370173, 370174]; 100 pairs, max_iter 10000
+  seed 370170: derivative mean tau 7.26, unmet 0, step 1.2640 (0s)
+  seed 370171: derivative mean tau 6.76, unmet 0, step 1.2853 (0s)
+  seed 370172: derivative mean tau 7.02, unmet 0, step 1.2813 (0s)
+  seed 370173: derivative mean tau 6.09, unmet 0, step 1.2950 (0s)
+  seed 370174: derivative mean tau 7.07, unmet 0, step 1.2549 (0s)
+ROW | C | N(0,I) d=5, start sd 300: grad + 2 | package | 370170 | 1706.680000 | 7.260000 | 6 | 0 | 0.258669 | 1.263995 | 2.80494 | ratio 235.080
+    (3s)
+ROW | C | N(0,I) d=5, start sd 300: grad + 2 | package | 370171 | 1468.300000 | 6.760000 | 3 | 0 | 0.261839 | 1.285294 | 2.78945 | ratio 217.204
+    (3s)
+ROW | C | N(0,I) d=5, start sd 300: grad + 2 | package | 370172 | 1706.720000 | 7.020000 | 7 | 0 | 0.233134 | 1.281253 | 2.99067 | ratio 243.123
+    (3s)
+ROW | C | N(0,I) d=5, start sd 300: grad + 2 | package | 370173 | 2018.580000 | 6.090000 | 11 | 0 | 0.288232 | 1.295004 | 2.77312 | ratio 331.458
+    (3s)
+ROW | C | N(0,I) d=5, start sd 300: grad + 2 | package | 370174 | 1289.980000 | 7.070000 | 3 | 0 | 0.244180 | 1.254906 | 2.92012 | ratio 182.458
+    (3s)
+package baseline 18: N(0,I) d=5, start sd 1000; seeds [370180, 370181, 370182, 370183, 370184]; 100 pairs, max_iter 10000
+  seed 370180: derivative mean tau 9.20, unmet 0, step 1.1399 (0s)
+  seed 370181: derivative mean tau 12.46, unmet 0, step 1.0729 (0s)
+  seed 370182: derivative mean tau 16.92, unmet 0, step 1.0662 (0s)
+  seed 370183: derivative mean tau 12.10, unmet 0, step 1.1761 (0s)
+  seed 370184: derivative mean tau 12.88, unmet 0, step 1.1034 (0s)
+ROW | C | N(0,I) d=5, start sd 1000: grad + 2 | package | 370180 | 1025.300000 | 9.200000 | 1 | 0 | 0.208412 | 1.139859 | 3.06288 | ratio 111.446
+    (3s)
+ROW | C | N(0,I) d=5, start sd 1000: grad + 2 | package | 370181 | 2541.520000 | 12.460000 | 10 | 0 | 0.228005 | 1.072905 | 2.64513 | ratio 203.974
+    (3s)
+ROW | C | N(0,I) d=5, start sd 1000: grad + 2 | package | 370182 | 1487.980000 | 16.920000 | 6 | 0 | 0.228447 | 1.066200 | 2.5453 | ratio 87.942
+    (3s)
+ROW | C | N(0,I) d=5, start sd 1000: grad + 2 | package | 370183 | 786.470000 | 12.100000 | 0 | 0 | 0.222681 | 1.176140 | 3.16095 | ratio 64.998
+    (1s)
+ROW | C | N(0,I) d=5, start sd 1000: grad + 2 | package | 370184 | 4080.000000 | 12.880000 | 32 | 0 | 0.285728 | 1.103446 | 2.23932 | ratio 316.770
+    (3s)
+ROW | C | N(0,I) d=5, start sd 1000: sign of coordinate 0 | package | 370180 | 10000.000000 | 9.200000 | 100 | 0 | 0.586226 | 1.139859 | 1.16823 | ratio 1086.957
+    (4s)
+ROW | C | N(0,I) d=5, start sd 1000: sign of coordinate 0 | package | 370181 | 10000.000000 | 12.460000 | 100 | 0 | 0.570916 | 1.072905 | 1.34041 | ratio 802.568
+    (4s)
+ROW | C | N(0,I) d=5, start sd 1000: sign of coordinate 0 | package | 370182 | 10000.000000 | 16.920000 | 100 | 0 | 0.702646 | 1.066200 | 1.08553 | ratio 591.017
+    (4s)
+ROW | C | N(0,I) d=5, start sd 1000: sign of coordinate 0 | package | 370183 | 10000.000000 | 12.100000 | 100 | 0 | 0.695934 | 1.176140 | 1.22172 | ratio 826.446
+    (4s)
+ROW | C | N(0,I) d=5, start sd 1000: sign of coordinate 0 | package | 370184 | 10000.000000 | 12.880000 | 100 | 0 | 0.567126 | 1.103446 | 1.33619 | ratio 776.398
+    (4s)
+package baseline 19: N(0,I) d=5, start sd 10000; seeds [370190, 370191, 370192, 370193, 370194]; 100 pairs, max_iter 10000
+  seed 370190: derivative mean tau 30.26, unmet 0, step 0.1911 (0s)
+  seed 370191: derivative mean tau 33.52, unmet 0, step 0.1838 (0s)
+  seed 370192: derivative mean tau 32.70, unmet 0, step 0.1326 (0s)
+  seed 370193: derivative mean tau 40.98, unmet 0, step 0.2707 (0s)
+  seed 370194: derivative mean tau 17.38, unmet 0, step 0.1148 (0s)
+ROW | C | N(0,I) d=5, start sd 10000: grad + 2 | package | 370190 | 1402.920000 | 30.260000 | 4 | 0 | 0.046648 | 0.191079 | 2.38774 | ratio 46.362
+    (3s)
+ROW | C | N(0,I) d=5, start sd 10000: grad + 2 | package | 370191 | 1303.370000 | 33.520000 | 2 | 0 | 0.041430 | 0.183806 | 2.51427 | ratio 38.883
+    (3s)
+ROW | C | N(0,I) d=5, start sd 10000: grad + 2 | package | 370192 | 6156.180000 | 32.700000 | 51 | 0 | 0.040003 | 0.132584 | 1.8675 | ratio 188.262
+    (5s)
+ROW | C | N(0,I) d=5, start sd 10000: grad + 2 | package | 370193 | 3460.160000 | 40.980000 | 0 | 0 | 0.051982 | 0.270704 | 2.98837 | ratio 84.435
+    (3s)
+ROW | C | N(0,I) d=5, start sd 10000: grad + 2 | package | 370194 | 5140.800000 | 17.380000 | 34 | 0 | 0.026842 | 0.114843 | 2.4153 | ratio 295.788
+    (4s)
+package baseline 20: rotated cond 100 d=10, matched; seeds [370200, 370201, 370202, 370203, 370204]; 100 pairs, max_iter 10000
+  seed 370200: derivative mean tau 5.04, unmet 0, step 1.2032 (0s)
+  seed 370201: derivative mean tau 5.53, unmet 0, step 1.1372 (0s)
+  seed 370202: derivative mean tau 4.73, unmet 0, step 1.0833 (0s)
+  seed 370203: derivative mean tau 4.93, unmet 0, step 1.1391 (0s)
+  seed 370204: derivative mean tau 5.25, unmet 0, step 1.0937 (0s)
+ROW | C | rotated cond 100 d=10, matched: sign along the widest axis | package | 370200 | 41.490000 | 5.040000 | 0 | 0 | 0.711138 | 1.203242 | 1.07857 | ratio 8.232
+    (0s)
+ROW | C | rotated cond 100 d=10, matched: sign along the widest axis | package | 370201 | 38.880000 | 5.530000 | 0 | 0 | 0.719621 | 1.137186 | 1.17738 | ratio 7.031
+    (0s)
+ROW | C | rotated cond 100 d=10, matched: sign along the widest axis | package | 370202 | 51.490000 | 4.730000 | 0 | 0 | 0.582409 | 1.083283 | 1.08529 | ratio 10.886
+    (0s)
+ROW | C | rotated cond 100 d=10, matched: sign along the widest axis | package | 370203 | 52.050000 | 4.930000 | 0 | 0 | 0.727129 | 1.139054 | 1.10798 | ratio 10.558
+    (0s)
+ROW | C | rotated cond 100 d=10, matched: sign along the widest axis | package | 370204 | 37.300000 | 5.250000 | 0 | 0 | 0.668108 | 1.093748 | 1.10231 | ratio 7.105
+    (0s)
+package baseline 21: rotated cond 10000 d=10, matched; seeds [370210, 370211, 370212, 370213, 370214]; 100 pairs, max_iter 10000
+  seed 370210: derivative mean tau 4.73, unmet 0, step 1.1717 (0s)
+  seed 370211: derivative mean tau 5.13, unmet 0, step 1.0855 (0s)
+  seed 370212: derivative mean tau 5.41, unmet 0, step 1.1240 (0s)
+  seed 370213: derivative mean tau 4.63, unmet 0, step 1.1379 (0s)
+  seed 370214: derivative mean tau 5.79, unmet 0, step 1.0889 (0s)
+ROW | C | rotated cond 10000 d=10, matched: sign along the widest axis | package | 370210 | 56.640000 | 4.730000 | 0 | 0 | 0.731527 | 1.171701 | 1.12549 | ratio 11.975
+    (1s)
+ROW | C | rotated cond 10000 d=10, matched: sign along the widest axis | package | 370211 | 43.130000 | 5.130000 | 0 | 0 | 0.682203 | 1.085519 | 1.08292 | ratio 8.407
+    (0s)
+ROW | C | rotated cond 10000 d=10, matched: sign along the widest axis | package | 370212 | 49.460000 | 5.410000 | 0 | 0 | 0.718433 | 1.123998 | 1.05468 | ratio 9.142
+    (1s)
+ROW | C | rotated cond 10000 d=10, matched: sign along the widest axis | package | 370213 | 46.020000 | 4.630000 | 0 | 0 | 0.656769 | 1.137949 | 1.18939 | ratio 9.940
+    (0s)
+ROW | C | rotated cond 10000 d=10, matched: sign along the widest axis | package | 370214 | 49.760000 | 5.790000 | 0 | 0 | 0.746183 | 1.088891 | 0.995617 | ratio 8.594
+    (0s)

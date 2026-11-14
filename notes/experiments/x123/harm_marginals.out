@@ -1,0 +1,5 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/harm.py marginals
+marginals d=5, derivative, step 1.2902: smallest of 8 p-values 0.114 (Bonferroni bound 1e-3 / 8); met in one step 0.276; equal pairs stay equal True
+marginals d=5, sign of coordinate 0, step 0.7169: smallest of 8 p-values 0.0397 (Bonferroni bound 1e-3 / 8); met in one step 0.054; equal pairs stay equal True
+marginals d=50, derivative, step 0.8623: smallest of 8 p-values 0.284 (Bonferroni bound 1e-3 / 8); met in one step 0.000; equal pairs stay equal True

@@ -1,0 +1,34 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/harm.py proxy 8 10
+proxy baseline 8: N(0,I) d=1000, start sd (0.1, 2, ...); seeds [375080, 375081, 375082, 375083, 375084]; 100 pairs, max_iter 10000; tuned step 0.5220
+  seed 375080: derivative mean tau 46.86, unmet 0 (0s)
+  seed 375081: derivative mean tau 44.46, unmet 0 (0s)
+  seed 375082: derivative mean tau 42.75, unmet 0 (0s)
+  seed 375083: derivative mean tau 40.69, unmet 0 (0s)
+  seed 375084: derivative mean tau 42.67, unmet 0 (0s)
+ROW | C | N(0,I) d=1000, start sd (0.1, 2, ...): sign of coordinate 0 | proxy | 375080 | 239.620000 | 46.860000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.114
+    (1s)
+ROW | C | N(0,I) d=1000, start sd (0.1, 2, ...): sign of coordinate 0 | proxy | 375081 | 262.040000 | 44.460000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.894
+    (1s)
+ROW | C | N(0,I) d=1000, start sd (0.1, 2, ...): sign of coordinate 0 | proxy | 375082 | 282.480000 | 42.750000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 6.608
+    (1s)
+ROW | C | N(0,I) d=1000, start sd (0.1, 2, ...): sign of coordinate 0 | proxy | 375083 | 303.320000 | 40.690000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 7.454
+    (1s)
+ROW | C | N(0,I) d=1000, start sd (0.1, 2, ...): sign of coordinate 0 | proxy | 375084 | 218.290000 | 42.670000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.116
+    (1s)
+proxy baseline 9: N(0,I) d=1000, start sd (0.01, 2, ...); seeds [375090, 375091, 375092, 375093, 375094]; 100 pairs, max_iter 10000; tuned step 0.5220
+  seed 375090: derivative mean tau 43.42, unmet 0 (0s)
+  seed 375091: derivative mean tau 44.14, unmet 0 (0s)
+  seed 375092: derivative mean tau 41.40, unmet 0 (0s)
+  seed 375093: derivative mean tau 42.78, unmet 0 (0s)
+  seed 375094: derivative mean tau 41.26, unmet 0 (0s)
+ROW | C | N(0,I) d=1000, start sd (0.01, 2, ...): sign of coordinate 0 | proxy | 375090 | 246.720000 | 43.420000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.682
+    (1s)
+ROW | C | N(0,I) d=1000, start sd (0.01, 2, ...): sign of coordinate 0 | proxy | 375091 | 244.640000 | 44.140000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.542
+    (1s)
+ROW | C | N(0,I) d=1000, start sd (0.01, 2, ...): sign of coordinate 0 | proxy | 375092 | 245.300000 | 41.400000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 5.925
+    (1s)
+ROW | C | N(0,I) d=1000, start sd (0.01, 2, ...): sign of coordinate 0 | proxy | 375093 | 265.480000 | 42.780000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 6.206
+    (1s)
+ROW | C | N(0,I) d=1000, start sd (0.01, 2, ...): sign of coordinate 0 | proxy | 375094 | 256.920000 | 41.260000 | 0 | 0 | 0.463144 | 0.522005 | 0.526656 | ratio 6.227
+    (1s)

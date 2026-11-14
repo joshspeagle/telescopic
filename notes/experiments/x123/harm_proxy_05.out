@@ -1,0 +1,18 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/harm.py proxy 5 6
+proxy baseline 5: N(0,I) d=5000, start sd 2; seeds [375050, 375051, 375052, 375053, 375054]; 100 pairs, max_iter 10000; tuned step 0.3997
+  seed 375050: derivative mean tau 90.80, unmet 0 (2s)
+  seed 375051: derivative mean tau 90.72, unmet 0 (2s)
+  seed 375052: derivative mean tau 87.61, unmet 0 (2s)
+  seed 375053: derivative mean tau 88.93, unmet 0 (2s)
+  seed 375054: derivative mean tau 93.74, unmet 0 (2s)
+ROW | C | N(0,I) d=5000, start sd 2: sign of coordinate 0 | proxy | 375050 | 998.590000 | 90.800000 | 0 | 0 | 0.369083 | 0.399659 | 0.396763 | ratio 10.998
+    (25s)
+ROW | C | N(0,I) d=5000, start sd 2: sign of coordinate 0 | proxy | 375051 | 1046.290000 | 90.720000 | 0 | 0 | 0.369083 | 0.399659 | 0.396763 | ratio 11.533
+    (26s)
+ROW | C | N(0,I) d=5000, start sd 2: sign of coordinate 0 | proxy | 375052 | 983.820000 | 87.610000 | 0 | 0 | 0.369083 | 0.399659 | 0.396763 | ratio 11.230
+    (24s)
+ROW | C | N(0,I) d=5000, start sd 2: sign of coordinate 0 | proxy | 375053 | 1010.800000 | 88.930000 | 0 | 0 | 0.369083 | 0.399659 | 0.396763 | ratio 11.366
+    (25s)
+ROW | C | N(0,I) d=5000, start sd 2: sign of coordinate 0 | proxy | 375054 | 1010.100000 | 93.740000 | 0 | 0 | 0.369083 | 0.399659 | 0.396763 | ratio 10.776
+    (25s)

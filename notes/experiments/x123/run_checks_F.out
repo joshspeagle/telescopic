@@ -1,0 +1,11 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/run_checks.py F
+group F; P = 8; columns: seeds | N | H | (N) with r=1e-06 r=0.0001 r=0.01 | ratio N med/max, H max | unusable, skipped | evaluations | errors | time
+[  0] N(0,I) d=10000, start sd (0.01, 2, ...): sign of coordinate 0            360000..360999 | N  518/1000 | H    0/1000 |  367    0    0 | 1.02e+00/4.43e+00 5.89e-03 | 0 0 | 40+8 | 0 | 11.6s
+[  1] N(0,I) d=1000, start sd (0.003, 2, ...): sign of coordinate 0            361000..361999 | N  476/1000 | H    0/1000 |    1    0    0 | 9.75e-01/3.81e+00 5.28e-04 | 0 0 | 40+8 | 0 | 2.7s
+[  2] N(0,I) d=5, start sd (1e-4, 2, ...): sign of coordinate 0                362000..362999 | N  210/1000 | H    0/1000 |    0    0    0 | 4.78e-01/1.62e+01 7.27e-07 | 0 0 | 40+8 | 0 | 1.4s
+[  3] scales (1, 1e-4 x4), start N(0, I): sign of the wide coordinate          363000..363999 | N  797/1000 | H  797/1000 |    0    0    0 | 1.99e+00/6.12e+01 4.07e+01 | 0 0 | 40+8 | 0 | 1.5s
+[  4] N(0,I) - 1e4 d=5, start sd 1e-3: sign of coordinate 0                    364000..364999 | N    0/1000 | H    0/1000 |    0    0    0 | 2.05e-02/1.11e-01 7.36e-05 | 0 0 | 40+8 | 0 | 1.7s
+[  5] N(0,I) d=1000, start sd (0.5, 2, ...): sign of coordinate 0              365000..365999 | N 1000/1000 | H  981/1000 | 1000 1000  222 | 2.67e+04/1.02e+05 1.32e+01 | 0 0 | 40+8 | 0 | 3.2s
+[  6] N(0,I) d=1000, start sd (0.25, 2, ...): sign of coordinate 0             366000..366999 | N 1000/1000 | H  403/1000 | 1000 1000    0 | 6.71e+03/3.37e+04 4.19e+00 | 0 0 | 40+8 | 0 | 2.5s
+total over 7000 checks: N 4001, H 2181, r=1e-06 2368, r=0.0001 2000, r=0.01 222

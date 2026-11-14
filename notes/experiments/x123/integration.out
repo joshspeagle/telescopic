@@ -1,0 +1,28 @@
+commit 7b2c992; processor Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; python 3.13.18, numpy 2.5.4, scipy 1.18.1
+command: python notes/experiments/x123/integration.py
+mala tuned  vectorize=True  rng=int       seed 391000: identical (none, N, H) True; k=20 m=200; target counters 19551 log_prob, 11547 grad
+mala tuned  vectorize=True  rng=int       seed 391001: identical (none, N, H) True; k=17 m=170; target counters 18524 log_prob, 10520 grad
+mala tuned  vectorize=True  rng=generator seed 391000: identical (none, N, H) True; k=13 m=130; target counters 17225 log_prob, 9221 grad
+mala tuned  vectorize=True  rng=generator seed 391001: identical (none, N, H) True; k=20 m=200; target counters 19431 log_prob, 11427 grad
+mala tuned  vectorize=False rng=int       seed 391000: identical (none, N, H) True; k=20 m=200; target counters 19551 log_prob, 11547 grad
+mala tuned  vectorize=False rng=generator seed 391000: identical (none, N, H) True; k=13 m=130; target counters 17225 log_prob, 9221 grad
+hmc tuned   vectorize=True  rng=int       seed 391000: identical (none, N, H) True; k=85 m=850; target counters 78897 log_prob, 70893 grad
+hmc tuned   vectorize=True  rng=int       seed 391001: identical (none, N, H) True; k=76 m=760; target counters 73502 log_prob, 65498 grad
+hmc tuned   vectorize=True  rng=generator seed 391000: identical (none, N, H) True; k=103 m=1030; target counters 90727 log_prob, 82723 grad
+hmc tuned   vectorize=True  rng=generator seed 391001: identical (none, N, H) True; k=75 m=750; target counters 74287 log_prob, 66283 grad
+hmc tuned   vectorize=False rng=int       seed 391000: identical (none, N, H) True; k=85 m=850; target counters 78897 log_prob, 70893 grad
+hmc tuned   vectorize=False rng=generator seed 391000: identical (none, N, H) True; k=103 m=1030; target counters 90727 log_prob, 82723 grad
+mala fixed  vectorize=True  rng=int       seed 391000: identical (none, N, H) True; k=29 m=290; target counters 11502 log_prob, 11502 grad
+mala fixed  vectorize=True  rng=int       seed 391001: identical (none, N, H) True; k=35 m=350; target counters 13440 log_prob, 13440 grad
+mala fixed  vectorize=True  rng=generator seed 391000: identical (none, N, H) True; k=20 m=200; target counters 8688 log_prob, 8688 grad
+mala fixed  vectorize=True  rng=generator seed 391001: identical (none, N, H) True; k=21 m=210; target counters 9051 log_prob, 9051 grad
+mala fixed  vectorize=False rng=int       seed 391000: identical (none, N, H) True; k=29 m=290; target counters 11502 log_prob, 11502 grad
+mala fixed  vectorize=False rng=generator seed 391000: identical (none, N, H) True; k=20 m=200; target counters 8688 log_prob, 8688 grad
+hmc fixed   vectorize=True  rng=int       seed 391000: identical (none, N, H) True; k=85 m=850; target counters 123230 log_prob, 123230 grad
+hmc fixed   vectorize=True  rng=int       seed 391001: identical (none, N, H) True; k=76 m=760; target counters 114666 log_prob, 114666 grad
+hmc fixed   vectorize=True  rng=generator seed 391000: identical (none, N, H) True; k=115 m=1150; target counters 162948 log_prob, 162948 grad
+hmc fixed   vectorize=True  rng=generator seed 391001: identical (none, N, H) True; k=75 m=750; target counters 115233 log_prob, 115233 grad
+hmc fixed   vectorize=False rng=int       seed 391000: identical (none, N, H) True; k=85 m=850; target counters 123230 log_prob, 123230 grad
+hmc fixed   vectorize=False rng=generator seed 391000: identical (none, N, H) True; k=115 m=1150; target counters 162948 log_prob, 162948 grad
+identical 24/24
+check: 40 log_prob + 8 grad; run median 46526 log_prob + 39469 grad; check / run evaluations of log_prob, median 1.30e-03; time, median 1.62 ms against 0.39 s; warnings 0 of 48
