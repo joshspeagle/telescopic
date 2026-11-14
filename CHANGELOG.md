@@ -379,3 +379,7 @@ All notable changes to this project are documented here. The format follows
   meet once their trajectories have brought them close, a meeting time can move, and
   with it a replicate's estimates (one of 100 on a logistic regression of 6 dimensions,
   which moved the estimates by up to 0.075 standard errors).
+- A coupled `Gibbs` sweep counts the coordinates where the two chains differ instead of
+  comparing every coordinate outside each block: at d = 200, three sweeps of
+  one-coordinate blocks took 1.06 to 1.28 times less time; at d = 20, as long as before.
+  Its outputs are unchanged.

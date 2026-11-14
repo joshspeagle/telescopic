@@ -1026,6 +1026,25 @@ def gibbs_state(points):
     return State(points, np.zeros(len(points)))
 
 
+def test_gibbs_chains_that_meet_in_a_block_give_the_later_blocks_one_draw():
+    # The pairs differ in coordinates 0 and 1 and meet in block 0, whose conditional is
+    # the same for both chains: blocks 1 and 2 then see chains that agree outside them,
+    # and build one conditional per row instead of one per chain.
+    calls = np.zeros(3, dtype=int)
+
+    def conditional(point, b):
+        calls[b] += 1
+        return Normal(0.0, 1.0)
+
+    x = np.zeros((10, 3))
+    y = x + np.array([1.0, 1.0, 0.0])
+    new_x, new_y = Gibbs(conditional, [[0], [1], [2]]).coupled_step(
+        Target(None), gibbs_state(x), gibbs_state(y), random_draws(10, 54)
+    )
+    np.testing.assert_array_equal(calls, [20, 10, 10])
+    np.testing.assert_array_equal(new_x.x, new_y.x)
+
+
 def test_maximal_gibbs_couplings_draw_each_chain_from_its_conditionals():
     n = 4000
     kernel = Gibbs(conditional, [[0], [1]], eta=0.7)

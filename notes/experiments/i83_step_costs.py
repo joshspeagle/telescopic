@@ -44,6 +44,12 @@ point by point.
    rows are not identical: microseconds per call, and from the same streams (seed 5)
    whether `x` and the flags are bitwise equal, and the largest relative difference of
    `y` on the rows that are not identical.
+3. Gibbs (p1-05). Three coupled sweeps of `Gibbs.coupled_step` with the maximal
+   coupling, one-coordinate blocks of the conditionals of an AR(1) chain
+   (x_i | rest ~ N(0.5 (x_(i-1) + x_(i+1)) / 1.25, 1 / 1.25), a small class with `rvs`
+   and `logpdf`), at d = 20 and 200, 16 and 256 rows, with pairs that differ in every
+   coordinate, in half of them, or nowhere: milliseconds per three sweeps, and whether
+   x and y are bitwise equal before and after.
 
 Result (`i83_step_costs.out`, at a load average of 1.3 to 2.0 on 4 cores shared with
 other jobs).
@@ -59,6 +65,9 @@ other jobs).
    most 9.5e-12 relative (d = 200, einsum). Before/after per round, medians: with einsum
    1.10, 1.10, 1.22, 1.26 and 1.36 at d = 2, 10, 20, 50 and 200; with BLAS 1.09, 1.06,
    1.10, 1.10 and 1.24. No median is below 1, so one form serves every d.
+3. Bitwise equal everywhere. At d = 20 no gain: medians 0.93 to 1.02. At d = 200, 1.06
+   to 1.10 where the pairs differ and 1.20 to 1.28 where they are equal, at 16 and 256
+   rows.
 
 Run from the repository root: OMP_NUM_THREADS=1 PYTHONPATH=src python notes/experiments/i83_step_costs.py
 """
@@ -247,6 +256,56 @@ print(json.dumps(outputs))
 """
 )
 
+# Section 3: coupled Gibbs sweeps.
+GIBBS = (
+    COMMON
+    + """
+from telescopic.kernels import Gibbs
+from telescopic.kernels.base import State
+from telescopic.testing import random_draws
+
+
+class Normal:
+    def __init__(self, mean, sd):
+        self.mean, self.sd = mean, sd
+
+    def rvs(self, random_state):
+        return self.mean + self.sd * random_state.standard_normal()
+
+    def logpdf(self, value):
+        return -0.5 * ((value - self.mean) / self.sd) ** 2 - np.log(self.sd)
+
+
+def conditional(x, b):
+    left = x[b - 1] if b else 0.0
+    right = x[b + 1] if b + 1 < len(x) else 0.0
+    return Normal(0.5 * (left + right) / 1.25, 1.25**-0.5)
+
+
+outputs = {}
+for d in (20, 200):
+    kernel = Gibbs(conditional, [np.array([i]) for i in range(d)])
+    for n in (16, 256):
+        x0 = np.random.default_rng(7).standard_normal((n, d))
+        for differ, offset in (("every", np.ones(d)), ("half", np.arange(d) % 2), ("none", np.zeros(d))):
+            y0 = x0 + offset
+
+            def sweeps(seed=8):
+                draws = random_draws(n, seed)
+                x, y = State(x0, np.zeros(n)), State(y0, np.zeros(n))
+                for _ in range(3):
+                    x, y = kernel.coupled_step(Target(None), x, y, draws)
+                return x, y
+
+            x, y = sweeps()
+            outputs[f"{d} {n} {differ}"] = {
+                "time": 1e3 * timed(sweeps, 1 if n * d > 4000 else 5),
+                "hash": digest(x.x, y.x),
+            }
+print(json.dumps(outputs))
+"""
+)
+
 
 def child(script, source):
     output = subprocess.run(
@@ -293,6 +352,10 @@ def compare(outputs, key):
     )
 
 
+def same(outputs, key):
+    return outputs["before"][0][key]["hash"] == outputs["after"][0][key]["hash"]
+
+
 def hashes(sources):
     print(
         "\n1. Fixed seeds: hash before -> after, meeting times that differ, largest change of E[x]"
@@ -328,6 +391,20 @@ def reflection(sources):
         )
 
 
+def gibbs(sources):
+    print(
+        "\n3. Gibbs: three coupled sweeps, one-coordinate blocks; milliseconds, median of "
+        "the rounds, and before/after per round: median (range)"
+    )
+    outputs = rounds(GIBBS, sources)
+    for key in outputs["after"][0]:
+        d, n, differ = key.split()
+        print(
+            f"d = {d:>3}, {n:>3} rows, differ in {differ:5}: {compare(outputs, key)}; "
+            f"x and y {'bitwise equal' if same(outputs, key) else 'DIFFER'}"
+        )
+
+
 def main():
     print(setup())
     print(f"before: commit {BEFORE}; after: this checkout; children run with {THREADS}")
@@ -336,6 +413,7 @@ def main():
         sources = {"before": extract(BEFORE, folder), "after": ROOT / "src"}
         hashes(sources)
         reflection(sources)
+        gibbs(sources)
     print(f"load average after: {tuple(round(x, 2) for x in os.getloadavg())}")
 
 
