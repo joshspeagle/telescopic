@@ -325,6 +325,9 @@ All notable changes to this project are documented here. The format follows
 - `Draws.child(row)` returns a new child of a row's generator, which does not move the
   row's stream: two draws from it can read the same numbers, as the Gibbs kernel's common
   random numbers do.
+- A request of `Draws` for no rows returns an empty array. It raised `ValueError` when it
+  asked for at least two numbers per row more than the buffer held, as for two normals
+  per row of replayed draws without normals.
 - `import telescopic` no longer imports `scipy.stats`, `scipy.optimize` and
   `scipy.integrate`: the functions that use them import them at their first call. That
   shortens the import, and with it the start of each worker of a process pool; the first
