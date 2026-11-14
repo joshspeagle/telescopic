@@ -82,3 +82,27 @@ Each item has the default that work proceeds on until Josh answers.
   several seeds and an explicit proposal as what helps; a check that does not depend on
   the start's width stays research. Alternatives: build the probe rule of row 117 in as
   confirmed, or as an opt-in check.
+
+- [ ] **Three choices in the messages of issue #73.** Each departs from or goes beyond
+  the ruling on #73, and work proceeds on its default (DECISIONS #128, #131, #132).
+  - *The slow-pair message's Ctrl-C clause.* The ruled text, "one Ctrl-C returns the
+    replicates so far", would be false: the first Ctrl-C starts no new replicate but
+    lets those in progress finish, the slow one included (spec §6.5). A SIGINT sent
+    0.5 s into a run of 2 replicates with a cap of 10^5 returned the run after 23.9 s,
+    with both replicates finished. Default: the message says what the code does, "a
+    first Ctrl-C starts no new replicate but lets this one finish, and a second stops
+    the run without a result". Alternative: the first Ctrl-C drops the replicates in
+    progress, which changes §6.5.
+  - *How tuning's progress reaches the tuning functions.* An argument cannot reach
+    `adaptive_metropolis` and `dual_averaging` without a flag on `Kernel.tune`, which
+    the ruling declines, since `Kernel.tune` calls them. Default: the sampler sets a
+    private context variable around `Kernel.tune`. Alternative: a `progress` argument
+    on `Kernel.tune`.
+  - *The memory warning's peak factor of 3.* Measured with `tracemalloc`, it bounds the
+    peak of `cov()` with `summary()` from d = 2 to 50 at `thin` = 1 (2.91 to 2.96
+    times the stored size), but not at d = 1 (3.79), with `thin` 2 or 10 in one or two
+    dimensions (3.65 to 5.93), or with a walk that rarely rejects (4.67 and 5.67)
+    (`notes/experiments/i73_memory_peak.out`). The issue measured 3.1 times in resident
+    memory at d = 50. Default: a factor of 3, with twice the peak as the message's upper
+    end in one or two dimensions. Alternatives: a factor of 4; a factor that depends on
+    d.

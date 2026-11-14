@@ -16,7 +16,15 @@ import numpy.typing as npt
 from scipy import stats
 
 from telescopic import diagnostics, engine
-from telescopic._types import FloatArray, coordinates, flag, integer, parameter_names, real
+from telescopic._types import (
+    FloatArray,
+    coordinates,
+    flag,
+    integer,
+    parameter_names,
+    real,
+    values_of,
+)
 from telescopic.engine import Replicates
 from telescopic.estimators import unbiased_covariance, unbiased_variance, weighted_quantile
 from telescopic.measure import SignedMeasure
@@ -50,11 +58,11 @@ class Estimate:
         The mean :math:`\bar H` of the replicates' estimates.
     standard_error : ndarray, shape () or (p,)
         Their sample standard deviation divided by :math:`\sqrt R`.
-    interval : tuple of two ndarrays
-        :math:`\bar H \mp t_{R-1}\,\hat\sigma/\sqrt R`, with :math:`t_{R-1}` the
-        quantile of ``(1 + level) / 2`` of Student's t with :math:`R - 1` degrees of
-        freedom; valid as :math:`R` grows when the variance is finite, and exact at every
-        :math:`R \ge 2` for normal replicates.
+    interval : ndarray, shape (2,) or (2, p)
+        The confidence interval :math:`\bar H \mp t_{R-1}\,\hat\sigma/\sqrt R`, lower end
+        first, with :math:`t_{R-1}` the quantile of ``(1 + level) / 2`` of Student's t
+        with :math:`R - 1` degrees of freedom; valid as :math:`R` grows when the variance
+        is finite, and exact at every :math:`R \ge 2` for normal replicates.
     level : float
         The confidence level of ``interval``, such as 0.95.
     replicates : ndarray, shape (R,) or (R, p)
@@ -63,7 +71,7 @@ class Estimate:
 
     value: FloatArray
     standard_error: FloatArray
-    interval: tuple[FloatArray, FloatArray]
+    interval: FloatArray
     level: float
     replicates: FloatArray
 
@@ -173,8 +181,17 @@ class Result:
         # The engine runs only requested indices, so missing ones make index shorter.
         self.interrupted = len(replicates.index) < len(replicates.requested)
         # The cap for a censored pair makes the bounds of section 3.6 lower bounds of
-        # their estimates.
+        # their estimates. The engine compared its chains at the cap before censoring
+        # it, so the TV bound counts it as meeting at cap + 1, the least it can.
         self._stopped = replicates.stopped.astype(np.int64)
+        self._earliest_meeting = self._stopped + ~met
+
+    def __repr__(self) -> str:
+        # Stored fields only: an echo in a notebook must not compute the diagnostics.
+        return (
+            f"Result(R={self.n_replicates}, d={self.ndim}, k={self.k}, m={self.m}, "
+            f"lag={self.lag}, censored={self.n_censored}, interrupted={self.interrupted})"
+        )
 
     # Spec section 3.3.
     def estimate(self, h: Callable[[FloatArray], npt.ArrayLike], level: float = 0.95) -> Estimate:
@@ -210,7 +227,8 @@ class Result:
         value, error = values.mean(axis=0), np.asarray(stats.sem(values, axis=0))
         # Student's t, not the normal quantile, whose intervals undercover at small R.
         t = stats.t.ppf((1 + level) / 2, self.n_replicates - 1)
-        return Estimate(value, error, (value - t * error, value + t * error), level, values)
+        interval = np.stack([value - t * error, value + t * error])
+        return Estimate(value, error, interval, level, values)
 
     def mean(self) -> Estimate:
         """The estimate of the mean of each coordinate.
@@ -272,42 +290,58 @@ class Result:
         return deviations
 
     # Spec section 3.4.
-    def quantile(self, q: npt.ArrayLike) -> FloatArray:
-        """Quantiles of each coordinate under the pooled signed measure.
+    def quantile(
+        self, q: npt.ArrayLike, h: Callable[[FloatArray], npt.ArrayLike] | None = None
+    ) -> FloatArray:
+        """Quantiles of each coordinate, or of ``h``, under the pooled signed measure.
 
-        Consistent as :math:`R` grows, not unbiased.
+        Spec section 3.4. Consistent as :math:`R` grows, not unbiased.
 
         Parameters
         ----------
         q : float or array_like of float in [0, 1]
+        h : callable, optional
+            As in :meth:`estimate`; its quantiles are taken in place of the coordinates'.
 
         Returns
         -------
-        ndarray, shape (d,) for a scalar ``q``, else ``(len(q), d)``
+        ndarray, shape ``q.shape + (d,)``, or with ``h``, ``q.shape`` or ``q.shape + (p,)``
+
+        Notes
+        -----
+        Cost: one sort of the atoms per column, after merging consecutive equal atoms, and
+        with ``h``, one call of ``h`` on the merged atoms.
         """
         self._require(1)
-        # Rejections repeat atoms; merging consecutive equal rows first shortens every sort.
+        # Rejections repeat atoms; merging consecutive equal rows first shortens every sort
+        # and the calls of h.
         atoms = self.measure.atoms
         first = np.concatenate([[True], np.any(atoms[1:] != atoms[:-1], axis=1)]).nonzero()[0]
         weights = np.add.reduceat(self.measure.weights, first) / self.n_replicates
-        columns = [weighted_quantile(column, weights, q) for column in atoms[first].T]
-        quantiles: FloatArray = np.stack(columns, axis=-1)
+        values = atoms[first] if h is None else values_of(h, atoms[first])
+        quantiles: FloatArray = np.apply_along_axis(weighted_quantile, 0, values, weights, q)
         return quantiles
 
-    def interval(self, mass: float = 0.68) -> FloatArray:
-        """The central interval holding ``mass`` of each marginal of the target.
+    def credible_interval(
+        self, mass: float = 0.68, h: Callable[[FloatArray], npt.ArrayLike] | None = None
+    ) -> FloatArray:
+        r"""The central credible interval holding ``mass`` of each marginal, or of ``h``.
+
+        The quantiles at :math:`(1 - \mathrm{mass})/2` and :math:`(1 + \mathrm{mass})/2`.
 
         Parameters
         ----------
         mass : float in (0, 1)
+        h : callable, optional
+            As in :meth:`quantile`.
 
         Returns
         -------
-        ndarray, shape (2, d)
+        ndarray, shape (2, d), or with ``h``, (2,) or (2, p)
             Lower and upper ends.
         """
         mass = real("mass", mass, 0, 1)
-        return self.quantile([(1 - mass) / 2, (1 + mass) / 2])
+        return self.quantile([(1 - mass) / 2, (1 + mass) / 2], h)
 
     # Spec section 3.4.
     def histogram(
@@ -315,10 +349,12 @@ class Result:
     ) -> tuple[FloatArray, FloatArray, FloatArray | list[FloatArray]]:
         """Histogram of one coordinate or several, with standard errors.
 
-        The mass of each half-open bin is the average over replicates of its signed mass,
-        so a bin can be negative. It is unbiased for a ``range`` fixed before the run; the
-        default range, from the atoms, biases every bin, the two outer ones by a term of
-        order :math:`1/R`. Memory: a few floats per atom, and per bin.
+        The mass of each bin is the average over replicates of its signed mass, so a bin
+        can be negative. The bins are half-open, :math:`[a, b)`, except the last, which is
+        closed, as in ``numpy.histogram``, so that an atom on the upper edge of ``range``
+        is counted. It is unbiased for a ``range`` fixed before the run; the default
+        range, from the atoms, biases every bin, the two outer ones by a term of order
+        :math:`1/R`. Memory: a few floats per atom, and per bin.
 
         Parameters
         ----------
@@ -367,8 +403,9 @@ class Result:
     def tv_bound(self, t: npt.ArrayLike | None = None) -> FloatArray:
         """Estimated upper bound on the total variation distance from the law of X_t to the target.
 
-        The bound derived under Distance to stationarity, in :doc:`/theory`; with censored
-        pairs it is a lower bound of that estimate.
+        The bound derived under Distance to stationarity, in :doc:`/theory`. A censored pair
+        counts as meeting just after its cap, the earliest it can, so with censored pairs
+        it is a lower bound of the estimate without a cap.
 
         Parameters
         ----------
@@ -381,8 +418,8 @@ class Result:
         ndarray, shape of ``t``
         """
         if t is None:
-            t = self._times(int(np.max(self._stopped)))
-        return diagnostics.tv_bound(self._stopped, self.lag, t)
+            t = self._times(int(np.max(self._earliest_meeting)))
+        return diagnostics.tv_bound(self._earliest_meeting, self.lag, t)
 
     # Spec section 3.6.
     def w1_bound(self, t: npt.ArrayLike | None = None) -> FloatArray:
@@ -427,8 +464,9 @@ class Result:
             one-sided 95% Clopper-Pearson upper bound, which stays informative when the
             fraction is 0; ``tv_bound_at_k``; ``variance_share``, the largest share of one
             replicate in the sample variance of the estimate of a coordinate's mean or
-            variance, and ``variance_share_of``, that estimate, ``nan`` and ``None``
-            below 2 replicates; ``mean_cost``, ``seconds_per_replicate`` and
+            variance, ``variance_share_of``, that estimate, and
+            ``variance_share_replicate``, the index of that replicate, ``nan``, ``None``
+            and ``None`` below 2 replicates; ``mean_cost``, ``seconds_per_replicate`` and
             ``relative_cost``, the mean cost over :math:`m - k + 1`.
         """
         return dict(self._diagnostics)
@@ -447,20 +485,26 @@ class Result:
         upper = stats.binomtest(n_late, n_total, alternative="less").proportion_ci(0.95).high
         # The TV bound at k as an average over replicates (section 3.6), in O(R) memory:
         # diagnostics.tv_bound's survival function takes memory up to the largest time.
-        excess = np.ceil((self._stopped - self.lag - self.k) / self.lag)
+        excess = np.ceil((self._earliest_meeting - self.lag - self.k) / self.lag)
         tv_at_k = min(1.0, float(np.maximum(0, excess).mean()))
-        share, share_of = np.nan, None
+        share, share_of, share_replicate = np.nan, None, None
         if self.n_replicates >= 2:
             # The second moments about the atoms' mean, which the variances use: about 0,
             # far from it, they would vary with the means and hide their own spread.
             centered, first = self._centered()
             # Squared in place: the centered atoms are not read again.
             second = self.measure.per_replicate(lambda _: np.square(centered, out=centered))
-            shares = diagnostics.variance_share(np.concatenate([first, second], axis=1))
+            values = np.concatenate([first, second], axis=1)
+            shares = diagnostics.variance_share(values)
             worst = int(np.argmax(shares))
             moment = "mean" if worst < self.ndim else "variance"
             share = float(shares[worst])
             share_of = f"the {moment} of {self.names[worst % self.ndim]}"
+            # The row of the largest squared deviation, which holds the share, among the
+            # replicates that met.
+            column = values[:, worst]
+            row = int(np.argmax(np.abs(column - column.mean())))
+            share_replicate = int(self.index[np.isfinite(self.meeting_times)][row])
         mean_cost = float(self.costs.mean())
         return {
             "meeting_time_50": float(quantiles[0]),
@@ -474,6 +518,7 @@ class Result:
             "tv_bound_at_k": tv_at_k,
             "variance_share": share,
             "variance_share_of": share_of,
+            "variance_share_replicate": share_replicate,
             "mean_cost": mean_cost,
             "seconds_per_replicate": self.wall_time / len(self.index),
             "relative_cost": mean_cost / (self.m - self.k + 1),
@@ -683,12 +728,12 @@ class Result:
         self, column: int, bins: int, limit: tuple[float, float] | None = None
     ) -> tuple[npt.NDArray[np.intp], FloatArray]:
         # The bin of each atom along a coordinate, below 0 or from bins outside the edges,
-        # and the edges; by default the last is nudged up to keep the largest atom inside.
+        # and the edges; the last bin is closed, as in numpy.histogram.
         values = self.measure.atoms[:, column]
         edges = np.histogram_bin_edges(values, bins, limit)
-        if limit is None:
-            edges[-1] = np.nextafter(edges[-1], np.inf)
-        return np.searchsorted(edges, values, side="right") - 1, edges
+        which = np.searchsorted(edges, values, side="right") - 1
+        which[values == edges[-1]] = bins - 1
+        return which, edges
 
     def _centered(self) -> tuple[FloatArray, FloatArray]:
         # The atoms about their mean, and each replicate's mean of them. Each replicate's

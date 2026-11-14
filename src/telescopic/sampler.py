@@ -11,7 +11,7 @@ import numpy as np
 
 from telescopic import diagnostics, engine
 from telescopic._parallel import Interrupt, check_pool, execute, opened
-from telescopic._progress import Progress
+from telescopic._progress import Progress, tuning
 from telescopic._random import MAIN, PILOT, namespace_seed, replicate_generator, root_seed
 from telescopic._types import FloatArray, IntArray, Seed, flag, integer, parameter_names
 from telescopic.initial import as_initial, draw
@@ -32,6 +32,12 @@ PILOT_REPLICATES = 100
 PILOT_MAX_ITER = 100_000
 # The meeting-time pilot: lag 1, with nothing stored (spec R-TUNE-2).
 PILOT_SETTINGS = engine.Settings(0, 0, 1, max_iter=PILOT_MAX_ITER, store=False)
+# The peak memory of a run's first estimates over the bytes the run stores: 2.9 to 3.0
+# from d = 2 to 50 for a random walk's rejection rate at thin = 1. In one or two
+# dimensions it reaches about twice that with thin above 1 or a kernel that rarely
+# rejects, since Result.quantile sorts the atoms that are not consecutive repeats
+# (notes/experiments/i73_memory_peak.out).
+PEAK_PER_STORED = 3
 # The warnings of spec section 7.4 that a run emits as they happen, not at its end, or as
 # it ends for slow pairs on a pool.
 _LIVE = ("slow", "tuning")
@@ -85,8 +91,8 @@ class CoupledSampler:
         Ctrl-C ignored. With a log-density evaluated point by point, no replicate
         depends on the pool.
     progress : bool
-        Show the progress of the pilot and of each run: a tqdm bar when tqdm is
-        installed, lines on stderr otherwise.
+        Show the progress of tuning, of the pilot and of each run: a tqdm bar when
+        tqdm is installed, lines on stderr otherwise.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
         The root of every random stream.
 
@@ -140,6 +146,7 @@ class CoupledSampler:
         self.names = None if names is None else parameter_names(names, self.ndim, draws)
         self.tuning: TuningReport | None = None
         self.pilot: FloatArray | None = None
+        self._pilot_zero_density = 0  # pilot pairs started where the density is zero
         self._replicates: engine.Replicates | None = None
 
     @property
@@ -164,8 +171,12 @@ class CoupledSampler:
         TuningReport or None
             ``None`` when the kernel had nothing to tune.
         """
+        return self._tune(self.progress)
+
+    def _tune(self, progress: bool) -> TuningReport | None:
         if not self.kernel.is_tuned:
-            self.kernel, self.tuning = self.kernel.tune(self.target, self.initial, self.seed)
+            with tuning(progress):
+                self.kernel, self.tuning = self.kernel.tune(self.target, self.initial, self.seed)
             disagreement = diagnostics.tuning_disagreement(self.tuning)
             if disagreement:
                 warn(disagreement, ConvergenceWarning)
@@ -203,11 +214,13 @@ class CoupledSampler:
     def _meeting_times(
         self, n: int, settings: engine.Settings, pool: Any, progress: bool
     ) -> FloatArray:
-        self.tune()
+        self._tune(progress)
         start = 0 if self.pilot is None else len(self.pilot)
         indices = np.arange(start, start + n)
-        times = self._run(PILOT, indices, settings, pool, progress).meeting_time
+        replicates = self._run(PILOT, indices, settings, pool, progress)
+        times = replicates.meeting_time
         self.pilot = times if self.pilot is None else np.concatenate([self.pilot, times])
+        self._pilot_zero_density += len(replicates.zero_density)
         return times
 
     # Spec R-TUNE-2 and D-21, sections 3.3, 6.5 and 7.4, R-EST-5.
@@ -247,13 +260,15 @@ class CoupledSampler:
             Censor pairs still unmet at this time. ``None`` runs every pair until it
             meets on the first call, and keeps the first call's cap on later ones.
         progress : bool, optional
-            Show the progress of the run and of the pilot it runs; ``None`` takes the
-            sampler's setting.
+            Show the progress of the run and of the tuning and the pilot it runs;
+            ``None`` takes the sampler's setting.
 
         Returns
         -------
         Result
-            Unbiased for an ``n_replicates`` fixed in advance; extending a run after
+            Unbiased for an ``n_replicates`` fixed in advance, unless ``max_iter``
+            censors a pair, which biases it and warns, or a Ctrl-C interrupts the run,
+            which leaves it consistent and flagged ``interrupted``; extending a run after
             looking at it keeps consistency, not exact unbiasedness.
 
         Examples
@@ -333,13 +348,15 @@ class CoupledSampler:
             **settings._asdict(),
         )
         kind = "replicate" if main else "pilot pair"
-        slow = _SlowPairs(settings.lag, settings.m, kind)
+        outside = _ZeroDensityStarts(kind)
+        slow = _SlowPairs(settings.lag, settings.m, kind, interrupt)
         zeroed = _ZeroedGradients(self.target, kind)
         bar = Progress(len(indices), f"{kind}s") if progress else None
 
         def monitor(status: engine.Status) -> bool:
             if bar is not None:
                 bar.update(status.finished)
+            outside(status)
             slow(status)
             zeroed()
             return interrupt is not None and interrupt.stopping
@@ -349,15 +366,9 @@ class CoupledSampler:
         finally:
             if bar is not None:
                 bar.close()
+        outside.after(replicates)
         slow.after(replicates)
         zeroed.after(replicates)
-        if len(replicates.zero_density):
-            warn(
-                f"{len(replicates.zero_density)} {kind}s start where the target density "
-                f"is zero (the first is {replicates.zero_density[0]}); the initial "
-                "distribution should lie inside the support of the target",
-                InputWarning,
-            )
         return replicates
 
     def _check(
@@ -392,28 +403,46 @@ class CoupledSampler:
     def _configure(self, given: dict[str, int], pool: Any, progress: bool) -> engine.Settings:
         # The first run's settings, which tune the kernel and, for an automatic k, complete
         # the pilot to 100 pairs: meeting_times can leave fewer.
-        self.tune()
+        self._tune(progress)
         if "k" not in given:
             done = 0 if self.pilot is None else len(self.pilot)
             if done < PILOT_REPLICATES:
                 self._meeting_times(PILOT_REPLICATES - done, PILOT_SETTINGS, pool, progress)
-            given = given | {"k": choose_k(cast(FloatArray, self.pilot))}
+            given = given | {"k": self._choose_k(cast(FloatArray, self.pilot))}
         return _settings(given)
+
+    def _choose_k(self, pilot: FloatArray) -> int:
+        # choose_k's advice of a wider initial distribution makes zero-density starts,
+        # from which a pair may never meet, more frequent.
+        try:
+            return choose_k(pilot)
+        except ValueError as error:
+            if not self._pilot_zero_density:
+                raise
+            raise ValueError(
+                "k cannot be chosen: too many pilot pairs never met within their cap, and "
+                f"{self._pilot_zero_density} of the {len(pilot)} started where the target "
+                "density is zero, from which a pair may never meet; draw the initial "
+                "distribution inside the support of the target, or give k, lag and m "
+                "explicitly"
+            ) from error
 
     def _check_memory(self, settings: engine.Settings, n_replicates: int) -> None:
         # Spec R-EXEC-7: estimate the atoms and distances to store before running, and warn
-        # above 1 GB. The pilot's meeting times stand in for those of the run, their
-        # tau - 1 for its tau - L.
-        n_averaged = len(range(settings.k, settings.m + 1, settings.thin))
-        late = distances = 0.0
+        # when a run and its first estimates, which peak at about three times that, would
+        # pass 1 GB. The pilot's meeting times stand in for those of the run, their tau - 1
+        # for its tau - L; without a pilot, the run's pairs count as meeting at once.
+        coupled = np.zeros(1)
         if self.pilot is not None and np.isfinite(self.pilot).any():
             coupled = self.pilot[np.isfinite(self.pilot)] - 1
-            late = float(np.mean(np.maximum(0, coupled - settings.k)))
-            distances = float(np.mean(coupled))
-        size = n_replicates * ((n_averaged + 2 * late) * (8 * self.ndim + 16) + 24 * distances)
-        if size > 1e9:
+        stored = n_replicates * engine.stored_bytes(settings, self.ndim, coupled) / len(coupled)
+        peak = PEAK_PER_STORED * stored
+        if peak > 1e9:
+            # In one or two dimensions the peak can reach twice the factor's figure.
+            upto = f" to {2 * peak / 1e9:.1f}" if self.ndim <= 2 else ""
             warn(
-                f"the run will store about {size / 1e9:.1f} GB of atoms and distances; pass "
+                f"the run will store about {stored / 1e9:.1f} GB of atoms and distances, "
+                f"and with its first estimates take about {peak / 1e9:.1f}{upto} GB; pass "
                 "thin= to store fewer atoms, or run fewer replicates",
                 InputWarning,
             )
@@ -492,7 +521,9 @@ def sample(
     Returns
     -------
     Result
-        Its estimates are unbiased; it warns about the conditions listed under Warnings,
+        Its estimates are unbiased unless ``max_iter`` censors a pair, which biases them
+        and warns, or a Ctrl-C interrupts the run, which leaves them consistent and flags
+        the result ``interrupted``. It warns about the conditions listed under Warnings,
         in :doc:`/guide/diagnostics`.
 
     Examples
@@ -524,31 +555,79 @@ def sample(
     return sampler.run(n_replicates, k=k, m=m, lag=lag, thin=thin, max_iter=max_iter)
 
 
-class _SlowPairs:
-    # Warns once about a pair still unmet at the slow-pair threshold (spec section 6.3):
-    # from the engine's status as it happens, or from the meeting times after a run on a
-    # pool, whose workers' statuses do not reach the parent. kind names the pairs.
-    def __init__(self, lag: int, m: int, kind: str) -> None:
-        self.threshold = diagnostics.slow_pair_threshold(lag, m)
+class _ZeroDensityStarts:
+    # Warns once about pairs that start where the target density is zero (spec section
+    # 4.2): from the engine's status as soon as one starts, or from the replicates after a
+    # run on a pool, whose workers' statuses do not reach the parent. A chain there moves
+    # only to a proposal of finite density, so a start far outside the support can keep a
+    # run waiting forever. kind names the pairs.
+    def __init__(self, kind: str) -> None:
         self.kind = kind
         self.warned = False
 
     def __call__(self, status: engine.Status) -> None:
-        if status.t >= self.threshold:
-            self._warn(status.slowest)
+        self._warn(status.zero_density, status.first_zero_density, " so far")
 
     def after(self, replicates: engine.Replicates) -> None:
-        # A pair is unmet at the threshold when it meets, or is censored, after it.
-        slow = replicates.index[replicates.stopped > self.threshold]
-        if len(slow):
-            self._warn(int(slow[0]))
+        starts = replicates.zero_density
+        self._warn(len(starts), int(starts[0]) if len(starts) else -1, "")
 
-    def _warn(self, replicate: int) -> None:
-        if not self.warned:
+    def _warn(self, count: int, first: int, so_far: str) -> None:
+        if count and not self.warned:
             self.warned = True
             warn(
-                f"{self.kind} {replicate} has not met after {self.threshold} iterations; "
-                "the meeting times may be heavy-tailed",
+                f"{self.kind}s start where the target density is zero ({count}{so_far}, the "
+                f"first is {first}): a chain there moves only to a proposal of finite "
+                "density, so its pair may never meet; draw the initial distribution inside "
+                "the support of the target",
+                InputWarning,
+            )
+
+
+class _SlowPairs:
+    # Warns once about a pair still unmet at the slow-pair threshold (spec section 6.3):
+    # from the engine's status as it happens, or from the meeting times after a run on a
+    # pool, whose workers' statuses do not reach the parent. kind names the pairs, and
+    # interrupt is the run's Ctrl-C handler, None for a pilot.
+    def __init__(self, lag: int, m: int, kind: str, interrupt: Interrupt | None = None) -> None:
+        self.threshold = diagnostics.slow_pair_threshold(lag, m)
+        self.kind, self.interrupt = kind, interrupt
+        self.warned = False
+
+    def __call__(self, status: engine.Status) -> None:
+        if status.t >= self.threshold:
+            # The first Ctrl-C lets the replicates in progress finish (spec section 6.5),
+            # this one too, so it does not end the wait.
+            waiting = ", and the run waits for it"
+            interrupt = self.interrupt
+            if interrupt is not None and interrupt.listening and not interrupt.stopping:
+                waiting += (
+                    ": a first Ctrl-C starts no new replicate but lets this one finish, "
+                    "and a second stops the run without a result"
+                )
+            self._warn(status.slowest, waiting, status.slowest_zero_density)
+
+    def after(self, replicates: engine.Replicates) -> None:
+        # A pair is unmet at the threshold when it meets after it, or is censored at or
+        # after it: the engine compared its chains at the cap.
+        earliest = replicates.stopped + np.isinf(replicates.meeting_time)
+        slow = replicates.index[earliest > self.threshold]
+        if len(slow):
+            self._warn(int(slow[0]), "", bool(np.isin(slow[0], replicates.zero_density)))
+
+    def _warn(self, replicate: int, waiting: str, outside: bool) -> None:
+        if not self.warned:
+            self.warned = True
+            cause = (
+                "it started where the target density is zero, so draw the initial "
+                "distribution inside the support of the target"
+                if outside
+                else "the meeting times may be heavy-tailed, so look at the kernel and the "
+                "initial distribution"
+            )
+            warn(
+                f"{self.kind} {replicate} has not met after {self.threshold} "
+                f"iterations{waiting}; {cause}",
                 ConvergenceWarning,
             )
 

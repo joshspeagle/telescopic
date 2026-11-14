@@ -2,6 +2,7 @@ import itertools
 import re
 import runpy
 import tempfile
+import warnings
 from importlib import resources
 from pathlib import Path
 
@@ -10,8 +11,9 @@ import pytest
 
 import telescopic
 from references import Normal as Conditional
-from references import gaussian_log_prob
+from references import gaussian_log_prob, synthetic
 from telescopic import CoupledSampler, __version__, sample
+from telescopic._parallel import Interrupt
 from telescopic.engine import Settings, Status
 from telescopic.initial import Empirical, Normal
 from telescopic.kernels import HMC, MALA, Gibbs, Mixture, RandomWalk
@@ -244,6 +246,34 @@ def test_a_slow_pair_warns_once_when_unmet_at_the_threshold():
     slow(Status(0, 3, 10_001))  # a second warning would fail under -W error
 
 
+def test_a_slow_pair_seen_as_it_happens_says_that_the_run_waits_for_it():
+    with pytest.warns(ConvergenceWarning, match="pilot pair 3 .* the run waits for it; the"):
+        _SlowPairs(lag=1, m=10, kind="pilot pair")(Status(0, 3, 10_000))
+
+
+def test_a_slow_replicate_names_ctrl_c_only_while_its_handler_listens():
+    interrupt = Interrupt()
+    clause = "waits for it: a first Ctrl-C starts no new replicate but lets this one finish"
+    with interrupt.catching(), pytest.warns(ConvergenceWarning, match=clause):
+        _SlowPairs(1, 10, "replicate", interrupt)(Status(0, 3, 10_000))
+    # Outside its block, as in a thread or under a host that keeps its own handler, and
+    # after a first Ctrl-C, the clause would not be true.
+    with pytest.warns(ConvergenceWarning) as caught:
+        _SlowPairs(1, 10, "replicate", interrupt)(Status(0, 3, 10_000))
+    interrupt.stopping = True
+    with interrupt.catching(), pytest.warns(ConvergenceWarning) as stopped:
+        _SlowPairs(1, 10, "replicate", interrupt)(Status(0, 3, 10_000))
+    assert "Ctrl-C" not in str(caught[0].message) + str(stopped[0].message)
+
+
+def test_a_pair_censored_at_the_threshold_warns_as_slow_after_a_run():
+    # The engine frees a censored pair's lane before its status is read, so only the
+    # check after the run sees a pair censored at t = 10^4.
+    replicates = synthetic([2, -1], [0.0], m=10, max_iter=10_000)._replicates
+    with pytest.warns(ConvergenceWarning, match="replicate 1 has not met after 10000"):
+        _SlowPairs(lag=1, m=10, kind="replicate").after(replicates)
+
+
 def test_tuning_chains_in_separate_modes_warn():
     starts = itertools.cycle([[-20.0], [20.0]])
 
@@ -278,8 +308,61 @@ def test_starts_outside_the_support_warn(call, kind):
     sampler = CoupledSampler(
         half_normal, Empirical([[-1.0], [1.0]]), kernel=RandomWalk(np.eye(1)), rng=9
     )
-    with pytest.warns(InputWarning, match=f" {kind} start where the target density is zero"):
+    with pytest.warns(InputWarning, match=f"{kind} start where the target density is zero"):
         call(sampler)
+
+
+def test_a_zero_density_start_warns_before_the_run_ends():
+    # The log-density counts its calls, and the warning records the count when it comes.
+    calls = []
+
+    def counting(x):
+        calls.append(1)
+        return half_normal(x)
+
+    seen = []
+    sampler = CoupledSampler(
+        counting, Empirical([[-1.0], [1.0]]), kernel=RandomWalk(np.eye(1)), rng=9
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("always")
+        warnings.showwarning = lambda message, *_, **__: seen.append((str(message), len(calls)))
+        sampler.run(6, k=40)
+    outside = [n for message, n in seen if "start where the target density is zero" in message]
+    assert outside
+    assert outside[0] < len(calls)
+
+
+def test_choose_k_failure_names_zero_density_starts():
+    # From -50 a random-walk chain on the half-normal never proposes a point of positive
+    # density, so the pairs that start there never meet within the pilot's cap.
+    sampler = CoupledSampler(
+        half_normal, Empirical([[-50.0], [1.0]]), kernel=RandomWalk(np.eye(1)), rng=9
+    )
+    with pytest.warns(InputWarning):
+        sampler.meeting_times(100, max_iter=20)
+    with pytest.raises(ValueError, match=r"pilot pairs never met .* of the 100 started where"):
+        sampler.run(2)
+
+
+def slow_pair_from_zero_density_as_it_happens(slow):
+    slow(Status(0, 1, 10_000, 1, 1, True))
+
+
+def slow_pair_from_zero_density_after_a_run(slow):
+    replicates = synthetic([2, 20_000], [0.0, 1.0])._replicates
+    replicates.zero_density = np.array([1])
+    slow.after(replicates)
+
+
+@pytest.mark.parametrize(
+    "seen",
+    [slow_pair_from_zero_density_as_it_happens, slow_pair_from_zero_density_after_a_run],
+    ids=["as it happens", "after a run"],
+)
+def test_a_slow_pair_that_started_at_zero_density_says_so(seen):
+    with pytest.warns(ConvergenceWarning, match="replicate 1 .* it started where the target"):
+        seen(_SlowPairs(lag=1, m=10, kind="replicate"))
 
 
 def test_a_run_that_would_store_gigabytes_warns():
@@ -289,13 +372,14 @@ def test_a_run_that_would_store_gigabytes_warns():
         sampler._check_memory(Settings(0, 10**18, 1), 1)
 
 
-def test_the_memory_estimate_counts_the_distances():
+def test_the_memory_warning_compares_the_peak_with_the_threshold():
     # A pilot pair meeting at 1001 stands for 1000 distances of 24 bytes and 2001 atoms
-    # of 32 bytes at k = 0: 1.14 GB for 13,000 replicates, of which the atoms are 0.83.
+    # of 32 bytes at k = 0: 0.44 GB stored for 5,000 replicates, of which the atoms are
+    # 0.32, and a peak of three times that, up to twice as much in two dimensions.
     sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=10)
     sampler.pilot = np.full(100, 1001.0)
-    with pytest.warns(InputWarning, match="about 1.1 GB of atoms and distances"):
-        sampler._check_memory(Settings(0, 0, 1), 13_000)
+    with pytest.warns(InputWarning, match="store about 0.4 GB .* take about 1.3 to 2.6 GB"):
+        sampler._check_memory(Settings(0, 0, 1), 5_000)
 
 
 def test_the_readme_example_runs_without_a_warning(capsys):
