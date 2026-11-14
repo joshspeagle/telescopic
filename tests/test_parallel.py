@@ -5,7 +5,6 @@ import os
 import signal
 import sys
 import threading
-import time
 import warnings
 import weakref
 from concurrent.futures import Executor, Future, ProcessPoolExecutor, ThreadPoolExecutor
@@ -311,12 +310,20 @@ def test_workers_stopped_by_an_error_are_freed_once_the_caller_drops_it():
 
 
 def test_a_stop_reaches_the_replicates_of_telescopics_workers():
-    # The stop comes before the worker has started: its first chunk starts one set of
-    # lanes and refills none, and the other chunks run nothing.
+    # The event is set before any chunk is submitted, so that the result does not depend
+    # on when a stop arrives: the first chunk starts one set of lanes and refills none,
+    # and the other chunks run nothing.
     with opened(1) as workers:
-        stopped = execute(job(), np.arange(2048), workers, lambda status: True)
+        workers.stop.set()
+        stopped = execute(job(), np.arange(2048), workers, never)
     np.testing.assert_array_equal(stopped.index, np.arange(engine.LANES))
     np.testing.assert_array_equal(stopped.requested, np.arange(2048))
+
+
+def test_a_monitors_stop_sets_the_event_of_telescopics_workers():
+    with opened(1) as workers:
+        execute(job(), np.arange(8), workers, lambda status: True)
+        assert workers.stop.is_set()
 
 
 def test_a_chunk_that_starts_after_the_stop_runs_nothing_unless_it_is_the_first(
@@ -339,11 +346,28 @@ def test_a_stop_on_a_pool_keeps_the_finished_chunks(pool, at_once, monkeypatch):
     # that the 4 chunks run one at a time.
     one_cpu(monkeypatch)
     indices = np.arange(1_000)
+    stops, canceled = [], threading.Event()
+    task = _parallel._task
+
+    def held(payload, parent, piece, first=False):
+        # A chunk that the thread could start before the parent cancels those not
+        # started waits for the monitor's next call, which comes after it has.
+        if at_once or not first:
+            canceled.wait()
+        return task(payload, parent, piece, first)
+
+    def monitor(status):
+        if stops:
+            canceled.set()
+        if at_once or status.finished:
+            stops.append(status)
+        return bool(stops)
+
+    if pool == "threads":
+        monkeypatch.setattr(_parallel, "_task", held)
     with ThreadPoolExecutor(1) as thread:
-        if at_once and pool == "threads":
-            thread.submit(time.sleep, 0.2)  # holds every chunk until the stop is seen
         runner = thread if pool == "threads" else Serial()
-        stopped = execute(job(), indices, runner, lambda status: at_once or status.finished)
+        stopped = execute(job(), indices, runner, monitor)
     assert 0 < len(stopped.index) < len(indices)
     np.testing.assert_array_equal(stopped.index, np.arange(len(stopped.index)))
     np.testing.assert_array_equal(stopped.requested, indices)
