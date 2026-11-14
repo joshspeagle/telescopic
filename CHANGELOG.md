@@ -91,9 +91,9 @@ All notable changes to this project are documented here. The format follows
   the notebook's temporary file, and wrap within the column.
 - Every figure on the executed pages has alternative text and a caption.
 - The API reference is an index of one-line summaries grouped by section, with a page for
-  each class, its attributes and methods, a page for `sample`, and a page for each module,
-  its functions and a table of its classes. The page of a class with two or more members
-  lists them under "On this page" and marks the one being read.
+  each class, its attributes and methods, a page for `sample`, and a page for each module
+  that the index lists, its functions and a table of its classes. The page of a class with
+  two or more members lists them under "On this page".
 - The API reference cites no internal requirement or decision numbers; where such a
   citation carried meaning, it links the page that explains it.
 - The docstring of `telescopic.sample` describes each of its parameters, and that of

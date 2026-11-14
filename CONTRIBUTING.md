@@ -60,8 +60,8 @@ committed: a class's page shows its attributes and methods, and a module's page 
 functions and data and a table of the classes of its `__all__`. A new public class or
 module, or a function that `telescopic` itself exports, is listed in `docs/api.md` under
 its section, and a new function or constant of a module in its module's `__all__`; the
-tests fail when a public class or module, or a name of the `__all__` of a module without
-a row, has no page. Before generating the pages, the build deletes those of `docs/api/`
+tests fail when a public class, a module that `telescopic` exports, or a name of the
+`__all__` of a module without a row has no page. Before generating the pages, the build deletes those of `docs/api/`
 that no table lists any more, so a name removed or renamed leaves no stale page.
 
 The colors, fonts, sizes, marks and plot style come from one script,

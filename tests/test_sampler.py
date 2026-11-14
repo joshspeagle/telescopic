@@ -448,12 +448,14 @@ def test_every_public_module_has_a_page_or_its_names_have_pages():
     # A module without a row, such as telescopic.results, is shown by the pages of its
     # names, which telescopic exports; a name of its __all__ without one is missing.
     pages = _objects_with_pages()
-    missing = [
-        f"{name}.{key}"
-        for name in sorted(SUBMODULES - set(API_PAGES))
-        for key in importlib.import_module(name).__all__
-        if not any(getattr(importlib.import_module(name), key) is page for page in pages)
-    ]
+    missing = []
+    for name in sorted(SUBMODULES - set(API_PAGES)):
+        module = importlib.import_module(name)
+        missing += [
+            f"{name}.{key}"
+            for key in module.__all__
+            if not any(getattr(module, key) is page for page in pages)
+        ]
     assert not missing
 
 

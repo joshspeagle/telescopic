@@ -57,16 +57,16 @@ def _sections(app: Sphinx, env: BuildEnvironment) -> set[str]:
             sections.append({"caption": toctree["caption"], "pages": pages})
     if not sections:
         logger.warning("the root document has no captioned toctree, so the top bar is empty")
-    # A page below a section's page in the toctrees belongs to it; the visited check stops
-    # at a cycle, which Sphinx reports.
+    # A page below a section's page in the toctrees belongs to it. Breadth first, so that a
+    # page reached by two paths takes the nearer section's page; a page already placed is
+    # not visited again, which also ends the walk on a cycle of toctrees.
     section_pages = {page["docname"]: page["docname"] for s in sections for page in s["pages"]}
-    stack = list(section_pages)
-    while stack:
-        parent = stack.pop()
+    queue = list(section_pages)
+    for parent in queue:
         for child in env.toctree_includes.get(parent, ()):
             if child not in section_pages:
                 section_pages[child] = section_pages[parent]
-                stack.append(child)
+                queue.append(child)
     # Every page carries the navigation, so a change to it rewrites every page, not only
     # those that were read again.
     changed = (sections, section_pages) != (
