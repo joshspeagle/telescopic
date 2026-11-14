@@ -153,7 +153,7 @@ def execute(
     if pool is None:
         return job(indices, monitor=monitor)
     start = time.perf_counter()
-    workers = pool.n if isinstance(pool, Workers) else n_workers or _workers(pool)
+    workers = _workers(pool, n_workers)
     # Chunks of at most a full set of lanes, where four per worker allow (DECISIONS #52).
     count = max(workers, math.ceil(len(indices) / engine.LANES))
     pieces = np.array_split(indices, min(len(indices), CHUNKS_PER_WORKER * workers, count))
@@ -169,9 +169,15 @@ def execute(
     return replace(merged, requested=indices, seconds=time.perf_counter() - start)
 
 
-def _workers(pool: Any) -> int:
-    # The pool's size, where it says: an executor's _max_workers, a multiprocessing
-    # pool's _processes, a schwimmbad pool's size; else the CPUs this process may use.
+def _workers(pool: Any, n_workers: int | None) -> int:
+    # The number of workers: the caller's n_workers, which check_workers allows only with
+    # a pool of the caller's own; else telescopic's own count; else the pool's size, where
+    # it says: an executor's _max_workers, a multiprocessing pool's _processes, a
+    # schwimmbad pool's size; else the CPUs this process may use.
+    if n_workers is not None:
+        return n_workers
+    if isinstance(pool, Workers):
+        return pool.n
     for name in ("_max_workers", "_processes", "size"):
         size = getattr(pool, name, None)
         if isinstance(size, int) and size >= 1:

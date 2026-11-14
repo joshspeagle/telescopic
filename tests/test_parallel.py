@@ -110,14 +110,9 @@ def test_a_map_pool_that_reports_its_size_gets_waves_of_that_size():
 
 
 class Unsized:
-    # An executor that does not report its size, as a cluster's may; it records the size
-    # of each chunk submitted to it.
+    # An executor that does not report its size, as a cluster's may.
     def __init__(self, executor):
-        self.executor, self.chunks = executor, []
-
-    def submit(self, function, piece, **options):
-        self.chunks.append(len(piece))
-        return self.executor.submit(function, piece, **options)
+        self.submit = executor.submit
 
 
 def one_cpu(monkeypatch):
@@ -132,27 +127,27 @@ def test_n_workers_sizes_the_pilot_and_the_run_on_a_pool_that_hides_its_size(
     # 100 pilot pairs, then 100 replicates: one chunk per worker each, the workers counted
     # by the CPUs (1) unless n_workers says otherwise.
     one_cpu(monkeypatch)
-    with ThreadPoolExecutor(4) as threads:
-        pool = Unsized(threads)
+    with Counting(4) as threads:
         sampler = telescopic.CoupledSampler(
             gaussian_log_prob,
             INIT,
             kernel=RandomWalk(np.eye(2)),
-            pool=pool,
+            pool=Unsized(threads),
             n_workers=n_workers,
             rng=0,
         )
         sampler.meeting_times(100)
         sampler.run(100)
-    assert pool.chunks == [100 // chunks] * 2 * chunks
+    assert threads.chunks == [100 // chunks] * 2 * chunks
 
 
 def test_n_workers_sizes_the_waves_of_a_map_pool_that_hides_its_size(monkeypatch):
-    # 600 replicates on 3 workers: 3 chunks, in one wave.
+    # 2,000 replicates on 2 stated workers: 8 chunks of at most a full set of lanes, in
+    # waves of 2. Sized by the 1 CPU they would be 4 chunks in waves of 1.
     one_cpu(monkeypatch)
     pool = Serial()
-    execute(job(), np.arange(600), pool, never, n_workers=3)
-    assert pool.waves == [3]
+    execute(job(), np.arange(2_000), pool, never, n_workers=2)
+    assert pool.waves == [2, 2, 2, 2]
 
 
 def test_n_workers_wins_over_the_size_a_pool_reports():
@@ -179,11 +174,19 @@ def test_results_do_not_depend_on_n_workers():
         (Serial(), True, TypeError, "n_workers must be None or a positive integer, not True"),
         (None, 2, ValueError, "n_workers is for an executor or a pool.*pool=None runs"),
         (2, 2, ValueError, "n_workers is for an executor or a pool.*pool=2 is already"),
+        (np.int64(2), 2, ValueError, "n_workers is for an executor or a pool.*pool=2 is already"),
     ],
 )
 def test_invalid_n_workers_raise(pool, n_workers, error, message):
     with pytest.raises(error, match=message):
-        telescopic.sample(gaussian_log_prob, INIT, pool=pool, n_workers=n_workers)
+        telescopic.CoupledSampler(gaussian_log_prob, INIT, pool=pool, n_workers=n_workers)
+
+
+def test_n_workers_as_a_numpy_integer_is_the_integer():
+    sampler = telescopic.CoupledSampler(
+        gaussian_log_prob, INIT, pool=Serial(), n_workers=np.int64(2)
+    )
+    assert type(sampler.n_workers) is int
 
 
 def checked_log_prob(x, threads, ignores_ctrl_c):

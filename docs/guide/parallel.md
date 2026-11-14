@@ -11,7 +11,7 @@ mystnb:
 Replicates are independent, so they run in parallel without communicating. The `pool`
 argument of {func}`telescopic.sample` and {class}`telescopic.CoupledSampler` decides where
 the meeting-time pilot and the replicates run, and `n_workers` how many workers a pool of
-your own has, where it does not say; the kernel is tuned in this process.
+your own has; the kernel is tuned in this process.
 
 ## Pools
 
@@ -78,8 +78,10 @@ executor, a `multiprocessing` pool and a schwimmbad pool. It counts any other po
 having as many workers as this process may use CPUs, so the chunks of a larger pool, such
 as a cluster's, can leave workers idle. The argument `n_workers` states the number of
 workers of an executor or a pool, and replaces the size that the pool reports, if any. It
-sets the chunks and the waves, and changes no replicate. The executor below shows only
-`submit`, as a cluster's may, so telescopic cannot read its two workers:
+sets the chunks and the waves, and with a log-density evaluated point by point it changes
+no replicate. State the pool's real number of workers: a larger value makes smaller
+chunks, which run fewer replicates together. The executor below shows only `submit`, as a
+cluster's may, so telescopic cannot read its two workers:
 
 ```{code-cell} python
 class Unsized:

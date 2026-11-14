@@ -97,7 +97,9 @@ class CoupledSampler:
         reports; ``None`` reads that size, or else counts the CPUs this process may
         use, which leaves idle the workers of a larger pool that does not report its
         size, such as a cluster's. Only for an executor or a pool: with ``pool`` None or
-        an integer it raises ``ValueError``. No replicate depends on it.
+        an integer it raises ``ValueError``. State the pool's real number of workers: a
+        larger value makes smaller chunks, which run fewer replicates together. With
+        a log-density evaluated point by point, no replicate depends on it.
     progress : bool
         Show the progress of tuning, of the pilot and of each run: a tqdm bar when
         tqdm is installed, lines on stderr otherwise.

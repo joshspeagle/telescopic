@@ -52,9 +52,10 @@ All notable changes to this project are documented here. The format follows
   or lines on stderr. The `parallel` extra installs cloudpickle, which ships functions
   defined in notebooks to the workers.
 - `n_workers=` on `sample` and `CoupledSampler` states the number of workers of an
-  executor or a pool that does not report it, such as a cluster's, which was counted as
-  the CPUs of this process and left the other workers idle; it replaces a reported size
-  and changes no replicate.
+  executor or a pool of your own. A pool that does not report its size, such as a
+  cluster's, was counted as having as many workers as this process may use CPUs, which
+  left its other workers idle. The argument replaces a reported size, and with a
+  log-density evaluated point by point it changes no replicate.
 - `Result.save` and `Result.load` (a versioned `.npz` file, without pickle); joint
   signed histograms of several coordinates (`Result.histogram`); plots of meeting times,
   the TV bound, signed marginals and corner plots (`telescopic.plotting`, with
