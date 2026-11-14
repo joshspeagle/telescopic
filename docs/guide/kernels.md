@@ -173,16 +173,17 @@ such a step. Two settings expose it:
   in 10 dimensions with `HMC(n_steps=3)`, over 10 seeds, `k` could not be chosen at 2 of
   them and was 12,377 to 52,065 at the others, against 83 to 113 with `HMC()`.
 - **A given `cov` that does not whiten the target**, which leaves eigenvalues that differ.
-  On a Gaussian whose scales run from 1 to 1/4 in 10 dimensions with
-  `HMC(cov=np.eye(10))`, over 10 seeds, `k` could not be chosen at 3 of them and was
-  1,566 to 10,134 at the others, against 50 to 65 with `HMC()`.
+  On a Gaussian in 10 dimensions whose scales run geometrically from 1 to 1/4, started
+  from $\mathcal N(0, 4I)$, with `HMC(cov=np.eye(10))`, over 10 seeds, `k` could not be
+  chosen at 3 of them and was 1,566 to 10,134 at the others, against 50 to 65 with
+  `HMC()`.
 
-The remedy is to leave `n_steps` and `cov` to the kernel: `HMC()` chose `k` at every seed
-of both examples.
+Both examples ran the pilot with its default cap. The remedy is to leave `n_steps` and
+`cov` to the kernel: `HMC()` chose `k` at every seed of both examples.
 
-Setup of these runs: telescopic at commits 5b98f6c and ce89da8, Python 3.13.18, NumPy
-2.5.4 and SciPy 1.18.1, `OMP_NUM_THREADS=1`, on an Intel Xeon processor at 2.10 GHz with
-4 logical cores.
+Setup of these runs: telescopic at commits 7c6b0d1 (the first example) and ce89da8 (the
+second), Python 3.13.18, NumPy 2.5.4 and SciPy 1.18.1, `OMP_NUM_THREADS=1`, on an Intel
+Xeon processor at 2.10 GHz with 4 logical cores.
 
 ## Checking a step size
 

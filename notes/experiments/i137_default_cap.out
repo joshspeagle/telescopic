@@ -1,14 +1,14 @@
-setup: commit 5b98f6c of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
+setup: commit 7c6b0d1 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
 
-seed, kernel, tuned step, n_steps, pilot pairs unmet at 100,000, median meeting time of the pairs that met, k
+seed, kernel, tuned step, n_steps, pilot pairs unmet at 100,000, median meeting time, k
 seed=0 HMC(n_steps=3)  step=1.0737 n_steps=3 unmet=  0 median=  5261.5 k=15656
-seed=1 HMC(n_steps=3)  step=1.0320 n_steps=3 unmet= 14 median= 37942.0 k=not chosen
+seed=1 HMC(n_steps=3)  step=1.0320 n_steps=3 unmet= 14 median= 41073.0 k=not chosen
 seed=2 HMC(n_steps=3)  step=0.9881 n_steps=3 unmet=  0 median=  5546.0 k=18815
 seed=3 HMC(n_steps=3)  step=1.0123 n_steps=3 unmet=  0 median=  8527.5 k=35816
 seed=4 HMC(n_steps=3)  step=1.0639 n_steps=3 unmet=  0 median=  8745.5 k=29017
 seed=5 HMC(n_steps=3)  step=1.0534 n_steps=3 unmet=  0 median=  9114.0 k=32152
 seed=6 HMC(n_steps=3)  step=1.0182 n_steps=3 unmet=  0 median=  3503.0 k=12377
-seed=7 HMC(n_steps=3)  step=1.0586 n_steps=3 unmet= 96 median= 25791.0 k=not chosen
+seed=7 HMC(n_steps=3)  step=1.0586 n_steps=3 unmet= 96 median=     inf k=not chosen
 seed=8 HMC(n_steps=3)  step=1.0331 n_steps=3 unmet=  0 median= 10750.5 k=29760
 seed=9 HMC(n_steps=3)  step=1.0487 n_steps=3 unmet=  0 median=  9097.5 k=52065
 HMC(n_steps=3): k chosen at 8 of 10 seeds, from 12,377 to 52,065
