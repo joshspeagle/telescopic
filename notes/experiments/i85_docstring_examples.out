@@ -1,15 +1,15 @@
-commit 32ae70b-dirty; x86_64, 4 cores
+commit a235e1a; x86_64, 4 cores
 Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1; run with OMP_NUM_THREADS=1
 example                                              seconds differs
-telescopic.kernels.gibbs.Gibbs                          0.12    0/30
-telescopic.kernels.hmc.HMC                              0.50    0/30
-telescopic.kernels.independence.Independence            0.02    0/30
+telescopic.kernels.gibbs.Gibbs                          0.14    0/30
+telescopic.kernels.hmc.HMC                              0.49    0/30
+telescopic.kernels.independence.Independence            0.04    0/30
 telescopic.kernels.mala.MALA                            0.27    0/30
 telescopic.kernels.mixture.Mixture                      0.23    0/30
-telescopic.kernels.random_walk.RandomWalk               0.24    0/30
-telescopic.results.Result.estimate                      0.22    0/30
-telescopic.results.Result.summary                       0.28    0/30
-telescopic.sampler.CoupledSampler.run                   0.26    0/30
-telescopic.sampler.sample                               0.23    0/30
-telescopic.testing.check_coupling                       0.17    0/30
-total                                                   2.54
+telescopic.kernels.random_walk.RandomWalk               0.20    0/30
+telescopic.results.Result.estimate                      0.17    0/30
+telescopic.results.Result.summary                       0.23    0/30
+telescopic.sampler.CoupledSampler.run                   0.23    0/30
+telescopic.sampler.sample                               0.20    0/30
+telescopic.testing.check_coupling                       0.20    0/30
+total                                                   2.41

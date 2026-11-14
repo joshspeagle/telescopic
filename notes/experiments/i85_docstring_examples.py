@@ -8,8 +8,8 @@ warning would fail on a platform that draws those numbers. The time is that of o
 at ``rng=0``, the seed of the docstring, after the imports.
 
 Result (``i85_docstring_examples.out``): all 11 examples print their documented output
-at all 30 seeds, without a warning; together they take 2.5 s, the longest (HMC)
-0.50 s.
+at all 30 seeds, without a warning; together they take 2.4 s, the longest (HMC)
+0.49 s.
 
 Run: python notes/experiments/i85_docstring_examples.py
 """
