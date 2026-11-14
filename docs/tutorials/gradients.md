@@ -97,7 +97,10 @@ The last column, times $0.01^2$, is the inefficiency $\mathbb E[C]\,\mathbb V[H]
 ([Theory](../theory.md#cost)) with the cost counted in log-density evaluations. For the
 same error bars, MALA and HMC evaluate the log-density {glue:text}`fewer_mala:.0f` and
 {glue:text}`fewer_hmc:.0f` times less often than the random walk, and the gradient as
-often as the log-density. Whether that saves time depends on what a gradient costs.
+often as the log-density. Whether that saves time depends on what a gradient costs, and
+on how much of its work the log-density shares: a function that returns both, passed as
+`log_prob_and_grad`, is called once where `log_prob` and `grad` are called one after the
+other ([Targets](../guide/targets.md#the-value-and-the-gradient-in-one-call)).
 
 ## A logistic regression
 

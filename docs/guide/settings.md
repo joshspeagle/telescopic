@@ -145,8 +145,8 @@ and HMC add four chains of 1000 steps that tune the step size, which evaluate th
 log-density and its gradient once per step (MALA) or once per leapfrog step (HMC). The
 pilot's pairs evaluate it about twice per step, and `result.n_log_prob` counts only the
 run's evaluations. With a kernel that evaluates the gradient, the gradient check adds 40
-evaluations of the log-density and 8 of the gradient when the sampler is built, before
-tuning, which no run counts ([Checking the gradient](targets.md#checking-the-gradient)).
+evaluations of the log-density and 8 of the gradient, or 40 of `log_prob_and_grad`, when
+the sampler is built, before tuning, which no run counts ([Checking the gradient](targets.md#checking-the-gradient)).
 Tuning and the pilot can be skipped:
 
 - **Tuning** runs only for a kernel with parameters left unset. A kernel whose
