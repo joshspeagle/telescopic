@@ -1,0 +1,34 @@
+2026-11-14T22:55:10Z; uptime:  22:55:10 up 7 min,  0 user,  load average: 0.25, 0.15, 0.05
+commit 9932df7 (clean)
+cpu: Intel(R) Xeon(R) Processor @ 2.10GHz; 4 logical cpus; Linux-6.18.44-fc-v470-x86_64-with-glibc2.39
+python 3.13.18, numpy 2.5.4, scipy 1.18.1
+thread settings: {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1'}
+threadpool: openblas 0.3.31.dev (SkylakeX), 1 threads
+threadpool: openblas 0.3.34.106.0 (SkylakeX), 1 threads
+load before timing (1, 5, 15 min): ['0.25', '0.15', '0.05']
+other python processes: none [line edited after the run: the first version of the filter matched one /bin/sh process at 0.0% CPU whose arguments contain the word python; its long argument list is removed]
+
+  target    step    d  calls cur,wh   cur us    wh us  median    min    max cpu med  ratios by round
+   dense coupled   50   1167,1554      397.4    349.0   0.881  0.857  1.147   0.883  0.857 1.147 0.878 0.899 0.937 0.881 0.960 0.860 0.875
+   dense coupled  100    798,949       749.5    609.9   0.800  0.774  0.861   0.805  0.789 0.774 0.861 0.794 0.814 0.818 0.800 0.799 0.826
+   dense coupled  200    278,319      2111.0   1924.1   0.917  0.845  0.974   0.918  0.895 0.974 0.939 0.942 0.941 0.917 0.845 0.893 0.845
+   dense  single   50   2536,3162      203.6    171.8   0.846  0.820  0.951   0.845  0.885 0.946 0.844 0.835 0.846 0.951 0.846 0.820 0.844
+   dense  single  100   1428,1859      374.1    280.7   0.755  0.716  0.763   0.755  0.716 0.763 0.757 0.755 0.757 0.754 0.737 0.719 0.759
+   dense  single  200    548,789      1055.6    695.4   0.658  0.625  0.671   0.658  0.625 0.662 0.658 0.640 0.665 0.671 0.639 0.660 0.650
+examples coupled   50   1099,1208      533.0    513.6   0.952  0.867  1.040   0.953  0.952 1.040 0.867 0.984 0.917 0.992 0.927 0.939 0.970
+examples coupled  100    444,464      1353.9   1180.5   0.888  0.861  1.000   0.892  0.861 0.911 0.892 0.902 0.887 0.888 0.866 1.000 0.861
+examples coupled  200    123,129      4291.3   3700.1   0.873  0.808  0.965   0.872  0.835 0.965 0.851 0.873 0.907 0.918 0.876 0.852 0.808
+examples  single   50   1368,1390      296.5    258.3   0.877  0.802  0.946   0.872  0.898 0.877 0.873 0.873 0.886 0.946 0.837 0.902 0.802
+examples  single  100    810,935       706.4    634.1   0.871  0.780  0.934   0.861  0.929 0.920 0.871 0.910 0.862 0.860 0.934 0.854 0.780
+examples  single  200    268,326      2156.9   1808.3   0.842  0.819  0.985   0.839  0.819 0.842 0.985 0.831 0.821 0.901 0.833 0.848 0.896
+
+One BLAS product of 64 rows with a d x d matrix (min of 9 blocks of 0.3 s):
+d = 50: 8.60 us
+d = 100: 26.81 us
+d = 200: 86.41 us
+
+load after timing (1, 5, 15 min): ['0.92', '0.45', '0.18']
+
+real	2m7.948s
+user	2m6.074s
+sys	0m1.188s

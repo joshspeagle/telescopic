@@ -1,0 +1,86 @@
+=== Run 1 of wm_timing_fine.py; 2026-11-14T23:03:31Z; uptime:  23:03:31 up 15 min,  0 user,  load average: 0.73, 0.63, 0.34
+commit 9932df7 (clean)
+cpu: Intel(R) Xeon(R) Processor @ 2.10GHz; 4 logical cpus; Linux-6.18.44-fc-v470-x86_64-with-glibc2.39
+python 3.13.18, numpy 2.5.4, scipy 1.18.1
+thread settings: {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1'}
+threadpool: openblas 0.3.31.dev (SkylakeX), 1 threads
+threadpool: openblas 0.3.34.106.0 (SkylakeX), 1 threads
+load before timing (1, 5, 15 min): ['0.73', '0.63', '0.34']
+other python processes: none
+
+  target    step    d  calls cur,wh   cur us    wh us  median    min    max  ratios by round
+   dense coupled   50    121,140       461.7    396.3   0.893  0.839  0.920  0.893 0.910 0.858 0.897 0.858 0.894 0.875 0.920 0.839
+   dense coupled  100     66,63        797.7    665.9   0.815  0.791  0.869  0.823 0.805 0.791 0.835 0.815 0.814 0.869 0.846 0.809
+   dense coupled  200     23,26       2255.2   1993.6   0.902  0.850  0.955  0.882 0.850 0.935 0.902 0.902 0.901 0.924 0.870 0.955
+   dense  single   50    217,225       220.2    188.9   0.843  0.802  0.876  0.858 0.821 0.852 0.802 0.808 0.843 0.876 0.842 0.853
+   dense  single  100    121,161       396.1    297.8   0.752  0.742  0.798  0.742 0.781 0.752 0.749 0.760 0.742 0.744 0.764 0.798
+   dense  single  200     33,42       1074.6    714.7   0.660  0.648  0.673  0.673 0.660 0.671 0.662 0.662 0.656 0.648 0.658 0.652
+examples coupled   50     86,100       540.7    502.6   0.924  0.909  0.957  0.924 0.924 0.939 0.920 0.949 0.944 0.923 0.957 0.909
+examples coupled  100     38,42       1370.2   1232.3   0.896  0.883  0.916  0.893 0.887 0.908 0.906 0.916 0.883 0.900 0.896 0.889
+examples coupled  200     12,14       4430.7   3739.5   0.847  0.823  0.895  0.864 0.845 0.846 0.823 0.827 0.854 0.847 0.861 0.895
+examples  single   50    157,178       304.4    266.3   0.874  0.816  0.897  0.816 0.874 0.859 0.860 0.896 0.874 0.873 0.897 0.888
+examples  single  100     68,81        754.4    653.2   0.864  0.835  0.936  0.878 0.854 0.866 0.864 0.839 0.854 0.936 0.866 0.835
+examples  single  200     23,28       2273.2   1884.8   0.829  0.809  0.864  0.822 0.838 0.818 0.829 0.846 0.809 0.856 0.864 0.828
+timing took 128 s
+
+One BLAS product of 64 rows with a d x d matrix (min of 9 blocks of 0.3 s):
+  d = 50: 8.70 us, d = 100: 26.10 us, d = 200: 84.68 us
+Ratio predicted by the count of products, 1 - saved x product / current step:
+     dense coupled d =  50: 0.868
+     dense coupled d = 100: 0.771
+     dense coupled d = 200: 0.737
+     dense  single d =  50: 0.842
+     dense  single d = 100: 0.736
+     dense  single d = 200: 0.685
+  examples coupled d =  50: 0.887
+  examples coupled d = 100: 0.867
+  examples coupled d = 200: 0.866
+  examples  single d =  50: 0.886
+  examples  single d = 100: 0.862
+  examples  single d = 200: 0.851
+
+load after timing (1, 5, 15 min): ['0.98', '0.77', '0.44']
+
+=== Run 2 of wm_timing_fine.py; 2026-11-14T23:05:48Z; uptime:  23:05:48 up 17 min,  0 user,  load average: 0.98, 0.77, 0.44
+commit 9932df7 (clean)
+cpu: Intel(R) Xeon(R) Processor @ 2.10GHz; 4 logical cpus; Linux-6.18.44-fc-v470-x86_64-with-glibc2.39
+python 3.13.18, numpy 2.5.4, scipy 1.18.1
+thread settings: {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1'}
+threadpool: openblas 0.3.31.dev (SkylakeX), 1 threads
+threadpool: openblas 0.3.34.106.0 (SkylakeX), 1 threads
+load before timing (1, 5, 15 min): ['0.98', '0.77', '0.44']
+other python processes: none
+
+  target    step    d  calls cur,wh   cur us    wh us  median    min    max  ratios by round
+   dense coupled   50    119,137       388.3    340.9   0.884  0.841  0.908  0.841 0.894 0.908 0.900 0.878 0.884 0.888 0.876 0.880
+   dense coupled  100     64,79        778.8    622.7   0.813  0.799  0.844  0.813 0.820 0.804 0.799 0.844 0.829 0.805 0.812 0.824
+   dense coupled  200     24,27       2722.9   2119.4   0.768  0.730  0.788  0.768 0.788 0.762 0.769 0.761 0.787 0.747 0.786 0.730
+   dense  single   50    215,246       227.7    191.9   0.820  0.807  0.878  0.809 0.820 0.878 0.832 0.869 0.852 0.812 0.807 0.810
+   dense  single  100    106,144       438.8    323.9   0.738  0.720  0.776  0.726 0.739 0.776 0.720 0.742 0.731 0.741 0.738 0.738
+   dense  single  200     45,67       1151.9    767.8   0.667  0.643  0.680  0.674 0.667 0.672 0.680 0.643 0.658 0.651 0.667 0.646
+examples coupled   50     80,90        545.7    501.6   0.920  0.906  0.936  0.914 0.928 0.920 0.906 0.936 0.928 0.918 0.911 0.928
+examples coupled  100     37,43       1343.5   1197.5   0.883  0.840  0.909  0.880 0.909 0.883 0.893 0.905 0.840 0.870 0.874 0.905
+examples coupled  200     12,14       4498.8   3779.8   0.859  0.840  0.866  0.859 0.859 0.864 0.848 0.840 0.865 0.855 0.845 0.866
+examples  single   50     81,93        302.7    266.4   0.865  0.838  0.892  0.860 0.892 0.880 0.876 0.865 0.865 0.845 0.862 0.838
+examples  single  100     65,76        738.1    639.4   0.857  0.812  0.904  0.857 0.894 0.904 0.812 0.853 0.815 0.857 0.873 0.858
+examples  single  200     23,26       2319.3   1957.3   0.829  0.790  0.888  0.829 0.814 0.844 0.824 0.845 0.790 0.863 0.827 0.888
+timing took 128 s
+
+One BLAS product of 64 rows with a d x d matrix (min of 9 blocks of 0.3 s):
+  d = 50: 9.00 us, d = 100: 27.11 us, d = 200: 86.97 us
+Ratio predicted by the count of products, 1 - saved x product / current step:
+     dense coupled d =  50: 0.838
+     dense coupled d = 100: 0.756
+     dense coupled d = 200: 0.776
+     dense  single d =  50: 0.842
+     dense  single d = 100: 0.753
+     dense  single d = 200: 0.698
+  examples coupled d =  50: 0.885
+  examples coupled d = 100: 0.859
+  examples coupled d = 200: 0.865
+  examples  single d =  50: 0.881
+  examples  single d = 100: 0.853
+  examples  single d = 200: 0.850
+
+load after timing (1, 5, 15 min): ['1.00', '0.86', '0.52']
+

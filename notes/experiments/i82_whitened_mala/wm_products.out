@@ -1,0 +1,15 @@
+commit 9932df7
+MALA.step: 7 products
+    2 x in _log_alpha: (50, 50) times rows of (64, 50)
+    4 x in _mean: (50, 50) times rows of (64, 50)
+    1 x in step: (50, 50) times rows of (64, 50)
+MALA.coupled_step: 14 products
+    4 x in _log_alpha: (50, 50) times rows of (64, 50)
+    8 x in _mean: (50, 50) times rows of (64, 50)
+    2 x in reflection_maximal: (50, 50) times rows of (64, 50)
+WhitenedMALA.step: 3 products
+    1 x in propose: (50, 50) times rows of (64, 50)
+    2 x in whitened_drift: (50, 50) times rows of (64, 50)
+WhitenedMALA.coupled_step: 7 products
+    3 x in coupled_step: (50, 50) times rows of (64, 50)
+    4 x in whitened_drift: (50, 50) times rows of (64, 50)
