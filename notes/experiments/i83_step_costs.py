@@ -56,6 +56,9 @@ point by point.
 5. Log-weights (p1-07). `_log_weights` of a coupled step at 1 and 256 rows, d = 20,
    with a Gaussian `MultivariateT` (df = None), whose log-density p1-08 leaves as it
    was: microseconds per call.
+6. Student-t constant (p1-08). `MultivariateT.log_density` (df = 5) at 1, 3 and 512
+   rows, d = 20: microseconds per call; and the one-lane Independence run of section 1,
+   point by point, whose time includes p1-07 and p1-08: seconds per run.
 
 Result (`i83_step_costs.out`, at a load average of 1.3 to 2.0 on 4 cores shared with
 other jobs).
@@ -77,6 +80,10 @@ other jobs).
 4. Bitwise equal. 1.31 and 1.32 at d = 2 (point by point, vectorized), 1.23 and 1.34 at
    d = 20, 1.24 and 1.32 at d = 100.
 5. 1.35 (1.22 to 1.43) at 1 row, 1.06 (0.96 to 1.18) at 256 rows.
+6. 1.06 (0.96 to 1.15) at 1 row, 1.09 (0.92 to 1.21) at 3 rows and 1.00 (0.59 to 1.08)
+   at 512 rows: about 0.5 to 0.7 microseconds a call, within the spread of the rounds.
+   The one-lane run, with p1-07 too, 1.10 (0.86 to 1.16), as the issue's 1.10 for p1-07
+   alone.
 
 Run from the repository root: OMP_NUM_THREADS=1 PYTHONPATH=src python notes/experiments/i83_step_costs.py
 """
@@ -356,6 +363,29 @@ print(json.dumps(outputs))
 """
 )
 
+# Section 6: MultivariateT's Student-t log-density, and a one-lane Independence run.
+LOG_DENSITY = (
+    COMMON
+    + """
+from telescopic import kernels
+from telescopic.engine import run
+
+example = examples.gaussian(20)
+proposal = kernels.MultivariateT(np.zeros(20), 1.5 * example.cov)
+generator = np.random.default_rng(9)
+outputs = {}
+for n in (1, 3, 512):
+    points = generator.standard_normal((n, 20))
+    call = lambda: proposal.log_density(points)
+    outputs[f"log density, {n} rows"] = {"time": 1e6 * timed(call, 4000 // n + 20)}
+target = gaussian_target(20, False)
+kernel = kernels.Independence(proposal)
+call = lambda: run(target, kernel, example.initial, range(16), k=10, m=100, lag=1, rng=0, lanes=1)
+outputs["one-lane run"] = {"time": timed(call, 1)}
+print(json.dumps(outputs))
+"""
+)
+
 
 def child(script, source):
     output = subprocess.run(
@@ -477,6 +507,16 @@ def log_weights(sources):
         print(f"{key:21}: {compare(outputs, key)}")
 
 
+def log_density(sources):
+    print(
+        "\n6. MultivariateT, d = 20: microseconds per call (seconds for the run), median of "
+        "the rounds, and before/after per round: median (range)"
+    )
+    outputs = rounds(LOG_DENSITY, sources)
+    for key in outputs["after"][0]:
+        print(f"{key:21}: {compare(outputs, key)}")
+
+
 def main():
     print(setup())
     print(f"before: commit {BEFORE}; after: this checkout; children run with {THREADS}")
@@ -488,6 +528,7 @@ def main():
         gibbs(sources)
         pilot(sources)
         log_weights(sources)
+        log_density(sources)
     print(f"load average after: {tuple(round(x, 2) for x in os.getloadavg())}")
 
 
