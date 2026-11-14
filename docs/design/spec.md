@@ -497,7 +497,7 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 
 - **Atoms:** storage needs $R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})\,(8d + 16)$ bytes for positions, weights and replicate indices, plus 24 bytes per stored distance, $\tau - L$ of them per replicate; `engine.stored_bytes` computes it, next to the engine's columns, exactly for `thin` $= 1$ and $m - k + 1 \ge L$, and as an upper bound otherwise, where some terms of the correction have no atoms. The engine stores each iteration's rows as small arrays and merges every 256 of them into one block, so at $d = 10$ a row holds 94 to 103 bytes against 92 of payload at 1 to 256 lanes (M3 review).
 - **Join:** at the end of a run, sorting the atoms by replicate holds about three times their size for a moment (3.1 times at $d = 10$).
-- **Estimate first:** the sampler estimates the stored size before each run, with the pilot's $\tau - 1$ standing in for the run's $\tau - L$, and warns when three times it, the peak of the run and its first estimates, exceeds 1 GB, stating both figures, with twice the peak as its upper end for $d \le 2$, and suggesting `thin`. Measured with `RandomWalk(I)` at $k = 200$, $m = 2000$, $R = 200$, the run peaks at 2.0 to 2.7 times the stored size and `cov()` with `summary()` at 2.9 to 3.0 times from $d = 2$ to 50, and at 3.8 times at $d = 1$, where the result's own 24 bytes per atom weigh most. Three holds for a random walk's rejection rate at `thin` $= 1$ from $d = 2$ on, not beyond it: `Result.quantile` sorts the atoms that are not consecutive repeats, so with `thin` above 1 or a kernel that rarely rejects the estimates peak at up to about six times the stored size in one or two dimensions, and at about three at $d = 10$ (`notes/experiments/i73_memory_peak.out`, DECISIONS #131). These peaks are of NumPy's allocations as `tracemalloc` traces them, not of resident memory: issue #73 measured the resident memory of the same run at $d = 50$ at 505 MB against 164 MB stored after `cov()`, 3.1 times, a measurement of the issue's own with no script in the repository.
+- **Estimate first:** the sampler estimates the stored size before each run, with the pilot's $\tau - 1$ standing in for the run's $\tau - L$, and warns when three times it, the peak of the run and its first estimates, exceeds 1 GB, stating both figures, with twice the peak as its upper end for $d \le 2$, and suggesting `thin`. Measured with `RandomWalk(I)` at $k = 200$, $m = 2000$, $R = 200$, the run peaks at 2.0 to 2.7 times the stored size and `cov()` with `summary()` at 2.0 to 2.5 times from $d = 2$ to 50, and at 3.3 times at $d = 1$, where the result's own bytes per atom weigh most. Three holds for a random walk's rejection rate at `thin` $= 1$ from $d = 2$ on, not beyond it: `Result.quantile` sorts the atoms that are not consecutive repeats, so with `thin` above 1 or a kernel that rarely rejects the estimates peak at up to about five times the stored size in one or two dimensions, and at about two at $d = 10$ (`notes/experiments/i73_memory_peak.out`, DECISIONS #131, #183). These peaks are of NumPy's allocations as `tracemalloc` traces them, not of resident memory: issue #73 measured the resident memory of the same run at $d = 50$ at 505 MB against 164 MB stored after `cov()`, 3.1 times, a measurement of the issue's own with no script in the repository.
 - **Pools:** a worker holds the replicates of one chunk, at most 1,024 (§6.4), until it sends them back; the parent holds every chunk's replicates and then their merge, so its memory grows with $R$ as in a run in-process (DECISIONS #179).
 - **Streaming:** a streaming mode with a fixed `h` and constant memory is on the roadmap.
 
@@ -534,9 +534,9 @@ Methods:
 **`SignedMeasure`** holds three arrays:
 - `atoms` `(N, d)`;
 - `weights` `(N,)`, each replicate's summing to 1;
-- `replicate` `(N,)`, the index into the result's replicates.
+- `replicate` `(N,)`, the index into the result's replicates, in nondecreasing order, so that each replicate's atoms are consecutive (DECISIONS #182).
 
-The constructor checks that `atoms` and `weights` have an integer or float dtype, raising `TypeError` naming the field, and the shapes, and that each `replicate` is an integer in $[0, R)$, raising `ValueError` naming the field. It stores the arrays as read-only views without copying them: its attributes cannot be written through, but the arrays passed in, such as those of the `Replicates` returned by `engine.run`, stay writable; the package never writes to them (DECISIONS #107).
+The constructor checks that `atoms` and `weights` have an integer or float dtype, raising `TypeError` naming the field, and the shapes, and that each `replicate` is an integer in $[0, R)$ and that they are in nondecreasing order, raising `ValueError` naming the field. It stores the arrays as read-only views without copying them: its attributes cannot be written through, but the arrays passed in, such as those of the `Replicates` returned by `engine.run`, stay writable; the package never writes to them (DECISIONS #107).
 
 Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 
@@ -712,14 +712,14 @@ These targets are measured by `benchmarks/` and are not gating.
   - a fast tier under 2 minutes, and a `slow` statistical tier;
   - at least 90% line coverage of `src/`.
 - **Documentation:**
-  - toolchain: Sphinx, MyST-NB (tutorials executed at every build in CI and by default; a local build may reuse the cache or skip execution, DECISIONS #81), numpydoc, sphinx-copybutton, and a theme of the project's own on Sphinx's `basic` theme, whose colors, type, marks and plot style are written by one script (DECISIONS #79);
+  - toolchain: Sphinx, MyST-NB (tutorials executed at every build in CI and by default; a local build may reuse the cache or skip execution, DECISIONS #81), numpydoc, autosummary (a generated page for each public class, for each module that the index lists and for `sample`, DECISIONS #184), sphinx-copybutton, and a theme of the project's own on Sphinx's `basic` theme, whose colors, type, marks and plot style are written by one script (DECISIONS #79);
   - pages: a landing page and six sections: Start (Getting started), Tutorials, How-to guides, Theory, Reference (API reference, Citing, Changelog) and Project (Contributing);
   - the design records (this specification, the plans, the design of the site's identity, the landscape report and the research notes) stay in the repository and are not built (DECISIONS #80);
-  - hosting: GitHub Pages from `main`, once the site's structure is final (DECISIONS #82).
+  - hosting: GitHub Pages, published by CI's `deploy` job from the site that the `docs` job builds on each push to `main` (DECISIONS #82, #188).
 - **CI (GitHub Actions):**
   - lint and types;
   - tests on Linux, macOS and Windows, with a job on the oldest supported stack;
-  - a docs build;
+  - a docs build, published on GitHub Pages on a push to `main` (DECISIONS #188);
   - a wheel and sdist build with a smoke test;
   - the slow tier on every push to `main` and on manual dispatch (DECISIONS #75).
 - **Repository files:** `CITATION.cff`, `CHANGELOG.md`, `CONTRIBUTING.md` (with the validation philosophy), `LICENSE`.

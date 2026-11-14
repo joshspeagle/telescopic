@@ -39,6 +39,8 @@ sphinx-build -W --keep-going docs docs/_build/html    # the strict build alone
 
 The gate builds from the checkout's sources. A bare `sphinx-build` imports the installed
 package: in a second checkout or a worktree, prefix it with `PYTHONPATH="$PWD/src"`.
+CI builds the site on every push and pull request, and publishes the build of each push
+to `main` on GitHub Pages.
 
 The environment variable `TELESCOPIC_DOCS_EXECUTE` sets how the build runs the notebooks.
 `force`, the default and what CI uses, runs every notebook. `cache` reuses the outputs
@@ -51,6 +53,16 @@ full build:
 ```bash
 TELESCOPIC_DOCS_EXECUTE=cache sphinx-build docs docs/_build/html
 ```
+
+The API reference, `docs/api.md`, is an index of autosummary tables, one per section. The
+build generates a page for each name the tables list into `docs/api/`, which is not
+committed: a class's page shows its attributes and methods, and a module's page its
+functions and data and a table of the classes of its `__all__`. A new public class or
+module, or a function that `telescopic` itself exports, is listed in `docs/api.md` under
+its section, and a new function or constant of a module in its module's `__all__`; the
+tests fail when a public class, a module that `telescopic` exports, or a name of the
+`__all__` of a module without a row has no page. Before generating the pages, the build deletes those of `docs/api/`
+that no table lists any more, so a name removed or renamed leaves no stale page.
 
 The colors, fonts, sizes, marks and plot style come from one script,
 `docs/_scripts/brand.py`, whose docstring lists the files it writes. Edit the values

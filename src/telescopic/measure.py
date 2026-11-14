@@ -33,7 +33,8 @@ class SignedMeasure:
     atoms : ndarray, shape (N, d)
     weights : ndarray, shape (N,)
     replicate : ndarray of int, shape (N,)
-        The position, from 0 to R - 1, of the replicate each atom belongs to.
+        The position, from 0 to R - 1, of the replicate each atom belongs to, in
+        nondecreasing order, so that each replicate's atoms are consecutive.
     n_replicates : int
     """
 
@@ -68,6 +69,10 @@ class SignedMeasure:
                 f"replicate must give each of the {len(atoms)} atoms an integer from 0 to "
                 f"n_replicates - 1 = {n_replicates - 1}"
             )
+        if np.any(replicate[1:] < replicate[:-1]):
+            raise ValueError(
+                "replicate must be in nondecreasing order, each replicate's atoms consecutive"
+            )
         index = replicate.astype(np.int64, copy=False)
         for name, stored in (("atoms", atoms), ("weights", weights), ("replicate", index)):
             object.__setattr__(self, name, read_only(stored))
@@ -95,10 +100,10 @@ class SignedMeasure:
     @cached_property
     def _sums(self) -> csr_array:
         # Row r holds the weights of replicate r's atoms, so a product sums each replicate.
+        # Built as CSR directly from the sorted replicate, it shares the weights.
         n = len(self.weights)
-        return csr_array(
-            (self.weights, (self.replicate, np.arange(n))), shape=(self.n_replicates, n)
-        )
+        indptr = np.searchsorted(self.replicate, np.arange(self.n_replicates + 1))
+        return csr_array((self.weights, np.arange(n), indptr), shape=(self.n_replicates, n))
 
     def mass(self, cell: IntArray, n_cells: int) -> csr_array:
         """Each replicate's signed mass in each of ``n_cells`` cells, such as histogram bins.

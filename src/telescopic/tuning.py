@@ -65,7 +65,7 @@ class TuningReport:
 
 @dataclass(frozen=True, eq=False)
 class PilotRun:
-    r"""The second halves of adaptive Metropolis pilot chains, from :func:`adaptive_metropolis`.
+    r"""The second halves of the pilot chains of :func:`~telescopic.tuning.adaptive_metropolis`.
 
     Attributes
     ----------
