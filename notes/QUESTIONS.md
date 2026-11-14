@@ -64,3 +64,4 @@ Each item has the default that work proceeds on until Josh answers.
   enter the pre-registered test of issue #91, with the Gaussian of unequal scales added
   and the predictions posted on that issue before it runs (DECISIONS #199). Meanwhile the
   kernels guide and a note on the error raised when `k` cannot be chosen name the case.
+  Default, as ruled: no change until the test of issue #91 decides.
