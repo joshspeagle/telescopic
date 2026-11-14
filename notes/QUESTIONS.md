@@ -2,15 +2,10 @@
 
 Each item has the default that work proceeds on until Josh answers.
 
-- [ ] **Licence.** Default: MIT, as emcee, dynesty and pastry use.
-- [ ] **When to make the repository public.** JOSS asks for about six months of public history. Default: stays private until Josh decides.
 - [ ] **Budget mode (spec §3.7).** It is a should-level feature, and an unbiased per-lane
   estimator needs per-replicate weights throughout `Result`. Default: deferred beyond
   v0.1 (DECISIONS #22); an interrupted run and its completion cover stopping early.
-- [ ] **The size of a user's pool.** Pools that do not report it through `_max_workers`,
-  `_processes` or `size` (such as dask's executors) are sized by the CPUs this process may
-  use, so a cluster's extra workers can sit idle. Default: keep the guess. Alternative: an
-  argument for it, as dynesty's `queue_size`.
+  Josh ruled on issue #79 (2026-11-13): prototype it as an experiment, then decide.
 - [ ] **The automatic steps of HMC and MALA.** Dual averaging toward
   acceptance 0.8 suits ordinary HMC, but its coupled chains then rarely meet on the
   banana from U[-5, 5]^2: 88 of 100 pilot pairs were unmet after 10^5 iterations, so
@@ -29,56 +24,14 @@ Each item has the default that work proceeds on until Josh answers.
   higher (the largest eigenvalue of ΣH a median of 3.5, against 2.1 for the others and 1.2
   at the mode). A step of 0.7 met every pair, and the automatic HMC met them all
   (`notes/experiments/m10_mala_logistic.out`).
+  Josh ruled on issue #89 (2026-11-13): an opt-in tuning that puts contraction first
+  (issue #91), which becomes the default if its pre-registered test passes.
 
-- [ ] **Starts far from the target.** From a π0 a hundred times wider than the posterior,
-  or far from it, the recipe k = q_0.99 leaves about one replicate in a hundred averaged
-  while its chain is still on its way, and the estimates of variances become heavy-tailed:
-  on the README's line fit from N(0, 10I), 11 of 20 runs warned and some estimated a
-  negative variance (`notes/experiments/m9_initial_width.out`; Sherlock reports the same in
-  his discussion of JOA20). Two remedies are new constructions (DECISIONS #1): a π0 built
-  from the tuning pilot's mean and covariance, widened, which loses the protection of a
-  wide π0 against missed modes; or k at a higher quantile or a multiple of it, which costs
-  more. Default: keep the recipe, recommend a π0 a few to ten times wider than the target
-  (spec §4.2, DECISIONS #35), and rely on the variance warning.
-
-- [ ] **The threshold of the variance warning.** Its share is now taken about the atoms'
-  mean, so that it does not depend on where the origin lies (DECISIONS #54). On 200 runs of
-  the banana at R = 100 it fires in 37 runs instead of 19; the runs it marks covered E[x₀²]
-  at 0.892 against 0.963 in the others with the normal quantile, and at 0.946 against
-  0.969 with the Student-t intervals of issue #84
-  (`notes/experiments/m11_variance_share.out`).
-  Default: keep the threshold of a half. Alternative: a higher threshold, calibrated anew.
-
-- [ ] **Common random numbers for Gibbs conditionals that are not normal.** Under
-  `coupling="crn"`, a block of several coordinates, or of one without `ppf`, is drawn as
-  the normal with the conditional's `mean` and `cov` (DECISIONS #48), so a class of one's
-  own with those attributes that is not normal gets the wrong law in the coupled step
-  only. Two M11 reviews proposed drawing both chains with generators in the same state:
-  each draw then has its conditional's law whatever it is, and the code shrinks, but
-  contraction depends on how each distribution draws. SciPy draws a multivariate normal
-  through a decomposition whose signs can flip between covariances; at a 10% difference
-  of scale the draws stayed 0.05 apart, against 1.54 for independent draws
-  (`notes/reviews/m11.md`). Default: keep the normal map, whose Cholesky factor contracts
-  for nearby covariances, and the documented contract.
-
-- [ ] **A gradient that is not finite where the density is positive.** MALA and HMC
-  rejected such proposals, which sampled the target restricted to where the gradient is
-  finite: E[x] = −0.29 for N(0, 1) with a NaN gradient beyond 1
-  (`notes/experiments/audit2_nan_gradient.out`). Raising there (DECISIONS #59) failed
-  default tuning on correct gradients that underflow far in the tails, as a mixture's
-  textbook responsibilities do, in 10 of 10 runs that rejection completed
-  (`notes/experiments/audit2_gradient_mixture.out`). Every kernel now takes such a
-  gradient as 0 where chains move, which is exact, warns as soon as a run meets one, and
-  raises with the point where chains start, since a MALA chain cannot leave such a start:
-  zero drift there too returned E[x] = 40.10 for a truth of 0
-  (`notes/experiments/audit2_zero_drift_costs.out`; DECISIONS #67). Default: this rule.
-  Alternatives: raise wherever a chain meets one after tuning, which fails runs that zero
-  drift completes exactly; zero drift without the warning.
-
-- [ ] **A warning that the tuned independence proposal misses a mode.** Josh ruled on
-  issue #102 that a run should warn when the proposal that `Independence` fits to the
-  tuning chains misses part of the target. No rule tested holds up (DECISIONS #117).
-  Default: no check in default tuning, and the limitation documented, with runs from
-  several seeds and an explicit proposal as what helps; a check that does not depend on
-  the start's width stays research. Alternatives: build the probe rule of row 117 in as
-  confirmed, or as an opt-in check.
+- [ ] **What a warning of the gradient check means (issue #123).** A check limited only
+  by numerical noise warns on any `grad` that is not the derivative of `log_prob` as
+  computed, which includes gradients that do no harm: the exact gradient of a log-density
+  from a solver at tolerance 1e-5, a factor of 1.005, a prior left out. A relative floor
+  silences those and misses a wrong coordinate whose share of a line's predicted change
+  is below half the floor. The second pre-registered experiment records what floors of
+  1e-6, 1e-4 and 1e-2 would have decided. Default: no floor, a message that states the
+  size of the disagreement, and the documented way to turn the check off.

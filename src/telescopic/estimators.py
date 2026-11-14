@@ -175,6 +175,7 @@ def weighted_quantile(values: FloatArray, weights: FloatArray, q: npt.ArrayLike)
     weights : ndarray, shape (N,)
         Finite signed weights, summing to 1.
     q : array_like of float in [0, 1]
+        The levels of the quantiles.
 
     Returns
     -------

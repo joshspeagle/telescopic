@@ -27,9 +27,11 @@ class MultivariateT:
     Parameters
     ----------
     mean : array_like, shape (d,)
+        The location :math:`\mu`.
     cov : array_like, shape (d, d)
         Scale matrix; the covariance is ``cov * df / (df - 2)`` for ``df > 2``.
     df : int or None
+        The degrees of freedom :math:`\nu`, a positive integer, or ``None``.
     """
 
     def __init__(self, mean: npt.ArrayLike, cov: npt.ArrayLike, df: int | None = 5) -> None:
@@ -150,6 +152,22 @@ class Independence(Kernel):
     well-separated modes, the chains can settle in one mode, and pairs then meet quickly
     in it: the estimates can be confidently wrong, and the pilot's agreeing chains raise
     no warning. Give ``proposal`` explicitly to cover modes that are known.
+
+    Examples
+    --------
+    A proposal given explicitly, here a Student-:math:`t` whose scale matrix is twice the
+    target's covariance, leaves nothing to tune, so the run has no tuning report:
+
+    >>> from telescopic import examples, kernels, sample
+    >>> example = examples.gaussian(2)
+    >>> proposal = kernels.MultivariateT(example.mean, 2 * example.cov)
+    >>> kernel = kernels.Independence(proposal)
+    >>> result = sample(
+    ...     example.log_prob, example.initial, kernel=kernel,
+    ...     n_replicates=50, vectorize=True, rng=0,
+    ... )
+    >>> result.tuning is None
+    True
     """
 
     def __init__(self, proposal: Proposal | None = None) -> None:

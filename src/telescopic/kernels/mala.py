@@ -51,6 +51,20 @@ class MALA(GradientKernel):
     A step uses ``d`` normals and 1 uniform, and a coupled step ``d`` normals and 2
     uniforms. Each evaluates the log-density once per chain, once per pair when the
     proposals coincide, and the gradient where the log-density is finite.
+
+    Examples
+    --------
+    MALA needs ``grad``, which it evaluates with every finite log-density, so on a Gaussian
+    the two counts agree:
+
+    >>> from telescopic import examples, kernels, sample
+    >>> example = examples.gaussian(2)
+    >>> result = sample(
+    ...     example.log_prob, example.initial, grad=example.grad,
+    ...     kernel=kernels.MALA(), n_replicates=50, vectorize=True, rng=0,
+    ... )
+    >>> result.n_grad == result.n_log_prob
+    True
     """
 
     target_acceptance = 0.574

@@ -106,6 +106,7 @@ class Target:
         Parameters
         ----------
         x : ndarray, shape (n, d)
+            The points, one per row.
 
         Returns
         -------
@@ -132,6 +133,7 @@ class Target:
         Parameters
         ----------
         x : ndarray, shape (n, d)
+            The points, one per row.
         start : bool
             Whether chains start at the rows of ``x``.
 

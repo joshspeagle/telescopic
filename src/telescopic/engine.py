@@ -23,6 +23,7 @@ from telescopic._types import (
     flag,
     instance,
     integer,
+    integral,
     real_array,
 )
 from telescopic.estimators import correction_coefficients
@@ -160,11 +161,21 @@ class Status(NamedTuple):
         Index of the unmet replicate that has run longest, or -1 if every pair has met.
     t : int
         Its time :math:`t`, or 0.
+    zero_density : int
+        Replicates started so far whose :math:`X_0` or :math:`Y_0` has zero target
+        density.
+    first_zero_density : int
+        Index of the first of them, or -1 if there is none.
+    slowest_zero_density : bool
+        Whether the replicate ``slowest`` is one of them.
     """
 
     finished: int
     slowest: int
     t: int
+    zero_density: int = 0
+    first_zero_density: int = -1
+    slowest_zero_density: bool = False
 
 
 # Spec sections 3.1, 6.1, 6.2 and 6.5, R-EST-5, R-EXEC-2 and R-EXEC-7.
@@ -198,6 +209,7 @@ def run(
     Parameters
     ----------
     target : Target
+        The target to sample.
     kernel : Kernel
         A tuned kernel.
     initial
@@ -234,8 +246,7 @@ def run(
 
     Notes
     -----
-    Memory: the stored atoms take about :math:`R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})
-    (8d + 16)` bytes, and the :math:`\tau - L` distances of each replicate 24 bytes each.
+    Memory: :func:`stored_bytes` gives the size of the stored atoms and distances.
     """
     instance("target", target, Target)
     instance("kernel", kernel, Kernel)
@@ -283,6 +294,7 @@ def check_settings(settings: Settings) -> Settings:
     Parameters
     ----------
     settings : Settings
+        The settings to check.
 
     Returns
     -------
@@ -314,6 +326,7 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
     Parameters
     ----------
     parts : sequence of Replicates
+        The outputs to join, at least one.
 
     Returns
     -------
@@ -378,6 +391,44 @@ class _Start:
         self.y0 = draw(initial, self.generator, len(self.x0))
 
 
+def stored_bytes(settings: Settings, ndim: int, coupled: npt.ArrayLike) -> float:
+    r"""Bytes of the atoms and distances that replicates store.
+
+    A replicate that met after :math:`c = \tau - L` coupled steps stores the
+    :math:`|S|` atoms of the time average and two atoms for each of the
+    :math:`\max(0, c - k)` terms of the bias correction, each of :math:`8d + 16` bytes (its
+    coordinates in ``atoms``, its weight and its replicate in ``owner``), and :math:`c`
+    distances of 24 bytes (``distance_owner``, ``distance_time`` and ``distance``). This
+    is exact when ``thin`` is 1 and :math:`m - k + 1 \ge L`, and an upper bound otherwise,
+    where some terms of the correction have no atoms. With ``store=False`` nothing is
+    stored.
+
+    Parameters
+    ----------
+    settings : Settings
+        The settings of the run.
+    ndim : int
+        The dimension :math:`d`.
+    coupled : array_like of int, shape (R,)
+        :math:`\tau - L` of each replicate, non-negative.
+
+    Returns
+    -------
+    float
+        The total over the replicates.
+    """
+    instance("settings", settings, Settings)
+    k, m, _, thin, _, store = check_settings(settings)
+    ndim = integer("ndim", ndim, minimum=1)
+    c = real_array("coupled", coupled, "non-negative integers of shape (R,)")
+    if c.ndim != 1 or not integral(c, 0):
+        raise ValueError("coupled must be non-negative integers of shape (R,)")
+    if not store:
+        return 0.0
+    atoms = len(c) * len(range(k, m + 1, thin)) + 2 * np.maximum(0, c - k).sum()
+    return float(atoms * (8 * ndim + 16) + 24 * c.sum())
+
+
 class _Batch:
     # The lanes of a lockstep batch, and the outputs of the replicates they have run.
     def __init__(
@@ -390,9 +441,8 @@ class _Batch:
         keep_paths: bool,
     ) -> None:
         self.target, self.kernel, self.settings = target, kernel, settings
-        self.k, self.m, self.lag, self.thin, self.max_iter, self.store = settings
         self.keep_paths = keep_paths
-        self.weight = 1.0 / len(range(self.k, self.m + 1, self.thin))  # 1 / |S|
+        self.weight = 1.0 / len(range(settings.k, settings.m + 1, settings.thin))  # 1 / |S|
         self.streams = Streams(lanes)
         self.replicate = np.full(lanes, -1, dtype=np.int64)
         self.t = np.zeros(lanes, dtype=np.int64)
@@ -401,9 +451,12 @@ class _Batch:
         self.y = _empty_state(lanes, ndim, kernel.needs_grad)
         integers, reals = np.zeros(0, dtype=np.int64), np.zeros(0)
         self.finished = _Chunks(integers, integers)
+        # The columns that stored_bytes counts: a change here changes it.
         self.atoms = _Chunks(integers, np.zeros((0, ndim)), reals)
         self.distances = _Chunks(integers, integers, reals)
+        # The replicates started at zero density, and whether each lane's did.
         self.zero_density: list[int] = []
+        self.outside = np.zeros(lanes, dtype=bool)
         self.paths: dict[int, tuple[list[FloatArray], list[FloatArray]]] = {}
         self.n_finished = 0
         self.counts = {name: getattr(target, name) for name in COUNTS}  # before any step
@@ -422,6 +475,7 @@ class _Batch:
         self.x.put(lanes, states.take(slice(0, None, 2)))
         self.y.put(lanes, states.take(slice(1, None, 2)))
         outside = np.isneginf(states.log_prob).reshape(-1, 2).any(axis=1)
+        self.outside[lanes] = outside
         self.zero_density += [s.index for s, bad in zip(starting, outside, strict=True) if bad]
         for lane, start in zip(lanes.tolist(), starting, strict=True):
             self.streams.assign(lane, start.generator)
@@ -435,9 +489,9 @@ class _Batch:
     def advance(self) -> None:
         # One iteration: X alone in the lagging and met lanes, the coupled kernel in the
         # others, then the exact comparison of R-EST-2 for every unmet lane past the lag.
-        active, unmet = self.active, self.tau < 0
-        solo = (active & ((self.t < self.lag) | ~unmet)).nonzero()[0]
-        coupled = (active & unmet & (self.t >= self.lag)).nonzero()[0]
+        active, unmet, lag = self.active, self.tau < 0, self.settings.lag
+        solo = (active & ((self.t < lag) | ~unmet)).nonzero()[0]
+        coupled = (active & unmet & (self.t >= lag)).nonzero()[0]
         if len(solo):
             moved, _ = self.kernel.step(self.target, self.x.take(solo), self.streams.view(solo))
             self.x.put(solo, moved)
@@ -448,7 +502,7 @@ class _Batch:
             self.x.put(coupled, new_x)
             self.y.put(coupled, new_y)
         self.t += 1  # idle lanes' clocks are never read
-        compared = (active & unmet & (self.t >= self.lag)).nonzero()[0]
+        compared = (active & unmet & (self.t >= lag)).nonzero()[0]
         if len(compared):
             met = np.all(self.x.x[compared] == self.y.x[compared], axis=1)
             self.tau[compared[met]] = self.t[compared[met]]
@@ -463,9 +517,9 @@ class _Batch:
 
     def finish(self) -> IntArray:
         # Frees the lanes of the pairs that met and reached m, and of censored pairs.
-        done = (self.tau >= 0) & (self.t >= self.m)
-        if self.max_iter is not None:
-            done |= (self.tau < 0) & (self.t >= self.max_iter)
+        done = (self.tau >= 0) & (self.t >= self.settings.m)
+        if self.settings.max_iter is not None:
+            done |= (self.tau < 0) & (self.t >= self.settings.max_iter)
         lanes = (self.active & done).nonzero()[0]
         if len(lanes):
             self.finished.add(self.replicate[lanes], self.tau[lanes])
@@ -475,10 +529,17 @@ class _Batch:
 
     def status(self) -> Status:
         unmet = self.active & (self.tau < 0)
+        outside = len(self.zero_density), self.zero_density[0] if self.zero_density else -1
         if not unmet.any():
-            return Status(self.n_finished, -1, 0)
+            return Status(self.n_finished, -1, 0, *outside)
         lane = int(np.argmax(np.where(unmet, self.t, -1)))
-        return Status(self.n_finished, int(self.replicate[lane]), int(self.t[lane]))
+        return Status(
+            self.n_finished,
+            int(self.replicate[lane]),
+            int(self.t[lane]),
+            *outside,
+            bool(self.outside[lane]),
+        )
 
     def result(self, seed: SeedSequence, requested: IntArray, start: float) -> Replicates:
         # The seconds since start include this join, a large part of a run with many atoms.
@@ -507,17 +568,18 @@ class _Batch:
         # The averaged atoms X_t, t in S, of the lanes that moved, and the bias-correction
         # atoms and distances of the unmet pairs (spec R-EST-6, section 3.6). Kinds without
         # rows are skipped: at one lane most iterations lack one, and its calls add up.
-        if not self.store:
+        k, m, lag, thin, _, store = self.settings
+        if not store:
             return
         t = self.t[stepped]
-        averaged = stepped[(t >= self.k) & (t <= self.m) & ((t - self.k) % self.thin == 0)]
+        averaged = stepped[(t >= k) & (t <= m) & ((t - k) % thin == 0)]
         if len(averaged):
             self.atoms.add(
                 self.replicate[averaged], self.x.x[averaged], np.full(len(averaged), self.weight)
             )
         if not len(unmet):
             return
-        coefficient = correction_coefficients(self.t[unmet], self.k, self.m, self.lag, self.thin)
+        coefficient = correction_coefficients(self.t[unmet], k, m, lag, thin)
         positive = coefficient > 0
         if positive.any():
             corrected = unmet[positive]

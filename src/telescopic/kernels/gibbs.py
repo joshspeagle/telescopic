@@ -72,6 +72,20 @@ class Gibbs(Kernel):
     A conditional that draws a point that is not finite, or not of its block's size,
     raises ``ValueError``. With ``log_prob=None`` the target has no log-density, and states
     carry 0.
+
+    Examples
+    --------
+    The pump-failure model has full conditionals, so a Gibbs kernel samples it without a
+    log-density, which is never evaluated:
+
+    >>> from telescopic import examples, kernels, sample
+    >>> example = examples.pumps()
+    >>> kernel = kernels.Gibbs(example.conditional, example.blocks)
+    >>> result = sample(
+    ...     None, example.initial, kernel=kernel, n_replicates=50, rng=0
+    ... )
+    >>> result.n_log_prob, result.mean().value.shape
+    (0, (11,))
     """
 
     def __init__(

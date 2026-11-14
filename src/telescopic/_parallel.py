@@ -49,6 +49,12 @@ class Interrupt:
     def catching(self) -> AbstractContextManager[None]:
         return _sigint(self._handle)
 
+    @property
+    def listening(self) -> bool:
+        # Whether its handler has Ctrl-C now: _sigint keeps a host's, an ignored one's
+        # and, outside the main thread, every handler.
+        return signal.getsignal(signal.SIGINT) == self._handle
+
     def _handle(self, signum: int, frame: Any) -> None:
         if self.stopping:
             raise KeyboardInterrupt
@@ -204,6 +210,9 @@ def _gather(
     finally:
         for waiting in futures:
             waiting.cancel()
+        # A raised error's traceback keeps this frame, and its future keeps the error:
+        # dropping the futures lets the workers go with the error, not at a later collection.
+        del futures, future, waiting
     return parts
 
 

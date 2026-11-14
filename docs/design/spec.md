@@ -185,7 +185,7 @@ Let $a_r = \hat\pi_r(h) \in \mathbb R^p$ for replicates $r = 1, \dots, R$. Write
 - **Expectations:** $\bar a$, with standard error $\sqrt{\mathrm{diag}(S_a)/R}$ and Monte Carlo covariance $S_a / R$.
 - **Products of expectations:** $\bar a \bar a^\top - S_a/R$ is unbiased for $\pi(h)\pi(h)^\top$ when $R \ge 2$.
 - **Covariance:** $\widehat{\mathrm{Cov}}_\pi(h) = R^{-1}\sum_r \hat\pi_r(hh^\top) - \bar a\bar a^\top + S_a/R$ is unbiased. The plug-in $\sum\omega hh^\top - (\sum \omega h)(\sum\omega h)^\top$ is biased by $-S_a/R$ and is not used. Standard deviations are $\sqrt{\max(0, \widehat{\mathrm{Var}})}$, which is consistent, not unbiased.
-- **Histograms:** each replicate's signed mass in each half-open bin $[a, b)$, averaged over replicates. This is unbiased for bins fixed before the run, with standard errors from the replicates; the default range, from the atoms, biases every bin, the two outer ones by a term of order $1/R$ (M11 audit). Bins can be negative.
+- **Histograms:** each replicate's signed mass in each bin, averaged over replicates. Bins are half-open, $[a, b)$, except the last along each coordinate, which is closed, as in `numpy.histogram`, so that an atom on the upper edge of the range is counted (DECISIONS #98). This is unbiased for bins fixed before the run, with standard errors from the replicates; the default range, from the atoms, biases every bin, the two outer ones by a term of order $1/R$ (M11 audit). Bins can be negative.
 - **Quantiles:**
   1. Pool all replicates' atoms with weights $\omega/R$, and merge atoms with equal coordinates by summing their weights.
   2. Sort along the coordinate and take the cumulative sum of the weights.
@@ -216,7 +216,7 @@ For any $L$ and $t \ge 0$ (Biswas, Jacob & Vanetti 2019, Thm. 2.5):
 $$d_{TV}(\pi_t, \pi) \le \mathbb E\big[\max(0, \lceil (\tau - L - t)/L \rceil)\big] = \sum_{j \ge 1} \mathbb P(\tau > t + jL).$$
 
 - **Estimate:** the bound is estimated by the replicate average, reported as $\min(1, \cdot)$. The result also reports its leading term at $k$, the fraction of pairs with $\tau - L > k$, with a one-sided 95% Clopper–Pearson upper bound, which stays informative when the fraction is 0.
-- **Censored pairs** count as meeting at the cap, so with censoring the estimate is a lower bound. It is reported with the number censored.
+- **Censored pairs** are known to meet after the cap: the engine compares the chains at the cap before it censors a pair, so $\tau \ge$ cap + 1, and the TV bound and its value at $k$ count a censored pair as meeting at cap + 1 (DECISIONS #99). With censoring the estimate is therefore a lower bound. It is reported with the number censored. The cost takes the time a pair stopped, the cap; the slow-pair check (§6.3) counts a censored pair as unmet at its cap, so a cap equal to the threshold flags it.
 - **Use for $k$:** with $L = k$ the bound at $t = k$ is close to $\mathbb P(\tau - L > k)$, which the main run estimates and reports. It exceeds the pilot's $1 - \beta$, because the main run's $\tau - L$ is longer than the pilot's $\tau - 1$: the coupled phase starts from a near-stationary $X_L$. With $\beta = 0.99$ in E01's setting it is 0.019 at $d = 10$ and 0.029 at $d = 30$ (design review D-R5).
 - **1-Wasserstein (should):**
 
@@ -261,7 +261,7 @@ Rules:
 - $X_0$ and $Y_0$ are independent draws from the replicate's own stream.
 - `ndim` is inferred from a draw.
 - A draw with the wrong shape or non-finite entries raises `ValueError`.
-- A draw with $\log\pi = -\infty$ emits an `InputWarning`; the chains leave it as §4.1 describes.
+- A draw with $\log\pi = -\infty$ emits an `InputWarning`, once per run: in this process as soon as the engine's progress report counts one, on a pool when the run ends, as for slow pairs (§6.3). The chains leave it as §4.1 describes; a start many proposal scales outside the support may never leave, so the slow-pair warning of a pair that started there says so, the censoring warning advises a cap rather than none when a censored pair started there, and a pilot that cannot choose $k$ names such starts (DECISIONS #130).
 
 The documentation recommends a $\pi_0$ that is overdispersed relative to $\pi$ and covers all its modes (JOA20 §2.3; AJ24), but not by orders of magnitude. A replicate whose chain $X$ is still far away at $k$ is averaged without correction, and only rarer replicates whose chain $Y$ is late balance it, so the estimates of second moments become heavy-tailed. On the README's line fit, Gaussians 2 and 10 times wider than the posterior never raised the variance warning in 20 runs; 100 times wider, 6 runs raised it, and from $\mathcal N(0, 10I)$, 70 posterior standard deviations away, 11 runs did, with standard deviations from 4.2 times the truth to a negative variance (`notes/experiments/m9_initial_width.out`). For a unimodal posterior, an optimiser's fit with its inverse Hessian scaled by 100 is a practical start (DECISIONS #35).
 
@@ -353,7 +353,7 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 - **Covariance:** pooled over the second halves of the chains, plus $10^{-10}$ times each coordinate's variance on the diagonal, or $10^{-10}$ for a coordinate of variance 0. The pilot's own factorisations add $10^{-12}$ times each variance (DECISIONS #47).
 - **Scale:** $2.38/\sqrt d$, `RandomWalk`'s default (DECISIONS #7).
 - **Divergence:** where the target is flat in some direction, the scales can grow until the running sum of the covariance overflows, as it also does for a proper target whose scales are near the float64 limit (about $10^{153}$); the pilot then raises `ValueError` saying that the tuning chains diverged and the target may be improper or its scales near that limit (DECISIONS #112).
-- **Report:** the pilot acceptance rates and $\hat R$ per coordinate. A `ConvergenceWarning` when the chains disagree: $\hat R > \sqrt 2$ in some coordinate, where the chain means spread more widely than the chains themselves, a sign of several modes or of chains that have not converged (DECISIONS #6, #118), or $\hat R$ is NaN in some coordinate, where all four chains sat at one value, so the pilot never moved in it. The message gives the largest finite $\hat R$ with the advice about modes when it exceeds $\sqrt 2$, and names the NaN coordinates with advice about the target's scale and the kernel's parameters, joining the two when both occur (DECISIONS #122). Chains that agree do not show that the target has one mode: on $0.7\,\mathcal N(-6e_1, I) + 0.3\,\mathcal N(6e_1, I)$ from $\mathcal N(0, 100I)$, the four chains, which share one covariance, ended in one mode in 15 of 20 runs at d = 10 and 18 of 20 at d = 32, settling on one side during their descent, before all four reached a mode (`notes/experiments/i102_q1_split.out`).
+- **Report:** the pilot acceptance rates and $\hat R$ per coordinate. A `ConvergenceWarning` when the chains disagree: $\hat R > \sqrt 2$ in some coordinate, where the chain means spread more widely than the chains themselves, a sign of several modes or of chains that have not converged (DECISIONS #6, #118), or $\hat R$ is NaN in some coordinate, where all four chains sat at one value, so the pilot never moved in it. The message gives the largest finite $\hat R$ with the advice about modes when it exceeds $\sqrt 2$, worded conditionally, "unless the initial distribution already covers every mode, use one that does", since an initial distribution that covers them can still give disagreeing chains (DECISIONS #128), and names the NaN coordinates with advice about the target's scale and the kernel's parameters, joining the two when both occur (DECISIONS #122). Chains that agree do not show that the target has one mode: on $0.7\,\mathcal N(-6e_1, I) + 0.3\,\mathcal N(6e_1, I)$ from $\mathcal N(0, 100I)$, the four chains, which share one covariance, ended in one mode in 15 of 20 runs at d = 10 and 18 of 20 at d = 32, settling on one side during their descent, before all four reached a mode (`notes/experiments/i102_q1_split.out`).
 
 ### 5.4 MALA (R-KER-MALA)
 
@@ -454,7 +454,7 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
   - it is reported by a `ConvergenceWarning` stating that the estimates are biased.
 - Censored pairs are never dropped silently, and never averaged as if they had met.
 - **Slow-pair warning:** when a pair passes $t = \max(10^4, 10\max(L, m))$, the sampler emits one `ConvergenceWarning` naming the replicate: in this process from the engine's progress reports, as it happens; on a pool, whose workers' reports do not reach the parent, from the meeting times when the run ends. With the recipe of R-TUNE-2 and $m \ge 1000$ this is 100 times the pilot's $\hat q_\beta$; it needs no pilot, and in the meeting-time pilot ($L = 1$, $m = 0$) it is $10^4$.
-- **Meeting-time pilot:** it is capped at the `max_iter` of `CoupledSampler.meeting_times`, $10^5$ by default and never `None`, which raises `TypeError` (DECISIONS #108), the cap that `run` and `sample` use (DECISIONS #38). Capped pairs are censored and sort above every finite meeting time; if $\hat q_\beta$ falls on a censored pair, the pilot raises `ValueError` with advice (a wider $\pi_0$, a better kernel, or explicit `k`, `lag` and `m`). So `sample()` cannot run forever on a target where the coupling never meets (D-23).
+- **Meeting-time pilot:** it is capped at the `max_iter` of `CoupledSampler.meeting_times`, $10^5$ by default and never `None`, which raises `TypeError` (DECISIONS #108), the cap that `run` and `sample` use (DECISIONS #38). Capped pairs are censored and sort above every finite meeting time; if $\hat q_\beta$ falls on a censored pair, the pilot raises `ValueError` with advice (a wider $\pi_0$, a better kernel, or explicit `k`, `lag` and `m`; when pilot pairs started at zero density, a $\pi_0$ inside the support instead of a wider one). So `sample()` cannot run forever on a target where the coupling never meets (D-23).
 
 ### 6.4 Parallel execution (R-EXEC-5)
 
@@ -481,9 +481,9 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 
 ### 6.6 Memory (R-EXEC-7)
 
-- **Atoms:** storage needs about $R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})\,(8d + 16)$ bytes for positions, weights and replicate indices, plus 24 bytes per stored distance. The engine stores each iteration's rows as small arrays and merges every 256 of them into one block, so at $d = 10$ a row holds 94 to 103 bytes against 92 of payload at 1 to 256 lanes (M3 review).
+- **Atoms:** storage needs $R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})\,(8d + 16)$ bytes for positions, weights and replicate indices, plus 24 bytes per stored distance, $\tau - L$ of them per replicate; `engine.stored_bytes` computes it, next to the engine's columns, exactly for `thin` $= 1$ and $m - k + 1 \ge L$, and as an upper bound otherwise, where some terms of the correction have no atoms. The engine stores each iteration's rows as small arrays and merges every 256 of them into one block, so at $d = 10$ a row holds 94 to 103 bytes against 92 of payload at 1 to 256 lanes (M3 review).
 - **Join:** at the end of a run, sorting the atoms by replicate holds about three times their size for a moment (3.1 times at $d = 10$).
-- **Estimate first:** the sampler estimates this before each run and warns above 1 GB, suggesting `thin`.
+- **Estimate first:** the sampler estimates the stored size before each run, with the pilot's $\tau - 1$ standing in for the run's $\tau - L$, and warns when three times it, the peak of the run and its first estimates, exceeds 1 GB, stating both figures, with twice the peak as its upper end for $d \le 2$, and suggesting `thin`. Measured with `RandomWalk(I)` at $k = 200$, $m = 2000$, $R = 200$, the run peaks at 2.0 to 2.7 times the stored size and `cov()` with `summary()` at 2.9 to 3.0 times from $d = 2$ to 50, and at 3.8 times at $d = 1$, where the result's own 24 bytes per atom weigh most. Three holds for a random walk's rejection rate at `thin` $= 1$ from $d = 2$ on, not beyond it: `Result.quantile` sorts the atoms that are not consecutive repeats, so with `thin` above 1 or a kernel that rarely rejects the estimates peak at up to about six times the stored size in one or two dimensions, and at about three at $d = 10$ (`notes/experiments/i73_memory_peak.out`, DECISIONS #131). These peaks are of NumPy's allocations as `tracemalloc` traces them, not of resident memory: issue #73 measured the resident memory of the same run at $d = 50$ at 505 MB against 164 MB stored after `cov()`, 3.1 times, a measurement of the issue's own with no script in the repository.
 - **Streaming:** a streaming mode with a fixed `h` and constant memory is on the roadmap.
 
 ---
@@ -506,9 +506,9 @@ Methods:
 - **Estimates:**
   - `estimate(h, level=0.95)` returns an `Estimate`. `h` maps `(n, d)` to `(n,)` or `(n, p)`; any other output shape raises `ValueError`;
   - `mean()`, `cov()`, `var()`, `std()` follow §3.4.
-- **Quantiles and histograms:** `quantile(q)`, `interval(mass=0.68)` (the central interval holding that mass of $\pi$; `level` is reserved for confidence levels) and `histogram(dims, bins=20, range=None)`, of one coordinate or a joint histogram of several, with standard errors (DECISIONS #30).
+- **Quantiles and histograms:** `quantile(q, h=None)`, `credible_interval(mass=0.68, h=None)` (the central credible interval holding that mass of $\pi$, an array of shape `(2, d)`; with `h`, as in `estimate`, the quantiles are those of `h` at the atoms, of shape `q.shape` or `q.shape + (p,)` from `quantile` and `(2,)` or `(2, p)` from `credible_interval`, DECISIONS #101; `level` is reserved for confidence levels, and the name keeps it apart from the confidence interval of an `Estimate`, DECISIONS #100) and `histogram(dims, bins=20, range=None)`, of one coordinate or a joint histogram of several, with standard errors (DECISIONS #30).
 - **Diagnostics:** `tv_bound(t=None)`, `w1_bound(t=None)` (should), and `diagnostics()` (a dict).
-- **Reporting:** `summary()` returns a `Summary` table (DECISIONS #40). `check(strict=False)` emits the warnings of §7.4, or raises if strict.
+- **Reporting:** `summary()` returns a `Summary` table (DECISIONS #40). The repr is one line of stored fields, `Result(R=100, d=2, k=63, m=630, lag=63, censored=0, interrupted=False)`, and computes no diagnostics (DECISIONS #102). `check(strict=False)` emits the warnings of §7.4, or raises if strict.
 - **Plots:** `plot_meeting_times(axes=None)`, `plot_tv_bound(ax=None)`, `plot_marginals(dims=None, bins=20, axes=None)` and `plot_corner(dims=None, bins=20)` (signed 2-D histograms); the first three draw on given axes (DECISIONS #30).
 - **Persistence and merging:**
   - `save(path)` and `Result.load(path)` use a versioned `.npz` schema, with no pickle: arrays, and the settings, names, seed state and descriptions as JSON (DECISIONS #26, #29). The engine's paths are not saved;
@@ -525,7 +525,7 @@ The constructor checks that `atoms` and `weights` have an integer or float dtype
 
 Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 
-**`Estimate`** is frozen. It holds `value`, `standard_error`, `interval` (low, high), `level` and `replicates` (the per-replicate values), and prints as value ± standard error.
+**`Estimate`** is frozen. It holds `value`, `standard_error`, `interval` (the confidence interval, an array of shape `(2, ...)`, lower ends first, DECISIONS #100), `level` and `replicates` (the per-replicate values), and prints as value ± standard error.
 
 ### 7.3 Summary (R-OUT-3)
 
@@ -613,8 +613,8 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
 - **Randomness:** every function that draws random numbers takes `rng` (SPEC 7). There is no global state.
 - **Shapes:** batch first. States are `(n, d)`; test functions map `(n, d)` to `(n,)` or `(n, p)`; per-replicate values are `(R, ...)`.
 - **Errors:** a scalar number argument of the wrong type raises `TypeError`, and one out of bounds `ValueError`, with messages that name it and say what was expected (DECISIONS #50). An array argument that is not real numbers, such as a string (a numeric one included), `None`, a boolean, a complex number or a ragged sequence, raises `TypeError` naming the argument and the expected form, with NumPy's error chained when NumPy raised one; real numbers held as objects, such as `Fraction`s, `Decimal`s or an object column of pandas, convert to float64 (DECISIONS #103). The `atoms` and `weights` of a `SignedMeasure` whose dtype is not integer or float, object arrays included, raise `TypeError` naming the field (DECISIONS #107). A flag that is not `True` or `False`, such as `progress="no"`, raises `TypeError` naming it (DECISIONS #104), and so does an `args` that is not a tuple or a list (DECISIONS #105). An argument that must be a `Target` or a `Kernel`, in `engine.run`, `Kernel.tune` and `check_target`, `adaptive_metropolis`, `check_coupling` and the components of a `Mixture`, raises `TypeError` naming it when it is something else, such as a bare log-density or a kernel class (DECISIONS #106). Questionable inputs emit `InputWarning`; reliability problems emit `ConvergenceWarning`.
-- **Progress:** `progress=True` draws tqdm's text bar when tqdm is installed, in notebooks too, and falls back to periodic lines on stderr (DECISIONS #39).
-- **Types and documentation:** public signatures are typed, with NumPy-style docstrings.
+- **Progress:** `progress=True` draws tqdm's text bar when tqdm is installed, in notebooks too, and falls back to periodic lines on stderr (DECISIONS #39). It covers tuning, in steps of the adaptive pilot chains and of dual averaging, the meeting-time pilot and each run; the sampler turns it on for `adaptive_metropolis` and `dual_averaging` through a context variable, so `Kernel.tune` keeps its signature (DECISIONS #132).
+- **Types and documentation:** public signatures are typed, with NumPy-style docstrings. The Examples sections of the docstrings run as doctests in the fast tests (DECISIONS #152). The strict documentation build fails on a parameter that a docstring leaves out of its Parameters section or lists there without a description (DECISIONS #141).
 - **Vocabulary:** the documentation says "replicates" and "pairs", never "walkers".
 
 ### 8.3 Minimal example (the README must show this)
@@ -684,7 +684,7 @@ These targets are measured by `benchmarks/` and are not gating.
 ## 11. Engineering requirements (R-ENG)
 
 - **Packaging:** `pyproject.toml` (hatchling), `src/` layout. The distribution and import name is `telescopic`, which was free on PyPI on 2026-10-23.
-- **Licence:** MIT (QUESTIONS).
+- **Licence:** MIT (DECISIONS #150).
 - **Python:** ≥ 3.11. CI covers 3.11 to the newest release.
 - **Dependencies:**
   - core: `numpy>=1.26`, `scipy>=1.12` (for `scipy.optimize.isotonic_regression`) and `threadpoolctl`;
