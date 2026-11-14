@@ -260,20 +260,16 @@ def _common(p: list[Any], q: list[Any], draws: Draws, size: int) -> tuple[list[A
     for row, value in zip(rows.tolist(), u, strict=True):
         # Each ppf gives a scalar, or an array for array parameters.
         drawn_x[row], drawn_y[row] = p[row].ppf(value), q[row].ppf(value)
-    normal = ~quantile & np.array(
-        [
-            isinstance(a, _MULTIVARIATE_NORMAL) and isinstance(b, _MULTIVARIATE_NORMAL)
-            for a, b in zip(p, q, strict=True)
-        ],
+    # SciPy's class itself, which has no ppf: a subclass may draw with an rvs of its own.
+    normal = np.array(
+        [type(a) is type(b) is _MULTIVARIATE_NORMAL for a, b in zip(p, q, strict=True)],
         dtype=bool,
     )
     rows = normal.nonzero()[0]
-    if len(rows):  # replayed draws may hold no normals
-        for row, z in zip(rows.tolist(), draws.subset(rows).normal(size), strict=True):
-            drawn_x[row], drawn_y[row] = (
-                c.mean + square_root("a conditional's cov", c.cov, size) @ z
-                for c in (p[row], q[row])
-            )
+    for row, z in zip(rows.tolist(), draws.subset(rows).normal(size), strict=True):
+        drawn_x[row], drawn_y[row] = (
+            c.mean + square_root("a conditional's cov", c.cov, size) @ z for c in (p[row], q[row])
+        )
     for row in (~quantile & ~normal).nonzero()[0].tolist():
         # A child of the row's generator, set back to its first state before the second
         # chain draws.

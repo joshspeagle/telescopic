@@ -302,10 +302,14 @@ All notable changes to this project are documented here. The format follows
   `mean` and `cov`, which gave a conditional that is not normal the wrong law in the
   coupled step only, and it refused conditionals without a `mean` and a `cov` that are
   values, such as SciPy's frozen `dirichlet`, whose `mean` and `cov` are methods,
-  `wishart`, which has no `cov`, and `multivariate_t`, which has neither. SciPy's
-  frozen `multivariate_normal` keeps common normals through a square root of its
-  covariance. Blocks of one coordinate with `ppf`, SciPy's multivariate normal, and the
-  maximal coupling give the same numbers as before.
+  `wishart`, which has no `cov`, and `multivariate_t`, which has neither. A pair whose
+  conditionals are both SciPy's frozen `multivariate_normal`, of that class and not of a
+  subclass, keeps common normals through a square root of each covariance. Blocks of one
+  coordinate with `ppf`, SciPy's multivariate normal, and the maximal coupling give the
+  same numbers as before.
 - `Draws.child(row)` returns a new child of a row's generator, which does not move the
   row's stream: two draws from it can read the same numbers, as the Gibbs kernel's common
   random numbers do.
+- A request of `Draws` for no rows returns an empty array. It raised `ValueError` when it
+  asked for more numbers per row than the buffer held, as of replayed draws without
+  normals.

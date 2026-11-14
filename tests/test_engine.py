@@ -93,14 +93,30 @@ def test_a_replicates_output_does_not_depend_on_the_lanes(coupling):
         assert_same_replicates(other, runs[0])
 
 
-def switching(point, block):
-    # A normal conditional with ppf where the other coordinate is positive, and without
-    # it elsewhere.
+class OwnNormal:
+    """A normal law of one coordinate written by a user, without ppf."""
+
+    def __init__(self, mean):
+        self.mean = mean
+
+    def rvs(self, *, random_state):
+        return self.mean + random_state.standard_normal()
+
+
+def ppf_or_scipy_normal(point, block):
+    # A normal conditional with ppf where the other coordinate is positive, and SciPy's
+    # multivariate normal elsewhere.
     mean = 0.5 * point[1 - block]
     return stats.norm(mean, 1.0) if mean > 0 else stats.multivariate_normal(mean)
 
 
-def test_a_replicates_output_does_not_depend_on_the_lanes_under_crn_gibbs_couplings():
+def scipy_normal_or_own(point, block):
+    mean = 0.5 * point[1 - block]
+    return stats.multivariate_normal(mean) if mean > 0 else OwnNormal(mean)
+
+
+@pytest.mark.parametrize("switching", [ppf_or_scipy_normal, scipy_normal_or_own])
+def test_a_replicates_output_does_not_depend_on_the_lanes_under_crn_gibbs_couplings(switching):
     # Spec R-EXEC-2: a row's coupling of a block followed the other rows' conditionals.
     kernel = Gibbs(switching, [[0], [1]], coupling="crn")
     runs = [simulate(kernel, n=14, lanes=lanes, max_iter=400) for lanes in (1, 7)]

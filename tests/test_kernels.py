@@ -926,21 +926,29 @@ def test_crn_gibbs_couplings_push_one_uniform_through_both_quantile_functions():
         np.testing.assert_allclose(new.x[0], [first, stats.norm(RHO * first, sd).ppf(u[1])])
 
 
-def test_crn_gibbs_couplings_draw_blocks_without_ppf_from_generators_in_the_same_state():
+class Folded(type(stats.multivariate_normal())):
+    """A subclass of SciPy's frozen multivariate normal whose rvs folds each draw onto
+    the side of its mean where the coordinates are larger: a law that is not normal."""
+
+    def rvs(self, size=1, random_state=None):
+        return self.mean + np.abs(super().rvs(size, random_state) - self.mean)
+
+
+@pytest.mark.parametrize("law", [stats.multivariate_t, Folded])
+def test_crn_gibbs_couplings_draw_blocks_without_ppf_from_generators_in_the_same_state(law):
     # Each chain draws from its own conditional, with a generator built from a child of
     # the row's generator and set to the same state for both; the row's generator itself
-    # does not move.
+    # does not move. A subclass of SciPy's multivariate normal draws with its own rvs.
     def given(point, block):
         if block == 0:
-            return stats.multivariate_t([0.5 * point[2], 0.0], (1 + point[2] ** 2) * np.eye(2))
+            return law([0.5 * point[2], 0.0], (1 + point[2] ** 2) * np.eye(2))
         return Normal(0.2 * (point[0] + point[1]), 1.0)
 
     kernel = Gibbs(given, [[0, 1], [2]], coupling="crn")
     x, y, u = [0.1, 0.2, 1.0], [0.1, 0.2, -2.0], 0.6
     row = np.random.default_rng(7)
-    new_x, new_y = kernel.coupled_step(
-        Target(None), gibbs_state(x), gibbs_state(y), fixed_draws(uniforms=[[u]], generators=[row])
-    )
+    draws = fixed_draws([[0.7, -1.2]], [[u]], [row])
+    new_x, new_y = kernel.coupled_step(Target(None), gibbs_state(x), gibbs_state(y), draws)
     for start, new in ((x, new_x), (y, new_y)):
         child = np.random.default_rng(7).bit_generator.spawn(1)[0]
         first = given(start, 0).rvs(random_state=np.random.Generator(child))
@@ -1023,6 +1031,28 @@ def test_crn_gibbs_couplings_draw_a_row_alike_alone_and_beside_rows_of_another_k
 
     for alone, beside in zip(step(1), step(2), strict=True):
         np.testing.assert_array_equal(alone.x[0], beside.x[0])
+
+
+def test_crn_gibbs_couplings_draw_a_scipy_normal_row_alike_alone_and_beside_another_kind():
+    # Row 0's conditionals are SciPy's multivariate normal, and row 1's a class of the
+    # user's own: each row draws the same numbers alone as beside the other.
+    def given(point, block):
+        other = point[1 - block]
+        return stats.multivariate_normal(0.5 * other) if other > 0 else Box(0.5 * other, 1)
+
+    kernel = Gibbs(given, [[0], [1]], coupling="crn")
+    x, y = np.array([[0.0, 1.0], [0.0, -1.0]]), np.array([[0.0, 2.0], [0.0, -2.0]])
+
+    def step(rows):
+        draws = fixed_draws(
+            normals=np.array([[0.7, 0.4], [0.6, 0.1]])[rows],
+            generators=[np.random.default_rng(seed) for seed in np.array([5, 6])[rows]],
+        )
+        return kernel.coupled_step(Target(None), gibbs_state(x[rows]), gibbs_state(y[rows]), draws)
+
+    for row in (0, 1):
+        for alone, beside in zip(step([row]), step([0, 1]), strict=True):
+            np.testing.assert_array_equal(alone.x[0], beside.x[row])
 
 
 def test_crn_gibbs_couplings_draw_a_block_from_its_own_conditional_whatever_its_type():
