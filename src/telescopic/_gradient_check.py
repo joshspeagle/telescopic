@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import functools
 from collections.abc import Callable, Mapping
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 from numpy.random import Generator, SeedSequence
@@ -28,20 +28,32 @@ SIGNS = np.array([-1.0, 1.0])
 
 
 class _Recorder:
-    # The user's function, recording the narrowest float dtype it returned since reset.
-    def __init__(self, function: Callable[..., Any]) -> None:
+    # The user's function, recording the narrowest float dtype of each of its outputs since
+    # reset: of its one output, or of the two of a log_prob_and_grad (parts=2).
+    def __init__(self, function: Callable[..., Any], parts: int = 1) -> None:
         functools.update_wrapper(self, function, updated=())  # its name, for errors
-        self.function, self.itemsize = function, 8
+        self.function, self.itemsizes = function, [8] * parts
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         out = self.function(*args, **kwargs)
-        dtype = np.asarray(out).dtype
-        if dtype.kind in "fc":  # a complex output counts as its real part, as the Target's
-            self.itemsize = min(self.itemsize, np.finfo(dtype).dtype.itemsize)
+        outputs = (out,) if len(self.itemsizes) == 1 else out
+        # A log_prob_and_grad that returns no pair records nothing: the Target raises.
+        if isinstance(outputs, tuple | list) and len(outputs) == len(self.itemsizes):
+            for part, output in enumerate(outputs):
+                dtype = np.asarray(output).dtype
+                if dtype.kind in "fc":  # a complex output counts as its real part, as the Target's
+                    size = np.finfo(dtype).dtype.itemsize
+                    self.itemsizes[part] = min(self.itemsizes[part], size)
         return out
 
     def reset(self) -> None:
-        self.itemsize = 8
+        self.itemsizes = [8] * len(self.itemsizes)
+
+
+def _itemsizes(recorders: tuple[_Recorder, ...]) -> tuple[int, int]:
+    # The narrowest itemsizes of the log-density and of the gradient since the last reset.
+    f, g = (size for recorder in recorders for size in recorder.itemsizes)
+    return f, g
 
 
 def _signs(generator: Generator, d: int) -> FloatArray:
@@ -89,15 +101,16 @@ def _direction(
 
 def _sweep(
     target: Target,
-    recorders: tuple[_Recorder, _Recorder],
+    recorders: tuple[_Recorder, ...],
+    values_at: Callable[[FloatArray], FloatArray],
     initial: Distribution,
     seed: SeedSequence,
     itemsizes: tuple[int, int],
 ) -> tuple[list[tuple[float, ...]], int, int, tuple[int, int], tuple[int, int], float]:
-    # One pass over the lines with the dtypes of log_prob and grad assumed at most
-    # itemsizes; returns for each compared line (draw from 1, G, gap, T, F4, L, w1, R_g),
-    # then the unusable lines, the skipped draws, the dtypes used and seen, and h.
-    lp, gr = recorders
+    # One pass over the lines with the dtypes of the log-density and of the gradient
+    # assumed at most itemsizes, and values_at giving the log-densities at the stencil;
+    # returns for each compared line (draw from 1, G, gap, T, F4, L, w1, R_g), then the
+    # unusable lines, the skipped draws, the dtypes used and seen, and h.
     itemsize_f, itemsize_g = itemsizes
     d, spread, fallback_signs, probe_signs = _streams(initial, seed)
     generator = replicate_generator(seed, GRADIENT_CHECK, 0)
@@ -112,13 +125,13 @@ def _sweep(
         u = _direction(x, a, b, spread, _signs(fallback_signs, d))
         probe_sign = _signs(probe_signs, d)
 
-        lp.reset()
-        gr.reset()
+        for recorder in recorders:
+            recorder.reset()
         zeroed = target.n_grad_zeroed
         f0, g = target.log_prob_and_grad(x[None])
-        seen_f = min(seen_f, lp.itemsize)
+        seen_f = min(seen_f, _itemsizes(recorders)[0])
         if p == 0:
-            itemsize_f = min(itemsize_f, lp.itemsize)
+            itemsize_f = min(itemsize_f, seen_f)
         dtype_f = np.dtype(f"f{itemsize_f}")
         if itemsize_f < 8:
             # Evaluate only at points that log_prob's dtype represents, so that the
@@ -127,9 +140,9 @@ def _sweep(
             zeroed = target.n_grad_zeroed
             f0, g = target.log_prob_and_grad(x[None])
         f0, g, zeroed = f0[0], g[0], target.n_grad_zeroed > zeroed
-        seen_g = min(seen_g, gr.itemsize)
+        seen_g = min(seen_g, _itemsizes(recorders)[1])
         if p == 0:
-            itemsize_g = min(itemsize_g, gr.itemsize)
+            itemsize_g = min(itemsize_g, seen_g)
             eps_g = float(np.finfo(np.dtype(f"f{itemsize_g}")).eps)
             # The cube root taken in log_prob's dtype, as design (N) registered it.
             h = float(np.finfo(dtype_f).eps ** (1 / 3))
@@ -151,7 +164,7 @@ def _sweep(
             row += x
         if itemsize_f < 8:
             stencil[...] = stencil.astype(dtype_f)
-        values = target.log_prob(stencil)
+        values = values_at(stencil)
         # The displacements as rounded, m_t = fl(x + t v) - x; then m_1 - m_-1 in row 0
         # and m_2 - m_-2 in row 2, and their widths along v, about 2 and 4.
         stencil -= x
@@ -186,21 +199,40 @@ def _sweep(
 # Spec section 4.4.
 def check_gradient(
     log_prob: Callable[..., Any],
-    grad: Callable[..., Any],
+    grad: Callable[..., Any] | None,
     initial: Distribution,
     seed: SeedSequence,
     *,
     args: tuple[Any, ...],
     kwargs: Mapping[str, Any] | None,
     vectorize: bool,
+    log_prob_and_grad: Callable[..., Any] | None = None,
 ) -> GradientCheck:
     # Design (N) on the user's functions, from namespace GRADIENT_CHECK of seed, with a
     # Target of its own so that the sampler's counters are untouched. That Target counts
     # as having warned of a narrow dtype, which the sampler's own Target warns of in the
     # run, so the check filters no warning. Warns when a line disagrees, and when no line
-    # could be compared.
-    recorders = _Recorder(log_prob), _Recorder(grad)
-    target = Target(*recorders, args=args, kwargs=kwargs, vectorize=vectorize)
+    # could be compared. A log_prob_and_grad, which the chains then evaluate wherever they
+    # evaluate a gradient, is compared with differences of its own values, and log_prob
+    # is not called.
+    if grad is not None:
+        recorders: tuple[_Recorder, ...] = (_Recorder(log_prob), _Recorder(grad))
+        target = Target(*recorders, args=args, kwargs=kwargs, vectorize=vectorize)
+        values_at, names = target.log_prob, ("log_prob and grad", "grad", "log_prob")
+    else:
+        recorders = (_Recorder(cast(Callable[..., Any], log_prob_and_grad), parts=2),)
+        target = Target(
+            log_prob, log_prob_and_grad=recorders[0], args=args, kwargs=kwargs, vectorize=vectorize
+        )
+
+        def values_at(x: FloatArray) -> FloatArray:
+            return target.log_prob_and_grad(x)[0]
+
+        names = (
+            "log_prob_and_grad",
+            "the gradient of log_prob_and_grad",
+            "the log-density of log_prob_and_grad",
+        )
     target._warned_precision = True
     assumed = (8, 8)
     try:
@@ -208,7 +240,7 @@ def check_gradient(
             # A function whose dtype narrows after the first draw restarts the sweep with
             # the narrowest dtype; for any other function this runs once.
             rows, unusable, skipped, used, seen, h = _sweep(
-                target, recorders, initial, seed, assumed
+                target, recorders, values_at, initial, seed, assumed
             )
             narrowest = (min(seen[0], used[0]), min(seen[1], used[1]))
             if narrowest == used:
@@ -216,7 +248,7 @@ def check_gradient(
             assumed = narrowest
     except Exception as error:
         error.add_note(
-            "raised in the gradient check, which evaluates log_prob and grad at draws of the "
+            f"raised in the gradient check, which evaluates {names[0]} at draws of the "
             "initial distribution when the sampler is built"
         )
         raise
@@ -243,23 +275,25 @@ def check_gradient(
         n_skipped=skipped,
         n_unusable=unusable,
     )
-    message = _message(record)
+    message = _message(record, *names[1:])
     if message:
         warn(message, InputWarning)
     return record
 
 
-def _message(check: GradientCheck) -> str | None:
+def _message(check: GradientCheck, grad: str, log_prob: str) -> str | None:
+    # grad and log_prob name the gradient and the log-density that the check compared.
     if not len(check.gap):
         return (
-            f"the gradient check compared no line, so grad is unchecked: of its {POINTS} "
+            f"the gradient check compared no line, so {grad} is unchecked: of its {POINTS} "
             f"draws of the initial distribution, {check.n_skipped} had zero density or a "
             f"gradient that is not finite, and the lines from the other {check.n_unusable} "
             "reached zero density, as from a start on a boundary of the support, or took "
-            "steps that round away in the dtype of log_prob, as from a float32 log_prob and a "
-            "start whose spread is tiny beside its distance from 0; draw the initial "
-            "distribution where the density is positive and grad is finite, and wide enough "
-            "for the precision of log_prob, or return float64 values from log_prob"
+            f"steps that round away in the dtype of {log_prob}, as from float32 values of "
+            f"{log_prob} and a start whose spread is tiny beside its distance from 0; draw "
+            f"the initial distribution where the density is positive and {grad} is finite, "
+            f"and wide enough for the precision of {log_prob}, or return float64 values "
+            f"from {log_prob}"
         )
     disagree = check.gap > check.tolerance
     if not disagree.any():
@@ -270,15 +304,15 @@ def _message(check: GradientCheck) -> str | None:
     relative = (
         f"{gap / abs(predicted):.2g} times the predicted change"
         if predicted
-        else "where grad predicts no change"
+        else f"where {grad} predicts no change"
     )
     return (
-        "grad disagrees with differences of log_prob: on a line through draw "
+        f"{grad} disagrees with differences of {log_prob}: on a line through draw "
         f"{check.draw[line]} of {POINTS} of the initial distribution, the change of "
-        "log_prob across the spread of the initial distribution differs from the one grad "
-        f"predicts by {gap:.3g} nats, {relative}, and {ratio[line]:.3g} times the "
-        "comparison's estimated error, so grad is not the derivative of log_prob as "
-        "computed; look for a wrong sign, a wrong factor or a missing term in grad; a "
+        f"{log_prob} across the spread of the initial distribution differs from the one "
+        f"{grad} predicts by {gap:.3g} nats, {relative}, and {ratio[line]:.3g} times the "
+        f"comparison's estimated error, so {grad} is not the derivative of {log_prob} as "
+        f"computed; look for a wrong sign, a wrong factor or a missing term in {grad}; a "
         "gradient that is approximate by design, as from a solver, numerical differences "
         "or single precision, is expected to warn, and check_grad=False turns the check off"
     )

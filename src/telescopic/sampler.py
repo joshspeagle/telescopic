@@ -72,18 +72,24 @@ class CoupledSampler:
         keeps the estimates unbiased (Guarantees and their limits, in :doc:`/theory`);
         one wider than the target and covering all its modes keeps them reliable.
     args : tuple or list
-        Extra positional arguments of ``log_prob`` and ``grad``, such as ``(data,)``.
+        Extra positional arguments of ``log_prob``, ``grad`` and
+        ``log_prob_and_grad``, such as ``(data,)``.
     kwargs : mapping, optional
-        Extra keyword arguments of ``log_prob`` and ``grad``.
+        Extra keyword arguments of these functions.
     grad : callable, optional
         :math:`\nabla\log\pi` with the signature of ``log_prob``. Only the kernels that
         need it, MALA and HMC, evaluate it; ``"auto"`` is random-walk Metropolis.
+    log_prob_and_grad : callable, optional
+        In place of ``grad``: the pair :math:`(\log\pi, \nabla\log\pi)` from one call
+        with the signature of ``log_prob``, as JAX's ``value_and_grad`` gives, which
+        MALA and HMC then call wherever they need a gradient; ``log_prob``, whose values
+        it must match, still serves tuning's pilot chains. See :class:`Target`.
     vectorize : bool
-        Whether ``log_prob`` and ``grad`` take a batch of points.
+        Whether ``log_prob``, ``grad`` and ``log_prob_and_grad`` take a batch of points.
     kernel : Kernel or str
         A kernel, or one of ``"auto"`` and ``"rwmh"`` (random-walk Metropolis with the
-        reflection-maximal coupling), ``"mala"`` and ``"hmc"`` (which need ``grad``) and
-        ``"independence"``.
+        reflection-maximal coupling), ``"mala"`` and ``"hmc"`` (which need ``grad`` or
+        ``log_prob_and_grad``) and ``"independence"``.
     names : sequence of str, optional
         Parameter names for summaries.
     pool : None, int, executor or pool
@@ -116,7 +122,8 @@ class CoupledSampler:
         costs 40 evaluations of ``log_prob`` and 8 of ``grad`` for float64 values, 8 more
         of each for a float32 ``grad`` and again for a float32 ``log_prob``, a second
         sweep for a ``log_prob`` whose values narrow after the first draw, and 48 draws of
-        the initial distribution, and changes no result.
+        the initial distribution, and changes no result. A ``log_prob_and_grad`` is
+        compared with differences of its own values, in 40 evaluations of it.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
         The root of every random stream.
 
@@ -144,6 +151,7 @@ class CoupledSampler:
         args: tuple[Any, ...] = (),
         kwargs: Mapping[str, Any] | None = None,
         grad: Callable[..., Any] | None = None,
+        log_prob_and_grad: Callable[..., Any] | None = None,
         vectorize: bool = False,
         kernel: Kernel | str = "auto",
         names: Sequence[str] | None = None,
@@ -156,7 +164,14 @@ class CoupledSampler:
         self.pool, self.progress = check_pool(pool), flag("progress", progress)
         self.n_workers = check_workers(n_workers, self.pool)
         check_grad = flag("check_grad", check_grad)
-        self.target = Target(log_prob, grad, args=args, kwargs=kwargs, vectorize=vectorize)
+        self.target = Target(
+            log_prob,
+            grad,
+            log_prob_and_grad=log_prob_and_grad,
+            args=args,
+            kwargs=kwargs,
+            vectorize=vectorize,
+        )
         self.initial = as_initial(init)
         if isinstance(kernel, str) and kernel in KERNELS:
             kernel = KERNELS[kernel]()
@@ -183,12 +198,13 @@ class CoupledSampler:
         if check_grad and self.kernel.needs_grad:
             self.gradient_check = check_gradient(
                 cast(Callable[..., Any], log_prob),
-                cast(Callable[..., Any], grad),
+                grad,
                 self.initial,
                 self.seed,
                 args=self.target.args,
                 kwargs=self.target.kwargs,
                 vectorize=self.target.vectorize,
+                log_prob_and_grad=log_prob_and_grad,
             )
 
     @property
@@ -499,6 +515,7 @@ def sample(
     args: tuple[Any, ...] = (),
     kwargs: Mapping[str, Any] | None = None,
     grad: Callable[..., Any] | None = None,
+    log_prob_and_grad: Callable[..., Any] | None = None,
     vectorize: bool = False,
     kernel: Kernel | str = "auto",
     k: int | str = "auto",
@@ -530,18 +547,22 @@ def sample(
     n_replicates : int
         The number :math:`R` of replicates, at least 2.
     args : tuple or list
-        Extra positional arguments of ``log_prob`` and ``grad``, such as ``(data,)``.
+        Extra positional arguments of ``log_prob``, ``grad`` and
+        ``log_prob_and_grad``, such as ``(data,)``.
     kwargs : mapping, optional
-        Extra keyword arguments of ``log_prob`` and ``grad``.
+        Extra keyword arguments of these functions.
     grad : callable, optional
         :math:`\nabla\log\pi` with the signature of ``log_prob``. Only the kernels that
         need it, MALA and HMC, evaluate it; ``"auto"`` is random-walk Metropolis.
+    log_prob_and_grad : callable, optional
+        In place of ``grad``: the pair :math:`(\log\pi, \nabla\log\pi)` from one call;
+        see :class:`CoupledSampler`.
     vectorize : bool
-        Whether ``log_prob`` and ``grad`` take a batch of points.
+        Whether ``log_prob``, ``grad`` and ``log_prob_and_grad`` take a batch of points.
     kernel : Kernel or str
         A kernel, or one of ``"auto"`` and ``"rwmh"`` (random-walk Metropolis with the
-        reflection-maximal coupling), ``"mala"`` and ``"hmc"`` (which need ``grad``) and
-        ``"independence"``.
+        reflection-maximal coupling), ``"mala"`` and ``"hmc"`` (which need ``grad`` or
+        ``log_prob_and_grad``) and ``"independence"``.
     k, m, lag : int or "auto"
         ``"auto"`` chooses ``k`` from the pilot's meeting times, then ``lag = max(1, k)``
         and ``m = 10 k``. A value given explicitly is kept.
@@ -599,6 +620,7 @@ def sample(
         args=args,
         kwargs=kwargs,
         grad=grad,
+        log_prob_and_grad=log_prob_and_grad,
         vectorize=vectorize,
         kernel=kernel,
         names=names,

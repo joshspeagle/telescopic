@@ -620,3 +620,28 @@ def test_tuning_reports_progress(kernel, phases, monkeypatch, capsys):
     lines = capsys.readouterr().err.splitlines()
     assert [line.split(": ")[1] for line in lines] == phases
     assert all(" steps finished in " in line for line in lines)
+
+
+def gaussian_log_prob_and_grad(x):
+    return gaussian_log_prob(x), -x
+
+
+def test_a_target_with_log_prob_and_grad_runs_on_a_pool():
+    # The pool's workers get the target pickled, its log_prob_and_grad with it.
+    runs = [
+        telescopic.sample(
+            gaussian_log_prob,
+            INIT,
+            20,
+            log_prob_and_grad=gaussian_log_prob_and_grad,
+            kernel=MALA(0.8, cov=np.eye(2)),
+            pool=pool,
+            k=20,
+            m=40,
+            lag=20,
+            rng=6,
+        )
+        for pool in (None, Serial())
+    ]
+    assert_same_replicates(runs[1]._replicates, runs[0]._replicates)
+    assert runs[0].n_grad > 0

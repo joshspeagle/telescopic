@@ -1,0 +1,32 @@
+setup: commit 3dc2412-dirty of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
+d = 10, R = 128, sample() with everything automatic, best of 3 runs
+
+logistic regression, N = 2,000
+kernel  calls of   log_prob      grad  combined     total  ratio   seconds  ratio
+mala     batches      3,226     1,217               4,443             2.79
+                      2,001               1,225     3,226  0.726      2.75  0.986
+                  k = 17; n_log_prob 22,538, n_grad 22,538 in the replicates of both runs
+hmc      batches      6,645     4,636              11,281            17.48
+                      2,001               4,644     6,645  0.589     16.47  0.942
+                  k = 74; n_log_prob 191,802, n_grad 191,802 in the replicates of both runs
+mala      points     35,816    27,780              63,596             3.52
+                      8,004              27,812    35,816  0.563      3.42  0.973
+                  k = 17; n_log_prob 22,538, n_grad 22,538 in the replicates of both runs
+hmc       points    247,465   239,429             486,894            24.47
+                      8,004             239,461   247,465  0.508     24.61  1.006
+                  k = 85; n_log_prob 219,762, n_grad 219,762 in the replicates of both runs
+
+linear regression, N = 20,000
+kernel  calls of   log_prob      grad  combined     total  ratio   seconds  ratio
+mala     batches      3,148     1,139               4,287             3.62
+                      2,001               1,147     3,148  0.734      2.77  0.765
+                  k = 10; n_log_prob 13,370, n_grad 13,370 in the replicates of both runs
+hmc      batches      6,961     4,952              11,913            29.01
+                      2,001               4,960     6,961  0.584     23.16  0.798
+                  k = 82; n_log_prob 212,088, n_grad 212,088 in the replicates of both runs
+mala      points     26,287    18,251              44,538             6.33
+                      8,004              18,283    26,287  0.590      4.64  0.733
+                  k = 10; n_log_prob 13,370, n_grad 13,370 in the replicates of both runs
+hmc       points    239,592   231,556             471,148            65.99
+                      8,004             231,588   239,592  0.509     44.75  0.678
+                  k = 82; n_log_prob 212,081, n_grad 212,081 in the replicates of both runs
