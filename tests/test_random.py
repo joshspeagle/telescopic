@@ -144,6 +144,13 @@ def test_injected_numbers_replay_in_order_then_run_out():
         draws.uniform()
 
 
+def test_a_request_for_no_rows_returns_no_numbers():
+    # Longer than the buffer of injected numbers, which no row asks to top up.
+    draws = fixed_draws(uniforms=[[0.5]]).subset(np.arange(0))
+    assert draws.normal(3).shape == (0, 3)
+    assert draws.uniform().shape == (0,)
+
+
 def test_injected_arrays_must_have_one_row_per_chain():
     with pytest.raises(ValueError, match="same number of rows"):
         fixed_draws(normals=np.zeros((2, 3)), uniforms=np.zeros((3, 1)))

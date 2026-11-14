@@ -325,3 +325,6 @@ All notable changes to this project are documented here. The format follows
 - `Draws.child(row)` returns a new child of a row's generator, which does not move the
   row's stream: two draws from it can read the same numbers, as the Gibbs kernel's common
   random numbers do.
+- A request of `Draws` for no rows returns an empty array. It raised `ValueError` when it
+  asked for more numbers per row than the buffer held, as of replayed draws without
+  normals.
