@@ -60,7 +60,7 @@ replicates whose pairs met; every pair of sections 1 and 2 met (the script check
 Gibbs and Mixture compute no products of their own (Mixture delegates to its
 components), so they are not run.
 
-Result (`i83_blas_products.out`, at a load average of 2.6 to 3.8 on 4 cores shared with
+Result (`i83_blas_products.out`, at a load average of 1.7 to 2.4 on 4 cores shared with
 other jobs).
 1. Every run of RandomWalk, MALA and HMC changed its hash and Independence's did not;
    every pair met. Meeting times were equal except HMC's at d = 2, where 19 of 64 differ:
@@ -76,13 +76,13 @@ other jobs).
    and HMC's runs at d = 20 and 200 already differed between layouts before the change,
    by at most 6.4e-14, through the target's own products; RandomWalk's, whose positions
    do not pass through the target, did not.
-3. Before/after per round: RandomWalk 1.04 at d = 20 (0.75 to 1.09) and 2.04 at d = 200
-   (1.94 to 2.13), where all 256 pairs ran to max_iter; MALA 1.61 at d = 20 (1.36 to
-   1.71) and 3.43 at d = 200 (3.19 to 3.79).
+3. Before/after per round: RandomWalk 1.11 at d = 20 (0.91 to 1.43) and 2.11 at d = 200
+   (2.04 to 2.23), where all 256 pairs ran to max_iter; MALA 1.47 at d = 20 (1.08 to
+   2.17) and 3.41 at d = 200 (2.68 to 3.63).
 4. For 1 row at d up to 20, and 16 rows at d = 2, BLAS inside `np.errstate` cost more than
-   `einsum` (1.80 against 1.55 microseconds at d = 2, 2.00 against 1.81 at d = 20); the
-   `errstate` added 0.9 to 1.6 microseconds at d up to 20. At 256 rows BLAS with the
-   `errstate` was 1.6 (d = 2) to 7.1 (d = 200) times faster than `einsum`.
+   `einsum` (1.87 against 1.54 microseconds at d = 2, 3.28 against 3.22 at d = 20); the
+   `errstate` added 0.9 to 3.0 microseconds at d up to 20. At 256 rows BLAS with the
+   `errstate` was 1.6 (d = 2) to 6.7 (d = 200) times faster than `einsum`.
 5. Equal rows of one call got different bits in 2 (1 thread) or 3 (4 threads) of 81
    shapes with the SkylakeX kernels, this machine's, and in 9 with Nehalem's; in none
    with Haswell's (which OpenBLAS also chose for Zen) or Sandybridge's. No kernel set

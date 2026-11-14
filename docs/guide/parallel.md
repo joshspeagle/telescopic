@@ -178,7 +178,7 @@ versions and machines.
 
 With a vectorized log-density (`vectorize=True`), the kernels also compute their matrix
 products for a batch of chains at once, with BLAS: whole runs of 256 replicates on a
-Gaussian target of 200 dimensions took 2.0 times less processor time with RandomWalk and
+Gaussian target of 200 dimensions took 2.1 times less processor time with RandomWalk and
 3.4 times less with MALA. BLAS can round a chain's products differently with the other chains
 of its batch and with the number of BLAS threads. A vectorized run is therefore bitwise
 identical when repeated only with the same seed and settings, the same `pool` and
@@ -191,8 +191,8 @@ differ by rounding, and a difference of rounding can change an acceptance or the
 which the two chains become equal: the replicate's meeting time, and with it its whole
 output, can then differ. The estimates agree within their error bars. With HMC on a
 Gaussian of 2 dimensions, the same 64 replicates run one at a time and all at once
-differed in 17 meeting times, and their estimates of the mean by at most 0.067 standard
-errors.
+differed in 17 meeting times, and the estimates of the mean from all 64 by at most 0.067
+standard errors.
 
 Functions of your own that call multithreaded BLAS or LAPACK, such as a SciPy
 multivariate normal of 200 dimensions as the initial distribution, can also differ by

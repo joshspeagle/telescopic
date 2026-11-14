@@ -356,7 +356,7 @@ All notable changes to this project are documented here. The format follows
   8 bytes per atom fewer.
 - With a vectorized target (`vectorize=True`), RandomWalk, MALA, HMC and the tuning
   pilot compute their products of a batch of chains with a matrix by BLAS: whole runs
-  of 256 replicates on a Gaussian of 200 dimensions took 2.0 times less processor time
+  of 256 replicates on a Gaussian of 200 dimensions took 2.1 times less processor time
   with RandomWalk and 3.4 times less with MALA. Such a run repeats bitwise only with the
   same seed and settings, `pool` and `n_workers`, BLAS build and number of BLAS threads;
   runs of other lane counts, pools, merges and later calls of a sampler, and runs on
