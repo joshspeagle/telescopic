@@ -100,8 +100,9 @@ class CoupledSampler:
         schwimmbad pool. A pool runs chunks of consecutive indices, at most four per
         worker; a task in a worker process runs with BLAS pinned to one thread and
         Ctrl-C ignored. With a log-density evaluated point by point, no replicate
-        depends on the pool. With a vectorized one, a run on workers differs by rounding
-        from one in this process unless this process is limited to one BLAS thread.
+        depends on the pool. With a vectorized one, a run on a pool can differ by
+        rounding from one in this process, through its chunks and through the one BLAS
+        thread of its workers (Reproducibility, in :doc:`/guide/parallel`).
     n_workers : int, optional
         The number of workers of an executor or a pool, which sets how many chunks it
         gets: one per worker at least, and four at most unless a chunk would then hold

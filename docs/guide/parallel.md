@@ -178,16 +178,17 @@ versions and machines.
 
 With a vectorized log-density (`vectorize=True`), the kernels also compute their matrix
 products for a batch of chains at once, with BLAS: whole runs of 256 replicates on a
-Gaussian target of 200 dimensions took 2.1 times less processor time with RandomWalk and
-3.4 times less with MALA. BLAS can round a chain's products differently with the other chains
+Gaussian target of 200 dimensions took 2.1 times less processor time with RandomWalk,
+whose pairs all ran to the iteration cap, and 3.4 times less with MALA. BLAS can round a chain's products differently with the other chains
 of its batch and with the number of BLAS threads. A vectorized run is therefore bitwise
 identical when repeated only with the same seed and settings, the same `pool` and
 `n_workers`, which set how the replicates are batched, the same BLAS build and the same
-number of BLAS threads. Worker processes run BLAS on one thread, so a vectorized run on
-workers can differ from one in this process unless this process is limited to one thread
-too, with `threadpoolctl.threadpool_limits(1)`. Otherwise, as between runs with other
-numbers of workers or chunks, merged runs and a sampler's later calls, a replicate can
-differ by rounding, and a difference of rounding can change an acceptance or the step at
+number of BLAS threads. A vectorized run on a pool can differ from one in this process
+for two reasons: the pool runs the replicates in chunks, which are other batches unless
+it makes a single chunk, and worker processes run BLAS on one thread, which this
+process does only when limited to one, with `threadpoolctl.threadpool_limits(1)`.
+Between such runs, as between runs with other numbers of workers or chunks, merged runs
+and a sampler's later calls, a replicate can differ by rounding, and a difference of rounding can change an acceptance or the step at
 which the two chains become equal: the replicate's meeting time, and with it its whole
 output, can then differ. The estimates agree within their error bars. With HMC on a
 Gaussian of 2 dimensions, the same 64 replicates run one at a time and all at once

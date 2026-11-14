@@ -303,7 +303,8 @@ def test_equal_hmc_chains_stay_equal_where_a_product_gives_equal_rows_other_bits
 )
 def test_products_use_blas_exactly_for_a_vectorized_target(name, vectorize, monkeypatch):
     # MultivariateT, and so Independence, receives no target and never uses BLAS. The
-    # spy records each product's flag, and each use of `@`, BLAS's product.
+    # spy records the flag of each product that goes through `matvec`, and each use of
+    # `@`, BLAS's product, there; a product computed outside `matvec` escapes it.
     flags, matmuls = [], []
 
     class Recorded(np.ndarray):
@@ -411,9 +412,10 @@ def chains(name, setup):
 
     gap = setup["gap"]
     # MALA: mean = x + (epsilon C)((epsilon C)^T g) / 2 with g = -x, which puts the means
-    # of two states at least 1 - epsilon^2 ||C||_2^2 / 2 times as far apart, then the
-    # proposal. HMC: the leapfrog's half kick, then 4 drifts and kicks; its last kick
-    # moves only the momentum.
+    # of two states at least 1 - epsilon^2 ||C||_2^2 / 2 times as far apart (a bound
+    # while epsilon^2 ||C||_2^2 / 2 <= 1, as here), then the proposal. HMC: the
+    # leapfrog's half kick, then 4 drifts and kicks; its last kick moves only the
+    # momentum.
     mean, mala = [0.9 * a_t, 0.45 * a], [0.9 * a_t, 0.45 * a, 0.9 * a]
     leapfrog = [0.15 * a_t, *[0.3 * a, 0.3 * a_t] * 3, 0.3 * a]
     return {
