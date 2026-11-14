@@ -304,9 +304,11 @@ All notable changes to this project are documented here. The format follows
   values, such as SciPy's frozen `dirichlet`, whose `mean` and `cov` are methods,
   `wishart`, which has no `cov`, and `multivariate_t`, which has neither. A pair whose
   conditionals are both SciPy's frozen `multivariate_normal`, of that class and not of a
-  subclass, keeps common normals through a square root of each covariance. Blocks of one
-  coordinate with `ppf`, SciPy's multivariate normal, and the maximal coupling give the
-  same numbers as before.
+  subclass, keeps common normals through a square root of the covariance that its `rvs`
+  draws from, for every covariance that SciPy accepts, including one that is not
+  symmetric. Blocks of one coordinate with `ppf`, SciPy's multivariate normal with an
+  exactly symmetric positive definite covariance, and the maximal coupling give the same
+  numbers as before.
 - `Draws.child(row)` returns a new child of a row's generator, which does not move the
   row's stream: two draws from it can read the same numbers, as the Gibbs kernel's common
   random numbers do.

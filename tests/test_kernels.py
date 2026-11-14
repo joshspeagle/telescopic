@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pytest
 from scipy import integrate, special, stats
@@ -979,19 +981,65 @@ def test_crn_gibbs_couplings_give_scipys_multivariate_normal_common_normals():
 
 
 def test_crn_gibbs_couplings_draw_from_a_singular_multivariate_normal():
-    # Two equal coordinates: a covariance without a Cholesky factor.
+    # The second coordinate is -1/4 of the first, of variance 4: a covariance without a
+    # Cholesky factor.
     def given(point, block):
         if block == 0:
             return Normal(0.5 * point[1], 1.0)
-        return stats.multivariate_normal(np.full(2, 0.5 * point[0]), np.ones((2, 2)), True)
+        cov = [[4.0, -1.0], [-1.0, 0.25]]
+        return stats.multivariate_normal(np.full(2, 0.5 * point[0]), cov, True)
 
     kernel = Gibbs(given, [[0], [1, 2]], coupling="crn")
     n = 2000
-    starts = ([0.0, 1.0, 1.0], [2.0, -1.0, -1.0])
+    starts = ([0.0, 1.0, -0.25], [2.0, -1.0, 0.25])
     x, y = (gibbs_state(np.tile(start, (n, 1))) for start in starts)
     for new in kernel.coupled_step(Target(None), x, y, random_draws(n, 43)):
-        np.testing.assert_allclose(new.x[:, 1], new.x[:, 2], rtol=0, atol=1e-12)
-        assert stats.kstest(new.x[:, 1] - 0.5 * new.x[:, 0], "norm").pvalue > P_MIN
+        offsets = new.x[:, 1:] - 0.5 * new.x[:, [0]]
+        np.testing.assert_allclose(offsets[:, 1], -0.25 * offsets[:, 0], rtol=0, atol=1e-12)
+        assert stats.kstest(offsets[:, 0] / 2, "norm").pvalue > P_MIN
+
+
+@pytest.mark.parametrize(
+    "cov",
+    [
+        # Not symmetric: SciPy checks its lower triangle, and NumPy, which its rvs calls,
+        # draws from (C C^T)^(1/2).
+        [[1.0, 3.0], [0.0, 1.0]],
+        # An eigenvalue of -5e-13, within SciPy's tolerance relative to the largest:
+        # NumPy draws from |C|, whose last two coordinates differ by a variance of 1e-12.
+        [[1.0, 0.0, 0.0], [0.0, 1e-12, 1.5e-12], [0.0, 1.5e-12, 1e-12]],
+    ],
+    ids=["not symmetric", "indefinite"],
+)
+def test_crn_gibbs_couplings_draw_scipys_multivariate_normal_as_its_rvs_does(cov):
+    k = len(cov)
+
+    def given(point, block):
+        if block == 0:
+            return Normal(0.5 * point[1], 1.0)
+        return stats.multivariate_normal(np.full(k, 0.5 * point[0]), cov, True)
+
+    kernel = Gibbs(given, [[0], list(range(1, k + 1))], coupling="crn")
+    n = 2000
+    x, y = (gibbs_state(np.tile([0.0, start] + [0.0] * (k - 1), (n, 1))) for start in (1.0, -1.0))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)  # NumPy's, for a matrix not symmetric
+        drawn = stats.multivariate_normal(np.zeros(k), cov, True).rvs(n, np.random.default_rng(56))
+    for new in kernel.coupled_step(Target(None), x, y, random_draws(n, 57)):
+        offsets = new.x[:, 1:] - 0.5 * new.x[:, [0]]
+        for weights in ([1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [1.0, -1.0]):
+            projected = [a[:, -2:] @ weights for a in (offsets, drawn)]
+            assert stats.ks_2samp(*projected).pvalue > P_MIN
+
+
+def test_a_scipy_normal_conditional_of_another_size_raises_under_crn_gibbs_couplings():
+    def given(point, block):
+        return stats.multivariate_normal(np.full(3, point[2])) if block == 0 else Normal(0.0, 1.0)
+
+    kernel = Gibbs(given, [[0, 1], [2]], coupling="crn")
+    x, y = gibbs_state([0.0, 0.0, 1.0]), gibbs_state([0.0, 0.0, 2.0])
+    with pytest.raises(ValueError, match=r"not a finite point of shape \(2,\)"):
+        kernel.coupled_step(Target(None), x, y, random_draws(1, 49))
 
 
 def test_crn_gibbs_couplings_draw_a_block_of_several_with_ppf_from_its_own_sampler():
