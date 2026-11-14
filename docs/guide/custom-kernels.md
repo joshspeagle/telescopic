@@ -36,7 +36,10 @@ belongs to chain, or pair, `i`:
 - `draws.log_uniform()`: their logarithms, `-inf` for a draw of 0, for Metropolis tests
   in log space;
 - `draws.generator(row)`: the `numpy.random.Generator` of a row, for draws that the
-  others do not cover, such as the `rvs` of a SciPy distribution or a rejection sampler.
+  others do not cover, such as the `rvs` of a SciPy distribution or a rejection sampler;
+- `draws.child(row)`: a new child of that generator, a stream of its own that does not
+  move the row's, for two draws that read the same numbers, as the Gibbs kernel's common
+  random numbers do.
 
 Other members have defaults that a kernel can override:
 
