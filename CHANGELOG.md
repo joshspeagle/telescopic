@@ -124,9 +124,10 @@ All notable changes to this project are documented here. The format follows
 - Theory opens with what it derives, writes the algorithm without the meeting time and
   defines it after, and says what the conditions of unbiasedness ask in practice before
   stating them.
-- The kernels guide defines its coupling terms before its table, and the warnings
-  reference says what Hill's estimate and the Clopper-Pearson bound measure and when
-  each warning is emitted; the docstring of `diagnostics.hill` gives the rule for ties.
+- The kernels guide defines its coupling terms before its table, the result-fields
+  reference says what Hill's estimate and the Clopper-Pearson bound measure, and the
+  warnings reference when each warning is emitted; the docstring of `diagnostics.hill`
+  gives the rule for ties.
 - The guide to choosing an initial distribution links `initial.as_initial`, which reads
   `init`.
 - Fixes from an audit of the whole package: a number argument of the wrong type raises
