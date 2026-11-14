@@ -299,5 +299,7 @@ All notable changes to this project are documented here. The format follows
   keeps its conditional's law. It took such a conditional to be the normal with its
   `mean` and `cov`, which gave a conditional that is not normal the wrong law in the
   coupled step only, and it refused conditionals whose `mean` and `cov` are not values,
-  such as SciPy's frozen `dirichlet`, `multivariate_t` and `wishart`. Blocks of one
-  coordinate with `ppf`, and the maximal coupling, give the same numbers as before.
+  such as SciPy's frozen `dirichlet`, `multivariate_t` and `wishart`. SciPy's frozen
+  `multivariate_normal` keeps common normals through a square root of its covariance.
+  Blocks of one coordinate with `ppf`, SciPy's multivariate normal, and the maximal
+  coupling give the same numbers as before.

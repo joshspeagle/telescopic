@@ -32,10 +32,11 @@ factor and z standard normals from the generator: from generators in the same st
 is the normal map that the package applied before the change, coupling for coupling.
 "SciPy" draws it with SciPy's frozen `multivariate_normal`, as a user would write it,
 which the package couples as its commit does: from generators in the same state after
-the change, and by the normal map before it. A row prints, for each seed, the median
-meeting time and the number of pairs censored at 2000 sweeps, then the mean and standard
-deviation of the 5 medians, and the time of a sweep relative to the first row of its
-target, which varies by a fifth or more between runs on a shared machine.
+the change, and by the normal map before it and under the alternative that keeps the map
+for SciPy's multivariate normal. A row prints, for each seed, the median meeting time and
+the number of pairs censored at 2000 sweeps, then the mean and standard deviation of the
+5 medians, and the time of a sweep relative to the first row of its target, which varies
+by a fifth or more between runs on a shared machine.
 
 Result (i127_gibbs_same_state.out, at the change): from generators in the same state,
 SciPy's draws are as close as the normal map's for covariances that differ by a scale
@@ -45,8 +46,10 @@ order of the decomposition, and near the identity they are as far apart as indep
 draws. Pairs of the robust regression meet later under "crn", at a median of 205.4
 sweeps (sd 18.5 over the seeds) against 147.1 (sd 10.3) under the map, and as fast under
 "two-scale" (4.0 against 3.7). The other targets meet as before, and the pumps without
-`ppf` meet as with it. Run as `python notes/experiments/i127_gibbs_same_state.py`, about
-15 minutes on one core.
+`ppf` meet as with it. Under the alternative (i127_gibbs_same_state_alternative.out),
+the robust regression's pairs with SciPy's conditionals meet under "crn" at a median of
+142.9 sweeps (sd 2.7), as under the map. Run as
+`python notes/experiments/i127_gibbs_same_state.py`, about 15 minutes on one core.
 """
 
 import math

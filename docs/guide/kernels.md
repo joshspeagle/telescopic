@@ -318,15 +318,15 @@ conditionals:
   the meeting probability is capped at `eta`, and the number of draws it takes has the
   bounded variance of Atchadé & Jacob (2024, Algorithm 2).
 - `coupling="crn"`: common random numbers. For a block of one coordinate whose
-  conditionals have `ppf`, one uniform goes through both. For any other block, each
-  chain draws from its own conditional with `rvs`, from generators in the same state, so
-  each keeps its conditional's law whatever its type. The draws are then as close as the
-  conditional's sampler makes them. SciPy's `multivariate_normal`, for one, draws
-  through a singular value decomposition of the covariance, whose signs and order can
-  change between nearby covariances; where they do, as for covariances near a multiple
-  of the identity, the two chains' draws are as far apart as independent ones. Common
-  random numbers can bring the chains together, but make them equal only by rounding;
-  `"two-scale"` adds the maximal coupling.
+  conditionals have `ppf`, one uniform goes through both. For conditionals that are
+  SciPy's frozen `multivariate_normal`, common standard normals go through a square
+  root of each covariance: SciPy's own sampler draws through a singular value
+  decomposition, whose signs and order can change between nearby covariances. For any
+  other block, each chain draws from its own conditional with `rvs`, from generators in
+  the same state, so each keeps its conditional's law whatever its type, and the draws
+  are as close as the conditional's sampler makes them. Common random numbers can bring
+  the chains together, but make them equal only by rounding; `"two-scale"` adds the
+  maximal coupling.
 - `coupling="two-scale"`: common random numbers for pairs farther apart than `threshold`
   at the start of a sweep, and the maximal coupling for the others, as in Biswas,
   Bhattacharya, Jacob & Johndrow (2022).

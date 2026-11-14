@@ -953,6 +953,43 @@ def test_crn_gibbs_couplings_draw_blocks_without_ppf_from_generators_in_the_same
     assert row.random() == np.random.default_rng(7).random()
 
 
+def test_crn_gibbs_couplings_give_scipys_multivariate_normal_common_normals():
+    cov = np.array([[1.0, 0.4], [0.4, 2.0]])
+
+    def conditional_3d(point, block):
+        # Coordinates 0 and 1 given 2, then 2 given 0 and 1.
+        if block == 0:
+            return stats.multivariate_normal([0.5 * point[2], -0.3 * point[2]], cov)
+        return Normal(0.2 * (point[0] + point[1]), 1.0)
+
+    kernel = Gibbs(conditional_3d, [[0, 1], [2]], coupling="crn")
+    x, y, z, u = [0.1, 0.2, 1.0], [0.1, 0.2, -2.0], [0.7, -1.2], 0.6
+    new_x, new_y = kernel.coupled_step(
+        Target(None), gibbs_state(x), gibbs_state(y), fixed_draws([z], [[u]])
+    )
+    shift = np.linalg.cholesky(cov) @ z
+    for start, new in ((x, new_x), (y, new_y)):
+        first = np.array([0.5 * start[2], -0.3 * start[2]]) + shift
+        np.testing.assert_allclose(new.x[0, :2], first)
+        np.testing.assert_allclose(new.x[0, 2], 0.2 * first.sum() + stats.norm.ppf(u))
+
+
+def test_crn_gibbs_couplings_draw_from_a_singular_multivariate_normal():
+    # Two equal coordinates: a covariance without a Cholesky factor.
+    def given(point, block):
+        if block == 0:
+            return Normal(0.5 * point[1], 1.0)
+        return stats.multivariate_normal(np.full(2, 0.5 * point[0]), np.ones((2, 2)), True)
+
+    kernel = Gibbs(given, [[0], [1, 2]], coupling="crn")
+    n = 2000
+    starts = ([0.0, 1.0, 1.0], [2.0, -1.0, -1.0])
+    x, y = (gibbs_state(np.tile(start, (n, 1))) for start in starts)
+    for new in kernel.coupled_step(Target(None), x, y, random_draws(n, 43)):
+        np.testing.assert_allclose(new.x[:, 1], new.x[:, 2], rtol=0, atol=1e-12)
+        assert stats.kstest(new.x[:, 1] - 0.5 * new.x[:, 0], "norm").pvalue > P_MIN
+
+
 def test_crn_gibbs_couplings_draw_a_block_from_its_own_conditional_whatever_its_type():
     # Common normals through the cov of a conditional that is not normal gave both chains
     # a normal draw in the coupled step only.
