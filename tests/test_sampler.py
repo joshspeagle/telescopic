@@ -16,7 +16,13 @@ import numpy as np
 import pytest
 
 import telescopic
-from references import Counted, gaussian_log_prob, synthetic
+from references import (
+    Counted,
+    assert_same_replicates,
+    gaussian_log_prob,
+    never_called,
+    synthetic,
+)
 from references import Normal as Conditional
 from telescopic import CoupledSampler, __version__, sample
 from telescopic._parallel import Interrupt
@@ -524,7 +530,7 @@ def test_chains_cannot_start_where_the_gradient_is_not_finite():
 
     # The gradient check, which skips such points, says first that it compared nothing.
     with (
-        pytest.raises(ValueError, match="where log_prob is finite: chains cannot start"),
+        pytest.raises(ValueError, match="where the log-density is finite: chains cannot start"),
         pytest.warns(InputWarning, match="compared no line"),
     ):
         sample(
@@ -648,3 +654,78 @@ def test_a_names_length_mismatch_names_the_initial_dimension():
     # the wrong dimension.
     with pytest.raises(ValueError, match="draws points of dimension 1, but names gives 2"):
         CoupledSampler(log_prob, Normal([0.0], [1.0]), names=["p", "lam"])
+
+
+def truncated_log_prob(x):
+    # The standard normal on x0 > -1, of a point or of rows of points.
+    return np.where(x[..., 0] > -1, -0.5 * np.sum(np.square(x), axis=-1), -np.inf)
+
+
+def truncated_grad(x):
+    # Not finite where x1 > 2, so that some gradients are taken as 0 and counted.
+    return np.where(x[..., 1:] > 2, np.nan, -x)
+
+
+def truncated_log_prob_and_grad(x):
+    return truncated_log_prob(x), truncated_grad(x)
+
+
+@pytest.mark.filterwarnings("ignore::telescopic.warnings.TelescopicWarning")
+@pytest.mark.parametrize("vectorize", [True, False], ids=["vectorized", "point by point"])
+@pytest.mark.parametrize("kernel", ["mala", "hmc"])
+def test_combined_callable_matches_separate_log_prob_and_grad(kernel, vectorize):
+    # Tuned in the run, so that tuning's pilot chains, which call log_prob alone, and its
+    # dual averaging, which calls log_prob_and_grad, are compared too.
+    runs = [
+        CoupledSampler(
+            truncated_log_prob,
+            Normal([0.0, 0.0], [1.0, 0.5]),
+            vectorize=vectorize,
+            kernel=kernel,
+            rng=3,
+            **gradient,
+        )
+        for gradient in (
+            {"grad": truncated_grad},
+            {"log_prob_and_grad": truncated_log_prob_and_grad},
+        )
+    ]
+    for name, value in vars(runs[0].gradient_check).items():
+        np.testing.assert_array_equal(getattr(runs[1].gradient_check, name), value, err_msg=name)
+    separate, combined = (sampler.run(10, k=3, m=10, lag=3) for sampler in runs)
+    assert str(combined.kernel) == str(separate.kernel)
+    assert_same_replicates(combined._replicates, separate._replicates)
+    # Points of zero density, whose gradients are not counted, and gradients taken as 0.
+    assert combined.n_log_prob > combined.n_grad
+    assert combined.n_grad_zeroed > 0
+
+
+# Pairs this short may meet late, which warns.
+@pytest.mark.filterwarnings("ignore::telescopic.warnings.ConvergenceWarning")
+@pytest.mark.parametrize("check_grad", [False, True], ids=["unchecked", "checked"])
+@pytest.mark.parametrize(
+    "kernel",
+    [
+        MALA(0.8, cov=np.eye(2)),
+        HMC(0.3, 5, cov=np.eye(2)),
+        Mixture([MALA(0.8, cov=np.eye(2)), RandomWalk(np.eye(2), scale=1.0)], [0.5, 0.5]),
+    ],
+    ids=["mala", "hmc", "mixture"],
+)
+def test_a_run_with_log_prob_and_grad_takes_its_values_from_it_alone(kernel, check_grad):
+    # Kernels given with their parameters, and k, m and lag, so that nothing is tuned:
+    # tuning's pilot chains are the one part of a run that calls log_prob. Every other
+    # evaluation, the gradient check's included, comes from log_prob_and_grad.
+    result = sample(
+        never_called,
+        Normal([0.0, 0.0], [1.0, 1.0]),
+        4,
+        log_prob_and_grad=lambda x: (gaussian_log_prob(x), -x),
+        kernel=kernel,
+        k=2,
+        m=4,
+        lag=2,
+        check_grad=check_grad,
+        rng=0,
+    )
+    assert result.n_log_prob == result.n_grad > 0

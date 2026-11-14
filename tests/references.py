@@ -92,6 +92,11 @@ def dense(d):
     return (a @ a.T + d * np.eye(d)) / (2 * d)
 
 
+def never_called(x):
+    # A log_prob that must not be called, beside a log_prob_and_grad.
+    raise AssertionError("log_prob was called")
+
+
 def gaussian_log_prob(x):
     # The standard normal log-density, up to a constant, of a point or of rows of points.
     return -0.5 * np.sum(np.square(x), axis=-1)

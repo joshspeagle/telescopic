@@ -1,0 +1,47 @@
+setup: commit ce89da8 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
+base d= 2 n_steps=2 eps=1.4516 jitter=0.000 near: stay p=0.121,0.652 moves p=1.000,1.000 met=0.0437 stale=0 near_misses=0 passed=True
+base d= 2 n_steps=2 eps=1.4516 jitter=0.000 far : stay p=0.121,0.652 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+base d= 2 n_steps=5 eps=1.2932 jitter=0.000 near: stay p=0.626,0.020 moves p=0.463,0.008 met=0.0437 stale=0 near_misses=0 passed=True
+base d= 2 n_steps=5 eps=1.2932 jitter=0.000 far : stay p=0.700,0.020 moves p=0.463,0.099 met=0.0000 stale=0 near_misses=0 passed=True
+base d=10 n_steps=2 eps=0.7844 jitter=0.000 near: stay p=0.313,0.759 moves p=1.000,1.000 met=0.0432 stale=0 near_misses=0 passed=True
+base d=10 n_steps=2 eps=0.7844 jitter=0.000 far : stay p=0.313,1.000 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+base d=10 n_steps=5 eps=0.8584 jitter=0.000 near: stay p=0.206,0.699 moves p=1.000,1.000 met=0.0432 stale=0 near_misses=0 passed=True
+base d=10 n_steps=5 eps=0.8584 jitter=0.000 far : stay p=0.206,0.762 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+a    d= 2 n_steps=2 eps=0.9585 jitter=0.000 near: stay p=1.000,0.338 moves p=0.294,0.024 met=0.0437 stale=0 near_misses=0 passed=True
+a    d= 2 n_steps=2 eps=0.9585 jitter=0.000 far : stay p=1.000,0.289 moves p=0.679,0.005 met=0.0000 stale=0 near_misses=0 passed=True
+a    d= 2 n_steps=5 eps=0.4086 jitter=0.000 near: stay p=0.334,1.000 moves p=1.000,0.203 met=0.0437 stale=0 near_misses=0 passed=True
+a    d= 2 n_steps=5 eps=0.4086 jitter=0.000 far : stay p=0.334,1.000 moves p=1.000,0.030 met=0.0000 stale=0 near_misses=0 passed=True
+a    d=10 n_steps=2 eps=0.7844 jitter=0.000 near: stay p=0.313,0.759 moves p=1.000,1.000 met=0.0432 stale=0 near_misses=0 passed=True
+a    d=10 n_steps=2 eps=0.7844 jitter=0.000 far : stay p=0.313,1.000 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+a    d=10 n_steps=5 eps=0.4087 jitter=0.000 near: stay p=1.000,0.140 moves p=1.000,0.088 met=0.0432 stale=0 near_misses=0 passed=True
+a    d=10 n_steps=5 eps=0.4087 jitter=0.000 far : stay p=1.000,0.140 moves p=1.000,0.108 met=0.0000 stale=0 near_misses=0 passed=True
+b    d= 2 n_steps=2 eps=0.7503 jitter=0.000 near: stay p=1.000,0.135 moves p=1.000,0.022 met=0.0437 stale=0 near_misses=0 passed=True
+b    d= 2 n_steps=2 eps=0.7503 jitter=0.000 far : stay p=1.000,0.135 moves p=1.000,0.004 met=0.0000 stale=0 near_misses=0 passed=True
+b    d= 2 n_steps=5 eps=0.3253 jitter=0.000 near: stay p=0.209,1.000 moves p=1.000,0.211 met=0.0437 stale=0 near_misses=0 passed=True
+b    d= 2 n_steps=5 eps=0.3253 jitter=0.000 far : stay p=0.209,1.000 moves p=1.000,0.032 met=0.0000 stale=0 near_misses=0 passed=True
+b    d=10 n_steps=2 eps=0.8329 jitter=0.000 near: stay p=0.216,0.670 moves p=1.000,1.000 met=0.0432 stale=0 near_misses=0 passed=True
+b    d=10 n_steps=2 eps=0.8329 jitter=0.000 far : stay p=0.216,0.670 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+b    d=10 n_steps=5 eps=0.3095 jitter=0.000 near: stay p=0.450,0.487 moves p=1.000,0.021 met=0.0432 stale=0 near_misses=0 passed=True
+b    d=10 n_steps=5 eps=0.3095 jitter=0.000 far : stay p=0.450,0.487 moves p=1.000,0.014 met=0.0000 stale=0 near_misses=0 passed=True
+c    d= 2 n_steps=2 eps=1.2183 jitter=0.500 near: stay p=1.000,1.000 moves p=0.654,0.026 met=0.0437 stale=0 near_misses=0 passed=True
+c    d= 2 n_steps=2 eps=1.2183 jitter=0.500 far : stay p=1.000,0.641 moves p=0.654,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+c    d= 2 n_steps=5 eps=1.2010 jitter=0.500 near: stay p=0.819,1.000 moves p=1.000,0.250 met=0.0437 stale=0 near_misses=0 passed=True
+c    d= 2 n_steps=5 eps=1.2010 jitter=0.500 far : stay p=0.819,1.000 moves p=0.026,0.250 met=0.0000 stale=0 near_misses=0 passed=True
+c    d=10 n_steps=2 eps=0.8603 jitter=0.500 near: stay p=0.263,0.642 moves p=0.393,1.000 met=0.0432 stale=0 near_misses=0 passed=True
+c    d=10 n_steps=2 eps=0.8603 jitter=0.500 far : stay p=0.263,0.642 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+c    d=10 n_steps=5 eps=0.8853 jitter=0.500 near: stay p=0.562,0.101 moves p=1.000,0.410 met=0.0432 stale=0 near_misses=0 passed=True
+c    d=10 n_steps=5 eps=0.8853 jitter=0.500 far : stay p=1.000,0.101 moves p=1.000,0.331 met=0.0000 stale=0 near_misses=0 passed=True
+d    d= 2 n_steps=2 eps=1.2183 jitter=0.500 near: stay p=1.000,1.000 moves p=0.654,0.026 met=0.0437 stale=0 near_misses=0 passed=True
+d    d= 2 n_steps=2 eps=1.2183 jitter=0.500 far : stay p=1.000,0.641 moves p=0.654,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+d    d= 2 n_steps=5 eps=1.2010 jitter=0.244 near: stay p=0.708,0.458 moves p=1.000,0.599 met=0.0437 stale=0 near_misses=0 passed=True
+d    d= 2 n_steps=5 eps=1.2010 jitter=0.244 far : stay p=1.000,0.458 moves p=0.416,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+d    d=10 n_steps=2 eps=0.8603 jitter=0.500 near: stay p=0.263,0.642 moves p=0.393,1.000 met=0.0432 stale=0 near_misses=0 passed=True
+d    d=10 n_steps=2 eps=0.8603 jitter=0.500 far : stay p=0.263,0.642 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+d    d=10 n_steps=5 eps=0.8853 jitter=0.343 near: stay p=0.437,0.758 moves p=0.406,0.782 met=0.0432 stale=0 near_misses=0 passed=True
+d    d=10 n_steps=5 eps=0.8853 jitter=0.343 far : stay p=0.437,0.604 moves p=1.000,0.587 met=0.0000 stale=0 near_misses=0 passed=True
+base: smallest p-value over 8 checks 0.0079
+a: smallest p-value over 8 checks 0.0050
+b: smallest p-value over 8 checks 0.0040
+c: smallest p-value over 8 checks 0.0260
+d: smallest p-value over 8 checks 0.0264
+checks failed: 0 of 40

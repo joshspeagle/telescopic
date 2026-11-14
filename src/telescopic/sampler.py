@@ -72,24 +72,30 @@ class CoupledSampler:
         keeps the estimates unbiased (Guarantees and their limits, in :doc:`/theory`);
         one wider than the target and covering all its modes keeps them reliable.
     args : tuple or list
-        Extra positional arguments of ``log_prob`` and ``grad``, such as ``(data,)``.
+        Extra positional arguments of ``log_prob``, ``grad`` and
+        ``log_prob_and_grad``, such as ``(data,)``.
     kwargs : mapping, optional
-        Extra keyword arguments of ``log_prob`` and ``grad``.
+        Extra keyword arguments of these functions.
     grad : callable, optional
         :math:`\nabla\log\pi` with the signature of ``log_prob``. Only the kernels that
         need it, MALA and HMC, evaluate it; ``"auto"`` is random-walk Metropolis.
+    log_prob_and_grad : callable, optional
+        In place of ``grad``: the pair :math:`(\log\pi, \nabla\log\pi)` from one call
+        with the signature of ``log_prob``, as JAX's ``value_and_grad`` gives, which
+        MALA and HMC then call wherever they need a gradient; ``log_prob``, whose values
+        it must match, still serves tuning's pilot chains. See :class:`Target`.
     vectorize : bool
-        Whether ``log_prob`` and ``grad`` take a batch of points. The kernels then also
-        compute their matrix products for a batch of chains at once, with BLAS, so a
-        run repeats bitwise only with the same seed and settings, ``pool`` and
-        ``n_workers``, BLAS build and number of BLAS threads. Otherwise a replicate can
-        differ by rounding, which can move its meeting time and its whole output, and
-        the estimates agree within their error bars (Reproducibility, in
+        Whether ``log_prob``, ``grad`` and ``log_prob_and_grad`` take a batch of points.
+        The kernels then also compute their matrix products for a batch of chains at
+        once, with BLAS, so a run repeats bitwise only with the same seed and settings,
+        ``pool`` and ``n_workers``, BLAS build and number of BLAS threads. Otherwise a
+        replicate can differ by rounding, which can move its meeting time and its whole
+        output, and the estimates agree within their error bars (Reproducibility, in
         :doc:`/guide/parallel`).
     kernel : Kernel or str
         A kernel, or one of ``"auto"`` and ``"rwmh"`` (random-walk Metropolis with the
-        reflection-maximal coupling), ``"mala"`` and ``"hmc"`` (which need ``grad``) and
-        ``"independence"``.
+        reflection-maximal coupling), ``"mala"`` and ``"hmc"`` (which need ``grad`` or
+        ``log_prob_and_grad``) and ``"independence"``.
     names : sequence of str, optional
         Parameter names for summaries.
     pool : None, int, executor or pool
@@ -118,13 +124,18 @@ class CoupledSampler:
         Show the progress of tuning, of the pilot and of each run: a tqdm bar when
         tqdm is installed, lines on stderr otherwise.
     check_grad : bool
-        Compare ``grad`` with differences of ``log_prob`` at 8 draws of the initial
-        distribution when the sampler is built, if the kernel evaluates ``grad``, and
-        warn where they disagree (Checking the gradient, in :doc:`/guide/targets`). It
-        costs 40 evaluations of ``log_prob`` and 8 of ``grad`` for float64 values, 8 more
-        of each for a float32 ``grad`` and again for a float32 ``log_prob``, a second
-        sweep for a ``log_prob`` whose values narrow after the first draw, and 48 draws of
-        the initial distribution, and changes no result.
+        Compare the gradient with differences of the log-density at 8 draws of the
+        initial distribution when the sampler is built, if the kernel evaluates a
+        gradient, and warn where they disagree (Checking the gradient, in
+        :doc:`/guide/targets`): ``grad`` with differences of ``log_prob``, or the
+        gradient of ``log_prob_and_grad`` with differences of its own values. With
+        ``grad`` it costs 40 evaluations of ``log_prob`` and 8 of ``grad`` for float64
+        values, 8 more of each for a float32 ``grad`` and again for a float32
+        ``log_prob``, and a second sweep for a ``log_prob`` whose values narrow after the
+        first draw; with ``log_prob_and_grad``, 40 evaluations of it for float64 values,
+        and for narrower ones at most as many as of ``log_prob`` with the same dtypes,
+        unless its gradient is narrower only where its value is ``-inf``.
+        It draws 48 points of the initial distribution and changes no result.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
         The root of every random stream.
 
@@ -152,6 +163,7 @@ class CoupledSampler:
         args: tuple[Any, ...] = (),
         kwargs: Mapping[str, Any] | None = None,
         grad: Callable[..., Any] | None = None,
+        log_prob_and_grad: Callable[..., Any] | None = None,
         vectorize: bool = False,
         kernel: Kernel | str = "auto",
         names: Sequence[str] | None = None,
@@ -164,7 +176,14 @@ class CoupledSampler:
         self.pool, self.progress = check_pool(pool), flag("progress", progress)
         self.n_workers = check_workers(n_workers, self.pool)
         check_grad = flag("check_grad", check_grad)
-        self.target = Target(log_prob, grad, args=args, kwargs=kwargs, vectorize=vectorize)
+        self.target = Target(
+            log_prob,
+            grad,
+            log_prob_and_grad=log_prob_and_grad,
+            args=args,
+            kwargs=kwargs,
+            vectorize=vectorize,
+        )
         self.initial = as_initial(init)
         if isinstance(kernel, str) and kernel in KERNELS:
             kernel = KERNELS[kernel]()
@@ -191,12 +210,13 @@ class CoupledSampler:
         if check_grad and self.kernel.needs_grad:
             self.gradient_check = check_gradient(
                 cast(Callable[..., Any], log_prob),
-                cast(Callable[..., Any], grad),
+                grad,
                 self.initial,
                 self.seed,
                 args=self.target.args,
                 kwargs=self.target.kwargs,
                 vectorize=self.target.vectorize,
+                log_prob_and_grad=log_prob_and_grad,
             )
 
     @property
@@ -507,6 +527,7 @@ def sample(
     args: tuple[Any, ...] = (),
     kwargs: Mapping[str, Any] | None = None,
     grad: Callable[..., Any] | None = None,
+    log_prob_and_grad: Callable[..., Any] | None = None,
     vectorize: bool = False,
     kernel: Kernel | str = "auto",
     k: int | str = "auto",
@@ -538,24 +559,28 @@ def sample(
     n_replicates : int
         The number :math:`R` of replicates, at least 2.
     args : tuple or list
-        Extra positional arguments of ``log_prob`` and ``grad``, such as ``(data,)``.
+        Extra positional arguments of ``log_prob``, ``grad`` and
+        ``log_prob_and_grad``, such as ``(data,)``.
     kwargs : mapping, optional
-        Extra keyword arguments of ``log_prob`` and ``grad``.
+        Extra keyword arguments of these functions.
     grad : callable, optional
         :math:`\nabla\log\pi` with the signature of ``log_prob``. Only the kernels that
         need it, MALA and HMC, evaluate it; ``"auto"`` is random-walk Metropolis.
+    log_prob_and_grad : callable, optional
+        In place of ``grad``: the pair :math:`(\log\pi, \nabla\log\pi)` from one call;
+        see :class:`CoupledSampler`.
     vectorize : bool
-        Whether ``log_prob`` and ``grad`` take a batch of points. The kernels then also
-        compute their matrix products for a batch of chains at once, with BLAS, so a
-        run repeats bitwise only with the same seed and settings, ``pool`` and
-        ``n_workers``, BLAS build and number of BLAS threads. Otherwise a replicate can
-        differ by rounding, which can move its meeting time and its whole output, and
-        the estimates agree within their error bars (Reproducibility, in
+        Whether ``log_prob``, ``grad`` and ``log_prob_and_grad`` take a batch of points.
+        The kernels then also compute their matrix products for a batch of chains at
+        once, with BLAS, so a run repeats bitwise only with the same seed and settings,
+        ``pool`` and ``n_workers``, BLAS build and number of BLAS threads. Otherwise a
+        replicate can differ by rounding, which can move its meeting time and its whole
+        output, and the estimates agree within their error bars (Reproducibility, in
         :doc:`/guide/parallel`).
     kernel : Kernel or str
         A kernel, or one of ``"auto"`` and ``"rwmh"`` (random-walk Metropolis with the
-        reflection-maximal coupling), ``"mala"`` and ``"hmc"`` (which need ``grad``) and
-        ``"independence"``.
+        reflection-maximal coupling), ``"mala"`` and ``"hmc"`` (which need ``grad`` or
+        ``log_prob_and_grad``) and ``"independence"``.
     k, m, lag : int or "auto"
         ``"auto"`` chooses ``k`` from the pilot's meeting times, then ``lag = max(1, k)``
         and ``m = 10 k``. A value given explicitly is kept.
@@ -578,8 +603,9 @@ def sample(
         Show the progress of the pilot and of the run: a tqdm bar when tqdm is installed,
         lines on stderr otherwise.
     check_grad : bool
-        Compare ``grad`` with differences of ``log_prob`` before tuning, if the kernel
-        evaluates ``grad``, and warn where they disagree; see :class:`CoupledSampler`.
+        Compare the gradient with differences of the log-density before tuning, if the
+        kernel evaluates a gradient, and warn where they disagree; see
+        :class:`CoupledSampler`.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
         The root of every random stream.
 
@@ -613,6 +639,7 @@ def sample(
         args=args,
         kwargs=kwargs,
         grad=grad,
+        log_prob_and_grad=log_prob_and_grad,
         vectorize=vectorize,
         kernel=kernel,
         names=names,
@@ -727,7 +754,7 @@ class _ZeroedGradients:
                 "gradients that were not finite where the log-density is were taken as 0 "
                 f"in {zeroed} of {evaluated} evaluations of the {self.kind}s: MALA and HMC "
                 "stay exact but lose their drift there, which slows the chains and can keep "
-                "HMC pairs from meeting; compute grad in log space, as with "
+                "HMC pairs from meeting; compute the gradient in log space, as with "
                 "scipy.special.logsumexp, or check it",
                 InputWarning,
             )
