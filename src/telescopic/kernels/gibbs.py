@@ -8,7 +8,6 @@ from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
-from numpy.random import Generator
 
 from telescopic._random import Draws
 from telescopic._types import BoolArray, FloatArray, read_only, real
@@ -65,8 +64,9 @@ class Gibbs(Kernel):
     class with the methods used is faster, as in :mod:`telescopic.examples`. A step draws
     each block from the row's generator. A coupled step does the same for the maximal
     coupling and for identical conditionals. For common random numbers it reads 1 uniform
-    per row and block through ``ppf``, or else builds a generator from a child that it
-    spawns from the row's generator, which leaves the row's own stream where it was.
+    per row and block through ``ppf``, or else draws from a new child of the row's
+    generator, :meth:`~telescopic.kernels.Draws.child`, which leaves the row's own stream
+    where it was.
     A conditional that draws a point that is not finite, or not of its block's size,
     raises ``ValueError``. With ``log_prob=None`` the target has no log-density, and states
     carry 0.
@@ -247,9 +247,9 @@ def _common(p: list[Any], q: list[Any], draws: Draws, size: int) -> tuple[list[A
         # Each ppf gives a scalar, or an array for array parameters.
         drawn_x[row], drawn_y[row] = p[row].ppf(value), q[row].ppf(value)
     for row in (~quantile).nonzero()[0].tolist():
-        # A child of the row's generator, spawned without moving the row's own stream, and
-        # set back to its first state before the second chain draws.
-        generator = Generator(draws.generator(row).bit_generator.spawn(1)[0])
+        # A child of the row's generator, set back to its first state before the second
+        # chain draws.
+        generator = draws.child(row)
         start = generator.bit_generator.state
         drawn_x[row] = p[row].rvs(random_state=generator)
         generator.bit_generator.state = start

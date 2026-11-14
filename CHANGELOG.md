@@ -303,3 +303,6 @@ All notable changes to this project are documented here. The format follows
   coupled step only, and it refused conditionals whose `mean` and `cov` are not values,
   such as SciPy's frozen `dirichlet`, `multivariate_t` and `wishart`. Blocks of one
   coordinate with `ppf`, and the maximal coupling, give the same numbers as before.
+- `Draws.child(row)` returns a new child of a row's generator, which does not move the
+  row's stream: two draws from it can read the same numbers, as the Gibbs kernel's common
+  random numbers do.
