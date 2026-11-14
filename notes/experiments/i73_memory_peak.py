@@ -52,6 +52,9 @@ sampler = CoupledSampler(log_prob, Normal(np.zeros(d), spread * np.eye(d)), vect
 if k == "auto":
     sampler.meeting_times(100)
 warnings.simplefilter("ignore")
+# Imported before tracing: the run and its estimates import them at first use, once in a
+# process, which is not memory of the run.
+import scipy.optimize, scipy.stats
 tracemalloc.start()
 base = tracemalloc.get_traced_memory()[0]
 result = sampler.run(n, k=k, m=2000 if k != "auto" else "auto", thin=thin)
