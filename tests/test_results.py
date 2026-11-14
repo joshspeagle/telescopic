@@ -11,7 +11,7 @@ from references import gaussian_log_prob, synthetic
 from telescopic import examples, sample
 from telescopic.diagnostics import w1_bound
 from telescopic.engine import run
-from telescopic.estimators import unbiased_covariance, unbiased_variance
+from telescopic.estimators import unbiased_covariance, unbiased_variance, weighted_quantile
 from telescopic.initial import Normal
 from telescopic.kernels import Independence, RandomWalk
 from telescopic.results import Result
@@ -53,8 +53,20 @@ def test_an_estimate_averages_the_replicates_with_a_student_t_interval(result):
     half_width = stats.t.ppf(0.95, len(values) - 1) * error
     np.testing.assert_array_equal(estimate.value, values.mean(axis=0))
     np.testing.assert_allclose(estimate.standard_error, error, rtol=1e-12)
+    # One array, lower ends first, as the credible interval of the result.
+    assert estimate.interval.shape == (2, 2)
     np.testing.assert_allclose(estimate.interval[0], estimate.value - half_width, rtol=1e-12)
     np.testing.assert_allclose(estimate.interval[1], estimate.value + half_width, rtol=1e-12)
+
+
+def test_result_repr_names_its_settings_without_computing_diagnostics():
+    result = gaussian_result(30, k=3, m=3, lag=1, max_iter=4)
+    expected = (
+        f"Result(R={result.n_replicates}, d=2, k=3, m=3, lag=1, "
+        f"censored={result.n_censored}, interrupted=False)"
+    )
+    assert repr(result) == expected
+    assert "_diagnostics" not in vars(result)
 
 
 def test_an_estimate_from_one_replicate_raises_instead_of_an_undefined_interval():
@@ -119,7 +131,27 @@ def test_without_bias_corrections_quantiles_are_those_of_the_pooled_draws():
         expected = np.quantile(atoms, levels, method="inverted_cdf")
         np.testing.assert_array_equal(result.quantile(levels)[:, dim], expected)
         central = np.quantile(atoms, [(1 - 0.555) / 2, (1 + 0.555) / 2], method="inverted_cdf")
-        np.testing.assert_array_equal(result.interval(0.555)[:, dim], central)
+        np.testing.assert_array_equal(result.credible_interval(0.555)[:, dim], central)
+
+
+def test_quantile_of_h_equals_weighted_quantile_recipe():
+    # The recipe applies h to every atom and divides the pooled weights by R; RESULT has
+    # bias corrections, so some weights are negative.
+    assert RESULT.measure.weights.min() < 0
+    weights = RESULT.measure.weights / RESULT.n_replicates
+    atoms = RESULT.measure.atoms
+    product = atoms[:, 0] * atoms[:, 1]
+    levels = [0.137, 0.503, 0.911]
+    expected = weighted_quantile(product, weights, levels)
+    np.testing.assert_array_equal(RESULT.quantile(levels, lambda x: x[:, 0] * x[:, 1]), expected)
+    one_level = RESULT.quantile(0.503, lambda x: x[:, 0] * x[:, 1])
+    assert one_level.shape == ()
+    assert one_level == expected[1]
+    # Values of shape (n, p) give a column per value, as the coordinates do.
+    both = RESULT.quantile(levels, lambda x: np.column_stack([x[:, 0] * x[:, 1], x[:, 0]]))
+    np.testing.assert_array_equal(both, np.column_stack([expected, RESULT.quantile(levels)[:, 0]]))
+    central = weighted_quantile(product, weights, [0.16, 0.84])
+    np.testing.assert_array_equal(RESULT.credible_interval(h=lambda x: x[:, 0] * x[:, 1]), central)
 
 
 def test_quantiles_keep_apart_atoms_that_share_some_coordinates():
@@ -131,7 +163,9 @@ def test_quantiles_keep_apart_atoms_that_share_some_coordinates():
 @pytest.mark.parametrize(
     ("dims", "limits"), [(0, (-2.0, 3.0)), ([1, 0], [(-3.0, 2.0), (-2.0, 3.0)])]
 )
-def test_histogram_bins_average_each_replicates_signed_mass_in_half_open_bins(dims, limits):
+def test_histogram_bins_average_each_replicates_signed_mass_closing_only_the_last_bin(
+    dims, limits
+):
     masses, errors, edges = RESULT.histogram(dims, bins=7, range=limits)
     if np.ndim(dims) == 0:
         dims, edges, limits = [dims], [edges], [limits]
@@ -144,7 +178,13 @@ def test_histogram_bins_average_each_replicates_signed_mass_in_half_open_bins(di
     )
     cells = itertools.product(*(itertools.pairwise(edge) for edge in edges))
     inside = [
-        np.all([(atoms[:, i] >= a) & (atoms[:, i] < b) for i, (a, b) in enumerate(cell)], axis=0)
+        np.all(
+            [
+                (atoms[:, i] >= a) & ((atoms[:, i] < b) | (b == edges[i][-1]) & (atoms[:, i] == b))
+                for i, (a, b) in enumerate(cell)
+            ],
+            axis=0,
+        )
         for cell in cells
     ]
     per_replicate = np.array(
@@ -154,6 +194,24 @@ def test_histogram_bins_average_each_replicates_signed_mass_in_half_open_bins(di
     np.testing.assert_allclose(errors, per_replicate.std(axis=0, ddof=1) / np.sqrt(40), atol=1e-12)
     total, _, _ = RESULT.histogram(dims, bins=7)
     assert abs(total.sum() - 1) < 1e-12
+
+
+@pytest.mark.parametrize("dims", [0, [0, 1]])
+def test_histogram_keeps_an_atom_on_the_upper_edge_of_its_range(dims):
+    # Each replicate's one atom of weight 1 lies on the edges [0, 1] of the range, so
+    # closing the last bin counts all of the mass, as numpy.histogram does.
+    values = np.array([[0.0, 0.0], [1.0, 1.0], [0.5, 1.0], [1.0, 0.25]])
+    result = synthetic([1] * 4, values)
+    limits = (0.0, 1.0) if np.ndim(dims) == 0 else [(0.0, 1.0)] * 2
+    masses, _, _ = result.histogram(dims, bins=4, range=limits)
+    assert masses.sum() == 1
+    expected, _ = np.histogramdd(
+        values[:, np.atleast_1d(dims)], bins=4, range=np.reshape(limits, (-1, 2))
+    )
+    np.testing.assert_array_equal(masses, expected / 4)
+    # The default range ends at the largest atom, which the same rule keeps.
+    automatic, _, _ = result.histogram(dims, bins=4)
+    np.testing.assert_array_equal(automatic, masses)
 
 
 def test_a_numpy_integer_of_bins_computes_as_a_python_integer():
@@ -372,6 +430,7 @@ def test_results_from_equal_array_seeds_merge():
         (lambda r: r.tv_bound([-1]), ValueError, "t must be non-negative"),
         (lambda r: r.w1_bound([-1]), ValueError, "t must be non-negative"),
         (lambda r: r.quantile(np.nan), ValueError, "q must be in"),
+        (lambda r: r.quantile(0.5, lambda x: x[:1]), ValueError, "h must map atoms"),
     ],
 )
 def test_invalid_arguments_of_the_result_raise(call, error, message):
@@ -414,6 +473,21 @@ def test_the_default_w1_times_reach_a_censored_pairs_last_distance():
     times = np.arange(len(bound))
     expected = w1_bound(replicates.distance_time, replicates.distance, 40, result.lag, times)
     np.testing.assert_array_equal(bound, expected)
+
+
+def test_tv_bound_counts_a_censored_pair_as_meeting_after_its_cap():
+    # The engine compares the chains at the cap, 25, before censoring a pair, so its
+    # meeting time is at least 26. With L = 3 the term of a pair is
+    # max(0, ceil((tau - L - t) / L)), and 26 adds 1 to the cap's where 3 divides 22 - t.
+    tau = np.array([4, 7, 9, 12, 20, -1, -1])
+    result = synthetic(tau, np.zeros(7), k=19, lag=3, max_iter=25)
+    known = np.where(tau < 0, 26, tau)
+    t = np.arange(30)
+    terms = np.maximum(0, np.ceil((known[:, None] - 3 - t) / 3))
+    expected = np.minimum(1, terms.mean(axis=0))
+    np.testing.assert_allclose(result.tv_bound(t), expected, rtol=1e-12)
+    np.testing.assert_allclose(result.tv_bound(), expected[: 26 - 3], rtol=1e-12)
+    assert result.diagnostics()["tv_bound_at_k"] == pytest.approx(4 / 7, rel=1e-12)
 
 
 def test_the_default_bound_times_end_where_the_bound_vanishes():

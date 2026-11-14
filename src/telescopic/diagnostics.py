@@ -26,8 +26,9 @@ def tv_bound(meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike) -> FloatA
     Parameters
     ----------
     meeting_times : array_like of int, shape (R,)
-        The meeting times :math:`\tau`. A censored pair, given as its cap, makes the
-        estimate a lower bound of the true average.
+        The meeting times :math:`\tau`. A censored pair, given as its cap plus 1, the
+        least meeting time it can have, makes the estimate a lower bound of the true
+        average.
     lag : int
         The lag :math:`L` of the runs that produced the meeting times.
     t : array_like of int
@@ -46,7 +47,7 @@ def tv_bound(meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike) -> FloatA
     if tau.ndim != 1 or len(tau) == 0 or not integral(tau, 0):
         raise ValueError(
             "meeting_times must be a non-empty one-dimensional array of non-negative "
-            "integers: give a censored pair as its cap"
+            "integers: give a censored pair as its cap plus 1"
         )
     survival = 1.0 - np.cumsum(np.bincount(tau.astype(np.int64))) / len(tau)
     bound: FloatArray = np.minimum(1.0, _lagged_tail(survival, lag, t))
@@ -77,7 +78,9 @@ def w1_bound(
     n_replicates : int
         The number of replicates :math:`R`, including those with no recorded distance.
     lag : int
+        The lag :math:`L` of the runs that recorded the distances.
     t : array_like of int
+        Times at which to bound the distance.
 
     Returns
     -------
@@ -211,6 +214,7 @@ def issues(result: Result) -> list[Issue]:
     Parameters
     ----------
     result : Result
+        The result to check.
 
     Returns
     -------
@@ -220,12 +224,23 @@ def issues(result: Result) -> list[Issue]:
     found = []
     values = result.diagnostics()
     if result.n_censored:
+        # A pair that starts where the density is zero may never meet, so no cap would
+        # leave the run waiting forever.
+        censored = result.index[np.isinf(result.meeting_times)]
+        outside = int(np.isin(censored, result._replicates.zero_density).sum())
+        remedy = (
+            f"{outside} of them started where the target density is zero, from which a "
+            "pair may never meet: draw the initial distribution inside the support of the "
+            "target, and run a new sampler with a larger max_iter"
+            if outside
+            else "run a new sampler with a larger max_iter, or none"
+        )
         found.append(
             Issue(
                 "censored",
                 f"{result.n_censored} of {len(result.meeting_times)} pairs reached max_iter = "
                 f"{result.max_iter} without meeting and are excluded, which biases the "
-                "estimates; run a new sampler with a larger max_iter, or none",
+                f"estimates; {remedy}",
             )
         )
     if values["late_fraction"] > 0.25:
@@ -233,16 +248,19 @@ def issues(result: Result) -> list[Issue]:
             Issue(
                 "late",
                 f"{values['late_fraction']:.0%} of the pairs met after k + lag, so k may be "
-                "too small: the bias correction is large and the variance high",
+                "too small: the bias correction is large and the variance high; run a new "
+                "sampler with a larger k",
             )
         )
     if result.n_replicates >= 100 and values["variance_share"] > 0.5:
         found.append(
             Issue(
                 "variance",
-                f"one replicate holds {values['variance_share']:.0%} of the variance of "
+                f"replicate {values['variance_share_replicate']} holds "
+                f"{values['variance_share']:.0%} of the variance of "
                 f"{values['variance_share_of']}: heavy tails or rare excursions make the "
-                "error bars unreliable",
+                "error bars unreliable; check the initial distribution, and look for a mode "
+                "that the other replicates missed",
             )
         )
     # The tail index is nan, which compares false, below 500 replicates.
@@ -251,19 +269,20 @@ def issues(result: Result) -> list[Issue]:
             Issue(
                 "tail",
                 f"the meeting times look heavy-tailed (tail index {values['tail_index']:.2f} "
-                "< 2), so the variance of the estimates may be infinite",
+                "< 2), so the variance of the estimates may be infinite; look at the "
+                "survival function of plot_meeting_times, and at the kernel",
             )
         )
     disagreement = tuning_disagreement(result.tuning)
     if disagreement:
         found.append(Issue("tuning", disagreement))
     threshold = slow_pair_threshold(result.lag, result.m)
-    if np.max(result._stopped) > threshold:
+    if np.max(result._earliest_meeting) > threshold:
         found.append(
             Issue(
                 "slow",
                 f"a pair was still unmet after {threshold} iterations; the meeting times may "
-                "be heavy-tailed",
+                "be heavy-tailed; look at the kernel and the initial distribution",
             )
         )
     return found
@@ -316,7 +335,8 @@ def tuning_disagreement(tuning: TuningReport | None) -> str | None:
             f"the tuning chains disagree (R-hat up to {largest:.2f}): the target may have "
             "several modes, or the chains may not have converged; several modes make "
             "meeting times heavy-tailed, and pairs that never leave one mode miss the "
-            "others; use an initial distribution that covers every mode"
+            "others; unless the initial distribution already covers every mode, use one "
+            "that does"
         )
     if nan.any():
         parts.append(

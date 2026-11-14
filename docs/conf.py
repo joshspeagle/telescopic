@@ -50,6 +50,18 @@ nb_execution_raise_on_error = True
 nb_merge_streams = True
 
 numpydoc_show_class_members = False
+# A parameter missing from a docstring's Parameters section (check PR01), or listed there
+# without a description (PR07), fails the build, with two exceptions. A class with
+# Attributes and no Parameters, such as Estimate, documents its fields there, since users
+# read them rather than pass them. And autodoc reads the docstring of every name in a
+# module documented with :members: while it chooses which to show, so the names imported
+# there are excluded by name: Any, dataclass and the like; Distribution, a Protocol; and
+# Draws, whose constructor only the engine and the testing module call.
+numpydoc_validation_checks = {"PR01", "PR07"}
+numpydoc_validation_overrides = {"PR01": [r"(?ms)\A(?!.*^\s*Parameters$).*^\s*Attributes$"]}
+numpydoc_validation_exclude = {
+    r"\.(Any|Axes|Distribution|Draws|Line2D|MaxNLocator|NamedTuple|dataclass|field|gcd)$"
+}
 # Signatures show names and defaults, one per line once they pass 88 characters; the
 # docstrings give the types.
 python_maximum_signature_line_length = 88

@@ -32,6 +32,23 @@ class Mixture(Kernel):
         the largest weight ratio of any independence component.
     weights : array_like
         Non-negative weights with a finite sum, normalized internally.
+
+    Examples
+    --------
+    The sampler tunes the untuned components of a mixture on the same pilot chains, whose
+    report gives the largest weight ratio of the independence proposal:
+
+    >>> from telescopic import examples, kernels, sample
+    >>> example = examples.gaussian(2)
+    >>> kernel = kernels.Mixture(
+    ...     [kernels.RandomWalk(), kernels.Independence()], [0.8, 0.2]
+    ... )
+    >>> result = sample(
+    ...     example.log_prob, example.initial, kernel=kernel,
+    ...     n_replicates=50, vectorize=True, rng=0,
+    ... )
+    >>> result.kernel.is_tuned, result.tuning.max_weight_ratio is not None
+    (True, True)
     """
 
     def __init__(self, kernels: Sequence[Kernel], weights: npt.ArrayLike) -> None:

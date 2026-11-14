@@ -139,6 +139,7 @@ class Kernel(ABC):
         Parameters
         ----------
         target : Target
+            The target to check.
         """
         instance("target", target, Target)
         if self.needs_log_prob and not target.has_log_prob:
@@ -217,6 +218,7 @@ class Kernel(ABC):
         Parameters
         ----------
         target : Target
+            The target to evaluate.
         x : ndarray, shape (n, d)
             Initial points, whose dimension must be the kernel's.
 
@@ -235,6 +237,7 @@ class Kernel(ABC):
         Parameters
         ----------
         target : Target
+            The target that the chains sample.
         state : State
             The chains, ``n`` of them.
         draws : Draws
@@ -257,6 +260,7 @@ class Kernel(ABC):
         Parameters
         ----------
         target : Target
+            The target that the chains sample.
         state_x, state_y : State
             The first and the second chains of the ``n`` pairs.
         draws : Draws
@@ -270,7 +274,7 @@ class Kernel(ABC):
 
 # Spec sections 5.4 and 5.5.
 class GradientKernel(Kernel):
-    """A kernel with a step size and a covariance, driven by the gradient: MALA, HMC.
+    r"""A kernel with a step size and a covariance, driven by the gradient: MALA, HMC.
 
     :meth:`~telescopic.kernels.Kernel.tune` takes the covariance of the pilot chains unless ``cov`` was given, then
     the step size by dual averaging toward ``target_acceptance`` from the pilot's last
@@ -279,7 +283,9 @@ class GradientKernel(Kernel):
     Parameters
     ----------
     step_size : float, optional
+        :math:`\epsilon`; ``None`` leaves it to :meth:`~telescopic.kernels.Kernel.tune`.
     cov : array_like, shape (d, d), optional
+        :math:`\Sigma`; ``None`` leaves it to :meth:`~telescopic.kernels.Kernel.tune`.
     """
 
     target_acceptance: float
@@ -319,11 +325,11 @@ class GradientKernel(Kernel):
         kernel.step_size = real("step_size", step_size, 0, np.inf)
         return kernel
 
-    def _with_cov(self, cov: FloatArray) -> GradientKernel:
-        raise NotImplementedError
+    @abstractmethod
+    def _with_cov(self, cov: FloatArray) -> GradientKernel: ...
 
-    def _first_step_size(self, d: int) -> float:
-        raise NotImplementedError
+    @abstractmethod
+    def _first_step_size(self, d: int) -> float: ...
 
     def _tuned(
         self, target: Target, initial: Any, pilot: PilotRun, rng: Seed
@@ -348,8 +354,11 @@ def evaluate(target: Target, x: FloatArray, need_grad: bool, *, start: bool = Fa
     Parameters
     ----------
     target : Target
+        The target to evaluate.
     x : ndarray, shape (n, d)
+        The points, one per row.
     need_grad : bool
+        Whether to evaluate the gradient too.
     start : bool
         Whether chains start at ``x``, where a gradient that is not finite raises
         (:meth:`telescopic.Target.log_prob_and_grad`).
@@ -373,7 +382,9 @@ def evaluate_proposal(target: Target, x: FloatArray, live: BoolArray | None = No
     Parameters
     ----------
     target : Target
+        The target to evaluate.
     x : ndarray, shape (n, d)
+        The proposals, one per row.
     live : ndarray of bool, shape (n,), optional
         Rows to evaluate, such as the HMC trajectories that have not stopped.
 
@@ -411,6 +422,7 @@ def evaluate_pair(
         Maps points of shape ``(m, d)`` to their states, such as :func:`evaluate` with its
         target and ``need_grad`` bound.
     x, y : ndarray, shape (n, d)
+        The proposals of the first and the second chains.
     identical : ndarray of bool, shape (n,)
         Rows where ``y`` is a copy of ``x``.
 
@@ -450,6 +462,7 @@ def log_ratio(new: FloatArray, old: FloatArray) -> FloatArray:
     Parameters
     ----------
     new, old : ndarray, shape (n,)
+        The log-densities at the proposals and at the current states.
 
     Returns
     -------
@@ -465,7 +478,9 @@ def select(accepted: BoolArray, proposal: State, current: State) -> State:
     Parameters
     ----------
     accepted : ndarray of bool, shape (n,)
+        Whether each chain accepts its proposal.
     proposal, current : State
+        The proposed and the current states of the chains.
 
     Returns
     -------

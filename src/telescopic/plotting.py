@@ -44,6 +44,7 @@ def meeting_times(result: Result, axes: Sequence[Axes] | None = None) -> list[Ax
     Parameters
     ----------
     result : Result
+        The result to plot.
     axes : sequence of two Axes, optional
         By default, those of a new figure.
 
@@ -78,6 +79,7 @@ def tv_bound(result: Result, ax: Axes | None = None) -> Axes:
     Parameters
     ----------
     result : Result
+        The result to plot.
     ax : Axes, optional
         By default, that of a new figure.
 
@@ -118,9 +120,11 @@ def marginals(
     Parameters
     ----------
     result : Result
+        The result to plot.
     dims : int or sequence of int, optional
         Coordinates; all by default.
     bins : int
+        The number of bins along each coordinate.
     axes : sequence of Axes, optional
         One per coordinate; by default, those of a new figure.
 
@@ -157,9 +161,11 @@ def corner(result: Result, dims: int | Sequence[int] | None = None, bins: int = 
     Parameters
     ----------
     result : Result
+        The result to plot.
     dims : int or sequence of int, optional
         Coordinates; all by default.
     bins : int
+        The number of bins along each coordinate.
 
     Returns
     -------
@@ -214,6 +220,7 @@ def paths(
     Parameters
     ----------
     replicates : telescopic.engine.Replicates
+        The output of a run that kept its paths.
     dims : two ints
         The plane, for more than one dimension.
     n : int

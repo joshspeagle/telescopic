@@ -31,7 +31,9 @@ def warn(message: str, category: type[Warning]) -> None:
     Parameters
     ----------
     message : str
+        The text of the warning.
     category : Warning subclass
+        The class of the warning.
     """
     frame, level = sys._getframe(1), 2
     while frame.f_back is not None and frame.f_code.co_filename.startswith(_PACKAGE):

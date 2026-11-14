@@ -12,8 +12,8 @@ target the hardest problems: complex, high-dimensional, ill-conditioned, multimo
 hierarchical distributions. Published methods are the starting point, not the boundary:
 the track innovates in theory, algorithms, implementation and computation.
 
-Known weaknesses of the current package, measured in `notes/QUESTIONS.md` and
-`notes/experiments/`:
+Known weaknesses of the current package, measured in `notes/QUESTIONS.md`,
+`notes/DECISIONS.md` (the rows on tuning, starts and warnings) and `notes/experiments/`:
 - Coupled HMC and MALA with automatically tuned steps rarely meet on a banana-shaped
   target, and fail on some log-concave posteriors started wide.
 - Starts far from the target leave replicates averaged before their chain has arrived,
@@ -23,7 +23,8 @@ Known weaknesses of the current package, measured in `notes/QUESTIONS.md` and
 - Everything is NumPy on CPU; there is no autodiff, GPU or compiled backend.
 
 Read first: `reports/Unbiased MCMC with couplings landscape.md` (the census of the field), the files under `research_notes/`, `docs/theory.md`,
-`notes/QUESTIONS.md`, and the part of `docs/design/spec.md` that lists what was deferred.
+`notes/QUESTIONS.md`, `notes/DECISIONS.md`, and the part of `docs/design/spec.md` that lists
+what was deferred.
 Do not repeat the census; build on it, correct it where it is wrong, and go past it.
 
 ## Hard rules

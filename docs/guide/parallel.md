@@ -193,14 +193,16 @@ the pool cannot run again.
 ## Progress
 
 `progress=True`, given to {func}`telescopic.sample`, to {class}`telescopic.CoupledSampler`
-or to one call of `run`, shows the progress of the meeting-time pilot and of each run, in
-replicates finished: a tqdm text bar on stderr with the `progress` extra, and otherwise a
-line on stderr every 10 seconds and when the run ends. On a pool, the count moves as
-chunks finish.
+or to one call of `run`, shows the progress of tuning, in steps of its chains, and of the
+meeting-time pilot and each run, in replicates finished: a tqdm text bar on stderr with
+the `progress` extra, and otherwise a line on stderr every 10 seconds and when each phase
+ends. Tuning runs in this process, as two phases for MALA and HMC: the adaptive pilot
+chains, then the step size. On a pool, the count of replicates moves as chunks finish.
 
 ## Memory
 
 The workers send the signed measures of their replicates back to this process, which
 holds them all. [Settings](settings.md#memory-and-thinning) gives their size, the
 {class}`telescopic.InputWarning <telescopic.warnings.InputWarning>` that the sampler emits
-when they would take more than 1 GB, and `thin`, which stores fewer.
+when the run and its first estimates would take more than 1 GB, and `thin`, which stores
+fewer.

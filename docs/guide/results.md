@@ -24,8 +24,11 @@ gaussian = examples.gaussian(2)  # N(0, [[1, 0.9], [0.9, 1]]), started from N(0,
 result = telescopic.sample(
     gaussian.log_prob, gaussian.initial, 1000, vectorize=True, rng=11
 )
-result.n_replicates, result.k, result.m, result.lag
+result
 ```
+
+A result prints as one line of its settings: $R$, the dimension $d$, `k`, `m`, `lag`,
+the number of censored pairs and whether the run was interrupted.
 
 ```{code-cell} python
 :tags: [remove-cell]
@@ -56,9 +59,10 @@ A few of the pairs met after `k + lag`, so a few replicates carry bias correctio
 {meth}`telescopic.Result.estimate` estimates $\pi(h)$ for a function `h` that maps
 points of shape `(n, d)`, a read-only array, to values of shape `(n,)` or `(n, p)`; any
 other shape raises `ValueError`. It returns an {class}`telescopic.Estimate`: the mean of
-the replicates' estimates (`value`), its `standard_error`, an `interval` at `level`
-(0.95 by default) and the replicates' estimates (`replicates`). The interval is the
-value plus or minus the standard error times the quantile of Student's t with $R - 1$
+the replicates' estimates (`value`), its `standard_error`, a confidence `interval` at
+`level` (0.95 by default), an array of shape `(2,)` or `(2, p)` with the lower ends
+first, and the replicates' estimates (`replicates`). The interval is the value plus or
+minus the standard error times the quantile of Student's t with $R - 1$
 degrees of freedom ([Theory](../theory.md#guarantees-and-their-limits)). It needs at least 2 replicates; with 1,
 `estimate` raises `ValueError`. Here $E[x_0 x_1]$ is the covariance, 0.9:
 
@@ -104,9 +108,11 @@ result.std()
 
 {meth}`telescopic.Result.quantile` returns quantiles of each coordinate under the pooled
 signed measures of the replicates, shape `(d,)` for one level and `(len(q), d)` for
-several. {meth}`telescopic.Result.interval` returns the central interval that holds a
-given `mass` of each marginal (0.68 by default): the quantiles at $(1 - \mathrm{mass})/2$
-and $(1 + \mathrm{mass})/2$, shape `(2, d)`. Both are consistent as $R$ grows, not
+several. {meth}`telescopic.Result.credible_interval` returns the central credible
+interval that holds a given `mass` of each marginal (0.68 by default): the quantiles at
+$(1 - \mathrm{mass})/2$ and $(1 + \mathrm{mass})/2$, shape `(2, d)`. It describes the
+spread of the target, where the `interval` of an estimate is a confidence interval for
+an expectation. Quantiles and credible intervals are consistent as $R$ grows, not
 unbiased, and come without standard errors; the method is on the
 [theory page](../theory.md#estimates-from-many-replicates).
 
@@ -115,31 +121,20 @@ result.quantile([0.05, 0.5, 0.95]), stats.norm.ppf([0.05, 0.5, 0.95])
 ```
 
 ```{code-cell} python
-result.interval(0.9)
+result.credible_interval(0.9)
 ```
 
-`quantile` and `interval` take the coordinates of the target only. For a quantity
-derived from them, apply {func}`telescopic.estimators.weighted_quantile` to its values at
-the atoms, with each atom's weight divided by $R$. On a coordinate, this gives what
-`quantile` gives:
+Both take a function `h`, as `estimate` does, for the quantiles of a quantity derived
+from the coordinates: those of its values at the atoms, with each atom's weight divided
+by $R$ (the quantiles of {func}`telescopic.estimators.weighted_quantile`). They have
+shape `()` or `(p,)` for one level and `(len(q),)` or `(len(q), p)` for several, and the
+credible interval has shape `(2,)` or `(2, p)`. The sum $x_0 + x_1$ is Gaussian, with a
+variance equal to the sum of the entries of the covariance matrix:
 
 ```{code-cell} python
 levels = [0.05, 0.5, 0.95]
-weights = result.measure.weights / result.n_replicates
-x0 = result.measure.atoms[:, 0]
-np.array_equal(
-    telescopic.estimators.weighted_quantile(x0, weights, levels),
-    result.quantile(levels)[:, 0],
-)
-```
-
-The sum $x_0 + x_1$ is Gaussian, with a variance equal to the sum of the entries of the
-covariance matrix:
-
-```{code-cell} python
-total = result.measure.atoms.sum(axis=1)  # x0 + x1 at every atom
 (
-    telescopic.estimators.weighted_quantile(total, weights, levels),
+    result.quantile(levels, lambda x: x[:, 0] + x[:, 1]),
     stats.norm.ppf(levels, scale=np.sqrt(gaussian.cov.sum())),
 )
 ```
@@ -147,12 +142,13 @@ total = result.measure.atoms.sum(axis=1)  # x0 + x1 at every atom
 ## Histograms
 
 {meth}`telescopic.Result.histogram` returns the mass of each bin, its standard error and
-the edges of the bins. The mass of a half-open bin $[a, b)$ is the average over
-replicates of their signed mass in it. It is unbiased for a `range` fixed before the
-run, and it can be negative where few atoms fall and the negative weights of the bias
-corrections outweigh the others. By default the bins span the atoms, so the masses sum to
-1, and since the atoms set the edges, every bin is biased, the two outer ones by a term
-of order $1/R$:
+the edges of the bins. The mass of a bin is the average over replicates of their signed
+mass in it. The bins are half-open, $[a, b)$, except the last, which is closed, as in
+`numpy.histogram`, so an atom on the upper edge of `range` is counted. It is unbiased
+for a `range` fixed before the run, and it can be negative where few atoms fall and the
+negative weights of the bias corrections outweigh the others. By default the bins span
+the atoms, so the masses sum to 1, and since the atoms set the edges, every bin is
+biased, the two outer ones by a term of order $1/R$:
 
 ```{code-cell} python
 masses, errors, edges = result.histogram(0, bins=10)

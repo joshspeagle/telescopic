@@ -57,9 +57,10 @@ result.plot_meeting_times();
 distance between the law of $X_t$ and the target
 ([Theory](../theory.md#distance-to-stationarity)) by its average over the replicates,
 capped at 1. By default it returns the bound at every $t$ from 0 to the last time at
-which it is positive, so that entry `t` is the bound at `t`. A censored pair counts as
-meeting at its cap, so with censored pairs the estimate is a lower bound of the one
-without a cap.
+which it is positive, so that entry `t` is the bound at `t`. A censored pair is known to
+meet after its cap, where its chains were last compared, and counts as meeting at the
+cap plus 1, so with censored pairs the estimate is a lower bound of the one without a
+cap.
 
 ```{code-cell} python
 result.tv_bound([0, result.k // 2, result.k])
@@ -94,7 +95,7 @@ result.w1_bound([0, result.k // 2, result.k])
 
 {func}`telescopic.diagnostics.tv_bound` and {func}`telescopic.diagnostics.w1_bound`
 compute the same bounds from arrays, such as meeting times of your own, with each
-censored pair given as its cap.
+censored pair given as the cap plus 1.
 
 ## The diagnostics of a run
 
@@ -113,8 +114,8 @@ values = result.diagnostics()
 assert set(values) == {
     "meeting_time_50", "meeting_time_90", "meeting_time_99", "meeting_time_max",
     "censored", "tail_index", "late_fraction", "late_fraction_upper", "tv_bound_at_k",
-    "variance_share", "variance_share_of", "mean_cost", "seconds_per_replicate",
-    "relative_cost",
+    "variance_share", "variance_share_of", "variance_share_replicate", "mean_cost",
+    "seconds_per_replicate", "relative_cost",
 }
 assert result.lag == result.k
 assert abs(values["late_fraction"] - values["tv_bound_at_k"]) < 0.01
@@ -132,9 +133,10 @@ assert abs(values["late_fraction"] - values["tv_bound_at_k"]) < 0.01
   `k + lag`, censored ones included, and its one-sided 95% Clopper-Pearson upper bound,
   an exact binomial confidence bound, which stays informative when the fraction is 0. The fraction is the leading term of
   `tv_bound_at_k`, the TV bound at $k$, and with `lag = k` the two are close.
-- `variance_share` and `variance_share_of`: the largest share of one replicate in the
-  variance of the estimate of a coordinate's mean or variance, and that estimate, such as
-  `"the variance of x1"`; `nan` and `None` below 2 replicates
+- `variance_share`, `variance_share_of` and `variance_share_replicate`: the largest share
+  of one replicate in the variance of the estimate of a coordinate's mean or variance,
+  that estimate, such as `"the variance of x1"`, and the index of that replicate; `nan`,
+  `None` and `None` below 2 replicates
   ([`variance`](#one-replicate-dominating-the-variance-variance)).
 - `mean_cost`, `seconds_per_replicate` and `relative_cost`: the cost of a replicate
   ([Settings](settings.md#cost)).
@@ -154,10 +156,11 @@ condition below that applies, at the time this table gives:
 {meth}`telescopic.Result.check`
 emits the warnings that apply to any result, and {func}`telescopic.diagnostics.issues`
 returns them, without warning, as a list of {class}`telescopic.diagnostics.Issue` with
-the `kind` named in each heading below and a `message`. An empty list means only that
-none of them holds, not that the run is right. They are heuristics, with thresholds set
-so that clean Gaussian runs at the default settings rarely trigger them; the measured
-rates below show how often they fire elsewhere.
+the `kind` named in each heading below and a `message`, which ends with the remedy in a
+few words. An empty list means only that none of them holds, not that the run is right.
+They are heuristics, with thresholds set so that clean Gaussian runs at the default
+settings rarely trigger them; the measured rates below show how often they fire
+elsewhere.
 
 ### Censored pairs (`censored`)
 
@@ -167,7 +170,9 @@ censored: its meeting time is `inf`, and it is left out of the estimates, of $R$
 the signed measure. `result.n_censored` counts them. **Meaning:** leaving them out biases
 the estimates, since they are the replicates whose chains take longest to meet.
 **Remedy:** a new sampler with a larger `max_iter`, or none; a sampler keeps the cap of
-its first run.
+its first run. When censored pairs started where the target density is zero, the warning
+says how many and advises an initial distribution inside the support first: such a pair
+may never meet, so a run without a cap could wait forever.
 
 ### Late pairs (`late`)
 
@@ -180,14 +185,16 @@ which make the variance high. **Remedy:** a new sampler with a larger `k`
 
 **Trigger:** with at least 100 replicates, one replicate holds more than half of the
 sample variance of the estimate of some coordinate's mean or variance.
-`result.diagnostics()` reports the largest share as `variance_share`, and the estimate
-that holds it as `variance_share_of`, whether or not the warning fires. **Meaning:**
-heavy tails or rare excursions make the error bars unreliable. A replicate whose chain is
-still on its way to the target at `k` does this, as from a start far wider than the
-target ([Initial distributions](targets.md#choosing-one)), and so does a replicate that
-found a mode that the others missed. **Remedy:** find the replicate in the `replicates`
-of the estimate, check the initial distribution, and look for a mode the other
-replicates missed. The warning looks at the first two moments of each coordinate only;
+`result.diagnostics()` reports the largest share as `variance_share`, the estimate that
+holds it as `variance_share_of`, and the index of the replicate that holds it, which
+the warning names, as `variance_share_replicate`, whether or not the warning fires.
+**Meaning:** heavy tails or rare excursions make the error bars unreliable. A replicate
+whose chain is still on its way to the target at `k` does this, as from a start far
+wider than the target ([Initial distributions](targets.md#choosing-one)), and so does a
+replicate that found a mode that the others missed. **Remedy:** check the initial
+distribution, and look for a mode that the other replicates missed, starting with the
+one named; its row in the `replicates` of an estimate is its position among the
+replicates that met. The warning looks at the first two moments of each coordinate only;
 {func}`telescopic.diagnostics.variance_share` applied to `result.estimate(h).replicates`
 checks a function of your own.
 
@@ -222,7 +229,7 @@ miss the others. A NaN says the pilot never moved in that coordinate, so the tun
 kernel's variance there is about $10^{-10}$ and its chains barely move in it either;
 this happens where float64 cannot resolve the target's scale at the coordinate's values,
 such as a scale of $10^3$ at $2^{70}$, where floats are $2^{18}$ apart. **Remedy:** for
-several modes, an initial distribution that covers every mode
+several modes, unless the initial distribution already covers every mode, one that does
 ([Initial distributions](targets.md#choosing-one)); for a NaN, a target written in
 coordinates centered near 0, or the kernel's parameters given instead of tuned
 ([Kernels](kernels.md)). Chains that agree can still all sit in one mode, and the
@@ -232,8 +239,10 @@ warning is then silent ([Tuning](kernels.md#tuning)).
 
 **Trigger:** a pair still unmet after $\max(10^4, 10 \max(L, m))$ iterations; the
 sampler names the replicate in one warning per run. **Meaning:** the meeting times may be
-heavy-tailed, and the run waits for that pair. **Remedy:** look at the kernel and the
-initial distribution. In the meeting-time pilot, whose own cap is on
+heavy-tailed, and the run waits for that pair: a first Ctrl-C starts no new replicate
+but lets the pairs in progress finish, this one too, and a second stops the run without
+a result ([Parallel runs](parallel.md#interrupting-a-run)). **Remedy:** look at the
+kernel and the initial distribution. In the meeting-time pilot, whose own cap is on
 [Settings](settings.md#the-automatic-pipeline), the threshold is $10^4$.
 
 ## A run that warns
@@ -308,8 +317,8 @@ a result may be unreliable: the conditions above. An
 {class}`telescopic.InputWarning <telescopic.warnings.InputWarning>` says that an input is
 legal but questionable: replicates or pilot pairs whose initial draws have zero target
 density, gradients taken as 0 because they were not finite where the log-density is
-([Targets](targets.md#special-values)), and a run whose atoms and distances would take
-more than 1 GB ([Settings](settings.md#memory-and-thinning)).
+([Targets](targets.md#special-values)), and a run that, with its first estimates, would
+take more than 1 GB ([Settings](settings.md#memory-and-thinning)).
 Each warning points at the line of your code that called telescopic.
 
 The filters of the `warnings` module select them by class:
