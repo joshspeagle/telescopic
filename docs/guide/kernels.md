@@ -39,7 +39,7 @@ the draws differ, the offset of the second from its mean mirrors that of the fir
   ([When the automatic step fails](#when-the-automatic-step-fails)). A wrong gradient
   leaves them exact but slow, so a sampler built with one compares the gradient with
   differences of the log-density first
-  ([Checking the gradient](targets.md#checking-the-gradient)).
+  ([Checking the gradient](log-density.md#checking-the-gradient)).
 - **The independence kernel** suits a target that a Student-$t$ approximates well, such
   as a posterior close to Gaussian.
 - **Gibbs** suits models whose full conditionals are known, such as conjugate

@@ -11,7 +11,7 @@ the chain converges ([Theory](../theory.md#guarantees-and-their-limits)), yet a 
 miss the truth by many times its error bar, or cover it with an error bar too wide to
 use. This page runs such cases and shows what telescopic reports for each. A run's
 warnings appear under its cell; [Diagnostics and warnings](../guide/diagnostics.md)
-explains each one, and [Initial distributions](../guide/targets.md#choosing-one) gives
+explains each one, and [Initial distributions](../guide/initial-distribution.md#choosing-one) gives
 the advice on choosing one.
 
 ```{code-cell} python
@@ -88,7 +88,7 @@ telescopic.diagnostics.issues(narrow)
 ```
 
 This is the failure of an initial distribution that misses a mode
-([Initial distributions](../guide/targets.md#choosing-one)): every chain starts on the
+([Initial distributions](../guide/initial-distribution.md#choosing-one)): every chain starts on the
 side of one mode, and the kernel rarely crosses to the other. Most seeds miss the truth
 in this setting without a warning
 ([Measured rates](../guide/diagnostics.md#measured-rates)).
@@ -225,7 +225,7 @@ assert abs(2.38 * np.sqrt(tuned.kernel.cov[0, 0]) - 10) < 1
 The interval covers the truth. The wide start made the failure visible, and the kernel
 that crosses removed it. A target with several modes needs both: an initial
 distribution that covers every mode
-([Initial distributions](../guide/targets.md#choosing-one)), and a kernel that crosses
+([Initial distributions](../guide/initial-distribution.md#choosing-one)), and a kernel that crosses
 between them, such as this tuned random walk, or a
 {class}`~telescopic.kernels.Mixture` with a component whose proposals reach the other
 modes ([Kernels and couplings](../guide/kernels.md)). With a kernel that cannot cross,
@@ -468,7 +468,7 @@ print(f"smallest {ratios[0]:.3f}, second largest {ratios[-2]:.3f}, largest {rati
 assert ratios[-1] > 10 * ratios[-2]
 ```
 
-One replicate causes it, as [Initial distributions](../guide/targets.md#choosing-one)
+One replicate causes it, as [Initial distributions](../guide/initial-distribution.md#choosing-one)
 explains for starts this far. A Gaussian centered on an optimizer's fit, with its inverse
 Hessian scaled by 100, is ten times wider than the posterior:
 

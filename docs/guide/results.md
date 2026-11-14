@@ -91,7 +91,7 @@ the covariance matrix and of the variances
 ([Theory](../theory.md#estimates-from-many-replicates)). A variance estimate can be
 negative, and the covariance matrix need not be positive semi-definite; a start far
 wider than the target can make them so
-([Initial distributions](targets.md#choosing-one)):
+([Initial distributions](initial-distribution.md#choosing-one)):
 
 ```{code-cell} python
 result.cov(), gaussian.cov

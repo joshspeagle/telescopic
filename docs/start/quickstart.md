@@ -63,7 +63,7 @@ assert warnings.formatwarning("m", UserWarning, "f.py", 1) == "UserWarning: m\n"
 
 The initial distribution should be wider than the posterior and cover all its modes,
 but not wider by orders of magnitude
-([Initial distributions](../guide/targets.md#choosing-one)). A Gaussian ten times wider
+([Initial distributions](../guide/initial-distribution.md#choosing-one)). A Gaussian ten times wider
 than an optimizer's error bars suits a posterior with one mode:
 
 ```{code-cell} python
@@ -139,4 +139,4 @@ replicates on several processes.
 
 The tutorials work through examples, starting with
 [How it works](../tutorials/how-it-works.md). The how-to guides, starting with
-[Targets and initial distributions](../guide/targets.md), cover each part of the package, and the [theory](../theory.md) states what the estimators guarantee.
+[Write the log-density and constraints](../guide/log-density.md), cover each part of the package, and the [theory](../theory.md) states what the estimators guarantee.

@@ -64,7 +64,7 @@ pilot runs whenever the kernel has parameters to tune.
 Before any of it, a sampler built with a gradient and a kernel that evaluates it
 compares the gradient with differences of the log-density, `grad` with those of
 `log_prob` or the gradient of `log_prob_and_grad` with those of its own values, unless
-`check_grad=False` ([Checking the gradient](targets.md#checking-the-gradient)).
+`check_grad=False` ([Checking the gradient](log-density.md#checking-the-gradient)).
 
 - {meth}`~telescopic.CoupledSampler.tune` tunes the kernel once, keeps it as
   `sampler.kernel`, and returns the report of the tuning pilot, or `None` when nothing
@@ -148,7 +148,7 @@ log-density and its gradient once per step (MALA) or once per leapfrog step (HMC
 pilot's pairs evaluate it about twice per step, and `result.n_log_prob` counts only the
 run's evaluations. With a kernel that evaluates the gradient, the gradient check adds 40
 evaluations of `log_prob` and 8 of `grad`, or 40 of `log_prob_and_grad`, with float64
-values when the sampler is built, before tuning, which no run counts ([Checking the gradient](targets.md#checking-the-gradient)).
+values when the sampler is built, before tuning, which no run counts ([Checking the gradient](log-density.md#checking-the-gradient)).
 Tuning and the pilot can be skipped:
 
 - **Tuning** runs only for a kernel with parameters left unset. A kernel whose

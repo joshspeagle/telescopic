@@ -80,7 +80,7 @@ exact_std = np.sqrt(np.diag(np.linalg.inv(precision)))
 ## telescopic
 
 We run the line fit from the Quickstart, starting from a Gaussian ten times wider than an optimizer's error
-bars ([Initial distributions](../guide/targets.md#choosing-one)), with the log-density
+bars ([Initial distributions](../guide/initial-distribution.md#choosing-one)), with the log-density
 evaluated in batches:
 
 ```{code-cell} python

@@ -190,7 +190,7 @@ holds it as `variance_share_of`, and the index of the replicate that holds it, w
 the warning names, as `variance_share_replicate`, whether or not the warning fires.
 **Meaning:** heavy tails or rare excursions make the error bars unreliable. A replicate
 whose chain is still on its way to the target at `k` does this, as from a start far
-wider than the target ([Initial distributions](targets.md#choosing-one)), and so does a
+wider than the target ([Initial distributions](initial-distribution.md#choosing-one)), and so does a
 replicate that found a mode that the others missed. **Remedy:** check the initial
 distribution, and look for a mode that the other replicates missed, starting with the
 one named; its row in the `replicates` of an estimate is its position among the
@@ -230,7 +230,7 @@ kernel's variance there is about $10^{-10}$ and its chains barely move in it eit
 this happens where float64 cannot resolve the target's scale at the coordinate's values,
 such as a scale of $10^3$ at $2^{70}$, where floats are $2^{18}$ apart. **Remedy:** for
 several modes, unless the initial distribution already covers every mode, one that does
-([Initial distributions](targets.md#choosing-one)); for a NaN, a target written in
+([Initial distributions](initial-distribution.md#choosing-one)); for a NaN, a target written in
 coordinates centered near 0, or the kernel's parameters given instead of tuned
 ([Kernels](kernels.md)). Chains that agree can still all sit in one mode, and the
 warning is then silent ([Tuning](kernels.md#tuning)).
@@ -303,7 +303,7 @@ Setup of these runs: telescopic at commit d014ac1, Python 3.13.18, NumPy 2.5.4 a
 The last two cases show the limit of every diagnostic here: a run whose pairs all met in
 one mode cannot be detected from its own output, since nothing in its meeting times or
 estimates shows the mode that no replicate visited. The remedy is an initial
-distribution that covers every mode ([Initial distributions](targets.md#choosing-one)),
+distribution that covers every mode ([Initial distributions](initial-distribution.md#choosing-one)),
 and a kernel that reaches every mode from it, which an automatically tuned
 {class}`~telescopic.kernels.Independence` proposal may not
 ([Independence](kernels.md#independence)).
@@ -320,9 +320,9 @@ a result may be unreliable: the conditions above. An
 {class}`telescopic.InputWarning <telescopic.warnings.InputWarning>` says that an input is
 legal but questionable: replicates or pilot pairs whose initial draws have zero target
 density, gradients taken as 0 because they were not finite where the log-density is
-([Targets](targets.md#special-values)), a gradient that disagrees with differences of
+([Special values](log-density.md#special-values)), a gradient that disagrees with differences of
 the log-density when a sampler is built, or a check of it that could compare nothing
-([Checking the gradient](targets.md#checking-the-gradient)), and a run that, with its
+([Checking the gradient](log-density.md#checking-the-gradient)), and a run that, with its
 first estimates, would take more than 1 GB ([Settings](settings.md#memory-and-thinning)).
 Each warning points at the line of your code that called telescopic.
 

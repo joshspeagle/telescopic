@@ -79,7 +79,8 @@ tutorials/failure-modes
 :hidden:
 :caption: How-to guides
 
-guide/targets
+guide/log-density
+guide/initial-distribution
 guide/kernels
 guide/settings
 guide/results

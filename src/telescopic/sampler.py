@@ -127,7 +127,7 @@ class CoupledSampler:
         Compare the gradient with differences of the log-density at 8 draws of the
         initial distribution when the sampler is built, if the kernel evaluates a
         gradient, and warn where they disagree (Checking the gradient, in
-        :doc:`/guide/targets`): ``grad`` with differences of ``log_prob``, or the
+        :doc:`/guide/log-density`): ``grad`` with differences of ``log_prob``, or the
         gradient of ``log_prob_and_grad`` with differences of its own values. With
         ``grad`` it costs 40 evaluations of ``log_prob`` and 8 of ``grad`` for float64
         values, 8 more of each for a float32 ``grad`` and again for a float32
