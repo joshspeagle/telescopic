@@ -28,11 +28,17 @@ class Gibbs(Kernel):
 
     - ``"maximal"``: the rejection maximal coupling, with ``eta``;
     - ``"crn"``: common random numbers, which contract the chains but make them equal only
-      by rounding. For a block of one coordinate whose conditionals have ``ppf``, one
+      by rounding. For a block of one coordinate whose two conditionals have ``ppf``, one
       uniform goes through each ``ppf``. For a block of several coordinates, or of one
       without ``ppf``, each chain draws from its own conditional with ``rvs``, from
       generators in the same state, so each keeps its conditional's law whatever its
-      type. How close the two draws are then depends on how ``rvs`` uses the generator;
+      type. The two draws are then close when ``rvs`` reads a fixed count of numbers from
+      the generator and maps them smoothly in the conditional's parameters, as a normal
+      block drawn as ``mean + cholesky(cov) @ random_state.standard_normal(k)``, or with
+      ``random_state.multivariate_normal(mean, cov, method="cholesky")``, does. NumPy's
+      default method, a singular value decomposition, which SciPy's
+      ``multivariate_normal`` calls, can change signs and order between nearby
+      covariances, and then the two draws are as far apart as independent ones;
     - ``"two-scale"``: common random numbers for pairs farther apart than ``threshold``
       at the start of the sweep, the maximal coupling for the others (Biswas, Bhattacharya,
       Jacob & Johndrow 2022).
