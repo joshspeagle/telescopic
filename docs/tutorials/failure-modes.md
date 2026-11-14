@@ -371,7 +371,7 @@ modes it is given: a mode that no optimization found stays as invisible as befor
 ## A start far wider than the target
 
 The line fit of the [Quickstart](../start/quickstart.md#a-first-run), on its data `x`, `y` and
-`yerr`, with the log-density of [telescopic beside emcee](beside-emcee.md), which takes
+`yerr`, with the log-density of [Coming from emcee](../start/coming-from-emcee.md), which takes
 one point or a batch, and its exact Gaussian posterior, computed as there:
 
 ```{code-cell} python

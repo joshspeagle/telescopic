@@ -24,7 +24,7 @@ estimator pairs them with a lag of 1. The lines join at the meeting time, and on
 ```
 
 :::{container} routes
-- [**I use emcee and want error bars I can trust**](tutorials/beside-emcee.md)
+- [**I use emcee and want error bars I can trust**](start/coming-from-emcee.md)
 
   The same line fit with emcee and with telescopic, side by side.
 - [**How can MCMC be unbiased?**](tutorials/how-it-works.md)
@@ -68,7 +68,6 @@ start/coming-from-emcee
 :caption: Tutorials
 
 tutorials/how-it-works
-tutorials/beside-emcee
 tutorials/choosing-settings
 tutorials/gradients
 tutorials/gibbs
