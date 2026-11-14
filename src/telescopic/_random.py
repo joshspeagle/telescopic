@@ -47,18 +47,18 @@ def root_seed(rng: Seed) -> SeedSequence:
 
 def namespace_seed(root: SeedSequence, namespace: int) -> SeedSequence:
     # The seed of a pilot's engine runs, whose streams then never meet the main run's.
-    return SeedSequence(
-        root.entropy, spawn_key=(*root.spawn_key, _BRANCH, namespace), pool_size=root.pool_size
-    )
+    return _seed(root, namespace)
 
 
 def replicate_generator(root: SeedSequence, namespace: int, index: int) -> Generator:
-    seed = SeedSequence(
-        root.entropy,
-        spawn_key=(*root.spawn_key, _BRANCH, namespace, index),
-        pool_size=root.pool_size,
+    return Generator(PCG64DXSM(_seed(root, namespace, index)))
+
+
+def _seed(root: SeedSequence, *key: int) -> SeedSequence:
+    # The seed below the root under the branch of replicate streams and then key.
+    return SeedSequence(
+        root.entropy, spawn_key=(*root.spawn_key, _BRANCH, *key), pool_size=root.pool_size
     )
-    return Generator(PCG64DXSM(seed))
 
 
 class Streams:
