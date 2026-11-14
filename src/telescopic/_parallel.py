@@ -109,6 +109,21 @@ def check_pool(pool: Any) -> Any:
     return count
 
 
+def check_workers(n_workers: Any, pool: Any) -> int | None:
+    # The number of workers that the caller states for a checked pool; it wins over the
+    # size the pool reports (DECISIONS #167).
+    if n_workers is None:
+        return None
+    count = integer("n_workers", n_workers, "None or a positive integer", minimum=1)
+    if pool is None or isinstance(pool, int):
+        runs = "runs in this process" if pool is None else "is already the number of workers"
+        raise ValueError(
+            f"n_workers is for an executor or a pool of your own, and pool={pool!r} {runs}: "
+            "leave n_workers out"
+        )
+    return count
+
+
 @contextmanager
 def opened(pool: Any) -> Iterator[Any]:
     # The pool as execute takes it: for a number, worker processes that live for the
@@ -126,16 +141,19 @@ def opened(pool: Any) -> Iterator[Any]:
         raise
 
 
-def execute(job: Job, indices: IntArray, pool: Any, monitor: Monitor) -> engine.Replicates:
-    # The job on sorted indices, here or on an opened pool. Here the monitor sees every
-    # iteration; on a pool, the finished replicates after each chunk and every POLL
-    # seconds. Once it returns true, telescopic's workers start no new replicate, and a
-    # chunk that starts on them afterwards runs nothing unless it is the first; a user's
-    # executor starts no chunk that it can still cancel (spec sections 6.4 and 6.5).
+def execute(
+    job: Job, indices: IntArray, pool: Any, monitor: Monitor, n_workers: int | None = None
+) -> engine.Replicates:
+    # The job on sorted indices, here or on an opened pool, whose workers n_workers counts
+    # when given. Here the monitor sees every iteration; on a pool, the finished
+    # replicates after each chunk and every POLL seconds. Once it returns true,
+    # telescopic's workers start no new replicate, and a chunk that starts on them
+    # afterwards runs nothing unless it is the first; a user's executor starts no chunk
+    # that it can still cancel (spec sections 6.4 and 6.5).
     if pool is None:
         return job(indices, monitor=monitor)
     start = time.perf_counter()
-    workers = pool.n if isinstance(pool, Workers) else _workers(pool)
+    workers = pool.n if isinstance(pool, Workers) else n_workers or _workers(pool)
     # Chunks of at most a full set of lanes, where four per worker allow (DECISIONS #52).
     count = max(workers, math.ceil(len(indices) / engine.LANES))
     pieces = np.array_split(indices, min(len(indices), CHUNKS_PER_WORKER * workers, count))
