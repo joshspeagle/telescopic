@@ -4,6 +4,9 @@ import os
 import sys
 from pathlib import Path
 
+from sphinx.application import Sphinx
+from sphinx.ext.autosummary.generate import find_autosummary_in_files
+
 import telescopic
 
 DOCS = Path(__file__).resolve().parent
@@ -29,6 +32,7 @@ extensions = [
     "myst_nb",
     "numpydoc",
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
 ]
@@ -48,6 +52,15 @@ nb_execution_timeout = 300
 nb_execution_raise_on_error = True
 # Consecutive printed lines of a cell show as one output.
 nb_merge_streams = True
+
+# The API reference is docs/api.md, an index whose autosummary tables generate a page for
+# each class, function and module that they list, into docs/api/ at every build, after
+# deleting the pages that they no longer list; the pages are not committed. A module's
+# page shows the names of its __all__.
+templates_path = ["_templates"]
+autosummary_ignore_module_all = False
+# The outline of a class's page lists its methods without repeating the class's name.
+toc_object_entries_show_parents = "hide"
 
 numpydoc_show_class_members = False
 # A parameter missing from a docstring's Parameters section (check PR01), or listed there
@@ -119,3 +132,17 @@ html_favicon = "_themes/telescopic/static/brand/favicon.svg"
 # No template links a page's source and search reads the built pages, so _sources/ would
 # only be dead weight.
 html_copy_source = False
+
+
+def _remove_stale_api_pages(app: Sphinx) -> None:
+    # A page generated for a name that no table lists any more, after it was removed or
+    # renamed, would fail the strict build as included in no toctree.
+    listed = {entry.name for entry in find_autosummary_in_files([str(DOCS / "api.md")])}
+    for page in (DOCS / "api").glob("*.rst"):
+        if page.stem not in listed:
+            page.unlink()
+
+
+def setup(app: Sphinx) -> None:
+    # Ahead of autosummary's generation, which runs at the default priority of 500.
+    app.connect("builder-inited", _remove_stale_api_pages, priority=400)

@@ -55,7 +55,7 @@
     {%- if not home %}
     <ul>
       {%- for page in s.pages %}
-      <li><a href="{{ pathto(page.docname) }}"{% if page.docname == pagename %} aria-current="page"{% endif %}>{{ page.title }}</a></li>
+      <li><a href="{{ pathto(page.docname) }}"{% if page.docname == section_page %} aria-current="{{ 'page' if page.docname == pagename else 'true' }}"{% endif %}>{{ page.title }}</a></li>
       {%- endfor %}
     </ul>
     {%- endif %}
