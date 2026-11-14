@@ -70,8 +70,16 @@ and join the results ([Merging runs](results.md#merging-runs)).
 
 A pool runs chunks of consecutive replicate indices: one per worker at least, more where
 a chunk would hold more than 256 replicates, the lanes that the engine advances together,
-and four per worker at most. An executor receives every chunk at once, in index order; a
-pool with only `map` receives them in waves of one chunk per worker.
+and four per worker at most, unless a chunk would then hold more than 1,024 replicates.
+For $R$ replicates on $W$ workers, that is
+$\max(\lceil R / 1024 \rceil, \min(R, 4W, \max(W, \lceil R / 256 \rceil)))$ chunks, of
+sizes that differ by at most one. Up to 4,096 replicates per worker, the limit of 1,024
+changes nothing: 2,000 replicates on 4 workers make 8 chunks of 250. Beyond it, the
+chunks hold at most 1,024 replicates whatever the number of workers: 100,000 replicates
+on 4 workers make 98 chunks of 1,020 or 1,021, and 1,000,000 on 4 or 64 workers make 977
+of 1,023 or 1,024. An executor receives every chunk at once, in index order; a pool with
+only `map` receives them in waves of one chunk per worker, so a long run on such a pool
+takes many waves, each as long as its slowest chunk.
 
 telescopic reads the number of workers of an integer pool, a `concurrent.futures`
 executor, a `multiprocessing` pool and a schwimmbad pool. It counts any other pool as
@@ -233,7 +241,10 @@ chains, then the step size. On a pool, the count of replicates moves as chunks f
 ## Memory
 
 The workers send the signed measures of their replicates back to this process, which
-holds them all. [Settings](settings.md#memory-and-thinning) gives their size, the
+holds them all. A worker holds those of one chunk at a time, at most 1,024 replicates,
+and sends them back when the chunk ends, so its memory does not grow with the number of
+replicates; the memory of this process does, since it keeps every chunk's replicates and
+then joins them. [Settings](settings.md#memory-and-thinning) gives their size, the
 {class}`telescopic.InputWarning <telescopic.warnings.InputWarning>` that the sampler emits
 when the run and its first estimates would take more than 1 GB, and `thin`, which stores
 fewer.

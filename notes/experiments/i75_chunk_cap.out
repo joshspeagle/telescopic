@@ -1,0 +1,22 @@
+{"commit": "932861f-dirty", "machine": "Intel(R) Xeon(R) Processor @ 2.10GHz, 4 CPUs, Linux 6.18.44-fc-v470", "available CPUs": 4, "blas": [{"internal_api": "openblas", "version": "0.3.34.106.0", "num_threads": 1}, {"internal_api": "openblas", "version": "0.3.31.dev", "num_threads": 1}], "python": "3.13.18", "numpy": "2.5.4", "scipy": "1.18.1", "telescopic": "0.1.0.dev0"}
+
+Part 1: chunks (number of chunks of min to max replicates)
+replicates workers  without the cap          with the cap of 1,024
+       100       4  4 of 25 to 25            4 of 25 to 25
+       200       4  4 of 50 to 50            4 of 50 to 50
+     1,000       1  4 of 250 to 250          4 of 250 to 250
+     1,000       4  4 of 250 to 250          4 of 250 to 250
+     2,000       4  8 of 250 to 250          8 of 250 to 250
+     4,096       1  4 of 1024 to 1024        4 of 1024 to 1024
+     4,096       2  8 of 512 to 512          8 of 512 to 512
+     4,097       1  4 of 1024 to 1025        5 of 819 to 820
+    16,384       4  16 of 1024 to 1024       16 of 1024 to 1024
+    16,385       4  16 of 1024 to 1025       17 of 963 to 964
+   100,000       4  16 of 6250 to 6250       98 of 1020 to 1021
+ 1,000,000       4  16 of 62500 to 62500     977 of 1023 to 1024
+ 1,000,000      64  256 of 3906 to 3907      977 of 1023 to 1024
+
+Part 2: 8,192 replicates of the line fit on one thread
+without the cap  4 chunks, seconds 8.94, 8.35, 9.01 (best 8.35), largest pickled result 52,891,539 bytes
+with the cap     8 chunks, seconds 9.37, 8.76, 8.62 (best 8.62), largest pickled result 26,453,131 bytes
+best with the cap / best without: 1.03

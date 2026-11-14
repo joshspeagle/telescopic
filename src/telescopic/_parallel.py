@@ -30,6 +30,11 @@ threadpoolctl = importlib.import_module("threadpoolctl")
 # At most this many chunks per worker, so that the workers finish together.
 CHUNKS_PER_WORKER = 4
 
+# At most this many replicates per chunk, four sets of lanes, so that a chunk's memory in
+# its worker and on its way back, and the steps of a pool's progress, do not grow with the
+# run (DECISIONS #179).
+MAX_CHUNK = 4 * engine.LANES
+
 # The most processes that ProcessPoolExecutor accepts on Windows; elsewhere it has no limit.
 MAX_PROCESSES = 61 if sys.platform == "win32" else sys.maxsize
 
@@ -154,9 +159,12 @@ def execute(
         return job(indices, monitor=monitor)
     start = time.perf_counter()
     workers = _workers(pool, n_workers)
-    # Chunks of at most a full set of lanes, where four per worker allow (DECISIONS #52).
-    count = max(workers, math.ceil(len(indices) / engine.LANES))
-    pieces = np.array_split(indices, min(len(indices), CHUNKS_PER_WORKER * workers, count))
+    # Chunks of at most a full set of lanes, where four per worker allow (DECISIONS #52),
+    # and of at most MAX_CHUNK replicates (DECISIONS #179): for R replicates on W
+    # workers, max(ceil(R / MAX_CHUNK), min(R, 4 W, max(W, ceil(R / LANES)))) chunks.
+    n = len(indices)
+    count = min(n, CHUNKS_PER_WORKER * workers, max(workers, math.ceil(n / engine.LANES)))
+    pieces = np.array_split(indices, max(count, math.ceil(n / MAX_CHUNK)))
     task = functools.partial(_task, _dumps(job), os.getpid())
     if isinstance(pool, Workers):
         parts = _gather(pool.executor, task, pieces, monitor, pool.stop)
