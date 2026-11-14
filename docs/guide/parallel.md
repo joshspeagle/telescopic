@@ -6,7 +6,7 @@ mystnb:
   merge_streams: true
 ---
 
-# Parallel runs
+# Run in parallel
 
 Replicates are independent, so they run in parallel without communicating. The `pool`
 argument of {func}`telescopic.sample` and {class}`telescopic.CoupledSampler` decides where

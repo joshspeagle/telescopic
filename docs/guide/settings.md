@@ -4,7 +4,7 @@ kernelspec:
   name: python3
 ---
 
-# Settings
+# Set k, m, the lag, thin and max_iter
 
 ## The settings
 

@@ -4,7 +4,7 @@ kernelspec:
   name: python3
 ---
 
-# Writing a kernel
+# Write a kernel
 
 A kernel is a subclass of {class}`telescopic.kernels.Kernel` with two methods: `step`
 moves a batch of chains, and `coupled_step` moves a batch of pairs. The engine does the
