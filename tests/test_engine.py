@@ -1,12 +1,13 @@
 import numpy as np
 import pytest
+from scipy import stats
 
 from references import assert_same_replicates, gaussian_log_prob
 from telescopic._random import MAIN, replicate_generator
 from telescopic.engine import Settings, Status, merge, run, stored_bytes
 from telescopic.estimators import averaging_times, correction_coefficients
 from telescopic.initial import Empirical, Normal
-from telescopic.kernels import MALA, RandomWalk, State
+from telescopic.kernels import MALA, Gibbs, RandomWalk, State
 from telescopic.target import Target
 
 # Point by point, so that a replicate's results are bitwise independent of the batch.
@@ -90,6 +91,20 @@ def test_a_replicates_output_does_not_depend_on_the_lanes(coupling):
     np.testing.assert_array_equal(runs[0].index, np.arange(30))
     for other in runs[1:]:
         assert_same_replicates(other, runs[0])
+
+
+def switching(point, block):
+    # A normal conditional with ppf where the other coordinate is positive, and without
+    # it elsewhere.
+    mean = 0.5 * point[1 - block]
+    return stats.norm(mean, 1.0) if mean > 0 else stats.multivariate_normal(mean)
+
+
+def test_a_replicates_output_does_not_depend_on_the_lanes_under_crn_gibbs_couplings():
+    # Spec R-EXEC-2: a row's coupling of a block followed the other rows' conditionals.
+    kernel = Gibbs(switching, [[0], [1]], coupling="crn")
+    runs = [simulate(kernel, n=14, lanes=lanes, max_iter=400) for lanes in (1, 7)]
+    assert_same_replicates(runs[1], runs[0])
 
 
 class Tagged(RandomWalk):
