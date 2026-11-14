@@ -357,6 +357,16 @@ def test_choose_k_failure_names_zero_density_starts():
         sampler.run(2)
 
 
+@pytest.mark.parametrize(("kernel", "noted"), [("hmc", True), ("mala", True), ("rwmh", False)])
+def test_choose_k_failure_points_gradient_kernels_to_their_step_size(kernel, noted):
+    # The automatic steps of MALA and HMC can fail to couple; other kernels have none.
+    sampler = CoupledSampler(log_prob, INIT, grad=lambda x: -x, kernel=kernel, check_grad=False)
+    with pytest.raises(ValueError, match="never met within their cap") as raised:
+        sampler._choose_k(np.full(100, np.inf))
+    notes = getattr(raised.value, "__notes__", [])
+    assert any("step_size checked on pilot pairs" in note for note in notes) == noted
+
+
 def slow_pair_from_zero_density_as_it_happens(slow):
     slow(Status(0, 1, 10_000, 1, 1, True))
 

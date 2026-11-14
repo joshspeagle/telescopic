@@ -383,7 +383,6 @@ def choose_k(meeting_times: npt.ArrayLike, quantile: float = 0.99) -> int:
         raise ValueError(
             f"more than {1 - quantile:.1%} of the pilot pairs never met within their cap, "
             "so k cannot be chosen: try a wider initial distribution or a better-tuned "
-            "kernel (for MALA and HMC a step_size checked on pilot pairs; for HMC also "
-            "n_steps and cov left unset), or give k, lag and m explicitly"
+            "kernel, or give k, lag and m explicitly"
         )
     return max(1, int(q))
