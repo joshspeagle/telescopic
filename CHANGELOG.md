@@ -352,8 +352,8 @@ All notable changes to this project are documented here. The format follows
   8 bytes per atom fewer.
 - With a vectorized target (`vectorize=True`), RandomWalk, MALA, HMC and the tuning
   pilot compute their products of a batch of chains with a matrix by BLAS, several times
-  faster beyond a few dimensions: whole runs at 200 dimensions took 2.3 times less
-  processor time with RandomWalk and 3.5 times less with MALA. Such a run is bitwise
+  faster beyond a few dimensions: whole runs at 200 dimensions took 2.2 times less
+  processor time with RandomWalk and 3.4 times less with MALA. Such a run is bitwise
   identical when repeated with the same seed and layout, and agrees statistically, no
   longer bitwise, with runs of other lane counts, pools, merges and later calls of a
   sampler; its seeded outputs move in the last bits. A target evaluated point by point

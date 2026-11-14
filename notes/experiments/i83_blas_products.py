@@ -33,17 +33,18 @@ covariance 1.5 Sigma.
 Gibbs and Mixture compute no products of their own (Mixture delegates to its
 components), so they are not run.
 
-Result (`i83_blas_products.out`, at a load average of 1.5 to 3.0 on 4 cores). Moved
+Result (`i83_blas_products.out`, at a load average of 1.8 to 2.1 on 4 cores). Moved
 numbers: every run of RandomWalk, MALA and HMC changed its hash, and Independence's did
 not; the maximal coupling's runs at d = 20 and 200 censored all 64 pairs, so they store
 no atoms and their hash is unchanged. Meeting times were all equal except HMC's at d = 2,
 where 19 of 64 differ: there the coupled trajectories contract until the two chains become
-equal, which turns on the last bits. The largest relative difference of the estimates of E[x_i^2] was at most
-1.1e-13 (RandomWalk at d = 200, from the single pair of 64 that met) and 3.7e-4 for HMC at
-d = 2; that of E[x_i] at most 2.3e-13 standard errors, and 0.051 for HMC at d = 2. Gain,
-before/after per round over 7 rounds: RandomWalk 1.13 at d = 20 (0.84 to 1.48) and 2.34
-at d = 200 (1.92 to 2.57); MALA 1.40 at d = 20 (1.00 to 2.30) and 3.45 at d = 200 (2.96 to
-3.77). The issue measured 2.95 and 3.32 at d = 200 on another load and configuration.
+equal, which turns on the last bits. The largest relative difference of the estimates of
+E[x_i^2] was at most 1.1e-13 (RandomWalk at d = 200, from the single pair of 64 that met)
+and 3.7e-4 for HMC at d = 2; that of E[x_i] at most 2.3e-13 standard errors, and 0.051 for
+HMC at d = 2. Gain,
+before/after per round over 7 rounds: RandomWalk 1.26 at d = 20 (1.02 to 1.59) and 2.16
+at d = 200 (1.76 to 2.49); MALA 1.25 at d = 20 (0.86 to 1.84) and 3.38 at d = 200 (3.18 to
+3.73). The issue measured 2.95 and 3.32 at d = 200 on another load and configuration.
 
 Run from the repository root: OMP_NUM_THREADS=1 PYTHONPATH=src python notes/experiments/i83_blas_products.py
 """

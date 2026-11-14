@@ -1,6 +1,6 @@
-setup: commit 3dc2412-dirty of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
-before: commit 3dc2412; after: this checkout; children run with {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1'}
-load average before: (1.95, 1.7, 1.76)
+setup: commit 0695146 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
+before: commit 8a058aa; after: this checkout; children run with {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1'}
+load average before: (1.77, 1.88, 2.11)
 
 1. Moved numbers: 64 replicates, k = 10, m = 50, lag 1, max_iter = 2000, rng = 1
 RandomWalk         d =   2: hash 52e67fed8a27 -> b753857cc711; meeting times that differ  0 of 64, censored  0; E[x^2] largest relative difference 1.4e-15; E[x] largest difference 2.0e-16 standard errors
@@ -20,8 +20,8 @@ HMC                d =  20: hash e67be5a18bdc -> 3365355c200c; meeting times tha
 HMC                d = 200: hash 863e7657b5e7 -> c62f94093dbe; meeting times that differ  0 of 64, censored  0; E[x^2] largest relative difference 3.2e-15; E[x] largest difference 4.3e-14 standard errors
 
 2. Gain: 256 replicates, k = 10, m = 200, lag 1, max_iter = 1000, rng = 2; 7 rounds after one uncounted
-RandomWalk d =  20: processor seconds median 0.36 before, 0.35 after; before/after per round: median 1.13, range 0.84 to 1.48
-RandomWalk d = 200: processor seconds median 13.94 before, 5.93 after; before/after per round: median 2.34, range 1.92 to 2.57
-MALA       d =  20: processor seconds median 0.19 before, 0.13 after; before/after per round: median 1.40, range 1.00 to 2.30
-MALA       d = 200: processor seconds median 5.53 before, 1.65 after; before/after per round: median 3.45, range 2.96 to 3.77
-load average after: (2.98, 2.46, 2.08)
+RandomWalk d =  20: processor seconds median 0.39 before, 0.28 after; before/after per round: median 1.26, range 1.02 to 1.59
+RandomWalk d = 200: processor seconds median 13.97 before, 6.13 after; before/after per round: median 2.16, range 1.76 to 2.49
+MALA       d =  20: processor seconds median 0.17 before, 0.14 after; before/after per round: median 1.25, range 0.86 to 1.84
+MALA       d = 200: processor seconds median 4.87 before, 1.43 after; before/after per round: median 3.38, range 3.18 to 3.73
+load average after: (2.11, 2.03, 2.09)
