@@ -26,6 +26,4 @@ Each item has the default that work proceeds on until Josh answers.
   (`notes/experiments/m10_mala_logistic.out`).
   Josh ruled on issue #89 (2026-11-13): an opt-in tuning that puts contraction first
   (issue #91), which becomes the default if its pre-registered test passes.
-  A given `n_steps` can fail on a Gaussian too: with `HMC(n_steps=2)` the tuned step
-  lands near a resonance of the leapfrog map, and `k` could not be chosen at some seeds on
-  `examples.gaussian(2)` (issue #137, validated; its experiment is in progress).
+  A given `n_steps` can fail on a Gaussian too (issue #137).
