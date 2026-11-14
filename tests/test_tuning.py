@@ -7,12 +7,21 @@ from scipy import linalg
 
 import references
 from telescopic import examples, tuning
-from telescopic._random import NORMAL, UNIFORM, Streams
+from telescopic._random import (
+    NORMAL,
+    TUNING,
+    UNIFORM,
+    Streams,
+    replicate_generator,
+    replicate_sources,
+    root_seed,
+)
 from telescopic.initial import Normal
 from telescopic.kernels import HMC, MALA, Independence, Kernel, Mixture, RandomWalk
 from telescopic.target import Target
 from telescopic.testing import random_draws
 from telescopic.tuning import (
+    N_CHAINS,
     TARGET_ACCEPTANCE,
     PilotRun,
     adaptive_metropolis,
@@ -132,6 +141,28 @@ def test_the_pilot_reads_each_chains_numbers_as_a_run_reads_a_replicates(monkeyp
     np.testing.assert_array_equal(blocks.samples, steps.samples)
     np.testing.assert_array_equal(blocks.log_prob, steps.log_prob)
     np.testing.assert_array_equal(blocks.acceptance, steps.acceptance)
+
+
+def test_each_pilot_chain_steps_with_the_normals_of_its_own_replicate():
+    # At the first step the proposal's factor is diagonal and every chain has the same
+    # scale, so each chain's move divided by the first normals of replicate c of the
+    # tuning namespace is one vector for every chain only if chain c reads replicate c.
+    points = []
+
+    def log_prob(x):
+        points.append(x.copy())
+        return -0.5 * np.sum(x**2, axis=1)
+
+    adaptive_metropolis(Target(log_prob, vectorize=True), START, rng=8, n_steps=200)
+    root = root_seed(8)
+    normals = np.array(
+        [
+            replicate_sources(replicate_generator(root, TUNING, c))[NORMAL].standard_normal(5)
+            for c in range(N_CHAINS)
+        ]
+    )
+    ratios = (points[1] - points[0]) / normals
+    np.testing.assert_allclose(ratios, np.broadcast_to(ratios[0], ratios.shape), rtol=1e-12)
 
 
 def test_the_pilot_refuses_draws_whose_dimension_changes():
