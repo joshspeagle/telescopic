@@ -209,8 +209,10 @@ extension `docs/_ext/telescopic_theme.py` gives its templates what they need.
   repository. Below 1080 px the sections leave the top bar: on the landing page they move
   into a menu, and on other pages the sidebar lists every section.
 - **Sidebar:** the pages of the current section, in the caption style, the current page
-  marked by a rule in the ink of met chains. Below 900 px it becomes a full-screen menu.
-- **On this page:** the outline of a page with two or more sections, in the caption
+  marked by a rule in the ink of met chains; on a page of the API reference, the API
+  reference is marked. Below 900 px it becomes a full-screen menu.
+- **On this page:** the outline of a page with two or more sections, or of a class's
+  page with two or more members, in the caption
   style, its current section marked in `accent` as the reader scrolls.
 - **Code:** blocks on `surface` with a `line` border and the corner radius, token colors
   as above, a copy button; notebook outputs joined below their cell on `bg`, with a rule

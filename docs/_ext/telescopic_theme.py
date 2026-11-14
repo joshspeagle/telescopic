@@ -1,8 +1,11 @@
 """Template context and the hero directive of the telescopic docs theme.
 
 * The sections of the top bar are the captioned toctrees of the root document; a page's
-  section is the one whose toctree lists it, and the sidebar lists that section's pages.
-* A page with two or more sections gets the "On this page" outline.
+  section is the one whose toctree lists it, or lists the page whose toctree lists it, as
+  the API reference lists its pages. The sidebar lists that section's pages and marks the
+  one that holds the page.
+* A page with two or more sections, or two or more entries below its one object, as a
+  class's page lists its methods, gets the "On this page" outline.
 * A page whose front matter says ``layout: home`` uses ``home.html``.
 * ``{hero}`` inlines the landing page's coupled pair (``_themes/telescopic/hero.svg``,
   written by ``_scripts/brand.py``) as a figure, with its one paragraph of content as
@@ -60,20 +63,35 @@ def _sections(app: Sphinx, env: BuildEnvironment) -> set[str]:
     return set(env.found_docs) if changed else set()
 
 
+def _section_of(sections: list[dict[str, Any]], docname: str) -> int | None:
+    return next(
+        (
+            i
+            for i, section in enumerate(sections)
+            if any(page["docname"] == docname for page in section["pages"])
+        ),
+        None,
+    )
+
+
 def _page_context(
     app: Sphinx, pagename: str, templatename: str, context: dict[str, Any], doctree: Any
 ) -> str | None:
     sections = context["sections"] = app.env.telescopic_sections
-    context["section_index"] = next(
-        (
-            i
-            for i, section in enumerate(sections)
-            if any(page["docname"] == pagename for page in section["pages"])
-        ),
-        None,
-    )
+    section_page = pagename
+    parents = {
+        child: parent
+        for parent, children in app.env.toctree_includes.items()
+        for child in children
+    }
+    while section_page in parents and _section_of(sections, section_page) is None:
+        section_page = parents[section_page]
+    context["section_page"] = section_page
+    context["section_index"] = _section_of(sections, section_page)
     toc = app.env.tocs.get(pagename)
     headings = toc.next_node(nodes.bullet_list) if toc else None
+    if headings is not None and len(headings) == 1:
+        headings = headings[0].next_node(nodes.bullet_list)
     context["outline"] = headings is not None and len(headings) > 1
     if (context.get("meta") or {}).get("layout") == "home":
         return "home.html"
