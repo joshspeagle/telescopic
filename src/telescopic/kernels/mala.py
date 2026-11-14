@@ -54,8 +54,8 @@ class MALA(GradientKernel):
 
     Examples
     --------
-    MALA needs ``grad``, which it evaluates with every finite log-density, so on a Gaussian
-    the two counts agree:
+    MALA needs the gradient, as ``grad`` or ``log_prob_and_grad``, which it evaluates
+    with every finite log-density, so on a Gaussian the two counts agree:
 
     >>> from telescopic import examples, kernels, sample
     >>> example = examples.gaussian(2)

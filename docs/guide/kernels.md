@@ -26,17 +26,19 @@ the draws differ, the offset of the second from its mean mirrors that of the fir
 | `Gibbs` | none | full conditionals | per block: maximal, common random numbers, or both | nothing |
 | `Mixture` | none | what its components need | common component | its components' parameters |
 
-`"auto"`, the default, is the random walk even when `grad` is given.
+`"auto"`, the default, is the random walk even when a gradient is given, as `grad` or
+`log_prob_and_grad`.
 
 ## Choosing a kernel
 
 - **The random walk**, the default, needs only the log-density and has no step size to
   tune.
-- **MALA and HMC** need the gradient. A step evaluates the log-density and the gradient
-  once (MALA) or `n_steps` times (HMC). Their automatic step sizes can fail to couple
+- **MALA and HMC** need the gradient, as `grad` or `log_prob_and_grad`. A step evaluates
+  the log-density and the gradient once (MALA) or `n_steps` times (HMC). Their automatic
+  step sizes can fail to couple
   ([When the automatic step fails](#when-the-automatic-step-fails)). A wrong gradient
-  leaves them exact but slow, so a sampler built with one compares `grad` with
-  differences of `log_prob` first
+  leaves them exact but slow, so a sampler built with one compares the gradient with
+  differences of the log-density first
   ([Checking the gradient](targets.md#checking-the-gradient)).
 - **The independence kernel** suits a target that a Student-$t$ approximates well, such
   as a posterior close to Gaussian.
@@ -101,7 +103,8 @@ $\log u < \log\pi(x') - \log\pi(x)$.
 
 ## MALA
 
-{class}`telescopic.kernels.MALA` needs `grad`. It proposes
+{class}`telescopic.kernels.MALA` needs the gradient, as `grad` or `log_prob_and_grad`.
+It proposes
 $x' = x + \tfrac{\epsilon^2}{2}\Sigma\nabla\log\pi(x) + \epsilon Cz$, with
 $\Sigma = CC^\top$ = `cov` and $\epsilon$ = `step_size`, and accepts by the
 Metropolis-Hastings ratio, which includes the proposal densities.
@@ -115,7 +118,8 @@ Metropolis-Hastings ratio, which includes the proposal densities.
 
 ## HMC
 
-{class}`telescopic.kernels.HMC` needs `grad`. Each step applies one of two components,
+{class}`telescopic.kernels.HMC` needs the gradient, as `grad` or `log_prob_and_grad`.
+Each step applies one of two components,
 chosen by a uniform:
 
 - with probability $1 - \gamma$, $\gamma$ = `meeting_weight`, a leapfrog trajectory of

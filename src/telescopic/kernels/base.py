@@ -145,7 +145,9 @@ class Kernel(ABC):
         if self.needs_log_prob and not target.has_log_prob:
             raise ValueError(f"{self!r} needs a log-density; log_prob=None is for Gibbs kernels")
         if self.needs_grad and not target.has_grad:
-            raise ValueError(f"{self!r} needs the gradient of log_prob: pass grad=")
+            raise ValueError(
+                f"{self!r} needs the gradient of log_prob: pass grad= or log_prob_and_grad="
+            )
 
     def check_ndim(self, ndim: int) -> None:
         """Raise ``ValueError`` if the kernel works in another dimension than ``ndim``.
