@@ -318,13 +318,12 @@ conditionals:
   the meeting probability is capped at `eta`, and the number of draws it takes has the
   bounded variance of Atchadé & Jacob (2024, Algorithm 2).
 - `coupling="crn"`: common random numbers. For a block of one coordinate whose two
-  conditionals have `ppf`, one uniform goes through both. For conditionals that are
-  SciPy's frozen `multivariate_normal`, common standard normals go through a square
-  root of each covariance. For any other block, each
+  conditionals have `ppf`, one uniform goes through both. For any other block, each
   chain draws from its own conditional with `rvs`, from generators in the same state, so
-  each keeps its conditional's law whatever its type. Common random numbers can bring
-  the chains together, but make them equal only by rounding; `"two-scale"` adds the
-  maximal coupling.
+  each keeps its conditional's law whatever its type, with one exception for SciPy's
+  frozen `multivariate_normal`, below. Common random numbers can bring the chains
+  together, but make them equal only by rounding; `"two-scale"` adds the maximal
+  coupling.
 - `coupling="two-scale"`: common random numbers for pairs farther apart than `threshold`
   at the start of a sweep, and the maximal coupling for the others, as in Biswas,
   Bhattacharya, Jacob & Johndrow (2022).
@@ -338,15 +337,22 @@ parameters. A normal block drawn as
 `random_state.multivariate_normal(mean, cov, method="cholesky")`, does: from
 generators in the same state, draws of two normals of 3 coordinates whose covariances
 differ in shape by 1% are 0.0056 apart on average, against 2.2 for independent draws.
-NumPy's default method, a singular value decomposition of the covariance, which SciPy's
-`multivariate_normal` calls, does not: its signs and order can change between nearby
-covariances, so the same draws are 0.063 apart on average, and for covariances near a
-multiple of the identity, 2.42 apart, as far as independent ones. In a robust
-regression whose block of 3 coefficients has a normal conditional, pairs meet after a
-median of 147.1 sweeps, averaged over 5 seeds, with NumPy's Cholesky method, as many as
-with the Cholesky factor written out, and 205.4 with SciPy's `multivariate_normal`.
+NumPy's default method, a singular value decomposition of the covariance, does not: its
+signs and order can change between nearby covariances, so the same draws are 0.063
+apart on average, and for covariances near a multiple of the identity, 2.42 apart, as
+far as independent ones.
 
-Setup of these runs: telescopic at commit 9be9024, Python 3.13.18, NumPy 2.5.4 and SciPy
+SciPy's frozen `multivariate_normal` calls NumPy's default method, and its `rvs` cannot
+be told to use another. So the coupled step draws a pair of conditionals of that class,
+and not of a subclass, without `rvs`: common standard normals go through the Cholesky
+factor of the covariance that `rvs` draws from, or a square root from its
+eigendecomposition where it has none, which gives each chain the law of `rvs`. A
+conditional of your own gets no such exception and is drawn with its `rvs`. In a robust
+regression whose block of 3 coefficients has a normal conditional, pairs meet after a
+median of 147.1 sweeps, averaged over 5 seeds, with the Cholesky factor written out in
+a class of your own, and 142.9 with SciPy's `multivariate_normal`.
+
+Setup of these runs: telescopic at commit COMMIT-B, Python 3.13.18, NumPy 2.5.4 and SciPy
 1.18.1, `OMP_NUM_THREADS=1`, on an Intel Xeon processor at 2.10 GHz with 4 logical cores.
 
 A Gibbs kernel needs no log-density, so `log_prob` can be `None`, and has nothing to

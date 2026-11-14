@@ -32,18 +32,20 @@ class Gibbs(Kernel):
     - ``"maximal"``: the rejection maximal coupling, with ``eta``;
     - ``"crn"``: common random numbers, which contract the chains but make them equal only
       by rounding. For a block of one coordinate whose two conditionals have ``ppf``, one
-      uniform goes through each ``ppf``. For SciPy's frozen ``multivariate_normal``,
-      common standard normals go through a square root of each covariance, which may be
-      singular. For any other block of several coordinates, or of one
+      uniform goes through each ``ppf``. For a block of several coordinates, or of one
       without ``ppf``, each chain draws from its own conditional with ``rvs``, from
       generators in the same state, so each keeps its conditional's law whatever its
       type. The two draws are then close when ``rvs`` reads a fixed count of numbers from
       the generator and maps them smoothly in the conditional's parameters, as a normal
       block drawn as ``mean + cholesky(cov) @ random_state.standard_normal(k)``, or with
       ``random_state.multivariate_normal(mean, cov, method="cholesky")``, does. NumPy's
-      default method, a singular value decomposition, which SciPy's
-      ``multivariate_normal`` calls, can change signs and order between nearby
-      covariances, and then the two draws are as far apart as independent ones;
+      default method, a singular value decomposition, can change signs and order
+      between nearby covariances, and then the two draws are as far apart as
+      independent ones. SciPy's frozen ``multivariate_normal`` calls that method, and
+      its ``rvs`` cannot be told to use another, so a pair of conditionals of that class,
+      not of a subclass, is drawn without ``rvs``, from the same law: common standard
+      normals go through the Cholesky factor of the covariance that ``rvs`` draws from,
+      or a square root from its eigendecomposition where it has none;
     - ``"two-scale"``: common random numbers for pairs farther apart than ``threshold``
       at the start of the sweep, the maximal coupling for the others (Biswas, Bhattacharya,
       Jacob & Johndrow 2022).
@@ -76,9 +78,9 @@ class Gibbs(Kernel):
     each block from the row's generator. A coupled step does the same for the maximal
     coupling and for identical conditionals. For common random numbers it reads 1 uniform
     per row and block through ``ppf``, or the block's size of normals for SciPy's
-    multivariate normal, or else draws from a new child of the row's
-    generator, :meth:`~telescopic.kernels.Draws.child`, which leaves the row's own stream
-    where it was.
+    multivariate normal, or else draws from a new child of the row's generator,
+    :meth:`~telescopic.kernels.Draws.child`, which leaves the row's own stream where it
+    was.
     A conditional that draws a point that is not finite, or not of its block's size,
     raises ``ValueError``. With ``log_prob=None`` the target has no log-density, and states
     carry 0.
