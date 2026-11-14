@@ -343,8 +343,9 @@ Two things help. Runs with different seeds disagree by far more than their error
 so running more than one seed shows the failure whenever their tuning chains settle in
 different modes. They need not: on the same target with a second mode of standard
 deviation 0.3, the tuning chains of all 20 seeds tried settled in the wider mode, and
-every run estimated the weight 0.7 as 1, so agreement between seeds does not show that
-every mode was found. And when the modes are known, from optimizations started at
+every run estimated the weight 0.7 as 1 (runs of the same experiment, with the same setup,
+as the [measured rates](../guide/diagnostics.md#measured-rates) of the tuning warning),
+so agreement between seeds does not show that every mode was found. And when the modes are known, from optimizations started at
 several points or from the model, an {class}`~telescopic.kernels.Independence` proposal
 given explicitly can cover them all. It needs only where the modes are, not their
 weights. A Student-$t$ located at the midpoint of the two modes, the origin, whose scale

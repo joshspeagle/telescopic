@@ -11,10 +11,13 @@ narrow N(10, 1), proposal variance 1, k = 50, m = 500, lag 1, R = 1,000, 50 seed
 the 95% interval of P(x > 3) misses the truth 0.5 Phi(1) + 0.5 Phi(-7), how often a
 warning fires then, and in how many runs one replicate holds more than half the variance.
 
-Run: python notes/experiments/m9_warnings.py [names], where names, by default all, are
-among gaussian, banana and mixture. The recorded output comes from two runs, the second
-for the mixture after a time limit stopped the first. `m11_warnings.out` is a run at
-ac4a032, after the variance share moved to moments about the atoms' mean (DECISIONS #54).
+Run: OMP_NUM_THREADS=1 python notes/experiments/m9_warnings.py [names], where names, by
+default all, are among gaussian, banana and mixture; all three take about ten minutes on
+one core. `m9_warnings.out` is the run of M9, from two invocations, the second for the
+mixture after a time limit stopped the first. `m11_warnings.out` holds the current rates,
+after the variance share moved to moments about the atoms' mean (DECISIONS #54); each
+invocation's output begins with its setup: the commit, the machine, the thread settings
+and the versions (issue #85).
 """
 
 import sys
@@ -23,6 +26,7 @@ import warnings
 from collections import Counter
 
 import numpy as np
+from i85_setup import setup
 from scipy import stats
 
 import telescopic
@@ -32,6 +36,7 @@ from telescopic.kernels import RandomWalk
 
 KINDS = ("censored", "late", "variance", "tail", "tuning", "slow")
 CHOSEN = set(sys.argv[1:]) or {"gaussian", "banana", "mixture"}
+print(setup(), flush=True)
 
 
 def kinds(result):

@@ -295,6 +295,9 @@ log-densities, and the first two targets `sample()`'s default settings:
   target, with modes 24 apart or other seeds, the tuning warning fired on none of the 191
   runs whose estimate was wrong, only on runs whose estimate was right.
 
+Setup of these runs: telescopic at commit d014ac1, Python 3.13.18, NumPy 2.5.4 and SciPy
+1.18.1, `OMP_NUM_THREADS=1`, on an Intel Xeon processor at 2.10 GHz with 4 logical cores.
+
 ## A run that never left one mode
 
 The last two cases show the limit of every diagnostic here: a run whose pairs all met in
