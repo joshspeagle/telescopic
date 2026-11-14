@@ -15,12 +15,14 @@ whose meeting times stand in for the run's in the sampler's estimate.
 
 Result (in the .out file beside this script): `stored_bytes` on the run's meeting times
 equals the stored bytes, and on the pilot's 0.998 of them. At `thin` = 1 with s = 1, the
-run's peak is 2.0 to 2.7 times the stored size and the estimates' 2.9 to 3.0 times from
-d = 2 to 50, and 3.8 times at d = 1, where the `Result`'s own 24 bytes per atom (its
-replicate index and, after the first estimate, two more columns) weigh most against the
-24 stored. With `thin` above 1, or the walk that rarely rejects, the estimates peak at up
-to about 6 times at d = 1 and 5 at d = 2, and about 3 at d = 10: `Result.quantile` sorts
-the atoms that are not consecutive repeats, and these runs repeat few.
+run's peak is 2.0 to 2.7 times the stored size and the estimates' 2.1 to 2.5 times from
+d = 2 to 50, and 3.3 times at d = 1, where the `Result`'s own 16 bytes per atom (its
+replicate index and, after the first estimate, the column indices of its sums) weigh
+most against the 24 stored. With `thin` above 1, or the walk that rarely rejects, the
+estimates peak at up to about 5.3 times at d = 1 and 4.2 at d = 2, and about 2.1 at
+d = 10: `Result.quantile` sorts the atoms that are not consecutive repeats, and these
+runs repeat few. Before issue #75, which lowered the peaks of `cov` and `quantile` and
+the sums' bytes, the estimates peaked at 2.9 to 3.0, 3.8, 5.9, 4.9 and 2.8 times.
 
 Run: python notes/experiments/i73_memory_peak.py
 """
