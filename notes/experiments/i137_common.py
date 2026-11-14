@@ -5,7 +5,8 @@ component; none of them copies package code.
 
 - `GuardedHMC` (remedy a): after the package's tuning, the predicted contraction factor
   |cos(n theta(eps w))|, theta(h) = 2 arcsin(h / 2), of every whitened mode w and of
-  every frequency within a factor 1 + BAND of it (w f, f in [1/1.3, 1.3]), is computed
+  every frequency within a factor 1 + BAND of it (w f, f at 21 geometric points from
+  1/1.3 to 1.3), is computed
   on the grid eps_DA exp(s), s in [-2, 0.1] by 0.001, and the step moves to the grid
   step nearest to eps_DA (in log) at which the worst factor is at most BOUND. The modes
   come from the pilot: w^2 are the eigenvalues of C^T S^-1 C, with C C^T the kernel's

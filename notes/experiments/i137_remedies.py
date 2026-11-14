@@ -32,7 +32,7 @@ n_steps = 2 at d = 10, and lowered it at every seed of the other 7 configuration
 0.21 for n_steps = 10), among them 4 where the package already gives k at every seed:
 d = 2 with n_steps = 3, 5 and 10 (largest factors 0.85, 0.99 and 0.98) and d = 10 with
 n_steps = 5 (0.99). Where it lowers the step, its predicted worst factor at the returned
-step is within 0.0013 of the bound 0.9.
+step is within 0.0014 of the bound 0.9.
 
 Run: PYTHONPATH=src:notes/experiments python notes/experiments/i137_remedies.py
 (needs the store of i137_baseline.py first, whose pilot records it copies and prints;

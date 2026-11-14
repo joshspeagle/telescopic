@@ -25,14 +25,13 @@ near 0.30 and 4 leapfrog steps; the largest factor is 0.99993 to 0.99997 where k
 chosen and at most 0.99858 where it is, and k is 1,566 to 10,134 where it is chosen. The
 one-dimensional check gives the ratio of distances equal to cos(n theta) to the last
 digits. The followed pairs meet at 110,807 (seed 3), 261,720 (seed 4) and 107,685
-(seed 5) iterations: the failure is a heavy tail of meeting times, not pairs that cannot
-meet. At iteration 100,000 all of their whitened distance lies along the mode of
+(seed 5) iterations: the three followed pairs all meet, as a heavy tail of meeting times
+would have them, not pairs that cannot meet. At iteration 100,000 all of their whitened distance lies along the mode of
 frequency 2.52, where n theta is near pi. The control HMC() gives k at every
 seed (50 to 65), with 2 leapfrog steps and largest factors 0.24 to 0.42.
 
 Run: PYTHONPATH=src:notes/experiments python notes/experiments/i137_reproduce_unequal.py
-(needs nothing first; 6.6 minutes on one thread, of which the followed pairs take about
-1.5)
+(needs nothing first; it runs in one go, on one thread)
 """
 
 import warnings

@@ -33,7 +33,7 @@ Each item has the default that work proceeds on until Josh answers.
   resonance, where one trajectory with a shared momentum barely shrinks the distance
   between the chains along a mode: at a cap of 10,000, `k` could not be chosen at 12,
   29 and 11 of 30 seeds of `examples.gaussian(2)` with `n_steps=2` and
-  `examples.gaussian(10)` with `n_steps=3` and 10, and the predicted factor
+  `examples.gaussian(10)` with `n_steps=3` and 10, and the factor
   |cos(n theta)| of a failing seed was at least 0.9967
   (`notes/experiments/i137_baseline.out`). The default `n_steps` fails too when a given
   covariance does not whiten the target: on a Gaussian of scales from 1 to 1/4 in 10
@@ -50,8 +50,9 @@ Each item has the default that work proceeds on until Josh answers.
   those 5 seeds). On the Gaussian with unequal scales no step of its grid meets the
   rule, at any `n_steps`: a step meeting it exists only for frequencies spanning a ratio
   of at most 2.05 to 3.50, depending on `n_steps`, and this target spans 4
-  (`i137_unequal.out`). With the default `n_steps` its fallback chose among steps whose
-  predicted factor is 0.9993 to 0.9998, and `k` could not be chosen at 3 of 10 seeds;
+  (`i137_unequal.out`). With the default `n_steps` its fallback's steps, the best of its
+  grid, had predicted factors of 0.9993 to 0.9998, and `k` could not be chosen at 3 of 10
+  seeds;
   the pilot's frequencies, within 4.5 to 12% of the exact ones, are not the cause. A
   step jittered by a uniform that both chains share gave `k` at every seed of every
   configuration (`i137_remedies.out`, `i137_unequal.out`), and failed the test of cost
@@ -60,7 +61,7 @@ Each item has the default that work proceeds on until Josh answers.
   the mixture (`i137_nongaussian.out`).
   Default: no change to the package's kernels or tuning until Josh rules on issue #137;
   meanwhile the kernels guide and the advice of the error raised when `k` cannot be
-  chosen name this case (an automatic step with a given `n_steps`, or with a given
+  chosen are to name this case (an automatic step with a given `n_steps`, or with a given
   covariance that does not whiten the target). Recommended: the guard as tested is not
   adopted, since it also lowers steps where the package already gives `k` (4 of the 12
   Gaussian configurations, `i137_remedies.out`) and has no step to return where the

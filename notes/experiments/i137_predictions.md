@@ -76,7 +76,8 @@ outcomes compare with each prediction.
   the Gaussian table (`i137_remedies.out`), inside the bound 0.9.
 - Prediction 1 for b: the package's tuning costs 4,000 n + 4 gradients, not
   4,000 n + 8,000 (4,004 at n_steps = 1, 8,004 at 2, 40,004 at 10, `i137_baseline.out`),
-  and b adds 2,560 n + 256 (6,820 at n_steps = 1, 65,860 at 10, `i137_remedies.out`).
+  and b adds 2,560 n + 256 to it (2,816 at n_steps = 1 and 25,856 at 10, for totals of
+  6,820 and 65,860, `i137_remedies.out`).
 - Prediction 2 for b: "about 4 times the pilot's prediction" on the mixture has no
   committed measurement; it is withdrawn.
 - Part 3, the Gaussian with unequal scales, had predictions but no falsification test.
@@ -86,7 +87,7 @@ outcomes compare with each prediction.
 ### Outcome against each prediction
 1. Gaussian table (`i137_baseline.out`, `i137_remedies.out`):
    - base: failures at d = 2, n = 2 at 12 of 30 seeds (predicted 25 to 40%: held, at
-     40%); at d = 10, n = 3 at 29 of 30 (predicted 60 to 70%: more); at d = 10, n = 10
+     40%); at d = 10, n = 3 at 29 of 30 (predicted 60 to 70%: failed, more); at d = 10, n = 10
      at 11 of 30 (predicted about 30%: held); none elsewhere, d = 10, n = 5 included
      (held).
    - a: no failure anywhere (held); median meeting time 27.0 at d = 2, n = 2 (held); no
@@ -119,4 +120,5 @@ outcomes compare with each prediction.
      (failed).
 4. The recommendation expected c (or d). The recommendation made on issue #137 was the
    guard (a) for the case the issue states, and the jitter (c) for the test of issue #91
-   (failed).
+   (failed). After the review it was revised: no remedy enters the package now, and a
+   guard that acts only near a resonance and the jitter both go to the test of issue #91.

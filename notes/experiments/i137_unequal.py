@@ -40,8 +40,8 @@ with the default n_steps, 3.40 with n_steps = 3 and 3.50 with n_steps = 10; here
 Every run of a therefore took the guard's fallback, the grid step of smallest predicted
 worst factor. With the default n_steps that smallest factor is 0.9993 to 0.9998: every
 step of the grid is predicted to be nearly as bad as a resonance, the fallback's choice
-among them does not make the pair contract, and k cannot be chosen at 3 seeds. With
-n_steps = 3 and 10 the fallback's steps have predicted worst factors of 0.918 to 0.932
+among them makes the pairs contract no faster than the package's step, and k cannot be
+chosen at 3 seeds. With n_steps = 3 and 10 the fallback's steps have predicted worst factors of 0.918 to 0.932
 and 0.914 to 0.928, and every seed passes, with median meeting times of 79 and 72.
 Other fallbacks (such as the step of smallest factor over the predicted modes alone, or
 a jitter where no step passes) were not tested.
