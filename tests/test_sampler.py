@@ -1,3 +1,4 @@
+import inspect
 import itertools
 import re
 import runpy
@@ -411,6 +412,28 @@ def test_the_package_exports_what_the_readme_uses():
     used = set(re.findall(r"\btelescopic\.(\w+)", code))
     assert used, "the README's example takes no name from telescopic"
     assert used | {"__version__"} <= set(telescopic.__all__)
+
+
+@pytest.mark.parametrize(
+    "name",
+    re.findall(
+        r"^\.\. automodule:: (telescopic\.\w+)\n\s+:members:$",
+        (Path(__file__).parents[1] / "docs" / "api.md").read_text(),
+        re.MULTILINE,
+    ),
+)
+def test_a_documented_module_exports_every_class_and_function_it_defines(name):
+    # The API reference shows the names of a module's __all__, so one left out is missing.
+    # telescopic.plotting needs matplotlib.
+    module = pytest.importorskip(name)
+    defined = {
+        key
+        for key, value in vars(module).items()
+        if not key.startswith("_")
+        and (inspect.isclass(value) or inspect.isfunction(value))
+        and value.__module__ == name
+    }
+    assert defined <= set(module.__all__) <= set(vars(module))
 
 
 def test_the_package_is_marked_as_typed():

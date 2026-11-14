@@ -294,3 +294,6 @@ All notable changes to this project are documented here. The format follows
   event, is freed when the caller drops an error raised in a worker. A reference cycle
   held them until a later garbage collection, which on Python 3.11 and 3.12 can warn
   that the resource tracker was called reentrantly and leave the semaphores to leak.
+- Each public module of the package lists in `__all__` the names that the API reference
+  documents, so a star import or tab completion on `telescopic.diagnostics`, for example,
+  no longer offers the helpers that the module imports.
