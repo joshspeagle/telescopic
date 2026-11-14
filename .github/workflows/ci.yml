@@ -94,6 +94,31 @@ jobs:
       - run: python docs/_scripts/hero_pair.py --check
       - name: Build, with warnings as errors, executing the tutorials
         run: sphinx-build -W --keep-going docs docs/_build/html
+      # The site of main is what the deploy job publishes.
+      - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs/_build/html
+
+  deploy:
+    # Publishes the site that the docs job built, on a push to main only.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      pages: write
+      id-token: write
+    # A newer deployment waits for a running one instead of canceling it.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
 
   dist:
     # Builds the wheel and the sdist and imports the wheel in a clean environment.
