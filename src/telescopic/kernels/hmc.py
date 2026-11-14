@@ -54,7 +54,10 @@ class HMC(Mixture):
         find 0.651 optimal for product targets as :math:`d` grows.
     n_steps : int, optional
         Leapfrog steps per trajectory; :math:`\lceil 1/\epsilon\rceil` by default, a
-        trajectory of length about 1 in whitened coordinates, and at most 1,000.
+        trajectory of length about 1 in whitened coordinates, and at most 1,000. Given
+        with a step size left to :meth:`~telescopic.kernels.Kernel.tune`, it can put the
+        tuned step on a resonance of the leapfrog, where coupled chains do not come
+        closer (When the automatic step fails, in :doc:`/guide/kernels`).
     cov : array_like, shape (d, d), optional
         :math:`\Sigma`; ``None`` leaves it to :meth:`~telescopic.kernels.Kernel.tune`, which takes the covariance of
         adaptive Metropolis pilot chains.

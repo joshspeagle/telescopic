@@ -161,6 +161,25 @@ long meeting times. The remedy is an explicit `step_size`, checked as in
 report a mean meeting time of 158 with a step of 1/500 and 500 leapfrog steps,
 `HMC(1/500, 500, cov=np.eye(2))`.
 
+HMC's automatic step can also fail on a Gaussian, through a resonance of the leapfrog.
+With a shared momentum, a trajectory of $n$ = `n_steps` steps multiplies the distance
+between the two chains, along a direction of frequency $w$ in the coordinates that `cov`
+whitens, by $\cos(n\theta)$, with $\theta = 2\arcsin(\epsilon w/2)$. Where $n\theta$ is
+close to a multiple of $\pi$ the trajectory brings the chains no closer along that
+direction, whatever its acceptance rate, and the tuning, which looks only at the
+acceptance rate, can settle on such a step. Two settings expose it:
+
+- **A given `n_steps` with an automatic step.** On {func}`telescopic.examples.gaussian`
+  in 10 dimensions with `HMC(n_steps=3)`, `k` could not be chosen for 29 of 30 seeds,
+  with the pilot's pairs capped at 10,000 iterations, a tenth of the default.
+- **A given `cov` that does not whiten the target**, which leaves directions of different
+  frequencies. On a Gaussian whose scales run from 1 to 1/4 in 10 dimensions with
+  `HMC(cov=np.eye(10))`, `k` could not be chosen for 3 of 10 seeds.
+
+With `n_steps` and `cov` both left to the kernel, `HMC()` chose `k` at every seed of both
+examples. The symptom is the one above: pilot pairs still unmet at the cap. The remedy is
+to leave `n_steps` and `cov` unset, or to give a `step_size` checked on pilot pairs.
+
 ## Checking a step size
 
 Pilot pairs check a step size before a run. With every parameter of the kernel given,

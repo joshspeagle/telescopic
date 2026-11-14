@@ -360,3 +360,7 @@ All notable changes to this project are documented here. The format follows
 - `SignedMeasure` requires `replicate` in nondecreasing order, each replicate's atoms
   consecutive, and raises `ValueError` otherwise; its sums share the weights and hold
   8 bytes per atom fewer.
+- The kernels guide names a failure of HMC's automatic step on Gaussians, a resonance of
+  the leapfrog that a given `n_steps`, or a given `cov` that does not whiten the target,
+  can expose, and the error raised when `k` cannot be chosen now advises a `step_size`
+  checked on pilot pairs and, for HMC, `n_steps` and `cov` left unset.
