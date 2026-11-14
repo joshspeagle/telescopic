@@ -25,12 +25,10 @@ those with two functions, counts included. It made 0.51 to 0.73 times as many us
 batches, where tuning's 2,001 calls of `log_prob` alone are the same in both (62 to 64% of
 the combined run's calls with MALA and 29 to 30% with HMC). Its time follows the share of
 the arithmetic that the two functions repeat. On the logistic regression, whose
-transcendental functions are not shared, the runs took 0.94 to 1.01 times as long, no
-gain beyond the machine's noise; on the linear regression, whose separate functions
-repeat a third of their arithmetic, 0.68 to 0.80 times as long (MALA 0.77 and 0.73, HMC
-0.80 and 0.68, in batches and point by point). The best times of the second target's
-HMC run point by point were 66.0 and 44.8 s, on a machine that other jobs loaded, so
-the ratios are approximate.
+transcendental functions are not shared, the runs took 0.92 to 0.98 times as long; on
+the linear regression, whose separate functions repeat a third of their arithmetic,
+0.70 to 0.84 times as long (MALA 0.84 and 0.75, HMC 0.82 and 0.70, in batches and point
+by point). Other jobs loaded the machine, so the time ratios are approximate.
 
 Run from the repository: python notes/experiments/i75_value_and_grad.py
 """

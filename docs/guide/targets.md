@@ -113,9 +113,9 @@ values, gradients, both.n_log_prob, both.n_grad
 
 What it saves depends on how much work the two functions share. On two regressions in 10
 dimensions, a whole `sample` call with MALA or HMC, tuning included, made 0.51 to 0.73
-times as many calls of the user's functions with `log_prob_and_grad`. It took 0.68 to
-0.80 times as long on a linear regression whose `log_prob` and `grad` repeated a third of
-their arithmetic, and as long, within the noise of the measurement, on a logistic
+times as many calls of the user's functions with `log_prob_and_grad`. It took 0.70 to
+0.84 times as long on a linear regression whose `log_prob` and `grad` repeated a third of
+their arithmetic, and 0.92 to 0.98 times as long on a logistic
 regression whose costly part, a logarithm or an exponential of each observation, is not
 shared.
 
