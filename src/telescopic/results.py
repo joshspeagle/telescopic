@@ -600,7 +600,8 @@ class Result:
         The merged result takes this result's names, and its kernel, initial distribution,
         tuning report and pilot meeting times, each from ``other`` where this result has
         none. Its replicates are bitwise those of one run of all of them for a target
-        evaluated point by point, and statistically the same for a vectorized one.
+        evaluated point by point, and can differ from them by rounding for a vectorized
+        one (:func:`telescopic.engine.run`).
 
         Parameters
         ----------

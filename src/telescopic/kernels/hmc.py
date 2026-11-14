@@ -199,8 +199,9 @@ class _Leapfrog(GradientKernel):
         # The end of each trajectory and its log acceptance ratio, -inf for a trajectory
         # that stopped. Stopped rows keep moving in the arithmetic, never in the target.
         # The rows hold the states of `chains` chains one after the other; each chain's
-        # products are a separate BLAS call of the same shape, so that chains that met
-        # stay equal.
+        # products are a separate BLAS call of the same shape, since two equal rows of one
+        # call can get different bits. Equal chains then stay equal if the target gives
+        # equal rows of its batch equal values.
         if self._chol is None or self.step_size is None:
             raise ValueError(
                 "HMC needs step_size and cov; give them, or tune the kernel on a pilot run"
@@ -210,7 +211,7 @@ class _Leapfrog(GradientKernel):
 
         def product(matrix: FloatArray, vectors: FloatArray) -> FloatArray:
             stacked = vectors.reshape(chains, -1, vectors.shape[1])
-            return matvec(matrix, stacked, target.vectorize).reshape(vectors.shape)
+            return matvec(matrix, stacked, blas=target.vectorize).reshape(vectors.shape)
 
         going = np.ones(len(x), dtype=bool)
         with np.errstate(over="ignore", invalid="ignore"):

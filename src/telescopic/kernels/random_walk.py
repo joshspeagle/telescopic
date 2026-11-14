@@ -109,7 +109,7 @@ class RandomWalk(Kernel):
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         chol, _ = self._ready()
-        x = state.x + matvec(chol, draws.normal(len(chol)), target.vectorize)
+        x = state.x + matvec(chol, draws.normal(len(chol)), blas=target.vectorize)
         proposal = evaluate(target, x, state.grad is not None)
         log_alpha = log_ratio(proposal.log_prob, state.log_prob)
         accepted = draws.log_uniform() < log_alpha

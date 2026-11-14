@@ -86,6 +86,12 @@ class Counted:
         return self.function(x)
 
 
+def dense(d):
+    # A dense covariance near the identity, so that most proposals are accepted.
+    a = np.random.default_rng(14).standard_normal((d, d))
+    return (a @ a.T + d * np.eye(d)) / (2 * d)
+
+
 def gaussian_log_prob(x):
     # The standard normal log-density, up to a constant, of a point or of rows of points.
     return -0.5 * np.sum(np.square(x), axis=-1)

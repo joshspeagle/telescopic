@@ -73,8 +73,11 @@ Other members have defaults that a kernel can override:
    can give a row different bits in batches of different sizes. A replicate's results
    then do not depend on how the replicates are batched
    ([Parallel runs](parallel.md#reproducibility)). Where `target.vectorize` is true,
-   the replicates depend on their batch anyway, and the built-in kernels use `@`, which
-   is several times faster beyond a few dimensions.
+   the built-in kernels use `@` for its speed and give up that invariance, which a
+   vectorized target whose rows are computed independently, as the built-in examples'
+   are, would otherwise keep. A coupled step that uses `@`
+   computes each chain's products in a call of its own, of the same shape: two equal
+   rows of one call can get different bits, which would separate chains that met.
 4. **Determinism.** A step is a function of its inputs and its draws alone: every random
    number comes from `draws`, and nothing is kept between calls.
 

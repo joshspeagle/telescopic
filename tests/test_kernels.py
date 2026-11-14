@@ -2,7 +2,9 @@ import numpy as np
 import pytest
 from scipy import integrate, special, stats
 
-from references import P_MIN, Normal, gaussian_log_prob, metropolis, reflection
+from references import P_MIN, Normal, dense, gaussian_log_prob, metropolis, reflection
+from telescopic import couplings, initial, tuning
+from telescopic._linalg import matvec
 from telescopic.kernels import (
     HMC,
     MALA,
@@ -13,6 +15,10 @@ from telescopic.kernels import (
     MultivariateT,
     RandomWalk,
     State,
+    hmc,
+    independence,
+    mala,
+    random_walk,
 )
 from telescopic.kernels.base import acceptance
 from telescopic.target import Target
@@ -72,12 +78,6 @@ def kernels(cov):
         "gibbs-crn": Gibbs(shifted, [[i] for i in range(d)], coupling="crn"),
         "gibbs-crn-uniform": Gibbs(shifted_box, [[i] for i in range(d)], coupling="crn"),
     }
-
-
-def dense(d):
-    # A dense covariance near the identity, so that most proposals are accepted.
-    a = np.random.default_rng(14).standard_normal((d, d))
-    return (a @ a.T + d * np.eye(d)) / (2 * d)
 
 
 # Oracle tests: draw for draw against independent references.
@@ -268,19 +268,66 @@ def test_equal_states_stay_equal(name):
             np.testing.assert_array_equal(state_x.grad, state_y.grad)
 
 
-@pytest.mark.parametrize("name", ["reflection", "mixture", "mala", "hmc"])
-def test_equal_states_stay_equal_where_blas_adds_rows_in_another_order(name):
-    # A vectorized target's products are BLAS's, which add the terms of some rows of a
-    # batch in another order, by their position: with OpenBLAS at d = 33, two equal rows of
-    # a batch of 6 got different bits. HMC's coupled trajectory holds both chains in one
-    # batch, so each chain's products must be a separate call of the same shape.
-    d = 33
-    kernel = kernels(dense(d))[name]
-    points = np.random.default_rng(23).standard_normal((3, d))
-    state_x, state_y = state(points, kernel.needs_grad), state(points.copy(), kernel.needs_grad)
+def positional(matrix, vectors, *, blas):
+    # A product whose bits depend on the row's position in the call, as some BLAS kernels'
+    # do: the odd rows of each call one unit in the last place larger.
+    product = matvec(matrix, vectors, blas=blas)
+    return product * (1 + (np.arange(product.shape[-2]) % 2)[:, None] * 2.0**-52)
+
+
+@pytest.mark.parametrize("product", ["positional", "blas"])
+def test_equal_hmc_chains_stay_equal_where_a_product_gives_equal_rows_other_bits(
+    product, monkeypatch
+):
+    # HMC's coupled trajectory holds both chains in one batch, so each chain's products
+    # must be a call of their own, of the same shape. With 3 pairs, rows i and 3 + i of
+    # one call of 6 rows have positions of different parity, which the stand-in rounds
+    # differently. The case on the real BLAS at d = 33 bites only where BLAS gives equal
+    # rows of one call other bits, as OpenBLAS 0.3.34 did with its SkylakeX or Nehalem
+    # kernels, and not with its Haswell (also used for Zen) or Sandybridge kernels.
+    if product == "positional":
+        monkeypatch.setattr(hmc, "matvec", positional)
+    kernel = kernels(dense(33))["hmc"]
+    points = np.random.default_rng(23).standard_normal((3, 33))
+    state_x, state_y = state(points, grad=True), state(points.copy(), grad=True)
     for step in range(5):
         state_x, state_y = kernel.coupled_step(TARGET, state_x, state_y, random_draws(3, step))
         np.testing.assert_array_equal(state_x.x, state_y.x)
+        np.testing.assert_array_equal(state_x.log_prob, state_y.log_prob)
+        np.testing.assert_array_equal(state_x.grad, state_y.grad)
+
+
+@pytest.mark.parametrize("vectorize", [False, True])
+@pytest.mark.parametrize(
+    "name", ["reflection", "maximal", "independence", "mixture", "mala", "hmc", "pilot"]
+)
+def test_products_use_blas_exactly_for_a_vectorized_target(name, vectorize, monkeypatch):
+    # MultivariateT, and so Independence, receives no target and never uses BLAS. The
+    # spy records each product's flag, and each use of `@`, BLAS's product.
+    flags, matmuls = [], []
+
+    class Recorded(np.ndarray):
+        def __matmul__(self, other):
+            matmuls.append(other)
+            return super().__matmul__(other)
+
+    def spy(matrix, vectors, *, blas):
+        flags.append(blas)
+        return np.asarray(matvec(matrix, vectors.view(Recorded), blas=blas))
+
+    for module in (random_walk, mala, hmc, couplings, independence, tuning):
+        monkeypatch.setattr(module, "matvec", spy)
+    target = Target(gaussian_log_prob, grad=lambda x: -x, vectorize=vectorize)
+    if name == "pilot":
+        tuning.adaptive_metropolis(target, initial.Normal(np.zeros(2), np.ones(2)), 0, n_steps=200)
+    else:
+        kernel = kernels(np.eye(2))[name]
+        x, y = (state(np.full((3, 2), value), grad=True) for value in (0.0, 1.0))
+        kernel.step(target, x, random_draws(3, 0))
+        kernel.coupled_step(target, x, y, random_draws(3, 1))
+    assert flags
+    assert set(flags) == {vectorize and name != "independence"}
+    assert len(matmuls) == flags.count(True)
 
 
 @pytest.mark.parametrize("name", NAMES)
@@ -308,11 +355,13 @@ def test_states_that_carry_gradients_get_them_at_every_new_position(name):
 
 
 def batch_transitions(name, target):
-    # Each row's step and coupled step from fixed random numbers, twice in one batch of 16
-    # rows and once in batches of one row, as rows of shape (3, d): the moved state, x and
-    # y; and the largest magnitude of the states and normals.
+    # Each row's step and coupled step from fixed random numbers, in one batch of 16 rows
+    # and in batches of one row, as rows of shape (3, d): the moved state, x and y; and
+    # the setup: d, the factor C of the covariance, the largest magnitude V of the states
+    # and normals, and the smallest Euclidean distance between the two states of a row.
     d, n = 10, 16
-    kernel = kernels(0.25 * dense(d))[name]
+    cov = 0.25 * dense(d)
+    kernel = kernels(cov)[name]
     rng = np.random.default_rng(15)
     x, y = rng.standard_normal((n, d)), rng.standard_normal((n, d))
     normals, uniforms = rng.standard_normal((n, 2 * d + 5)), rng.random((n, d + 3))
@@ -330,37 +379,81 @@ def batch_transitions(name, target):
         return np.stack([moved.x, new_x.x, new_y.x], axis=1)
 
     alone = np.concatenate([transition(np.array([row])) for row in range(n)])
-    largest = max(np.abs(x).max(), np.abs(y).max(), np.abs(normals).max())
-    return transition(np.arange(n)), transition(np.arange(n)), alone, largest
+    setup = {
+        "d": d,
+        "chol": np.linalg.cholesky(cov),
+        "largest": max(np.abs(x).max(), np.abs(y).max(), np.abs(normals).max()),
+        "gap": np.linalg.norm(x - y, axis=1).min(),
+    }
+    return transition(np.arange(n)), alone, setup
 
 
 @pytest.mark.parametrize("name", NAMES)
 def test_a_rows_transition_does_not_depend_on_the_rest_of_the_batch(name):
     # Spec R-KER-6: for a point-by-point target, a BLAS product would give most rows other
     # bits in a batch of one.
-    batch, _, alone, _ = batch_transitions(name, Target(gaussian_log_prob, grad=lambda x: -x))
+    batch, alone, _ = batch_transitions(name, Target(gaussian_log_prob, grad=lambda x: -x))
     np.testing.assert_array_equal(alone, batch)
+
+
+def chains(name, setup):
+    # The norms l of the stages that each kernel chains to reach the moved state, x and y
+    # (see the next test), one list of chains per output.
+    d, chol, largest = setup["d"], setup["chol"], setup["largest"]
+    a, a_t = np.linalg.norm(chol, np.inf), np.linalg.norm(chol.T, np.inf)
+    b, a_2 = np.linalg.norm(np.linalg.inv(chol), np.inf), np.linalg.norm(chol, 2)
+
+    def reflect(scale, gap):
+        # delta = (s C)^-1 (mu_x - mu_y), the reflection, then mu_y + s C z'; the
+        # reflection's two dot products count as two stages, the second with l = 0.
+        reflection = 4 * d * largest * scale * a_2 / gap + 3 * np.sqrt(d)
+        return [2 * b / scale, reflection, 0.0, scale * a]
+
+    gap = setup["gap"]
+    # MALA: mean = x + (epsilon C)((epsilon C)^T g) / 2 with g = -x, which puts the means
+    # of two states at least 1 - epsilon^2 ||C||_2^2 / 2 times as far apart, then the
+    # proposal. HMC: the leapfrog's half kick, then 4 drifts and kicks; its last kick
+    # moves only the momentum.
+    mean, mala = [0.9 * a_t, 0.45 * a], [0.9 * a_t, 0.45 * a, 0.9 * a]
+    leapfrog = [0.15 * a_t, *[0.3 * a, 0.3 * a_t] * 3, 0.3 * a]
+    return {
+        "reflection": ([[a]], [[a]], [reflect(1.0, gap)]),
+        "maximal": ([[a]], [], []),
+        "mixture": ([[2 * a]], [[2 * a]], [reflect(0.5, gap), reflect(2.0, gap)]),
+        "mala": ([mala], [mala], [mean + reflect(0.9, (1 - (0.9 * a_2) ** 2 / 2) * gap)]),
+        "hmc": ([leapfrog, [0.5 * a]], [leapfrog, [0.5 * a]], [leapfrog, reflect(0.5, gap)]),
+    }.get(name, ([], [], []))
 
 
 @pytest.mark.parametrize("name", NAMES)
 def test_a_vectorized_targets_rows_depend_on_their_batch_only_by_rounding(name):
     # Spec R-KER-6: for a vectorized target the products are BLAS's, whose bits depend on
-    # the batch but repeat for the same batch. A product of d terms is within
-    # gamma_d = d u / (1 - d u) of exact, relative to the sum of the terms' magnitudes
-    # (Higham 2002, eq. 3.5), in any order of addition, so two orders differ by at most
-    # 2 gamma_d L V for factors of infinity-norm at most L and inputs at most V. Carried
-    # through a chain of K products, at most 9 here (the leapfrog's), the differences
-    # add to at most 2 K gamma_d L^K V. The kernels scale C by at most 2 and C^-1 by at
-    # most 1 / 0.5.
-    batch, again, alone, largest = batch_transitions(name, TARGET)
-    np.testing.assert_array_equal(again, batch)
-    d, u, depth = 10, np.finfo(float).eps / 2, 9
-    chol = np.linalg.cholesky(0.25 * dense(d))
-    norm = 2 * max(np.linalg.norm(chol, np.inf), np.linalg.norm(np.linalg.inv(chol), np.inf))
-    gamma = d * u / (1 - d * u)
-    np.testing.assert_allclose(
-        alone, batch, rtol=0, atol=2 * depth * gamma * norm**depth * largest
-    )
+    # the batch. To first order in the unit roundoff u, a stage w = a + s M w' with |a|
+    # and |w'| at most W, computed in any order of addition, is within
+    # gamma (|a| + |s| |M| |w'|) <= gamma (1 + l) W of exact, with gamma = gamma_(d+3) =
+    # (d+3) u / (1 - (d+3) u) for the d terms, the scaling and the addition (Higham 2002,
+    # eq. 3.5), and l = |s| ||M||_inf; it carries an error E of its inputs to (1 + l) E.
+    # Through a chain of K stages from inputs of magnitude at most V, the two layouts then
+    # differ by at most 2 K gamma V prod(1 + l). In each kernel's chains (see `chains`),
+    # l is ||C||_inf or ||C^T||_inf times the step's scale, and 2 ||C^-1||_inf / s for
+    # the whitened difference of two means; the reflection z - 2 (e . z) e, with
+    # e = delta / |delta|, carries an error of delta to at most 4 d V / |delta|_2 times
+    # it, and grows a vector by at most 3 sqrt(d), with |delta|_2 at least the distance
+    # of the means over s ||C||_2. A row whose acceptance or meeting turned on these
+    # differences would differ by O(1); none does here.
+    batch, alone, setup = batch_transitions(name, TARGET)
+    d, largest = setup["d"], setup["largest"]
+    u = np.finfo(float).eps / 2
+    gamma = (d + 3) * u / (1 - (d + 3) * u)
+    for column, output_chains in enumerate(chains(name, setup)):
+        bound = max(
+            (
+                2 * len(norms) * gamma * largest * np.prod(1 + np.array(norms))
+                for norms in output_chains
+            ),
+            default=0.0,
+        )
+        np.testing.assert_allclose(alone[:, column], batch[:, column], rtol=0, atol=bound)
 
 
 # Validation and the proposal distribution.

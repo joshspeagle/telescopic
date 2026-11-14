@@ -27,3 +27,12 @@ Each item has the default that work proceeds on until Josh answers.
   Josh ruled on issue #89 (2026-11-13): an opt-in tuning that puts contraction first
   (issue #91), which becomes the default if its pre-registered test passes.
   A given `n_steps` can fail on a Gaussian too (issue #137).
+- [ ] **Row-independent products for a vectorized target.** With a vectorized target the
+  kernels compute their products by BLAS (DECISIONS #189), so a vectorized target whose
+  rows are computed independently, as the built-in examples' are, is no longer bitwise
+  invariant across lane counts, pools and merged runs, as it was before: a difference of
+  rounding can move a replicate's meeting time and its whole output, while the estimates
+  agree within their error bars (`notes/experiments/i83_blas_products.out`, section 2).
+  Should there be a way to keep the row-independent products for such a target, such as
+  an argument of `Target`? Default: none; `vectorize=False` keeps every bitwise
+  guarantee.

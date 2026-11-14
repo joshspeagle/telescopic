@@ -81,9 +81,11 @@ class CoupledSampler:
     vectorize : bool
         Whether ``log_prob`` and ``grad`` take a batch of points. The kernels then also
         compute their matrix products for a batch of chains at once, with BLAS, so a
-        replicate's last bits depend on which replicates ran beside it: a run repeated
-        with the same seed and lanes is bitwise identical, and runs of other layouts
-        agree statistically.
+        run repeats bitwise only with the same seed and settings, ``pool`` and
+        ``n_workers``, BLAS build and number of BLAS threads. Otherwise a replicate can
+        differ by rounding, which can move its meeting time and its whole output, and
+        the estimates agree within their error bars (Reproducibility, in
+        :doc:`/guide/parallel`).
     kernel : Kernel or str
         A kernel, or one of ``"auto"`` and ``"rwmh"`` (random-walk Metropolis with the
         reflection-maximal coupling), ``"mala"`` and ``"hmc"`` (which need ``grad``) and
@@ -98,7 +100,8 @@ class CoupledSampler:
         schwimmbad pool. A pool runs chunks of consecutive indices, at most four per
         worker; a task in a worker process runs with BLAS pinned to one thread and
         Ctrl-C ignored. With a log-density evaluated point by point, no replicate
-        depends on the pool.
+        depends on the pool. With a vectorized one, a run on workers differs by rounding
+        from one in this process unless this process is limited to one BLAS thread.
     n_workers : int, optional
         The number of workers of an executor or a pool, which sets how many chunks it
         gets: one per worker at least, and four at most unless a chunk would then hold
@@ -543,9 +546,11 @@ def sample(
     vectorize : bool
         Whether ``log_prob`` and ``grad`` take a batch of points. The kernels then also
         compute their matrix products for a batch of chains at once, with BLAS, so a
-        replicate's last bits depend on which replicates ran beside it: a run repeated
-        with the same seed and lanes is bitwise identical, and runs of other layouts
-        agree statistically.
+        run repeats bitwise only with the same seed and settings, ``pool`` and
+        ``n_workers``, BLAS build and number of BLAS threads. Otherwise a replicate can
+        differ by rounding, which can move its meeting time and its whole output, and
+        the estimates agree within their error bars (Reproducibility, in
+        :doc:`/guide/parallel`).
     kernel : Kernel or str
         A kernel, or one of ``"auto"`` and ``"rwmh"`` (random-walk Metropolis with the
         reflection-maximal coupling), ``"mala"`` and ``"hmc"`` (which need ``grad``) and

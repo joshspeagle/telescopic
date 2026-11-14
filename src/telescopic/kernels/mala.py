@@ -80,7 +80,9 @@ class MALA(GradientKernel):
         chol, inverse = self._ready()
         blas = target.vectorize
         mean = _mean(state, chol, blas)
-        proposal = evaluate_proposal(target, mean + matvec(chol, draws.normal(len(chol)), blas))
+        proposal = evaluate_proposal(
+            target, mean + matvec(chol, draws.normal(len(chol)), blas=blas)
+        )
         log_alpha = _log_alpha(state, proposal, mean, chol, inverse, blas)
         accepted = draws.log_uniform() < log_alpha
         return select(accepted, proposal, state), acceptance(log_alpha)
@@ -139,7 +141,7 @@ class MALA(GradientKernel):
 def _mean(state: State, chol: FloatArray, blas: bool) -> FloatArray:
     # The mean of q(. | x): x + (epsilon^2 / 2) Sigma grad, with chol = epsilon C.
     grad = cast(FloatArray, state.grad)
-    mean: FloatArray = state.x + 0.5 * matvec(chol, matvec(chol.T, grad, blas), blas)
+    mean: FloatArray = state.x + 0.5 * matvec(chol, matvec(chol.T, grad, blas=blas), blas=blas)
     return mean
 
 
@@ -155,8 +157,8 @@ def _log_alpha(
     # A rejected proposal (log pi = -inf) may hold non-finite positions: no warnings, and a
     # NaN ratio rejects as -inf does.
     with np.errstate(over="ignore", invalid="ignore"):
-        to = matvec(inverse, proposal.x - forward, blas)
-        back = matvec(inverse, current.x - _mean(proposal, chol, blas), blas)
+        to = matvec(inverse, proposal.x - forward, blas=blas)
+        back = matvec(inverse, current.x - _mean(proposal, chol, blas), blas=blas)
         log_q = 0.5 * (np.einsum("ij,ij->i", to, to) - np.einsum("ij,ij->i", back, back))
         log_alpha: FloatArray = proposal.log_prob - current.log_prob + log_q
     return log_alpha

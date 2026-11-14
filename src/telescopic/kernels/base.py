@@ -87,8 +87,10 @@ class Kernel(ABC):
     Each marginal of :meth:`coupled_step` must have exactly the law of :meth:`step`. The
     engine declares a meeting when a pair's returned positions are equal under ``==``, so a
     coupling that makes the two proposals identical must give the second chain a copy of
-    the first chain's proposal, never a recomputation. A row's arithmetic must not depend
-    on the other rows of the batch.
+    the first chain's proposal, never a recomputation. For a target evaluated point by
+    point, a row's arithmetic must not depend on the other rows of the batch; for a
+    vectorized one it may, as BLAS products do, if a coupled step computes each chain's
+    products in a call of its own, of the same shape, so that equal chains stay equal.
     """
 
     @property
