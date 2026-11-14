@@ -953,6 +953,28 @@ def test_crn_gibbs_couplings_draw_blocks_without_ppf_from_generators_in_the_same
     assert row.random() == np.random.default_rng(7).random()
 
 
+def test_crn_gibbs_couplings_draw_a_row_alike_alone_and_beside_rows_of_another_kind():
+    # A row's coupling of a block depends on its own two conditionals: beside a row whose
+    # conditionals lack ppf, a row whose conditionals have it drew from generators in the
+    # same state, and alone from a common uniform.
+    def given(point, block):
+        other = point[1 - block]
+        return Normal(0.5 * other, 1.0) if other > 0 else Box(0.5 * other, 1)
+
+    kernel = Gibbs(given, [[0], [1]], coupling="crn")
+    x, y = np.array([[0.0, 1.0], [0.0, -1.0]]), np.array([[0.0, 2.0], [0.0, -2.0]])
+
+    def step(n):
+        draws = fixed_draws(
+            uniforms=[[0.7, 0.4], [0.6, 0.1]][:n],
+            generators=[np.random.default_rng(seed) for seed in (5, 6)][:n],
+        )
+        return kernel.coupled_step(Target(None), gibbs_state(x[:n]), gibbs_state(y[:n]), draws)
+
+    for alone, beside in zip(step(1), step(2), strict=True):
+        np.testing.assert_array_equal(alone.x[0], beside.x[0])
+
+
 def test_crn_gibbs_couplings_draw_a_block_from_its_own_conditional_whatever_its_type():
     # Common normals through the cov of a conditional that is not normal gave both chains
     # a normal draw in the coupled step only.

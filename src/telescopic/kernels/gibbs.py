@@ -230,20 +230,28 @@ def _maximal(p: list[Any], q: list[Any], draws: Draws, eta: float) -> tuple[Floa
 
 
 def _common(p: list[Any], q: list[Any], draws: Draws, size: int) -> tuple[list[Any], ...]:
-    # Common random numbers: a uniform through each ppf for a block of one coordinate, or
-    # else each chain's own sampler, run from the same state of a generator.
-    if size == 1 and all(hasattr(conditional, "ppf") for conditional in p + q):
-        # A uniform of 0, drawn with probability 2^-53, would give ppf = -inf.
-        u = np.maximum(draws.uniform(), np.finfo(np.float64).tiny)
+    # Common random numbers, chosen row by row from the row's two conditionals, so that a
+    # row's draw does not depend on the other rows (spec R-EXEC-2): a uniform through each
+    # ppf for a block of one coordinate, or else each chain's own sampler, run from the
+    # same state of a generator.
+    drawn_x: list[Any] = [None] * len(p)
+    drawn_y: list[Any] = [None] * len(p)
+    quantile = np.array(
+        [size == 1 and hasattr(a, "ppf") and hasattr(b, "ppf") for a, b in zip(p, q, strict=True)],
+        dtype=bool,
+    )
+    rows = quantile.nonzero()[0]
+    # A uniform of 0, drawn with probability 2^-53, would give ppf = -inf.
+    u = np.maximum(draws.subset(rows).uniform(), np.finfo(np.float64).tiny)
+    for row, value in zip(rows.tolist(), u, strict=True):
         # Each ppf gives a scalar, or an array for array parameters.
-        return tuple([c.ppf(value) for c, value in zip(side, u, strict=True)] for side in (p, q))
-    drawn_x, drawn_y = [], []
-    for row, (p_row, q_row) in enumerate(zip(p, q, strict=True)):
+        drawn_x[row], drawn_y[row] = p[row].ppf(value), q[row].ppf(value)
+    for row in (~quantile).nonzero()[0].tolist():
         # A child of the row's generator, spawned without moving the row's own stream, and
         # set back to its first state before the second chain draws.
         generator = Generator(draws.generator(row).bit_generator.spawn(1)[0])
         start = generator.bit_generator.state
-        drawn_x.append(p_row.rvs(random_state=generator))
+        drawn_x[row] = p[row].rvs(random_state=generator)
         generator.bit_generator.state = start
-        drawn_y.append(q_row.rvs(random_state=generator))
+        drawn_y[row] = q[row].rvs(random_state=generator)
     return drawn_x, drawn_y
