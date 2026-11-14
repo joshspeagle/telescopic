@@ -21,7 +21,12 @@ if TYPE_CHECKING:
     from telescopic.kernels.base import Kernel
 
 TARGET_ACCEPTANCE = 0.234
+# The random-walk scale 2.38 / sqrt(d) of Roberts, Gelman & Gilks (1997), used by
+# RandomWalk by default and by the pilot chains at their start.
+OPTIMAL_SCALE = 2.38
 N_CHAINS = 4
+# Draws from the initial distribution per pilot chain, whose first is its start.
+STARTS_PER_CHAIN = 25
 DUAL_AVERAGING_STEPS = 1000
 
 
@@ -195,13 +200,11 @@ def adaptive_metropolis(
     root = root_seed(rng)
     initial = as_initial(initial)
     generators = [replicate_generator(root, TUNING, i) for i in range(N_CHAINS)]
-    # 25 draws per chain from its own generator, all of the first draw's dimension.
-    sources: list[Any] = []
-    for generator in generators:
-        sources.extend([generator] * 25)
+    # The draws of each chain from its own generator, all of the first draw's dimension.
+    sources = [generator for generator in generators for _ in range(STARTS_PER_CHAIN)]
     first = draw(initial, sources[0])
     rest = [draw(initial, generator, len(first)) for generator in sources[1:]]
-    points = np.reshape([first, *rest], (N_CHAINS, 25, len(first)))
+    points = np.reshape([first, *rest], (N_CHAINS, STARTS_PER_CHAIN, len(first)))
     x, d = points[:, 0].copy(), len(first)
     # Learning a covariance takes of order d^2 steps. Beyond 20 dimensions, refactoring the
     # covariance and keeping states only every ceil(d/20) steps, or fewer so that each
@@ -213,7 +216,7 @@ def adaptive_metropolis(
         streams.assign(chain, generator)
     draws = streams.view(np.arange(N_CHAINS))
     log_p = target.log_prob(x)
-    log_scale = np.full(N_CHAINS, np.log(2.38**2 / d))
+    log_scale = np.full(N_CHAINS, np.log(OPTIMAL_SCALE**2 / d))
     # The initial distribution's scales start the covariance; the identity would dominate
     # small variances for thousands of steps.
     variance = points.reshape(-1, d).var(axis=0, ddof=1)
@@ -262,8 +265,8 @@ def adaptive_metropolis(
         if step >= first_kept:
             accepted += accept
             if behind % stride == 0:
-                samples[:, n_kept - 1 - behind // stride] = x
-                kept_log_p[:, n_kept - 1 - behind // stride] = log_p
+                column = n_kept - 1 - behind // stride
+                samples[:, column], kept_log_p[:, column] = x, log_p
     if not accepted.all():
         raise ValueError(
             f"tuning chain {int(np.argmin(accepted))} accepted no proposal in its second "

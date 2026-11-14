@@ -22,7 +22,7 @@ from telescopic.kernels.base import (
     select,
 )
 from telescopic.target import Target
-from telescopic.tuning import PilotRun, TuningReport
+from telescopic.tuning import OPTIMAL_SCALE, PilotRun, TuningReport
 
 
 # Spec R-KER-RW; the tuning of cov is that of spec section 5.3.
@@ -89,7 +89,8 @@ class RandomWalk(Kernel):
         self._factors: tuple[FloatArray, FloatArray] | None = None
         if cov is not None:
             self.cov, chol = covariance("cov", cov)
-            scaled = (2.38 / np.sqrt(len(chol)) if self.scale is None else self.scale) * chol
+            scale = OPTIMAL_SCALE / np.sqrt(len(chol)) if self.scale is None else self.scale
+            scaled = scale * chol
             self._factors = scaled, inverse_lower(scaled)
 
     @property

@@ -441,9 +441,8 @@ class _Batch:
         keep_paths: bool,
     ) -> None:
         self.target, self.kernel, self.settings = target, kernel, settings
-        self.k, self.m, self.lag, self.thin, self.max_iter, self.store = settings
         self.keep_paths = keep_paths
-        self.weight = 1.0 / len(range(self.k, self.m + 1, self.thin))  # 1 / |S|
+        self.weight = 1.0 / len(range(settings.k, settings.m + 1, settings.thin))  # 1 / |S|
         self.streams = Streams(lanes)
         self.replicate = np.full(lanes, -1, dtype=np.int64)
         self.t = np.zeros(lanes, dtype=np.int64)
@@ -490,9 +489,9 @@ class _Batch:
     def advance(self) -> None:
         # One iteration: X alone in the lagging and met lanes, the coupled kernel in the
         # others, then the exact comparison of R-EST-2 for every unmet lane past the lag.
-        active, unmet = self.active, self.tau < 0
-        solo = (active & ((self.t < self.lag) | ~unmet)).nonzero()[0]
-        coupled = (active & unmet & (self.t >= self.lag)).nonzero()[0]
+        active, unmet, lag = self.active, self.tau < 0, self.settings.lag
+        solo = (active & ((self.t < lag) | ~unmet)).nonzero()[0]
+        coupled = (active & unmet & (self.t >= lag)).nonzero()[0]
         if len(solo):
             moved, _ = self.kernel.step(self.target, self.x.take(solo), self.streams.view(solo))
             self.x.put(solo, moved)
@@ -503,7 +502,7 @@ class _Batch:
             self.x.put(coupled, new_x)
             self.y.put(coupled, new_y)
         self.t += 1  # idle lanes' clocks are never read
-        compared = (active & unmet & (self.t >= self.lag)).nonzero()[0]
+        compared = (active & unmet & (self.t >= lag)).nonzero()[0]
         if len(compared):
             met = np.all(self.x.x[compared] == self.y.x[compared], axis=1)
             self.tau[compared[met]] = self.t[compared[met]]
@@ -518,9 +517,9 @@ class _Batch:
 
     def finish(self) -> IntArray:
         # Frees the lanes of the pairs that met and reached m, and of censored pairs.
-        done = (self.tau >= 0) & (self.t >= self.m)
-        if self.max_iter is not None:
-            done |= (self.tau < 0) & (self.t >= self.max_iter)
+        done = (self.tau >= 0) & (self.t >= self.settings.m)
+        if self.settings.max_iter is not None:
+            done |= (self.tau < 0) & (self.t >= self.settings.max_iter)
         lanes = (self.active & done).nonzero()[0]
         if len(lanes):
             self.finished.add(self.replicate[lanes], self.tau[lanes])
@@ -569,17 +568,18 @@ class _Batch:
         # The averaged atoms X_t, t in S, of the lanes that moved, and the bias-correction
         # atoms and distances of the unmet pairs (spec R-EST-6, section 3.6). Kinds without
         # rows are skipped: at one lane most iterations lack one, and its calls add up.
-        if not self.store:
+        k, m, lag, thin, _, store = self.settings
+        if not store:
             return
         t = self.t[stepped]
-        averaged = stepped[(t >= self.k) & (t <= self.m) & ((t - self.k) % self.thin == 0)]
+        averaged = stepped[(t >= k) & (t <= m) & ((t - k) % thin == 0)]
         if len(averaged):
             self.atoms.add(
                 self.replicate[averaged], self.x.x[averaged], np.full(len(averaged), self.weight)
             )
         if not len(unmet):
             return
-        coefficient = correction_coefficients(self.t[unmet], self.k, self.m, self.lag, self.thin)
+        coefficient = correction_coefficients(self.t[unmet], k, m, lag, thin)
         positive = coefficient > 0
         if positive.any():
             corrected = unmet[positive]
