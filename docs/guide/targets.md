@@ -451,7 +451,7 @@ variance and the cost, and decides whether the chains find every mode.
   A start a few to ten times wider than the target avoids this.
 - **For a target with one mode,** a Gaussian centered on an optimizer's fit, with its
   inverse Hessian scaled by 100, is ten times wider than the fit's error bars
-  ([Getting started](../getting-started.md#a-first-run)).
+  ([Quickstart](../start/quickstart.md#a-first-run)).
 - **Inside the support.** A replicate that starts where the target density is zero emits
   an {class}`~telescopic.warnings.InputWarning`, as soon as it starts in this process and
   when the run ends on a pool, and its chains stay there until they accept a proposal of

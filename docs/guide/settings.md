@@ -89,7 +89,7 @@ one, and compares other settings with the recipe's.
 ## A slow log-density
 
 When the log-density is slow, its evaluations set the time of a run. A counter added to
-the log-density of the line fit of [Getting started](../getting-started.md#a-first-run),
+the log-density of the line fit of the [Quickstart](../start/quickstart.md#a-first-run),
 on its data `x`, `y` and `yerr`, counts them in each step:
 
 ```{code-cell} python

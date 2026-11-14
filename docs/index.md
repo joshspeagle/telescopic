@@ -58,7 +58,9 @@ print(result.estimate(lambda t: t[:, 0] * t[:, 1]))
 :hidden:
 :caption: Start
 
-getting-started
+start/install
+start/quickstart
+start/coming-from-emcee
 ```
 
 ```{toctree}

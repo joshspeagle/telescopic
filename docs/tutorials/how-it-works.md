@@ -6,7 +6,7 @@ kernelspec:
 
 # How it works
 
-[Getting started](../getting-started.md) describes a run in words. This page runs one by
+The [Quickstart](../start/quickstart.md#what-a-run-does) describes a run in words. This page runs one by
 hand, on a standard normal target in one dimension with chains started far from it: the
 paths of a few pairs, one replicate's estimate taken apart, and the bias that the
 correction removes on average. [Theory](../theory.md) derives each step.
