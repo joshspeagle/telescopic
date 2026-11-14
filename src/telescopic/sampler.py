@@ -97,7 +97,8 @@ class CoupledSampler:
         depends on the pool.
     n_workers : int, optional
         The number of workers of an executor or a pool, which sets how many chunks it
-        gets: one per worker at least and four at most, and for a pool with only
+        gets: one per worker at least, and four at most unless a chunk would then hold
+        more than 1,024 replicates, the most it ever holds; for a pool with only
         ``map``, waves of one per worker. Given, it replaces the size that the pool
         reports; ``None`` reads that size, or else counts the CPUs this process may
         use, which leaves idle the workers of a larger pool that does not report its
