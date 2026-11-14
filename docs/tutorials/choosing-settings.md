@@ -85,7 +85,7 @@ recipe.summary()
 
 The footer gives the cost of a replicate, its relative cost, and the fraction of pairs
 that met after $k + L$, the ones that carry a bias correction
-([Results](../guide/results.md#the-summary) defines each entry). That fraction need not
+([The summary](../reference/result-fields.md#the-summary) defines each entry). That fraction need not
 equal the pilot's fraction after $k + 1$: the lag changes the law of $\tau - L$.
 
 ## Other settings

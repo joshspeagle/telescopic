@@ -67,7 +67,7 @@ assert (both.k, both.m, both.lag) == (first.k, first.m, first.lag)
 The second run ran 100 more replicates on the same workers, with the settings of the
 first, and returned the result of all the replicates so far. To split a run across
 machines, run separate ranges of replicate indices with one seed and the same settings,
-and join the results ([Merging runs](results.md#merging-runs)).
+and join the results ([Merging runs](save-load-merge.md#merging-runs)).
 
 ## Tuning
 
@@ -79,7 +79,7 @@ log-density evaluated point by point on many workers, these sequential steps can
 longer than a worker's share of the run. A job that passes a tuned kernel and its `k`
 skips both the tuning and the meeting-time pilot, as the second of those sections
 explains, so several jobs on one target can tune once. A saved result holds only the kernel's description
-([Saving and loading](results.md#saving-and-loading)), so a job in another process gets
+([Saving and loading](save-load-merge.md#saving-and-loading)), so a job in another process gets
 the kernel itself by pickle, here through bytes, as it would through a file:
 
 ```{code-cell} python

@@ -371,7 +371,7 @@ it:
 result.estimate(lambda t: np.exp(t[:, 1]))
 ```
 
-[Results](results.md#quantiles-and-credible-intervals) gives the quantiles of the
+[Quantiles and credible intervals](estimates.md#quantiles-and-credible-intervals) gives the quantiles of the
 sampled coordinates and of derived quantities. To sample $\sigma$ itself instead, return
 `-inf` where $\sigma \le 0$, as above, and draw the initial distribution inside the
 support ([Choosing one](initial-distribution.md#choosing-one)).

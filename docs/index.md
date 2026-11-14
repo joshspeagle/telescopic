@@ -84,7 +84,9 @@ guide/initial-distribution
 guide/kernels
 guide/step-size
 guide/settings
-guide/results
+guide/estimates
+guide/plots
+guide/save-load-merge
 guide/diagnostics
 guide/parallel
 guide/custom-kernels
@@ -102,6 +104,7 @@ theory
 :caption: Reference
 
 api
+reference/result-fields
 citing
 changelog
 ```

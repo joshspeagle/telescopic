@@ -85,7 +85,7 @@ The table has one row per parameter: the estimate of the posterior mean, which i
 unbiased, with its standard error, and the standard deviation and the 16th, 50th and
 84th percentiles, which are **consistent**: they converge to the posterior's values as
 the number of replicates grows, but are not unbiased at a fixed number. Below it are the
-run's diagnostics and the warnings that apply: [Results](../guide/results.md#the-summary)
+run's diagnostics and the warnings that apply: [The summary](../reference/result-fields.md#the-summary)
 defines each entry, and [Diagnostics and warnings](../guide/diagnostics.md) says what each
 warning means.
 

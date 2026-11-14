@@ -8,7 +8,7 @@ kernelspec:
 
 The meeting times of the pairs bound the distance of the chains from the target and set
 the cost of a run, and telescopic warns when a run's error bars may be unreliable. The
-examples use the run of [Results](results.md):
+examples use the run of [Estimate anything from a result](estimates.md):
 
 ```{code-cell} python
 import warnings
@@ -100,7 +100,7 @@ censored pair given as the cap plus 1.
 ## The diagnostics of a run
 
 {meth}`telescopic.Result.diagnostics` returns the diagnostics that the summary prints, as
-a dictionary; [Results](results.md#the-summary) defines each line of the summary.
+a dictionary; [The summary](../reference/result-fields.md#the-summary) defines each line of the summary.
 
 ```{code-cell} python
 result.diagnostics()
