@@ -38,25 +38,6 @@ def covariance(
     return matrix, chol
 
 
-def square_root(name: str, cov: npt.ArrayLike, ndim: int) -> FloatArray:
-    # A matrix A with A A^T = cov for a covariance of size ndim that may be singular: the
-    # Cholesky factor, or else A = D V sqrt(Lambda) from the eigendecomposition of the
-    # correlation matrix D^-1 cov D^-1, whose eigenvalues that rounding made negative
-    # count as 0. The test is on correlations, so it does not depend on the coordinates'
-    # scales.
-    matrix = _symmetric(name, cov, ndim)
-    try:
-        return np.linalg.cholesky(matrix)
-    except np.linalg.LinAlgError:
-        variances = np.diag(matrix)
-        scale = np.sqrt(np.where(variances > 0, variances, 1.0))
-        values, vectors = np.linalg.eigh(matrix / np.outer(scale, scale))
-        if np.any(variances < 0) or values[0] < -1e-8 * values[-1]:
-            raise ValueError(f"{name} must be positive semi-definite") from None
-        root: FloatArray = scale[:, None] * vectors * np.sqrt(np.maximum(values, 0.0))
-        return root
-
-
 def _symmetric(name: str, cov: npt.ArrayLike, ndim: int | None) -> FloatArray:
     # The symmetric part of a finite square matrix, of size ndim if given, symmetric up
     # to rounding: |C_ij - C_ji| <= 1e-8 sqrt(C_ii C_jj), a test that does not depend on

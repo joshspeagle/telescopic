@@ -317,13 +317,16 @@ conditionals:
 - `coupling="maximal"`, the default: the rejection maximal coupling. With `eta` below 1
   the meeting probability is capped at `eta`, and the number of draws it takes has the
   bounded variance of Atchadé & Jacob (2024, Algorithm 2).
-- `coupling="crn"`: common random numbers, one uniform through `ppf` for a block of one
-  coordinate, or common standard normals for a normal conditional, an object with `mean`,
-  a vector of the block's size, and `cov`, a matrix of the block's size that may be
-  singular. An object with `mean` and `cov` that is not normal would get the wrong law,
-  and one whose `mean` and `cov` are methods, as a frozen SciPy `dirichlet`'s are,
-  raises `TypeError`. Common random numbers can bring the chains together, but make them
-  equal only by rounding; `"two-scale"` adds the maximal coupling.
+- `coupling="crn"`: common random numbers. For a block of one coordinate whose
+  conditionals have `ppf`, one uniform goes through both. For any other block, each
+  chain draws from its own conditional with `rvs`, from generators in the same state, so
+  each keeps its conditional's law whatever its type. The draws are then as close as the
+  conditional's sampler makes them. SciPy's `multivariate_normal`, for one, draws
+  through a singular value decomposition of the covariance, whose signs and order can
+  change between nearby covariances; where they do, as for covariances near a multiple
+  of the identity, the two chains' draws are as far apart as independent ones. Common
+  random numbers can bring the chains together, but make them equal only by rounding;
+  `"two-scale"` adds the maximal coupling.
 - `coupling="two-scale"`: common random numbers for pairs farther apart than `threshold`
   at the start of a sweep, and the maximal coupling for the others, as in Biswas,
   Bhattacharya, Jacob & Johndrow (2022).

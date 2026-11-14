@@ -294,3 +294,10 @@ All notable changes to this project are documented here. The format follows
   event, is freed when the caller drops an error raised in a worker. A reference cycle
   held them until a later garbage collection, which on Python 3.11 and 3.12 can warn
   that the resource tracker was called reentrantly and leave the semaphores to leak.
+- `Gibbs(coupling="crn")` draws a block of several coordinates, or of one without `ppf`,
+  from each chain's own conditional with generators in the same state, so each chain
+  keeps its conditional's law. It took such a conditional to be the normal with its
+  `mean` and `cov`, which gave a conditional that is not normal the wrong law in the
+  coupled step only, and it refused conditionals whose `mean` and `cov` are not values,
+  such as SciPy's frozen `dirichlet`, `multivariate_t` and `wishart`. Blocks of one
+  coordinate with `ppf`, and the maximal coupling, give the same numbers as before.

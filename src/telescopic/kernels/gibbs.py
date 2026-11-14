@@ -8,10 +8,10 @@ from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
+from numpy.random import Generator
 
-from telescopic._linalg import square_root
 from telescopic._random import Draws
-from telescopic._types import FloatArray, read_only, real, vector
+from telescopic._types import FloatArray, read_only, real
 from telescopic.couplings import maximal
 from telescopic.kernels.base import Kernel, State, evaluate, evaluate_pair
 from telescopic.target import Target
@@ -31,12 +31,9 @@ class Gibbs(Kernel):
     - ``"crn"``: common random numbers, which contract the chains but make them equal only
       by rounding. For a block of one coordinate whose conditionals have ``ppf``, one
       uniform goes through each ``ppf``. For a block of several coordinates, or of one
-      without ``ppf``, ``"crn"`` takes each conditional to be the normal with its ``mean``
-      and ``cov``, whatever its type, and common standard normals go through a square
-      root of each ``cov``, a matrix of the block's size that may be singular. A
-      conditional with ``mean`` and ``cov`` that is not normal would get the wrong law;
-      one whose ``mean`` and ``cov`` are methods, as a frozen SciPy ``dirichlet``'s are,
-      raises ``TypeError``;
+      without ``ppf``, each chain draws from its own conditional with ``rvs``, from
+      generators in the same state, so each keeps its conditional's law whatever its
+      type. How close the two draws are then depends on how ``rvs`` uses the generator;
     - ``"two-scale"``: common random numbers for pairs farther apart than ``threshold``
       at the start of the sweep, the maximal coupling for the others (Biswas, Bhattacharya,
       Jacob & Johndrow 2022).
@@ -67,8 +64,9 @@ class Gibbs(Kernel):
     SciPy distribution takes 250 to 300 µs to build, which can dominate a step; a small
     class with the methods used is faster, as in :mod:`telescopic.examples`. A step draws
     each block from the row's generator. A coupled step does the same for the maximal
-    coupling and for identical conditionals, and reads 1 uniform (through ``ppf``) or the
-    block's size of normals (through ``cov``) per row and block for common random numbers.
+    coupling and for identical conditionals. For common random numbers it reads 1 uniform
+    per row and block through ``ppf``, or else builds a generator from a child that it
+    spawns from the row's generator, which leaves the row's own stream where it was.
     A conditional that draws a point that is not finite, or not of its block's size,
     raises ``ValueError``. With ``log_prob=None`` the target has no log-density, and states
     carry 0.
@@ -223,34 +221,21 @@ def _maximal(p: list[Any], q: list[Any], draws: Draws, eta: float) -> tuple[Floa
     return x, y
 
 
-def _common(p: list[Any], q: list[Any], draws: Draws, size: int) -> tuple[Any, ...]:
+def _common(p: list[Any], q: list[Any], draws: Draws, size: int) -> tuple[list[Any], ...]:
     # Common random numbers: a uniform through each ppf for a block of one coordinate, or
-    # normals through a square root of each conditional's covariance, taken as normal.
+    # else each chain's own sampler, run from the same state of a generator.
     if size == 1 and all(hasattr(conditional, "ppf") for conditional in p + q):
         # A uniform of 0, drawn with probability 2^-53, would give ppf = -inf.
         u = np.maximum(draws.uniform(), np.finfo(np.float64).tiny)
         # Each ppf gives a scalar, or an array for array parameters.
         return tuple([c.ppf(value) for c, value in zip(side, u, strict=True)] for side in (p, q))
-    # Values, not methods: a frozen SciPy dirichlet has mean() and cov().
-    if not all(
-        hasattr(conditional, "mean")
-        and hasattr(conditional, "cov")
-        and not callable(conditional.mean)
-        and not callable(conditional.cov)
-        for conditional in p + q
-    ):
-        raise TypeError(
-            "coupling='crn' needs conditionals with ppf for blocks of one coordinate, or "
-            "multivariate normal ones whose mean and cov are values, not methods"
-        )
-    z = draws.normal(size)
-    return tuple(
-        np.array(
-            [
-                vector("a conditional's mean", c.mean, size)
-                + square_root("a conditional's cov", c.cov, size) @ row
-                for c, row in zip(side, z, strict=True)
-            ]
-        )
-        for side in (p, q)
-    )
+    drawn_x, drawn_y = [], []
+    for row, (p_row, q_row) in enumerate(zip(p, q, strict=True)):
+        # A child of the row's generator, spawned without moving the row's own stream, and
+        # set back to its first state before the second chain draws.
+        generator = Generator(draws.generator(row).bit_generator.spawn(1)[0])
+        start = generator.bit_generator.state
+        drawn_x.append(p_row.rvs(random_state=generator))
+        generator.bit_generator.state = start
+        drawn_y.append(q_row.rvs(random_state=generator))
+    return drawn_x, drawn_y
