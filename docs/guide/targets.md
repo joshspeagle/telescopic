@@ -154,8 +154,11 @@ between the two exceeds 10 times the estimated error of the comparison: the trun
 of the differences, from a second difference at steps $2hu$, and the rounding of
 `log_prob` and of `grad`. It costs 40 evaluations of `log_prob` and 8 of `grad` at any
 dimension, and 8 more of each when `grad` returns float32 values, and again when
-`log_prob` does; it draws from a random stream of its own, and it changes
-no result: a run is the same with and without it.
+`log_prob` does; a `log_prob` whose values narrow to float32 only after the first draw
+costs a second sweep at float32. It draws 48 points of the initial distribution, in two
+passes of 24, and holds about 16 vectors of length $d$ at its peak. It draws from a
+random stream of its own, and it changes no result: a run is the same with and without
+it.
 
 A gradient with its sign wrong warns before any pair runs, with the size of the
 disagreement:

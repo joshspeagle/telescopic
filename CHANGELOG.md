@@ -298,8 +298,9 @@ All notable changes to this project are documented here. The format follows
   central differences of `log_prob` along 8 lines through draws of the initial
   distribution, before tuning, and emits an `InputWarning` with the size of the
   disagreement in nats where they disagree beyond rounding, or when it could compare no
-  line. It costs 40 evaluations of `log_prob` and 8 of `grad` at any dimension, draws
-  from a random stream of its own and changes no result; `check_grad=False` on
+  line. It costs 40 evaluations of `log_prob` and 8 of `grad` at any dimension for
+  float64 values, and 48 draws of the initial distribution, draws from a random stream
+  of its own and changes no result; `check_grad=False` on
   `CoupledSampler` and `sample` turns it off, and `CoupledSampler.gradient_check`, a
   `diagnostics.GradientCheck`, records what it compared. An error raised inside the
   check keeps its type and message, with a note that it was raised in the check.

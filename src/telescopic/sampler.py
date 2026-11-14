@@ -100,8 +100,10 @@ class CoupledSampler:
         Compare ``grad`` with differences of ``log_prob`` at 8 draws of the initial
         distribution when the sampler is built, if the kernel evaluates ``grad``, and
         warn where they disagree (Checking the gradient, in :doc:`/guide/targets`). It
-        costs 40 evaluations of ``log_prob`` and 8 of ``grad`` for float64 values, and
-        changes no result.
+        costs 40 evaluations of ``log_prob`` and 8 of ``grad`` for float64 values, 8 more
+        of each for a float32 ``grad`` and again for a float32 ``log_prob``, a second
+        sweep for a ``log_prob`` whose values narrow after the first draw, and 48 draws of
+        the initial distribution, and changes no result.
     rng : None, int, numpy.random.SeedSequence or numpy.random.Generator
         The root of every random stream.
 
