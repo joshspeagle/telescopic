@@ -160,8 +160,7 @@ def execute(
     start = time.perf_counter()
     workers = _workers(pool, n_workers)
     # Chunks of at most a full set of lanes, where four per worker allow (DECISIONS #52),
-    # and of at most MAX_CHUNK replicates (DECISIONS #179): for R replicates on W
-    # workers, max(ceil(R / MAX_CHUNK), min(R, 4 W, max(W, ceil(R / LANES)))) chunks.
+    # and of at most MAX_CHUNK replicates (DECISIONS #179).
     n = len(indices)
     count = min(n, CHUNKS_PER_WORKER * workers, max(workers, math.ceil(n / engine.LANES)))
     pieces = np.array_split(indices, max(count, math.ceil(n / MAX_CHUNK)))

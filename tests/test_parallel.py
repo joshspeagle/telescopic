@@ -110,14 +110,19 @@ class Sampling(Counting):
         return ThreadPoolExecutor.submit(self, function, piece[:1], **options)
 
 
-def test_pool_chunks_never_exceed_the_replicate_cap():
-    # 100,000 replicates on 4 workers: four chunks per worker would hold 6,250 each, so
-    # the cap of 1,024 makes 98 chunks of 1,020 or 1,021.
-    with Sampling(4) as executor:
-        execute(job(), np.arange(100_000), executor, never)
-    assert sum(executor.chunks) == 100_000
-    assert len(executor.chunks) == 98
+@pytest.mark.parametrize(
+    ("n", "workers", "chunks"), [(4_096, 1, 4), (4_097, 1, 5), (100_000, 4, 98)]
+)
+def test_pool_chunks_never_exceed_the_replicate_cap(n, workers, chunks):
+    # The cap of 1,024 binds above 4,096 replicates per worker, where one replicate more
+    # makes a fifth chunk. Four chunks per worker of 100,000 replicates on 4 workers
+    # would hold 6,250 each, so the cap makes 98 chunks of 1,020 or 1,021.
+    with Sampling(workers) as executor:
+        execute(job(), np.arange(n), executor, never)
+    assert sum(executor.chunks) == n
+    assert len(executor.chunks) == chunks
     assert max(executor.chunks) <= _parallel.MAX_CHUNK == 1_024
+    assert max(executor.chunks) - min(executor.chunks) <= 1
 
 
 def test_results_do_not_depend_on_the_replicate_cap(monkeypatch):
