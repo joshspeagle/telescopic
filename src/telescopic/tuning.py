@@ -21,6 +21,9 @@ if TYPE_CHECKING:
     from telescopic.kernels.base import Kernel
 
 TARGET_ACCEPTANCE = 0.234
+# The random-walk scale 2.38 / sqrt(d) of Roberts, Gelman & Gilks (1997), used by
+# RandomWalk by default and by the pilot chains at their start.
+OPTIMAL_SCALE = 2.38
 N_CHAINS = 4
 DUAL_AVERAGING_STEPS = 1000
 
@@ -213,7 +216,7 @@ def adaptive_metropolis(
         streams.assign(chain, generator)
     draws = streams.view(np.arange(N_CHAINS))
     log_p = target.log_prob(x)
-    log_scale = np.full(N_CHAINS, np.log(2.38**2 / d))
+    log_scale = np.full(N_CHAINS, np.log(OPTIMAL_SCALE**2 / d))
     # The initial distribution's scales start the covariance; the identity would dominate
     # small variances for thousands of steps.
     variance = points.reshape(-1, d).var(axis=0, ddof=1)
