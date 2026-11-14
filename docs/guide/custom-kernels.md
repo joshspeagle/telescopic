@@ -68,11 +68,17 @@ Other members have defaults that a kernel can override:
    are equal, compared with `==`. Where the coupling makes the two new positions equal,
    the second chain must get a copy of the first chain's position, log-density and
    gradient, never a recomputation, which can differ in the last bits.
-3. **Rows are independent.** A row's arithmetic must not depend on the other rows of the
-   batch. Use elementwise operations, and `np.einsum` without `optimize` for linear
-   algebra on rows; `@` and `solve` on a batch can give a row different bits in batches
-   of different sizes. A replicate's results then do not depend on how the replicates
-   are batched ([Parallel runs](parallel.md#reproducibility)).
+3. **Rows are independent.** For a target evaluated point by point, a row's arithmetic
+   must not depend on the other rows of the batch. Use elementwise operations, and
+   `np.einsum` without `optimize` for linear algebra on rows; `@` and `solve` on a batch
+   can give a row different bits in batches of different sizes. A replicate's results
+   then do not depend on how the replicates are batched
+   ([Parallel runs](parallel.md#reproducibility)). Where `target.vectorize` is true,
+   the built-in kernels use `@` for its speed and give up that invariance, which a
+   vectorized target whose rows are computed independently, as the built-in examples'
+   are, would otherwise keep. A coupled step that uses `@`
+   computes each chain's products in a call of its own, of the same shape: two equal
+   rows of one call can get different bits, which would separate chains that met.
 4. **Determinism.** A step is a function of its inputs and its draws alone: every random
    number comes from `draws`, and nothing is kept between calls.
 
@@ -104,7 +110,8 @@ rows where the two draws coincide it returns a copy.
 - {func}`telescopic.couplings.reflection_maximal` couples $\mathcal N(\mu_x, CC^\top)$
   and $\mathcal N(\mu_y, CC^\top)$, given $C$ and $C^{-1}$, with $d$ normals and 1
   uniform per row. It is maximal: the draws coincide with probability
-  $2\Phi(-\lVert C^{-1}(\mu_x - \mu_y)\rVert/2)$.
+  $2\Phi(-\lVert C^{-1}(\mu_x - \mu_y)\rVert/2)$. With `blas=True`, for a vectorized
+  target, it computes its products with BLAS.
 - {func}`telescopic.couplings.maximal` is the rejection maximal coupling of two
   distributions per row, objects with `rvs(random_state=...)` and a normalized `logpdf`
   or `logpmf`. Its number of draws is random, so it draws from each row's generator.

@@ -599,7 +599,9 @@ class Result:
         initial distribution is the caller's to ensure: their descriptions omit parameters.
         The merged result takes this result's names, and its kernel, initial distribution,
         tuning report and pilot meeting times, each from ``other`` where this result has
-        none.
+        none. Its replicates are bitwise those of one run of all of them for a target
+        evaluated point by point, and can differ from them by rounding for a vectorized
+        one (:func:`telescopic.engine.run`).
 
         Parameters
         ----------

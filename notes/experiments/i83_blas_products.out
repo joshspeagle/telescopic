@@ -1,0 +1,81 @@
+setup: commit 15a40db of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
+before: commit 49256f5; after: this checkout; children run with {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1'}
+load average before: (1.65, 2.15, 2.79)
+
+1. Moved numbers: 64 replicates, k = 10, m = 50, lag 1, max_iter = 20000, rng = 1
+RandomWalk         d =   2: hash 52e67fed8a27 -> b753857cc711; meeting times that differ  0 of 64, censored 0 and 0; E[x^2] largest relative change 1.4e-15; E[x] largest change 2.0e-16 standard errors
+RandomWalk         d =  20: hash e337451017a8 -> 5154b756d709; meeting times that differ  0 of 64, censored 0 and 0; E[x^2] largest relative change 1.9e-14; E[x] largest change 2.2e-15 standard errors
+RandomWalk         d = 200: hash 1f7501891c10 -> 41ad6ba20186; meeting times that differ  0 of 64, censored 0 and 0; E[x^2] largest relative change 1.4e-13; E[x] largest change 6.2e-15 standard errors
+RandomWalk maximal d =   2: hash b45e1ff4f624 -> 60ce7a39339b; meeting times that differ  0 of 64, censored 0 and 0; E[x^2] largest relative change 1.8e-16; E[x] largest change 0.0e+00 standard errors
+Independence       d =   2: hash a06277d56a48 -> a06277d56a48; meeting times that differ  0 of 64, censored 0 and 0; E[x^2] largest relative change 0.0e+00; E[x] largest change 0.0e+00 standard errors
+Independence       d =  20: hash d435459e701a -> d435459e701a; meeting times that differ  0 of 64, censored 0 and 0; E[x^2] largest relative change 0.0e+00; E[x] largest change 0.0e+00 standard errors
+Independence       d = 200: hash 8aa956196f43 -> 8aa956196f43; meeting times that differ  0 of 64, censored 0 and 0; E[x^2] largest relative change 0.0e+00; E[x] largest change 0.0e+00 standard errors
+MALA               d =   2: hash 216cc5f45bd8 -> 9b40aa007fa6; meeting times that differ  0 of 64, censored 0 and 0; E[x^2] largest relative change 2.3e-16; E[x] largest change 1.4e-16 standard errors
+MALA               d =  20: hash 282b22719bc9 -> 039e4ca358ee; meeting times that differ  0 of 64, censored 0 and 0; E[x^2] largest relative change 3.6e-16; E[x] largest change 2.4e-15 standard errors
+MALA               d = 200: hash 8ff82be7bce0 -> 279404dda6a8; meeting times that differ  0 of 64, censored 0 and 0; E[x^2] largest relative change 3.2e-15; E[x] largest change 1.8e-14 standard errors
+HMC                d =   2: hash 4d6c91ec345d -> 63effee07ccb; meeting times that differ 19 of 64, censored 0 and 0; E[x^2] largest relative change 3.7e-04; E[x] largest change 5.1e-02 standard errors
+HMC                d =  20: hash e67be5a18bdc -> 3365355c200c; meeting times that differ  0 of 64, censored 0 and 0; E[x^2] largest relative change 8.7e-16; E[x] largest change 8.9e-14 standard errors
+HMC                d = 200: hash 863e7657b5e7 -> c62f94093dbe; meeting times that differ  0 of 64, censored 0 and 0; E[x^2] largest relative change 3.2e-15; E[x] largest change 4.3e-14 standard errors
+
+2. Layouts: the runs of section 1 with lanes = 1 and 7 against lanes = 64, for the target of section 1 (BLAS) and for one whose products are einsum's (row-wise)
+row-wise RandomWalk         d =   2: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 1.4e-14, pooled 2.3e-16 s.e.; after lanes 7:  0 meeting times, replicate 7.1e-15, pooled 1.8e-16 s.e.
+row-wise RandomWalk         d =  20: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 3.4e-12, pooled 3.6e-15 s.e.; after lanes 7:  0 meeting times, replicate 1.8e-12, pooled 1.7e-15 s.e.
+row-wise RandomWalk         d = 200: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 4.2e-11, pooled 6.2e-15 s.e.; after lanes 7:  0 meeting times, replicate 3.9e-11, pooled 4.3e-15 s.e.
+row-wise RandomWalk maximal d =   2: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 1.8e-15, pooled 2.6e-16 s.e.; after lanes 7:  0 meeting times, replicate 2.9e-16, pooled 0.0e+00 s.e.
+row-wise Independence       d =   2: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.
+row-wise Independence       d =  20: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.
+row-wise Independence       d = 200: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.
+row-wise MALA               d =   2: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 4.7e-16, pooled 1.2e-15 s.e.; after lanes 7:  0 meeting times, replicate 8.3e-17, pooled 3.5e-16 s.e.
+row-wise MALA               d =  20: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 2.1e-15, pooled 4.0e-15 s.e.; after lanes 7:  0 meeting times, replicate 1.7e-15, pooled 1.8e-15 s.e.
+row-wise MALA               d = 200: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 8.0e-14, pooled 2.5e-14 s.e.; after lanes 7:  0 meeting times, replicate 7.6e-14, pooled 2.0e-14 s.e.
+row-wise HMC                d =   2: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1: 17 meeting times, replicate 2.0e-01, pooled 6.7e-02 s.e.; after lanes 7:  8 meeting times, replicate 6.0e-02, pooled 5.4e-02 s.e.
+row-wise HMC                d =  20: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 2.8e-14, pooled 2.6e-14 s.e.; after lanes 7:  0 meeting times, replicate 4.0e-14, pooled 5.2e-14 s.e.
+row-wise HMC                d = 200: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 5.8e-14, pooled 9.5e-14 s.e.; after lanes 7:  0 meeting times, replicate 4.9e-14, pooled 7.1e-14 s.e.
+BLAS     RandomWalk         d =   2: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 1.4e-14, pooled 2.3e-16 s.e.; after lanes 7:  0 meeting times, replicate 7.1e-15, pooled 1.8e-16 s.e.
+BLAS     RandomWalk         d =  20: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 3.4e-12, pooled 3.6e-15 s.e.; after lanes 7:  0 meeting times, replicate 1.8e-12, pooled 1.7e-15 s.e.
+BLAS     RandomWalk         d = 200: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 4.2e-11, pooled 6.2e-15 s.e.; after lanes 7:  0 meeting times, replicate 3.9e-11, pooled 4.3e-15 s.e.
+BLAS     RandomWalk maximal d =   2: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 1.8e-15, pooled 2.6e-16 s.e.; after lanes 7:  0 meeting times, replicate 2.9e-16, pooled 0.0e+00 s.e.
+BLAS     Independence       d =   2: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.
+BLAS     Independence       d =  20: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.
+BLAS     Independence       d = 200: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.
+BLAS     MALA               d =   2: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1:  0 meeting times, replicate 5.0e-16, pooled 1.4e-16 s.e.; after lanes 7:  0 meeting times, replicate 5.6e-17, pooled 0.0e+00 s.e.
+BLAS     MALA               d =  20: before lanes 1:  0 meeting times, replicate 1.8e-15, pooled 2.4e-15 s.e.; before lanes 7:  0 meeting times, replicate 7.8e-16, pooled 9.8e-16 s.e.; after lanes 1:  0 meeting times, replicate 1.9e-15, pooled 1.6e-15 s.e.; after lanes 7:  0 meeting times, replicate 8.9e-16, pooled 7.6e-16 s.e.
+BLAS     MALA               d = 200: before lanes 1:  0 meeting times, replicate 6.4e-14, pooled 2.6e-14 s.e.; before lanes 7:  0 meeting times, replicate 3.3e-15, pooled 8.8e-16 s.e.; after lanes 1:  0 meeting times, replicate 4.5e-14, pooled 1.3e-14 s.e.; after lanes 7:  0 meeting times, replicate 5.2e-14, pooled 1.3e-14 s.e.
+BLAS     HMC                d =   2: before lanes 1:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; before lanes 7:  0 meeting times, replicate 0.0e+00, pooled 0.0e+00 s.e.; after lanes 1: 18 meeting times, replicate 1.1e-01, pooled 3.1e-02 s.e.; after lanes 7:  6 meeting times, replicate 6.0e-02, pooled 5.4e-02 s.e.
+BLAS     HMC                d =  20: before lanes 1:  0 meeting times, replicate 2.4e-14, pooled 3.4e-14 s.e.; before lanes 7:  0 meeting times, replicate 1.5e-14, pooled 1.0e-14 s.e.; after lanes 1:  0 meeting times, replicate 2.4e-14, pooled 2.5e-14 s.e.; after lanes 7:  0 meeting times, replicate 1.7e-14, pooled 2.8e-14 s.e.
+BLAS     HMC                d = 200: before lanes 1:  0 meeting times, replicate 3.7e-14, pooled 3.9e-14 s.e.; before lanes 7:  0 meeting times, replicate 2.4e-14, pooled 1.6e-14 s.e.; after lanes 1:  0 meeting times, replicate 3.0e-14, pooled 3.3e-14 s.e.; after lanes 7:  0 meeting times, replicate 3.8e-14, pooled 5.6e-14 s.e.
+
+3. Gain: 256 replicates, k = 10, m = 200, lag 1, max_iter = 1000, rng = 2; 7 rounds after one uncounted
+RandomWalk d =  20: censored   0 of 256; processor seconds median 0.35 before, 0.30 after; before/after per round: median 1.11, range 0.91 to 1.43
+RandomWalk d = 200: censored 256 of 256; processor seconds median 14.15 before, 6.71 after; before/after per round: median 2.11, range 2.04 to 2.23
+MALA       d =  20: censored   0 of 256; processor seconds median 0.16 before, 0.13 after; before/after per round: median 1.47, range 1.08 to 2.17
+MALA       d = 200: censored   0 of 256; processor seconds median 5.08 before, 1.49 after; before/after per round: median 3.41, range 2.68 to 3.63
+
+4. One product: microseconds per call, median (range) of 7 repeats
+d =   2,   1 rows: einsum 1.54 (1.51 to 1.70); BLAS with errstate 1.87 (1.75 to 2.00); BLAS alone 0.87 (0.85 to 0.96)
+d =   2,  16 rows: einsum 1.89 (1.74 to 2.14); BLAS with errstate 2.14 (1.91 to 2.30); BLAS alone 1.11 (0.99 to 1.18)
+d =   2, 256 rows: einsum 4.66 (4.57 to 6.42); BLAS with errstate 3.00 (2.94 to 6.06); BLAS alone 2.00 (1.93 to 2.04)
+d =  10,   1 rows: einsum 1.60 (1.58 to 1.74); BLAS with errstate 1.81 (1.80 to 1.94); BLAS alone 0.89 (0.87 to 0.99)
+d =  10,  16 rows: einsum 5.10 (5.01 to 5.36); BLAS with errstate 4.22 (4.01 to 5.50); BLAS alone 2.29 (2.23 to 2.53)
+d =  10, 256 rows: einsum 16.30 (15.57 to 21.25); BLAS with errstate 5.83 (5.22 to 15.52); BLAS alone 4.08 (3.47 to 4.23)
+d =  20,   1 rows: einsum 3.22 (2.97 to 3.44); BLAS with errstate 3.28 (3.21 to 5.78); BLAS alone 1.64 (1.56 to 2.64)
+d =  20,  16 rows: einsum 3.77 (3.69 to 4.00); BLAS with errstate 2.72 (2.42 to 3.90); BLAS alone 1.48 (1.46 to 1.93)
+d =  20, 256 rows: einsum 38.15 (36.59 to 45.03); BLAS with errstate 10.84 (8.94 to 17.62); BLAS alone 7.81 (7.69 to 8.49)
+d = 200,   1 rows: einsum 11.12 (10.54 to 11.39); BLAS with errstate 6.74 (6.41 to 7.48); BLAS alone 5.45 (5.32 to 5.63)
+d = 200,  16 rows: einsum 159.56 (154.86 to 165.63); BLAS with errstate 42.56 (39.76 to 48.45); BLAS alone 39.08 (37.31 to 64.56)
+d = 200, 256 rows: einsum 3045.30 (2713.93 to 3498.89); BLAS with errstate 453.87 (329.10 to 510.02); BLAS alone 419.95 (353.04 to 475.81)
+
+5. Equal rows over 81 shapes: (a) shapes where two equal rows of one call get different bits; (b) shapes where a row gets other bits in another call of the same shape; (c) the HMC test's configuration with both chains in one call
+OPENBLAS_CORETYPE=(unset)     kernels SkylakeX    threads 1: (a)  2 of 81; (b)  0 of 81; (c) separated
+OPENBLAS_CORETYPE=(unset)     kernels SkylakeX    threads 4: (a)  3 of 81; (b)  0 of 81; (c) separated
+OPENBLAS_CORETYPE=Haswell     kernels Haswell     threads 1: (a)  0 of 81; (b)  0 of 81; (c) stayed equal
+OPENBLAS_CORETYPE=Haswell     kernels Haswell     threads 4: (a)  0 of 81; (b)  0 of 81; (c) stayed equal
+OPENBLAS_CORETYPE=SkylakeX    kernels SkylakeX    threads 1: (a)  2 of 81; (b)  0 of 81; (c) separated
+OPENBLAS_CORETYPE=SkylakeX    kernels SkylakeX    threads 4: (a)  3 of 81; (b)  0 of 81; (c) separated
+OPENBLAS_CORETYPE=Sandybridge kernels Sandybridge threads 1: (a)  0 of 81; (b)  0 of 81; (c) stayed equal
+OPENBLAS_CORETYPE=Sandybridge kernels Sandybridge threads 4: (a)  0 of 81; (b)  0 of 81; (c) stayed equal
+OPENBLAS_CORETYPE=Nehalem     kernels Nehalem     threads 1: (a)  9 of 81; (b)  0 of 81; (c) separated
+OPENBLAS_CORETYPE=Nehalem     kernels Nehalem     threads 4: (a)  9 of 81; (b)  0 of 81; (c) separated
+OPENBLAS_CORETYPE=Zen         kernels Haswell     threads 1: (a)  0 of 81; (b)  0 of 81; (c) stayed equal
+OPENBLAS_CORETYPE=Zen         kernels Haswell     threads 4: (a)  0 of 81; (b)  0 of 81; (c) stayed equal
+load average after: (2.4, 2.1, 2.31)

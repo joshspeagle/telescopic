@@ -45,7 +45,8 @@ class Target:
     kwargs : mapping, optional
         Extra keyword arguments passed to them.
     vectorize : bool
-        Whether the functions accept a batch of points.
+        Whether the functions accept a batch of points. Kernels then also compute their
+        matrix products with BLAS, for a batch of chains at once.
 
     Notes
     -----

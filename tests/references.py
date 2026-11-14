@@ -86,6 +86,12 @@ class Counted:
         return self.function(x)
 
 
+def dense(d):
+    # A dense covariance near the identity, so that most proposals are accepted.
+    a = np.random.default_rng(14).standard_normal((d, d))
+    return (a @ a.T + d * np.eye(d)) / (2 * d)
+
+
 def never_called(x):
     # A log_prob that must not be called, beside a log_prob_and_grad.
     raise AssertionError("log_prob was called")
