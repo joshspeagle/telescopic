@@ -48,7 +48,10 @@ record the field `error` and recorded `m` wrongly; no analysis reads either.
 
 Ran against commit c961089. Each set takes on the order of an hour on three workers; a
 set that is stopped resumes from its saved rows, so the wall time printed last is that of
-the last invocation.
+the last invocation. Rerun for issue #85 with the same rows: about 90 minutes of job time
+for the main set and 20 for the confirm set on one core, one job per process, at commit
+32ae70b; the saved rows were then read and the tables printed at the commit that the
+first line of each output records, whose package source is that of 32ae70b.
 
 Run:
   python notes/experiments/i102_q2_rules.py 0 100 main [workers]

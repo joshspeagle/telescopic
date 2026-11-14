@@ -1,3 +1,4 @@
+setup: commit d014ac1 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.4, SciPy 1.18.1
 
 raw table (confirm): cell | seed | n_steps pilot-evals run-evals k m=10k tau_max | estimate se z wrong | q-side Lmax Lmed disagree | R0a R0b | R1 half_dens at (m=16, n=n_steps/16) | (m=32, n=n_steps/8) | warnings
 bimodal d=10 s=6               |  20 |   2000   8004   303763   70   700    368 |    0.6947   0.0090     -0.59 0 | -1    4.08    1.21 1 |   -123.1    -48.3 |     -3.7 |     -0.0 | 0   thin=1
