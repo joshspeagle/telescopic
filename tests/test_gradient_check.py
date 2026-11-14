@@ -109,13 +109,16 @@ def test_a_float32_gradient_of_a_float64_log_density_is_silent():
     assert counted.points == 16
 
 
-@pytest.mark.parametrize("always", [True, False])
-def test_a_float32_log_density_with_its_gradient_is_silent(always):
+@pytest.mark.parametrize(
+    ("dtype", "always"), [(np.float32, True), (np.complex64, True), (np.float32, False)]
+)
+def test_a_float32_log_density_with_its_gradient_is_silent(dtype, always):
     # Float32 values from the first draw, or only where every point has x_0 > 0, which
-    # makes the check start again at the narrower dtype once it sees them.
+    # makes the check start again at the narrower dtype once it sees them. Complex64
+    # values are float32 ones to the Target, which takes their real part.
     def log_prob32(x):
         values = log_prob(x)
-        return values.astype(np.float32) if always or np.all(x[:, 0] > 0) else values
+        return values.astype(dtype) if always or np.all(x[:, 0] > 0) else values
 
     counted = Counted(log_prob32)
     check = quiet(function=counted, rng=5)
@@ -123,3 +126,21 @@ def test_a_float32_log_density_with_its_gradient_is_silent(always):
     assert check.ratio.max() < 1
     if always:
         assert counted.points == 48  # each draw evaluated again once rounded
+
+
+def test_the_check_changes_no_warning_filter_and_hides_no_warning():
+    # It ignored its own precision warnings with a filter, which hid a user's warning
+    # that mentions a returned float and, from two threads, outlived the check.
+    def warning_log_prob(x):
+        seen.append(list(warnings.filters))
+        warnings.warn("the solver returned float values", UserWarning, stacklevel=1)
+        return log_prob(x)
+
+    seen = []
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        filters = list(warnings.filters)
+        checked(function=warning_log_prob)
+        seen.append(list(warnings.filters))
+    assert all(during == filters for during in seen)
+    assert len(caught) == len(seen) - 1

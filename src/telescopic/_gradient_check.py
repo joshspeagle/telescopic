@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import copy
 import functools
-import warnings
 from collections.abc import Callable, Mapping
 from typing import Any
 
@@ -37,8 +36,8 @@ class _Recorder:
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         out = self.function(*args, **kwargs)
         dtype = np.asarray(out).dtype
-        if dtype.kind == "f":
-            self.itemsize = min(self.itemsize, dtype.itemsize)
+        if dtype.kind in "fc":  # a complex output counts as its real part, as the Target's
+            self.itemsize = min(self.itemsize, np.finfo(dtype).dtype.itemsize)
         return out
 
     def reset(self) -> None:
@@ -211,23 +210,22 @@ def check_gradient(
     vectorize: bool,
 ) -> GradientCheck:
     # Design (N) on the user's functions, from namespace GRADIENT_CHECK of seed, with a
-    # Target of its own so that the sampler's counters and its once-only precision warning
-    # are untouched. Warns when a line disagrees, and when no line could be compared.
+    # Target of its own so that the sampler's counters are untouched. That Target counts
+    # as having warned of a narrow dtype, which the sampler's own Target warns of in the
+    # run, so the check filters no warning. Warns when a line disagrees, and when no line
+    # could be compared.
     recorders = _Recorder(log_prob), _Recorder(grad)
     target = Target(*recorders, args=args, kwargs=kwargs, vectorize=vectorize)
+    target._warned_precision = True
     assumed = (8, 8)
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message=".*returned float")
-        while True:
-            # A function whose dtype narrows after the first draw restarts the sweep with
-            # the narrowest dtype; for any other function this runs once.
-            rows, unusable, skipped, used, seen, h = _sweep(
-                target, recorders, initial, seed, assumed
-            )
-            narrowest = (min(seen[0], used[0]), min(seen[1], used[1]))
-            if narrowest == used:
-                break
-            assumed = narrowest
+    while True:
+        # A function whose dtype narrows after the first draw restarts the sweep with the
+        # narrowest dtype; for any other function this runs once.
+        rows, unusable, skipped, used, seen, h = _sweep(target, recorders, initial, seed, assumed)
+        narrowest = (min(seen[0], used[0]), min(seen[1], used[1]))
+        if narrowest == used:
+            break
+        assumed = narrowest
     eps_f = float(np.finfo(np.dtype(f"f{used[0]}")).eps)
     tolerance = np.empty(len(rows))
     if rows:
