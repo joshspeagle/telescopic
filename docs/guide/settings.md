@@ -60,6 +60,9 @@ pilot runs whenever the kernel has parameters to tune.
 
 {class}`telescopic.CoupledSampler` runs the same pipeline step by step;
 `sample(log_prob, init, n, ...)` is `CoupledSampler(log_prob, init, ...).run(n, ...)`.
+Before any of it, a sampler built with `grad` and a kernel that evaluates it compares
+`grad` with differences of `log_prob`, unless `check_grad=False`
+([Checking the gradient](targets.md#checking-the-gradient)).
 
 - {meth}`~telescopic.CoupledSampler.tune` tunes the kernel once, keeps it as
   `sampler.kernel`, and returns the report of the tuning pilot, or `None` when nothing

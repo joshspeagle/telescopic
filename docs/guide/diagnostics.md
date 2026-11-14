@@ -317,8 +317,10 @@ a result may be unreliable: the conditions above. An
 {class}`telescopic.InputWarning <telescopic.warnings.InputWarning>` says that an input is
 legal but questionable: replicates or pilot pairs whose initial draws have zero target
 density, gradients taken as 0 because they were not finite where the log-density is
-([Targets](targets.md#special-values)), and a run that, with its first estimates, would
-take more than 1 GB ([Settings](settings.md#memory-and-thinning)).
+([Targets](targets.md#special-values)), a `grad` that disagrees with differences of
+`log_prob` when a sampler is built, or a check of it that could compare nothing
+([Checking the gradient](targets.md#checking-the-gradient)), and a run that, with its
+first estimates, would take more than 1 GB ([Settings](settings.md#memory-and-thinning)).
 Each warning points at the line of your code that called telescopic.
 
 The filters of the `warnings` module select them by class:

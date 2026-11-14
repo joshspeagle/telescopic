@@ -74,6 +74,11 @@ Most estimator bugs cannot be caught statistically. In the census, an off-by-one
 - **Wrappers:** `args` and `kwargs` are forwarded. Counters count evaluations. Input arrays are never modified.
 - **Gradients:** `log_prob_and_grad` without a gradient raises. A gradient that is not finite in one coordinate, where the log-density is finite, is zero in every coordinate and counted once.
 
+**Gradient check** (`tests/test_gradient_check.py`; its use by the sampler in `tests/test_sampler.py`; R-INPUT-3)
+- Silent on a correct gradient; one `InputWarning` with the size of the disagreement on a wrong sign, a factor of 2 and a missing term.
+- 40 + 8 evaluations at $d = 5$ and $d = 1{,}000$; an error inside it names it; a check that compares no line warns; draws of zero density are skipped; a float32 gradient of a float64 log-density, and a float32 log-density, are silent.
+- The sampler runs it for a gradient kernel, a mixture with one and point by point, not for a random walk, and not with `check_grad=False`, which saves its evaluations; results are bitwise identical with and without it for MALA and HMC, tuned and given.
+
 **Initial distributions**
 - **Each input form:**
   - callables, SciPy frozen distributions and point arrays all give draws of shape `(d,)`;
@@ -290,7 +295,7 @@ Kernel-specific tests:
 | R-THEORY-1 | docs review; 2.12 coverage and failure-mode runs |
 | R-CPL-1–3 | 2.2 |
 | R-KER-* | 2.4 (with batch invariance and draw counts); 2.12 |
-| R-INPUT-1–2 | 2.3 |
+| R-INPUT-1–3 | 2.3 |
 | R-EXEC-1–2 (streams, invariance) | 2.1; 2.6; 2.10 |
 | R-EXEC-3–4 (engine, censoring) | 2.6 |
 | R-EXEC-5–6 (parallel, interrupts) | 2.10 |

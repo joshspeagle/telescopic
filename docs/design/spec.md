@@ -269,6 +269,18 @@ The documentation recommends a $\pi_0$ that is overdispersed relative to $\pi$ a
 
 `names` (a sequence of `d` strings) labels summaries and plots. The log-density still receives arrays. Since `d` comes from a draw of the initial distribution, a `names` of another length raises `ValueError` saying the dimension the initial distribution draws; there is no `ndim` argument (DECISIONS #111).
 
+### 4.4 Gradient check (R-INPUT-3)
+
+A sampler built with `grad` and a kernel whose `needs_grad` is true (MALA, HMC, or a mixture with one of them) compares `grad` with central differences of `log_prob` in its constructor, before any tuning, unless `check_grad=False` is passed to `CoupledSampler` or `sample` (default `True`, DECISIONS #159). It runs whatever the kernel's tuning state, the pool and `vectorize` (DECISIONS #160). The check is design (N) of the second pre-registered experiment of issue #123 (`notes/experiments/x123/PREREGISTRATION.md`, section 2; the floor of design (H) and the relative floors are not part of it):
+
+- **Lines.** From the generator of namespace 3, replicate 0, of the root seed (§6.1), which no run reads, it draws $3P$ points of $\pi_0$, $P = 8$: $x_p, a_p, b_p$, then random signs. The line at $x_p$ has direction $u_p = a_p - b_p$, with the fallbacks of the registration where $u_{pi} = 0$ or $|u_{pi}| < \sqrt{\epsilon_{64}}|x_{pi}|$, and points $x_p + t h u_p$, $t \in \{\pm1, \pm2\}$, $h = \epsilon_f^{1/3}$ for the epsilon of the dtype `log_prob` returns.
+- **Rule.** A line disagrees when the gap $|G - D|$ between the change that `grad` predicts and the central difference exceeds $S(T + R_f + R_g)$, $S = 10$: the truncation estimate, the rounding of `log_prob` from fourth differences (pooled, per line, and at least $64\epsilon_f|\log\pi|$), and the rounding of `grad`, measured by a probe where `grad` returns a dtype narrower than float64. The inequality is strict and nothing is divided. A point is skipped where the density is zero or the gradient is not finite; a line that reaches zero density is not compared.
+- **Cost.** 40 evaluations of `log_prob` and 8 of `grad` at any $d$, 8 more of each for a narrow `grad` and again for a narrow `log_prob`, through a `Target` of its own, so that the sampler's counters and its precision warning are untouched; its memory is a few vectors of length $d$. Results with and without the check are bitwise identical.
+- **Record.** `CoupledSampler.gradient_check` is a `diagnostics.GradientCheck` (the draw, gap, tolerance and predicted change of each compared line in nats along $u_p$, the ratios, the skipped points and the unusable lines), or `None` when the check did not run (DECISIONS #161).
+- **Warnings.** A line that disagrees emits one `InputWarning` that gives, for the line of the largest ratio, the gap in nats across the spread of $\pi_0$, relative to the predicted change and to the tolerance, and the draw; says that `grad` is not the derivative of `log_prob` as computed; and says what to look for, that a gradient approximate by design is expected to warn, and that `check_grad=False` turns the check off. A check that compared no line emits an `InputWarning` that says so (DECISIONS #162). An error raised by `log_prob` or `grad` inside the check is raised again as a `RuntimeError` that names the check and `check_grad=False`, with the error as its cause (DECISIONS #163).
+
+The documentation states what a warning and silence mean, with the measured figures of the experiment and its review (`notes/experiments/x123/RESULT.md`, `review/REVIEW.md`): silent on exact gradients of code smooth at about $10^{-5}$ of the start's spread; a warning on gradients approximate by design; possible warnings on correct gradients of strongly periodic or finely tabulated log-densities from a wide start; and silence as weak evidence from a start at a mode or a point, for an error away from the start, for $|\log\pi|$ above about $10^9$, and for a float32 `log_prob` in high dimension.
+
 ---
 
 ## 5. Kernels and couplings
@@ -430,7 +442,7 @@ The choice of component must not depend on the states (AJ24 §4.2). Switching be
   - `G` draws $X_0$, then $Y_0$, and serves `draws.generator(i)`.
   - The replicate's normals and uniforms come from `G.spawn(2)`: the generators with spawn keys `+ (0,)` and `+ (1,)` under `G`'s seed sequence. Each is read in order (D-8).
 - **Buffering:** each lane pre-draws its replicate's normals and uniforms into buffers, so a lockstep batch gathers them with array indexing. A request that needs more numbers than a buffer holds tops it up and keeps the unread ones, so the buffer width changes no number.
-- **Namespaces:** 0 for main replicates, 1 for tuning pilots, 2 for meeting-time pilots. The engine runs its replicates in namespace 0 of the seed it is given, and records that seed. The sampler gives it the root for main runs and, for meeting-time pilots, the root's namespace-2 seed `SeedSequence(root.entropy, spawn_key=root.spawn_key + (T, 2))`, so a pilot's replicate `i` has the key `root.spawn_key + (T, 2, T, 0, i)`, and a run's recorded seed identifies its streams (DECISIONS #32). Each call of `tune`, `meeting_times` or `run` continues the indices of its namespace.
+- **Namespaces:** 0 for main replicates, 1 for tuning pilots, 2 for meeting-time pilots, 3 for the gradient check (§4.4). The engine runs its replicates in namespace 0 of the seed it is given, and records that seed. The sampler gives it the root for main runs and, for meeting-time pilots, the root's namespace-2 seed `SeedSequence(root.entropy, spawn_key=root.spawn_key + (T, 2))`, so a pilot's replicate `i` has the key `root.spawn_key + (T, 2, T, 0, i)`, and a run's recorded seed identifies its streams (DECISIONS #32). Each call of `tune`, `meeting_times` or `run` continues the indices of its namespace.
 - **R-EXEC-2:** a replicate's output is a function of `(root, ns, i)` and its configuration only. It is bitwise identical across batch sizes, worker counts and executors when the log-density is evaluated point by point (R-KER-6), on one machine with the same NumPy and SciPy versions: generator algorithms, SciPy samplers and BLAS builds can change between versions and machines. A vectorised log-density can differ in the last bits between batch layouts, and so can a user's function that calls multithreaded BLAS or LAPACK between this process and workers, which run one BLAS thread; there the guarantee is statistical. The documentation says so.
 
 ### 6.2 Engine (R-EXEC-3)
@@ -585,7 +597,8 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
    ```python
    telescopic.sample(log_prob, init, n_replicates=100, *, args=(), kwargs=None, grad=None,
                      vectorize=False, kernel="auto", k="auto", m="auto", lag="auto", thin=None,
-                     max_iter=None, pool=None, names=None, progress=False, rng=None) -> Result
+                     max_iter=None, pool=None, names=None, progress=False, check_grad=True,
+                     rng=None) -> Result
    ```
 
    `n_replicates` is at least 2, checked before any work, since the estimates need two replicates that met; `CoupledSampler.run`, whose runs accumulate, takes 1 (DECISIONS #92). `kernel` is a `Kernel` or one of the strings `"auto"`, `"rwmh"`, `"mala"`, `"hmc"` and `"independence"`. `"auto"` means RWMH, with or without a gradient; gradient kernels are requested by name (D-3).
@@ -594,7 +607,7 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
    ```python
    sampler = telescopic.CoupledSampler(log_prob, init, *, args=(), kwargs=None, grad=None,
                                        vectorize=False, kernel="auto", names=None, pool=None,
-                                       progress=False, rng=None)
+                                       progress=False, check_grad=True, rng=None)
    sampler.tune()                                  # pilot runs; freezes sampler.kernel
    times = sampler.meeting_times(n=100)            # pilot meeting times, lag 1
    result = sampler.run(500, k="auto", m="auto", lag="auto", thin=None, max_iter=None,
