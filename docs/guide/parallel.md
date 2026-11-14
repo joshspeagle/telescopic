@@ -157,7 +157,9 @@ copies of the target, the kernel and the initial distribution; tuning runs in th
 process, on your objects. Side effects of the log-density on a pool, such as a call
 counter or a cache, therefore happen on the copies and are not seen on your objects. An
 object that cannot be pickled, such as one that holds a `threading.Lock`, cannot run on a
-pool: telescopic raises `TypeError`.
+pool: telescopic raises `TypeError`. The copies travel with every chunk, once per 1,024
+replicates in a long run, so keep the data that a log-density holds small; data that it
+reads from a global of a module the workers import is not sent.
 
 With cloudpickle installed (the `parallel` extra), telescopic pickles them with
 cloudpickle, which also sends lambdas and functions defined in a notebook or a script.
