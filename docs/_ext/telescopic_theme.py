@@ -1,8 +1,12 @@
 """Template context and the hero directive of the telescopic docs theme.
 
 * The sections of the top bar are the captioned toctrees of the root document; a page's
-  section is the one whose toctree lists it, and the sidebar lists that section's pages.
-* A page with two or more sections gets the "On this page" outline.
+  section is the one whose toctree lists it, or else the one that lists its nearest
+  ancestor in the toctrees, as the API reference lists its generated pages. The sidebar
+  lists that section's pages and marks the page, or that ancestor.
+* A page gets the "On this page" outline when it has two or more sections or documented
+  objects, as a module's page with two or more functions has, or one section or object
+  with two or more entries below it, as a class's page with two or more members has.
 * A page whose front matter says ``layout: home`` uses ``home.html``.
 * ``{hero}`` inlines the landing page's coupled pair (``_themes/telescopic/hero.svg``,
   written by ``_scripts/brand.py``) as a figure, with its one paragraph of content as
@@ -53,10 +57,24 @@ def _sections(app: Sphinx, env: BuildEnvironment) -> set[str]:
             sections.append({"caption": toctree["caption"], "pages": pages})
     if not sections:
         logger.warning("the root document has no captioned toctree, so the top bar is empty")
+    # A page below a section's page in the toctrees belongs to it. Breadth first, so that a
+    # page reached by two paths takes the nearer section's page; a page already placed is
+    # not visited again, which also ends the walk on a cycle of toctrees.
+    section_pages = {page["docname"]: page["docname"] for s in sections for page in s["pages"]}
+    queue = list(section_pages)
+    for parent in queue:
+        for child in env.toctree_includes.get(parent, ()):
+            if child not in section_pages:
+                section_pages[child] = section_pages[parent]
+                queue.append(child)
     # Every page carries the navigation, so a change to it rewrites every page, not only
     # those that were read again.
-    changed = sections != getattr(env, "telescopic_sections", None)
+    changed = (sections, section_pages) != (
+        getattr(env, "telescopic_sections", None),
+        getattr(env, "telescopic_section_pages", None),
+    )
     env.telescopic_sections = sections
+    env.telescopic_section_pages = section_pages
     return set(env.found_docs) if changed else set()
 
 
@@ -64,16 +82,19 @@ def _page_context(
     app: Sphinx, pagename: str, templatename: str, context: dict[str, Any], doctree: Any
 ) -> str | None:
     sections = context["sections"] = app.env.telescopic_sections
+    section_page = context["section_page"] = app.env.telescopic_section_pages.get(pagename)
     context["section_index"] = next(
         (
             i
             for i, section in enumerate(sections)
-            if any(page["docname"] == pagename for page in section["pages"])
+            if any(page["docname"] == section_page for page in section["pages"])
         ),
         None,
     )
     toc = app.env.tocs.get(pagename)
     headings = toc.next_node(nodes.bullet_list) if toc else None
+    if headings is not None and len(headings) == 1:
+        headings = headings[0].next_node(nodes.bullet_list)
     context["outline"] = headings is not None and len(headings) > 1
     if (context.get("meta") or {}).get("layout") == "home":
         return "home.html"

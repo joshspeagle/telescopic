@@ -178,7 +178,8 @@ needs no issue.
   Documentation); each runs in under 2 minutes.
 - Colors, fonts, sizes and the mark come from `docs/_scripts/brand.py`, and figures follow
   the drawing rules of `docs/design/brand.md`: the two chain colors mean the two chains.
-  A new page joins a captioned toctree of `docs/index.md`, which makes its section.
+  A new page joins a captioned toctree of `docs/index.md`, which makes its section, or the
+  toctree of a page listed there, as the API reference lists its generated pages.
 
 ## Measurements
 

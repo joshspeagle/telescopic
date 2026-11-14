@@ -1,4 +1,4 @@
-"""Warning classes of telescopic, and the helper that emits them."""
+"""Warning classes of telescopic."""
 
 from __future__ import annotations
 

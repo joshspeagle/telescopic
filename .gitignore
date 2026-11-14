@@ -18,7 +18,7 @@ htmlcov/
 # Docs
 docs/_build/
 docs/jupyter_execute/
-docs/api/generated/
+docs/api/
 
 # Local state of agents: everything under .claude/ but the shared rules, and the
 # working folders of tasks shared between agents

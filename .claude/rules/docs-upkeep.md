@@ -36,17 +36,20 @@ the same pull request. The documentation states only what the code does now.
 Paths in the table are relative to `docs/`, except `README.md`, `CONTRIBUTING.md` and
 `pyproject.toml`. When a page moves or a module is added, change this table in the same
 pull request. The site's sections are the captioned toctrees of `docs/index.md`: a new
-page is listed in one of them.
+page is listed in one of them, or in the toctree of a page listed there, as the API
+reference lists its generated pages.
 
 ## Before merging
 
 1. **Pages.** Update the mapped pages, and the README when its example or its list of
    guarantees is affected.
-2. **API reference.** A new public name is added to `docs/api.md` under its section, to
-   the `__all__` of its module (for `telescopic.kernels`, of the package), which is what
-   the reference shows of a module documented with `:members:`, and to `__all__` in
-   `src/telescopic/__init__.py` when it is exported there. The strict build fails on a
-   reference that resolves to nothing.
+2. **API reference.** A new public name is added to the `__all__` of its module (for
+   `telescopic.kernels`, of the package), whose functions and data a module's page
+   shows, and to `__all__` in `src/telescopic/__init__.py` when it is exported there; a
+   new public class or module, or a function that `telescopic` itself exports, is also
+   listed in its section's table in `docs/api.md`, which generates its page
+   (`CONTRIBUTING.md`, Documentation). The strict build fails on a reference that
+   resolves to nothing.
 3. **The specification.** A change that departs from `docs/design/spec.md` edits it in
    the same commit and records the decision in `notes/DECISIONS.md`.
 4. **Numbers.** A figure quoted in the documentation comes from a script in
