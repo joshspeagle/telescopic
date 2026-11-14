@@ -482,6 +482,17 @@ def sample(
     Result
         Its estimates are unbiased; it warns about the conditions listed under Warnings,
         in :doc:`/guide/diagnostics`.
+
+    Examples
+    --------
+    One call runs 100 replicates on a correlated Gaussian in two dimensions and estimates
+    the mean of each coordinate:
+
+    >>> from telescopic import examples, sample
+    >>> example = examples.gaussian(2)
+    >>> result = sample(example.log_prob, example.initial, vectorize=True, rng=0)
+    >>> result.n_replicates, result.mean().value.shape
+    (100, (2,))
     """
     # Checked before tuning: the estimates and the summary need 2 replicates that met.
     integer("n_replicates", n_replicates, minimum=2)

@@ -265,6 +265,7 @@ Kernel-specific tests:
 
 - The tutorials (MyST notebooks) execute in the docs CI job, each in under 2 minutes.
 - The README example is extracted and run by a test.
+- The Examples sections of the package's docstrings run as doctests in the fast tier (`tests/test_docstrings.py`), on the package that `import telescopic` finds, with warnings as errors (DECISIONS #152).
 - The version in `CITATION.cff` equals `telescopic.__version__` (DECISIONS #74).
 - `python -m build` produces a wheel and an sdist. A clean environment installs the wheel and imports it.
 

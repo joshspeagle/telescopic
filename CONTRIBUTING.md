@@ -98,6 +98,10 @@ census of published methods and software behind the design.
 - User-facing problems raise `ValueError` or `TypeError` with a message that names the
   argument and says how to fix it. Questionable inputs emit `InputWarning`; results that
   may be unreliable emit `ConvergenceWarning`.
+- The Examples section of a docstring runs as a test (`tests/test_docstrings.py`), on the
+  package that `import telescopic` finds. An example imports what it uses, fixes `rng`,
+  runs well under a second without a warning, and prints shapes, counts, booleans or
+  settings rather than digits that another platform's random numbers would change.
 
 ## Adding a kernel
 
