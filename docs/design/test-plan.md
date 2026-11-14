@@ -123,7 +123,7 @@ Kernel-specific tests:
 - **IMH:** both chains propose the same point, and the pair meets when both accept.
 - **Gibbs:**
   - `"maximal"` couplings of conditionals have exact marginals (KS against the conditional's CDF), and meet at the rate $\int\min(\eta p, q)$ (binomial test);
-  - `"crn"` uses a common uniform through `ppf`;
+  - `"crn"` uses a common uniform through `ppf`, and otherwise draws each chain from its own conditional with generators in the same state, built from a child of the row's generator, whose own stream does not move; each chain keeps its conditional's law for blocks of SciPy's multivariate normal, t, Dirichlet, Wishart and gamma laws and for a class of the user's own that is not normal (`check_coupling` and a KS test), and equal conditionals give equal draws;
   - `"two-scale"` switches at the threshold, and requires one;
   - when the coordinates outside a block are equal, both chains receive the same draw, so equal states stay equal with $\eta < 1$.
 - **Mixture:** the component frequencies match the weights, which are normalized when they do not sum to 1. Component choice does not depend on the states (structural test with `fixed_draws`).

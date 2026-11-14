@@ -1,5 +1,3 @@
-from types import SimpleNamespace
-
 import numpy as np
 import pytest
 from scipy import integrate, special, stats
@@ -22,7 +20,17 @@ from telescopic.testing import check_coupling, fixed_draws, random_draws
 
 # N(0, I); gradient-free kernels evaluate the gradient only for states that carry one.
 TARGET = Target(gaussian_log_prob, grad=lambda x: -x, vectorize=True)
-NAMES = ["reflection", "maximal", "independence", "mixture", "mala", "hmc", "gibbs", "gibbs-crn"]
+NAMES = [
+    "reflection",
+    "maximal",
+    "independence",
+    "mixture",
+    "mala",
+    "hmc",
+    "gibbs",
+    "gibbs-crn",
+    "gibbs-crn-uniform",
+]
 
 
 def state(points, grad=False):
@@ -36,6 +44,21 @@ def shifted(point, block):
     return Normal(0.5 * (point.sum() - point[block]), 1.0)
 
 
+class Box:
+    """Independent uniforms on [center - 1, center + 1], without ppf. Its mean and cov
+    made the normal map of common random numbers take it for a normal."""
+
+    def __init__(self, center, size):
+        self.mean, self.cov = np.full(size, center), np.eye(size) / 3
+
+    def rvs(self, *, random_state):
+        return self.mean + random_state.uniform(-1.0, 1.0, len(self.mean))
+
+
+def shifted_box(point, block):
+    return Box(0.5 * (point.sum() - point[block]), 1)
+
+
 def kernels(cov):
     d = len(cov)
     return {
@@ -47,6 +70,7 @@ def kernels(cov):
         "hmc": HMC(0.3, 4, cov=cov, meeting_weight=0.3, meeting_scale=0.5),
         "gibbs": Gibbs(shifted, [[i] for i in range(d)], eta=0.5),
         "gibbs-crn": Gibbs(shifted, [[i] for i in range(d)], coupling="crn"),
+        "gibbs-crn-uniform": Gibbs(shifted_box, [[i] for i in range(d)], coupling="crn"),
     }
 
 
@@ -902,49 +926,130 @@ def test_crn_gibbs_couplings_push_one_uniform_through_both_quantile_functions():
         np.testing.assert_allclose(new.x[0], [first, stats.norm(RHO * first, sd).ppf(u[1])])
 
 
-def test_crn_gibbs_couplings_give_multivariate_normal_conditionals_common_normals():
-    cov = np.array([[1.0, 0.4], [0.4, 2.0]])
-
-    def conditional_3d(point, block):
-        # Coordinates 0 and 1 given 2, then 2 given 0 and 1.
+def test_crn_gibbs_couplings_draw_blocks_without_ppf_from_generators_in_the_same_state():
+    # Each chain draws from its own conditional, with a generator built from a child of
+    # the row's generator and set to the same state for both; the row's generator itself
+    # does not move.
+    def given(point, block):
         if block == 0:
-            return stats.multivariate_normal([0.5 * point[2], -0.3 * point[2]], cov)
+            return stats.multivariate_t([0.5 * point[2], 0.0], (1 + point[2] ** 2) * np.eye(2))
         return Normal(0.2 * (point[0] + point[1]), 1.0)
 
-    kernel = Gibbs(conditional_3d, [[0, 1], [2]], coupling="crn")
-    x, y, z, u = [0.1, 0.2, 1.0], [0.1, 0.2, -2.0], [0.7, -1.2], 0.6
+    kernel = Gibbs(given, [[0, 1], [2]], coupling="crn")
+    x, y, u = [0.1, 0.2, 1.0], [0.1, 0.2, -2.0], 0.6
+    row = np.random.default_rng(7)
     new_x, new_y = kernel.coupled_step(
-        Target(None), gibbs_state(x), gibbs_state(y), fixed_draws([z], [[u]])
+        Target(None), gibbs_state(x), gibbs_state(y), fixed_draws(uniforms=[[u]], generators=[row])
     )
-    shift = np.linalg.cholesky(cov) @ z
     for start, new in ((x, new_x), (y, new_y)):
-        first = np.array([0.5 * start[2], -0.3 * start[2]]) + shift
-        np.testing.assert_allclose(new.x[0, :2], first)
+        child = np.random.default_rng(7).bit_generator.spawn(1)[0]
+        first = given(start, 0).rvs(random_state=np.random.Generator(child))
+        np.testing.assert_array_equal(new.x[0, :2], first)
         np.testing.assert_allclose(new.x[0, 2], 0.2 * first.sum() + stats.norm.ppf(u))
+    assert row.random() == np.random.default_rng(7).random()
 
 
-def test_crn_gibbs_couplings_need_a_multivariate_normal_for_a_block_of_several():
-    # A univariate distribution with two means has ppf, but one uniform through it would
-    # give both coordinates the same draw.
-    def two_means(point, block):
-        return stats.norm([point[2], 0.0]) if block == 0 else Normal(0.0, 1.0)
-
-    kernel = Gibbs(two_means, [[0, 1], [2]], coupling="crn")
-    x, y = gibbs_state([0.0, 0.0, 1.0]), gibbs_state([0.0, 0.0, -1.0])
-    with pytest.raises(TypeError, match="blocks of one coordinate"):
-        kernel.coupled_step(Target(None), x, y, fixed_draws(uniforms=[[0.5, 0.5]]))
-
-
-def test_crn_refuses_conditionals_whose_mean_and_cov_are_methods():
-    # A frozen dirichlet has mean() and cov(), which failed inside with a TypeError that
-    # named neither the coupling nor the block.
+def test_crn_gibbs_couplings_draw_a_block_of_several_with_ppf_from_its_own_sampler():
+    # One uniform through the ppf of array parameters would give each coordinate of the
+    # block the same quantile.
     def given(point, block):
-        return stats.dirichlet([1.0, 2.0]) if block == 0 else Normal(0.0, 1.0)
+        if block == 0:
+            return stats.gamma([2.0, 0.5], scale=1.0 + point[2] ** 2)
+        return Normal(0.0, 1.0)
 
     kernel = Gibbs(given, [[0, 1], [2]], coupling="crn")
-    x, y = gibbs_state([0.3, 0.7, 1.0]), gibbs_state([0.3, 0.7, -1.0])
-    with pytest.raises(TypeError, match="mean and cov are values, not methods"):
-        kernel.coupled_step(Target(None), x, y, random_draws(1, 0))
+    x, y = [1.0, 1.0, 0.5], [1.0, 1.0, -1.5]
+    draws = fixed_draws(uniforms=[[0.3, 0.6]], generators=[np.random.default_rng(8)])
+    new_x, new_y = kernel.coupled_step(Target(None), gibbs_state(x), gibbs_state(y), draws)
+    for start, new in ((x, new_x), (y, new_y)):
+        child = np.random.default_rng(8).spawn(1)[0]
+        np.testing.assert_array_equal(new.x[0, :2], given(start, 0).rvs(random_state=child))
+
+
+def test_crn_gibbs_couplings_draw_a_row_alike_alone_and_beside_rows_of_another_kind():
+    # A row's coupling of a block depends on its own two conditionals: beside a row whose
+    # conditionals lack ppf, a row whose conditionals have it drew from generators in the
+    # same state, and alone from a common uniform.
+    def given(point, block):
+        other = point[1 - block]
+        return Normal(0.5 * other, 1.0) if other > 0 else Box(0.5 * other, 1)
+
+    kernel = Gibbs(given, [[0], [1]], coupling="crn")
+    x, y = np.array([[0.0, 1.0], [0.0, -1.0]]), np.array([[0.0, 2.0], [0.0, -2.0]])
+
+    def step(n):
+        draws = fixed_draws(
+            uniforms=[[0.7, 0.4], [0.6, 0.1]][:n],
+            generators=[np.random.default_rng(seed) for seed in (5, 6)][:n],
+        )
+        return kernel.coupled_step(Target(None), gibbs_state(x[:n]), gibbs_state(y[:n]), draws)
+
+    for alone, beside in zip(step(1), step(2), strict=True):
+        np.testing.assert_array_equal(alone.x[0], beside.x[0])
+
+
+def test_crn_gibbs_couplings_draw_a_block_from_its_own_conditional_whatever_its_type():
+    # Common normals through the cov of a conditional that is not normal gave both chains
+    # a normal draw in the coupled step only.
+    def given(point, block):
+        return Normal(0.5 * point[1], 1.0) if block == 0 else Box(0.5 * point[0], 2)
+
+    kernel = Gibbs(given, [[0], [1, 2]], coupling="crn")
+    n = 2000
+    starts = ([0.0, 1.0, 1.0], [2.0, -1.0, -1.0])
+    x, y = (gibbs_state(np.tile(start, (n, 1))) for start in starts)
+    for new in kernel.coupled_step(Target(None), x, y, random_draws(n, 42)):
+        offsets = new.x[:, 1:] - 0.5 * new.x[:, [0]]
+        assert stats.kstest(offsets.ravel(), stats.uniform(-1.0, 2.0).cdf).pvalue > P_MIN
+
+
+# Conditionals of a block of several coordinates given v, the square of the last
+# coordinate.
+FAMILIES = {
+    "normal": lambda v: stats.multivariate_normal([v, -v], [[1.0 + v, 0.3], [0.3, 1.0]]),
+    "t": lambda v: stats.multivariate_t([v, 0.0], [[1.0, 0.5], [0.5, 2.0 + v]], df=3),
+    "dirichlet": lambda v: stats.dirichlet([1.0 + v, 2.0, 0.5]),
+    "wishart": lambda v: stats.wishart(4, [[1.0 + v, 0.2], [0.2, 1.0]]),
+    "gamma": lambda v: stats.gamma([2.0, 0.5], scale=1.0 + v),
+}
+
+
+def family_kernel(family):
+    law = FAMILIES[family]
+
+    def given(point, block):
+        return law(point[-1] ** 2) if block == 0 else Normal(0.1 * np.sum(point[:-1]), 1.0)
+
+    block = np.ravel(law(0.0).rvs(random_state=np.random.default_rng(51)))
+    return Gibbs(given, [np.arange(len(block)), [len(block)]], coupling="crn"), block
+
+
+# Slow: the check builds 20,000 frozen SciPy distributions, which takes seconds.
+@pytest.mark.slow
+@pytest.mark.parametrize("family", FAMILIES)
+def test_crn_gibbs_couplings_keep_the_one_step_law_of_blocks_of_any_family(family):
+    kernel, block = family_kernel(family)
+    x0, y0 = np.append(block, 0.5), np.append(block, 1.5)
+    report = check_coupling(kernel, Target(None), x0, y0, n=5000, rng=52)
+    assert min(*report.stay, *report.moves) > P_MIN, report
+    assert report.near_misses == 0, report
+
+
+@pytest.mark.parametrize("family", FAMILIES)
+def test_crn_gibbs_couplings_give_equal_conditionals_one_draw_where_other_coordinates_differ(
+    family,
+):
+    # Chains whose conditionals of a block are equal, though the coordinates outside it
+    # differ, draw the same point from generators in the same state.
+    kernel, block = family_kernel(family)
+    x, y = np.append(block, 0.5), np.append(block, -0.5)
+    new_x, new_y = kernel.coupled_step(
+        Target(None),
+        gibbs_state(np.tile(x, (20, 1))),
+        gibbs_state(np.tile(y, (20, 1))),
+        random_draws(20, 53),
+    )
+    np.testing.assert_array_equal(new_x.x, new_y.x)
 
 
 def test_crn_gibbs_couplings_use_common_numbers_for_pairs_closer_than_underflow():
@@ -977,61 +1082,6 @@ def test_crn_gibbs_couplings_map_a_uniform_of_zero_to_a_finite_point():
     )
     assert np.isfinite(new_x.x).all()
     assert np.isfinite(new_y.x).all()
-
-
-class Equal:
-    """Two equal coordinates, N(mean, 1): a normal law whose covariance is singular."""
-
-    def __init__(self, mean, cov=((1.0, 1.0), (1.0, 1.0))):
-        self.mean, self.cov = np.full(len(cov), mean), np.array(cov)
-
-
-def test_crn_gibbs_couplings_draw_from_a_singular_multivariate_normal():
-    # It has no Cholesky factor.
-    def given(point, block):
-        return Normal(0.5 * point[1], 1.0) if block == 0 else Equal(0.5 * point[0])
-
-    kernel = Gibbs(given, [[0], [1, 2]], coupling="crn")
-    n = 2000
-    starts = ([0.0, 1.0, 1.0], [2.0, -1.0, -1.0])
-    x, y = (gibbs_state(np.tile(start, (n, 1))) for start in starts)
-    for new in kernel.coupled_step(Target(None), x, y, random_draws(n, 42)):
-        np.testing.assert_allclose(new.x[:, 1], new.x[:, 2], rtol=0, atol=1e-12)
-        assert stats.kstest(new.x[:, 1] - 0.5 * new.x[:, 0], "norm").pvalue > P_MIN
-
-
-@pytest.mark.parametrize(
-    ("cov", "message"),
-    [
-        ([[1.0, 2.0], [2.0, 1.0]], "positive semi-definite"),
-        # A correlation of 1.5 at sd 1e-4, beside a coordinate of sd 1.
-        ([[1.0, 0.0, 0.0], [0.0, 1e-8, 1.5e-8], [0.0, 1.5e-8, 1e-8]], "positive semi-definite"),
-        ([[1.0, 0.9], [0.2, 1.0]], "symmetric"),
-        # Variances, which the symmetry test broadcast to a matrix of ones.
-        ([1.0, 1.0], r"square matrix, not shape \(2,\)"),
-    ],
-)
-def test_crn_gibbs_couplings_refuse_an_invalid_covariance(cov, message):
-    def given(point, block):
-        return Normal(point[1], 1.0) if block == 0 else Equal(0.0, cov)
-
-    kernel = Gibbs(given, [[0], list(range(1, len(cov) + 1))], coupling="crn")
-    x, y = (gibbs_state([0.0] + [value] * len(cov)) for value in (1.0, -1.0))
-    with pytest.raises(ValueError, match=message):
-        kernel.coupled_step(Target(None), x, y, random_draws(1, 43))
-
-
-def test_crn_gibbs_couplings_refuse_a_scalar_mean_for_a_block_of_several():
-    # A scalar mean was added to every coordinate of the block.
-    def given(point, block):
-        if block == 0:
-            return Normal(point[1], 1.0)
-        return SimpleNamespace(mean=0.0, cov=np.eye(2))
-
-    kernel = Gibbs(given, [[0], [1, 2]], coupling="crn")
-    x, y = gibbs_state([0.0, 1.0, 1.0]), gibbs_state([0.0, -1.0, -1.0])
-    with pytest.raises(ValueError, match=r"a conditional's mean must have shape \(2,\)"):
-        kernel.coupled_step(Target(None), x, y, random_draws(1, 44))
 
 
 @pytest.mark.parametrize("coupling", ["maximal", "crn"])
