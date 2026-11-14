@@ -274,7 +274,7 @@ All notable changes to this project are documented here. The format follows
 - The memory warning compares the estimated peak of a run and its first estimates, about
   three times the stored atoms and distances, with its threshold of 1 GB, and states both
   figures, with twice the peak as its upper end in one or two dimensions, where few
-  repeated atoms can make the estimates take up to about six times the stored size;
+  repeated atoms can make the estimates take up to about five times the stored size;
   `telescopic.engine.stored_bytes` computes the stored size, and refuses steps that are
   not non-negative integers.
 - `progress=True` also shows the progress of tuning: the steps of the adaptive pilot
@@ -341,3 +341,14 @@ All notable changes to this project are documented here. The format follows
   shortens the import, and with it the start of each worker of a process pool; the first
   call that needs `scipy.stats`, such as the end of the first run of `sample`, pays its
   import once.
+- `Result.cov` weights the atoms in blocks of 1 MiB, so its peak memory is about the
+  atoms' size plus a block rather than twice the atoms; `cov` can differ from before in
+  the last bits.
+- `Result.quantile` gathers one coordinate at a time instead of copying the atoms, which
+  lowers its peak memory.
+- `Result.var`, `Result.std` and the diagnostics share each replicate's moments,
+  computed once, so `summary()` centers the atoms once; `var` and `std` can differ from
+  before in the last bits.
+- `SignedMeasure` requires `replicate` in nondecreasing order, each replicate's atoms
+  consecutive, and raises `ValueError` otherwise; its sums share the weights and hold
+  8 bytes per atom fewer.
