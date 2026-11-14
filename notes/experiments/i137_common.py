@@ -5,16 +5,24 @@ component; none of them copies package code.
 
 - `GuardedHMC` (remedy a): after the package's tuning, the predicted contraction factor
   |cos(n theta(eps w))|, theta(h) = 2 arcsin(h / 2), of every whitened mode w and of
-  every frequency within a factor 1 + BAND of it, is computed, and the step moves to the
-  nearest step (in log) at which the worst factor is at most BOUND. The modes come from
-  the pilot: w^2 are the eigenvalues of C^T S^-1 C, with C C^T the kernel's covariance
-  and S the pilot covariance, so w = 1 when the covariance is the pilot's. Search: the
-  grid eps_DA exp(s), s in [-2, 0.1] by 0.001; a step with eps w >= 2 counts as factor 1
-  (unstable, rejected). If no step on the grid passes, the one with the smallest worst
-  factor (nearest on ties).
+  every frequency within a factor 1 + BAND of it (w f, f in [1/1.3, 1.3]), is computed
+  on the grid eps_DA exp(s), s in [-2, 0.1] by 0.001, and the step moves to the grid
+  step nearest to eps_DA (in log) at which the worst factor is at most BOUND. The modes
+  come from the pilot: w^2 are the eigenvalues of C^T S^-1 C, with C C^T the kernel's
+  covariance and S the pilot covariance, so w = 1 when the covariance is the pilot's. A
+  step with eps w >= 2 counts as factor 1 (unstable, rejected). Besides keeping the
+  step, the guard has three behaviors, which the outputs count: it lowers the step,
+  away from a resonance n theta = j pi with j >= 1; it raises it, where the trajectory
+  is so short that the j = 0 end of the bound binds (cos(n theta) <= 0.9 at the band's
+  lowest frequency, w / 1.3, needs n theta >= arccos 0.9 = 0.451, so n eps >= about
+  1.3 x 0.451 = 0.59 at w = 1); and where no step of its grid meets the rule, it falls
+  back to the grid step of smallest worst factor (nearest on ties), whose worst factor
+  can be near 1. The record's `extra` holds eps_DA, the worst factor at eps_DA and at
+  the returned step, and `passed`, whether a grid step met the rule.
 - `ContractionHMC` (remedy b): after the package's tuning, 16 steps eps_DA exp(s), s
-  evenly from -1.5 to 0.3, are scored on 8 pairs of pilot states (each chain's last state
-  against its states at the middle and the quarter of its kept half), by 10 coupled
+  evenly from -1.5 to 0.3, are scored on 2 pairs of pilot states per pilot chain (the
+  chain's last state against its states at the middle and the quarter of its kept
+  half), by 10 coupled
   leapfrog trajectories with common momenta and uniforms across the grid; the step with
   the most negative mean log contraction of the distance per trajectory is kept. Every
   evaluation is counted by the target.
@@ -40,11 +48,14 @@ import copy
 import functools
 import json
 import math
+import re
 import time
 import warnings
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
+from i85_setup import setup
 
 import telescopic
 from telescopic._random import TUNING, replicate_generator, root_seed
@@ -56,7 +67,14 @@ from telescopic.tuning import choose_k
 
 BAND = 0.3  # remedy a: relative error of the predicted frequencies (set in i137_predictions.md)
 BOUND = 0.9  # remedy a: largest acceptable predicted contraction factor
+GUARD_GRID = np.round(np.arange(-2000, 101) / 1000, 3)  # remedy a: steps eps_DA exp(.)
 JITTER = 0.5  # remedy c, and the largest width of remedy d (#91)
+PAIRS = 100  # pilot pairs, as `sample` runs them
+# The commit of the package at which the records of the stores were computed. Those
+# records do not carry their setup, and the scripts print their tables later, at other
+# commits, so each output names this commit beside the setup of its print pass. Records
+# added since carry their own setup line (Store.add).
+RECORDS_COMMIT = "b0b8f71"
 
 
 def theta(h):
@@ -80,18 +98,31 @@ def jitter_factor(eps, n, w, j, points=401):
     return np.exp(np.log(np.maximum(f, 1e-300)).mean(axis=0))
 
 
-def n_at(given, eps):
-    return given if given is not None else math.ceil(1 / max(eps, 1e-3))
-
-
 def pilot_frequencies(chol, pilot_cov):
     # Whitened frequencies predicted from the pilot: sqrt eig(C^T S^-1 C).
     return np.sqrt(np.linalg.eigvalsh(chol.T @ np.linalg.solve(pilot_cov, chol)))
 
 
+def band(w):
+    # The frequencies remedy a guards: w and every frequency within a factor 1 + BAND of it.
+    return np.concatenate([w * f for f in np.geomspace(1 / (1 + BAND), 1 + BAND, 21)])
+
+
+def worst_factor(steps, n_steps, w):
+    # Remedy a's predicted worst factor at each step over band(w); n_steps None follows
+    # the package's rule.
+    frequencies = band(w)
+    leapfrog = _Leapfrog(None, n_steps, None)
+    return np.array(
+        [factor(e, leapfrog.with_step_size(float(e)).n_steps, frequencies).max() for e in steps]
+    )
+
+
 # Remedy a.
 class _GuardedLeapfrog(_Leapfrog):
     def _with_cov(self, cov):
+        # _n_steps, the given count: n_steps is the count that follows the step when none
+        # is given.
         return _GuardedLeapfrog(self.step_size, self._n_steps, cov)
 
     def _tuned(self, target, initial, pilot, rng):
@@ -99,11 +130,9 @@ class _GuardedLeapfrog(_Leapfrog):
         if self.step_size is not None:
             return kernel, report
         eps0 = kernel.step_size
-        w = pilot_frequencies(kernel._chol, pilot.cov)
-        band = np.concatenate([w * f for f in np.geomspace(1 / (1 + BAND), 1 + BAND, 21)])
-        s = np.round(np.arange(-2000, 101) / 1000, 3)
+        s = GUARD_GRID
         steps = eps0 * np.exp(s)
-        worst = np.array([factor(e, n_at(self._n_steps, e), band).max() for e in steps])
+        worst = worst_factor(steps, self._n_steps, pilot_frequencies(kernel._chol, pilot.cov))
         ok = worst <= BOUND
         if ok.any():
             choice = np.flatnonzero(ok)[np.argmin(np.abs(s[ok]))]
@@ -122,7 +151,7 @@ class _GuardedLeapfrog(_Leapfrog):
 
 # Remedy b.
 class _ContractionLeapfrog(_Leapfrog):
-    GRID, PAIRS_PER_CHAIN, TRAJECTORIES = np.linspace(-1.5, 0.3, 16), 2, 10
+    GRID, TRAJECTORIES = np.linspace(-1.5, 0.3, 16), 10
 
     def _with_cov(self, cov):
         return _ContractionLeapfrog(self.step_size, self._n_steps, cov)
@@ -133,7 +162,8 @@ class _ContractionLeapfrog(_Leapfrog):
             return kernel, report
         eps0 = kernel.step_size
         kept = pilot.samples.shape[1]
-        xs = np.concatenate([pilot.samples[:, -1]] * self.PAIRS_PER_CHAIN)
+        # Two pairs per chain: its last state against two earlier states of its kept half.
+        xs = np.concatenate([pilot.samples[:, -1]] * 2)
         ys = np.concatenate([pilot.samples[:, kept // 2], pilot.samples[:, kept // 4]])
         p, g, d = len(xs), len(self.GRID), xs.shape[1]
         steps = eps0 * np.exp(self.GRID)
@@ -141,15 +171,18 @@ class _ContractionLeapfrog(_Leapfrog):
         x = np.concatenate([np.tile(xs, (g, 1)), np.tile(ys, (g, 1))])
         state = evaluate(target, x, True)
         gap0 = np.linalg.norm(x[: g * p] - x[g * p :], axis=1)
+        # A stream of the tuning namespace that the package's tuning (indices 0 to 7) does
+        # not read.
         generator = replicate_generator(root_seed(rng), TUNING, 100)
         rows_eps = np.tile(np.repeat(steps, p), 2)[:, None]
-        n_rows = np.tile(np.repeat([n_at(self._n_steps, e) for e in steps], p), 2)
+        n_rows = np.tile(np.repeat([kernel.with_step_size(float(e)).n_steps for e in steps], p), 2)
         for _ in range(self.TRAJECTORIES):
             momentum = generator.standard_normal((p, d))
             log_u = np.log(generator.random(p))
             new = state.take(slice(None))
             for n in np.unique(n_rows):
                 rows = np.flatnonzero(n_rows == n)
+                # _trajectory takes one count for all its rows, and a step per row.
                 k = copy.copy(kernel)
                 k.step_size, k._n_steps = rows_eps[rows], int(n)
                 end, log_alpha = k._trajectory(
@@ -198,9 +231,30 @@ class _PhaseJitterLeapfrog(_JitterLeapfrog):
         kernel, report = super()._tuned(target, initial, pilot, rng)
         if self.step_size is None:
             w_min = pilot_frequencies(kernel._chol, pilot.cov).min()
+            # theta is undefined from eps w = 2 on, where the leapfrog is unstable.
             t = float(theta(min(kernel.step_size * w_min, 1.999)))
             kernel.jitter = min(JITTER, math.pi / (2 * kernel.n_steps * t))
         return kernel, report
+
+
+def guard_summary(records):
+    """What remedy a's guard did over records: counts, and its predicted worst factor."""
+    moves = Counter(
+        "fallback"
+        if not r["extra"]["passed"]
+        else "kept"
+        if r["eps"] == r["extra"]["eps_da"]
+        else "lowered"
+        if r["eps"] < r["extra"]["eps_da"]
+        else "raised"
+        for r in records
+    )
+    worst = [r["extra"]["worst"] for r in records]
+    return (
+        f"kept {moves['kept']:2}, lowered {moves['lowered']:2}, raised {moves['raised']:2}, "
+        f"fallback {moves['fallback']:2}; predicted worst factor at the returned step "
+        f"[{min(worst):.6f}, {max(worst):.6f}]"
+    )
 
 
 def _hmc_with(leapfrog_class):
@@ -238,14 +292,18 @@ def gaussian_target(d, scales=None):
     )
 
 
-def run_pilot(example, method, n_steps, seed, cap, cov=None, initial=None, n_pairs=100):
-    """Tune as `sample` does, run 100 lag-1 pilot pairs at `cap`, then choose_k."""
+def run_pilot(example, method, n_steps, seed, cap, cov=None):
+    """Tune as `sample` does, run 100 lag-1 pilot pairs at `cap`, then choose_k.
+
+    With cap = 0 it only tunes, and the record has no pilot fields. q90 is the 90%
+    quantile of the meeting times, NaN where more than 10 pairs are unmet (censored).
+    """
     warnings.simplefilter("ignore")
     start = time.time()
     kernel = METHODS[method](n_steps=n_steps, cov=cov)
     sampler = CoupledSampler(
         example.log_prob,
-        example.initial if initial is None else initial,
+        example.initial,
         vectorize=True,
         grad=example.grad,
         kernel=kernel,
@@ -256,7 +314,7 @@ def run_pilot(example, method, n_steps, seed, cap, cov=None, initial=None, n_pai
     tune_grads = target.n_grad
     leapfrog = sampler.kernel.kernels[0]
     eps, n = leapfrog.step_size, leapfrog.n_steps
-    jitter = getattr(leapfrog, "jitter", 0.0) if method in ("c", "d") else 0.0
+    jitter = getattr(leapfrog, "jitter", 0.0)
     chol = np.linalg.cholesky(sampler.kernel.cov)
     precision = np.linalg.inv(example.cov)
     w = np.sqrt(np.linalg.eigvalsh(chol.T @ precision @ chol))
@@ -282,7 +340,7 @@ def run_pilot(example, method, n_steps, seed, cap, cov=None, initial=None, n_pai
         ),
     }
     if cap:
-        tau = sampler.meeting_times(n_pairs, max_iter=cap)
+        tau = sampler.meeting_times(PAIRS, max_iter=cap)
         try:
             k, error = choose_k(tau), None
         except ValueError:
@@ -295,7 +353,7 @@ def run_pilot(example, method, n_steps, seed, cap, cov=None, initial=None, n_pai
             max_finite=float(finite.max()) if len(finite) else None,
             k=k,
             error=error,
-            pilot_grads_per_pair=(target.n_grad - tune_grads) / n_pairs,
+            pilot_grads_per_pair=(target.n_grad - tune_grads) / PAIRS,
         )
     record["seconds"] = round(time.time() - start, 2)
     return record
@@ -305,8 +363,8 @@ class Store:
     """JSON lines keyed by configuration, so that a rerun skips what is done."""
 
     def __init__(self, name):
-        # Beside this file, and not committed: the tables of the outputs are printed from it.
-        self.path = Path(__file__).with_name(name)
+        # In _rows/, which git ignores (as i102_common.py): the outputs print from it.
+        self.path = Path(__file__).with_name("_rows") / name
         self.records = {}
         if self.path.exists():
             for line in self.path.read_text().splitlines():
@@ -318,13 +376,35 @@ class Store:
 
     def add(self, key, record):
         record["key"] = key
+        record.setdefault("setup", setup())
         self.records[key] = record
+        self.path.parent.mkdir(exist_ok=True)
         with open(self.path, "a") as f:
             f.write(json.dumps(record) + "\n")
 
 
+def header(*stores):
+    """The head of an output: the setup of the print pass and the commit of its records.
+
+    Raises if the records of the stores were computed at more than one commit.
+    """
+    commits = {
+        re.search(r"commit (\S+) of the package", r["setup"])[1]
+        if "setup" in r
+        else RECORDS_COMMIT
+        for store in stores
+        for r in store.records.values()
+    }
+    if len(commits) != 1:
+        raise ValueError(f"the stores mix records of commits {sorted(commits)}: rerun them")
+    return (
+        f"{setup()}\nrecords computed at commit {commits.pop()} of the package, and printed "
+        "from the stores with the setup above"
+    )
+
+
 class Budget:
-    """Stops a run before ten minutes; the next run resumes."""
+    """Starts no new record after `seconds` (the one under way ends); a rerun resumes."""
 
     def __init__(self, seconds=540):
         self.end = time.time() + seconds

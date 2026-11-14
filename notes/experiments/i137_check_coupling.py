@@ -5,9 +5,10 @@ before any meeting time counts. Remedies c and d (a step jittered by a uniform t
 chains share) change the kernel; a and b change only the tuned step and keep the
 package's coupled step, which is checked here too, tuned as they tune it.
 
-Design: each remedy tuned on examples.gaussian(d) at seed 0, d = 2 and 10, n_steps = 2
-and 5 (8 kernels per remedy). From two pairs of points, check_coupling with 20,000
-pairs, check seed 1: a near pair, the origin and a point 2e-4 away along each axis
+Design: each remedy, and the package's kernel, tuned on examples.gaussian(d) at seed 0,
+d = 2 and 10, n_steps = 2 and 5 (4 kernels per remedy, each checked from 2 pairs of
+points: 8 checks). From each pair of points, check_coupling with 20,000 pairs, check
+seed 1: a near pair, the origin and a point 2e-4 away along each axis
 (within the meeting scale of 1e-3, so pairs meet), and a far pair, the origin and the
 point (1, ..., 1), where pairs cannot meet in one step and only the trajectory's
 marginals are compared. Pass: for the near pair `passed()` at its default level 1e-3
@@ -19,6 +20,7 @@ of the 160 p-values is 0.0040 (remedy b, a far pair; the package's coupled step 
 b's step); for the new kernels c and d it is 0.026, against a level of 1e-3.
 
 Run: PYTHONPATH=src:notes/experiments python notes/experiments/i137_check_coupling.py
+(needs nothing first; about 35 s on one thread)
 """
 
 import warnings
@@ -27,7 +29,7 @@ import numpy as np
 from i85_setup import setup
 from i137_common import METHODS, gaussian_target
 
-from telescopic import CoupledSampler, Target
+from telescopic import CoupledSampler
 from telescopic.testing import check_coupling
 
 warnings.simplefilter("ignore")
@@ -36,7 +38,6 @@ smallest, failures = {}, 0
 for method in ["base", "a", "b", "c", "d"]:
     for d in (2, 10):
         example = gaussian_target(d)
-        target = Target(example.log_prob, example.grad, vectorize=True)
         for n_steps in (2, 5):
             sampler = CoupledSampler(
                 example.log_prob,
@@ -47,7 +48,7 @@ for method in ["base", "a", "b", "c", "d"]:
                 rng=0,
             )
             sampler.tune()
-            kernel = sampler.kernel
+            kernel, target = sampler.kernel, sampler.target
             for name, x, y in (
                 ("near", np.zeros(d), np.full(d, 2e-4)),
                 ("far", np.zeros(d), np.ones(d)),
@@ -63,7 +64,7 @@ for method in ["base", "a", "b", "c", "d"]:
                 smallest[method] = min(smallest.get(method, 1.0), p)
                 print(
                     f"{method:4} d={d:2} n_steps={n_steps} eps={kernel.step_size:.4f} "
-                    f"jitter={getattr(kernel.kernels[0], 'jitter', 0.0) if method in 'cd' else 0.0:.3f} "
+                    f"jitter={getattr(kernel.kernels[0], 'jitter', 0.0):.3f} "
                     f"{name:4}: stay p={report.stay[0]:.3f},{report.stay[1]:.3f} "
                     f"moves p={report.moves[0]:.3f},{report.moves[1]:.3f} met={report.met:.4f} "
                     f"stale={report.stale} near_misses={report.near_misses} "

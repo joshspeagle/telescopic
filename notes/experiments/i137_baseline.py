@@ -5,7 +5,7 @@ Question: on examples.gaussian(d), d = 2 and 10, with n_steps in (default, 1, 2,
 contraction factor of the coupled trajectory on each mode of the tuned covariance, and
 what are the pilot's meeting times?
 
-Design (package at the commit on the first line of the output):
+Design (package at the commit on the second line of the output):
 - Tuning only, seeds 0 to 99: `CoupledSampler(..., kernel=HMC(n_steps=n), rng=seed).tune()`.
   For the tuned step eps, n and covariance C C^T, the whitened frequencies w are the
   square roots of the eigenvalues of C^T P C, P the exact precision, and the factor of a
@@ -20,29 +20,40 @@ seeds with pairs, and the cap of 10,000. A pair's streams do not depend on the c
 pair unmet at 100,000 is unmet at 10,000: the cut design can only add failures. It adds
 those seeds whose factor puts the meeting between 10^4 and 10^5 iterations, which is the
 same defect, measured at a smaller budget; remedies are held to the same cap. The 100
-tuning-only seeds give the factors, which the validation found to separate failing from
-passing seeds without overlap.
+tuning-only seeds give the factors.
 
 Result (i137_baseline.out): the defect reproduces. At cap 10,000, k cannot be chosen at
 12 of 30 seeds for d = 2, n_steps = 2, at 29 of 30 for d = 10, n_steps = 3 and at 11 of
 30 for d = 10, n_steps = 10; at none of 30 in the other 9 configurations, the default
 included. Over 100 tunings the largest factor exceeds 0.999 at 38 (d = 2, n = 2), 69
-(d = 10, n = 3) and 34 (d = 10, n = 10) seeds, and never elsewhere (largest 0.991). The
-failing configurations cost 11,956, 50,470 and 35,851 gradients per pilot pair (median
-over seeds) against 60 to 1,798 elsewhere. Seed 0, d = 2, n_steps = 2 at the package's
-cap of 100,000 gives the issue's figures exactly: step 1.4516, 31 pairs unmet. The
-tuned covariance's whitened frequencies are within 0.099 of 1 at d = 2 and within 0.286
-at d = 10.
+(d = 10, n = 3) and 34 (d = 10, n = 10) seeds, and never elsewhere: its largest value there
+is 0.998081 (d = 10, n_steps = 5, where k was chosen at all 30 pilot seeds, whose
+factors reach 0.990789), and at most 0.991312 in the other 8 configurations. Within a
+configuration the factor of the pilot seeds separates those where k cannot be chosen
+from those where it can (d = 2, n_steps = 2: failing from 0.997944, passing up to
+0.997212; d = 10, n_steps = 3: from 0.996743, and 0.993569 at the one seed that passes;
+d = 10, n_steps = 10: from 0.998563, passing up to 0.997954); across configurations it
+does not: 6 passing seeds have a larger factor than the smallest failing one, 0.996743.
+The failing configurations cost 11,956, 50,470 and 35,851 gradients per pilot pair
+(median over seeds) against 60 to 1,798 elsewhere. Seed 0, d = 2, n_steps = 2 at the
+package's cap of 100,000 gives the issue's figures exactly: step 1.4516, 31 pairs unmet.
+The tuned covariance's whitened frequencies are within 0.099 of 1 at d = 2 and within
+0.286 at d = 10; the 99% quantile of a tuning's largest |w - 1| is 0.093 and 0.254, and
+every mode lies inside the band of remedy a as coded, w in [1/1.3, 1.3], at 600 of 600
+tunings at d = 2 and 558 of 600 at d = 10 (the band's low end, 1/1.3 = 0.769, is 0.231
+below 1, not 0.3).
 
 Run: PYTHONPATH=src:notes/experiments python notes/experiments/i137_baseline.py
-(rerun until it prints the tables; each run stops after 9 minutes and resumes)
+(needs nothing first; rerun until it prints the tables: each run starts no new record
+after 9 minutes, and the next resumes from the store in notes/experiments/_rows/). From
+nothing, the records took 1,074 s on one thread by the store's `seconds` (392 s for the
+1,200 tunings, 639 s for the 360 pilots, 43 s for seed 0 at the package's cap).
 """
 
 import sys
 
 import numpy as np
-from i85_setup import setup
-from i137_common import Budget, Store, gaussian_target, run_pilot
+from i137_common import Budget, Store, gaussian_target, header, run_pilot
 
 CONFIGS = [(d, n) for d in (2, 10) for n in (None, 1, 2, 3, 5, 10)]
 TUNE_SEEDS, PILOT_SEEDS, CAP = range(100), range(30), 10_000
@@ -63,7 +74,7 @@ for kind, d, n, seed, cap in work:
     record.update(kind=kind, d=d)
     store.add(key, record)
 
-print(setup())
+print(header(store))
 records = list(store.records.values())
 
 
@@ -105,9 +116,16 @@ for d in (2, 10):
             if r["kind"] == "tune" and r["d"] == d
         ]
     )
+    inside = [
+        r["w_min"] >= 1 / 1.3 and r["w_max"] <= 1.3
+        for r in records
+        if r["kind"] == "tune" and r["d"] == d
+    ]
     print(
         f"d={d:2}: largest |w - 1| of a seed's modes, over {len(dev)} tunings: median "
-        f"{np.median(dev):.3f}, 95% {np.quantile(dev, 0.95):.3f}, max {dev.max():.3f}"
+        f"{np.median(dev):.3f}, 95% {np.quantile(dev, 0.95):.3f}, 99% "
+        f"{np.quantile(dev, 0.99):.3f}, max {dev.max():.3f}; every mode inside remedy a's "
+        f"band [1/1.3, 1.3] at {sum(inside)} of {len(inside)}"
     )
 
 print(
@@ -127,7 +145,25 @@ for d, n in CONFIGS:
         f"grads/pair {np.median([r['pilot_grads_per_pair'] for r in rs]):.0f}, tune grads "
         f"{np.median([r['tune_grads'] for r in rs]):.0f}"
     )
-r = records[[x["kind"] for x in records].index("issue")]
+
+print(
+    "\nFactor of the pilot seeds, seeds 0-29: smallest where k cannot be chosen, largest "
+    "where it can"
+)
+for d, n in CONFIGS:
+    rs = pick("pilot", d, n)
+    failing = [r["factor_max"] for r in rs if r["error"]]
+    passing = [r["factor_max"] for r in rs if not r["error"]]
+    print(
+        f"d={d:2} n_steps={n!s:4}: failing {len(failing):2}, smallest "
+        f"{f'{min(failing):.6f}' if failing else '-'}; passing {len(passing):2}, largest "
+        f"{f'{max(passing):.6f}' if passing else '-'}"
+    )
+pilots = [r for r in records if r["kind"] == "pilot"]
+smallest = min(r["factor_max"] for r in pilots if r["error"])
+above = sum(r["factor_max"] > smallest for r in pilots if not r["error"])
+print(f"over all configurations: {above} passing seeds have a factor above {smallest:.6f}")
+r = store.records["issue d=2 n=2 seed=0"]
 print(
     f"\nSeed 0, d=2, n_steps=2, cap 100,000: eps {r['eps']:.4f}, factor {r['factor_max']:.6f}, "
     f"unmet {r['unmet']}, k {r['k']}, error {r['error']}"
