@@ -38,6 +38,7 @@ pandas = ["pandas>=2.1"]
 all = ["telescopic[plot,progress,parallel,pandas]"]
 
 [project.urls]
+Documentation = "https://joshspeagle.com/telescopic/"
 Repository = "https://github.com/joshspeagle/telescopic"
 Changelog = "https://github.com/joshspeagle/telescopic/blob/main/CHANGELOG.md"
 Issues = "https://github.com/joshspeagle/telescopic/issues"

@@ -78,7 +78,8 @@ All notable changes to this project are documented here. The format follows
   index of the meeting times and the largest share of one replicate in a variance.
 - Documentation: Getting started, a user guide, six tutorials executed when the site is
   built, a theory page, the API reference and a citing page.
-- The documentation site is published on GitHub Pages from each push to `main`.
+- The documentation site is published at <https://joshspeagle.com/telescopic/> from each
+  push to `main`.
 - The documentation site has its own theme and identity: the Focus mark, two chain colors
   that mean the two chains, Red Hat type served with the site, light and dark themes, a
   landing page with a coupled pair drawn by telescopic itself, and navigation by section

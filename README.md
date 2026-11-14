@@ -10,7 +10,7 @@ run in parallel without communication. Their meeting times also bound the distan
 the chains from stationarity.
 
 telescopic is written in Python on NumPy and SciPy. It is in development; version 0.1 is
-a first draft.
+a first draft. The documentation is at <https://joshspeagle.com/telescopic/>.
 
 ## Installation
 
