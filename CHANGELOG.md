@@ -233,6 +233,22 @@ All notable changes to this project are documented here. The format follows
   target does: with unbounded weights $\pi/q$, a run usually gives too little mass to
   the region where the weights are large, with error bars that are too small and often
   without a warning; the kernels guide has a measured example.
+- Changes to `Result` ruled before the first release: the last bin of a histogram is
+  closed, as in `numpy.histogram`, so an atom on the upper edge of `range` is counted,
+  and the last edge of the default range is no longer nudged up; the TV bound and its
+  value at `k` count a censored pair as meeting at its cap plus 1, since its chains were
+  compared at the cap, which raises the bound by $1/R$ per censored pair at each
+  $t \le$ cap $- L$ where $L$ divides cap $- L - t$, and
+  `telescopic.diagnostics.tv_bound` asks for a censored pair as its cap plus 1;
+  `Result.interval` is renamed `Result.credible_interval`, with no alias, and
+  `Estimate.interval` is an array of shape `(2,)` or `(2, p)`, lower ends first,
+  instead of a tuple of two arrays;
+  `Result.quantile` and `Result.credible_interval` take a function `h`, as `estimate`
+  does, for the quantiles of a derived quantity; a `Result` prints as one line of its
+  settings, such as `Result(R=100, d=2, k=63, m=630, lag=63, censored=0,
+  interrupted=False)`.
+- A pair censored at a `max_iter` equal to the slow-pair threshold now raises the
+  slow-pair warning, since its chains were compared, unmet, at the threshold.
 - The summary shows as an HTML table in notebooks, its footer a list with one warning
   per item. Its text keeps the lines below the table within 80 characters, with the
   kernel on a line of its own and its floating-point parameters to 4 significant

@@ -185,7 +185,7 @@ Let $a_r = \hat\pi_r(h) \in \mathbb R^p$ for replicates $r = 1, \dots, R$. Write
 - **Expectations:** $\bar a$, with standard error $\sqrt{\mathrm{diag}(S_a)/R}$ and Monte Carlo covariance $S_a / R$.
 - **Products of expectations:** $\bar a \bar a^\top - S_a/R$ is unbiased for $\pi(h)\pi(h)^\top$ when $R \ge 2$.
 - **Covariance:** $\widehat{\mathrm{Cov}}_\pi(h) = R^{-1}\sum_r \hat\pi_r(hh^\top) - \bar a\bar a^\top + S_a/R$ is unbiased. The plug-in $\sum\omega hh^\top - (\sum \omega h)(\sum\omega h)^\top$ is biased by $-S_a/R$ and is not used. Standard deviations are $\sqrt{\max(0, \widehat{\mathrm{Var}})}$, which is consistent, not unbiased.
-- **Histograms:** each replicate's signed mass in each half-open bin $[a, b)$, averaged over replicates. This is unbiased for bins fixed before the run, with standard errors from the replicates; the default range, from the atoms, biases every bin, the two outer ones by a term of order $1/R$ (M11 audit). Bins can be negative.
+- **Histograms:** each replicate's signed mass in each bin, averaged over replicates. Bins are half-open, $[a, b)$, except the last along each coordinate, which is closed, as in `numpy.histogram`, so that an atom on the upper edge of the range is counted (DECISIONS #98). This is unbiased for bins fixed before the run, with standard errors from the replicates; the default range, from the atoms, biases every bin, the two outer ones by a term of order $1/R$ (M11 audit). Bins can be negative.
 - **Quantiles:**
   1. Pool all replicates' atoms with weights $\omega/R$, and merge atoms with equal coordinates by summing their weights.
   2. Sort along the coordinate and take the cumulative sum of the weights.
@@ -216,7 +216,7 @@ For any $L$ and $t \ge 0$ (Biswas, Jacob & Vanetti 2019, Thm. 2.5):
 $$d_{TV}(\pi_t, \pi) \le \mathbb E\big[\max(0, \lceil (\tau - L - t)/L \rceil)\big] = \sum_{j \ge 1} \mathbb P(\tau > t + jL).$$
 
 - **Estimate:** the bound is estimated by the replicate average, reported as $\min(1, \cdot)$. The result also reports its leading term at $k$, the fraction of pairs with $\tau - L > k$, with a one-sided 95% Clopper–Pearson upper bound, which stays informative when the fraction is 0.
-- **Censored pairs** count as meeting at the cap, so with censoring the estimate is a lower bound. It is reported with the number censored.
+- **Censored pairs** are known to meet after the cap: the engine compares the chains at the cap before it censors a pair, so $\tau \ge$ cap + 1, and the TV bound and its value at $k$ count a censored pair as meeting at cap + 1 (DECISIONS #99). With censoring the estimate is therefore a lower bound. It is reported with the number censored. The cost takes the time a pair stopped, the cap; the slow-pair check (§6.3) counts a censored pair as unmet at its cap, so a cap equal to the threshold flags it.
 - **Use for $k$:** with $L = k$ the bound at $t = k$ is close to $\mathbb P(\tau - L > k)$, which the main run estimates and reports. It exceeds the pilot's $1 - \beta$, because the main run's $\tau - L$ is longer than the pilot's $\tau - 1$: the coupled phase starts from a near-stationary $X_L$. With $\beta = 0.99$ in E01's setting it is 0.019 at $d = 10$ and 0.029 at $d = 30$ (design review D-R5).
 - **1-Wasserstein (should):**
 
@@ -506,9 +506,9 @@ Methods:
 - **Estimates:**
   - `estimate(h, level=0.95)` returns an `Estimate`. `h` maps `(n, d)` to `(n,)` or `(n, p)`; any other output shape raises `ValueError`;
   - `mean()`, `cov()`, `var()`, `std()` follow §3.4.
-- **Quantiles and histograms:** `quantile(q)`, `interval(mass=0.68)` (the central interval holding that mass of $\pi$; `level` is reserved for confidence levels) and `histogram(dims, bins=20, range=None)`, of one coordinate or a joint histogram of several, with standard errors (DECISIONS #30).
+- **Quantiles and histograms:** `quantile(q, h=None)`, `credible_interval(mass=0.68, h=None)` (the central credible interval holding that mass of $\pi$, an array of shape `(2, d)`; with `h`, as in `estimate`, the quantiles are those of `h` at the atoms, of shape `q.shape` or `q.shape + (p,)` from `quantile` and `(2,)` or `(2, p)` from `credible_interval`, DECISIONS #101; `level` is reserved for confidence levels, and the name keeps it apart from the confidence interval of an `Estimate`, DECISIONS #100) and `histogram(dims, bins=20, range=None)`, of one coordinate or a joint histogram of several, with standard errors (DECISIONS #30).
 - **Diagnostics:** `tv_bound(t=None)`, `w1_bound(t=None)` (should), and `diagnostics()` (a dict).
-- **Reporting:** `summary()` returns a `Summary` table (DECISIONS #40). `check(strict=False)` emits the warnings of §7.4, or raises if strict.
+- **Reporting:** `summary()` returns a `Summary` table (DECISIONS #40). The repr is one line of stored fields, `Result(R=100, d=2, k=63, m=630, lag=63, censored=0, interrupted=False)`, and computes no diagnostics (DECISIONS #102). `check(strict=False)` emits the warnings of §7.4, or raises if strict.
 - **Plots:** `plot_meeting_times(axes=None)`, `plot_tv_bound(ax=None)`, `plot_marginals(dims=None, bins=20, axes=None)` and `plot_corner(dims=None, bins=20)` (signed 2-D histograms); the first three draw on given axes (DECISIONS #30).
 - **Persistence and merging:**
   - `save(path)` and `Result.load(path)` use a versioned `.npz` schema, with no pickle: arrays, and the settings, names, seed state and descriptions as JSON (DECISIONS #26, #29). The engine's paths are not saved;
@@ -525,7 +525,7 @@ The constructor checks that `atoms` and `weights` have an integer or float dtype
 
 Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 
-**`Estimate`** is frozen. It holds `value`, `standard_error`, `interval` (low, high), `level` and `replicates` (the per-replicate values), and prints as value ± standard error.
+**`Estimate`** is frozen. It holds `value`, `standard_error`, `interval` (the confidence interval, an array of shape `(2, ...)`, lower ends first, DECISIONS #100), `level` and `replicates` (the per-replicate values), and prints as value ± standard error.
 
 ### 7.3 Summary (R-OUT-3)
 

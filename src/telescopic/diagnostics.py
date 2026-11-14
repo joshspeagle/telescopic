@@ -26,8 +26,9 @@ def tv_bound(meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike) -> FloatA
     Parameters
     ----------
     meeting_times : array_like of int, shape (R,)
-        The meeting times :math:`\tau`. A censored pair, given as its cap, makes the
-        estimate a lower bound of the true average.
+        The meeting times :math:`\tau`. A censored pair, given as its cap plus 1, the
+        least meeting time it can have, makes the estimate a lower bound of the true
+        average.
     lag : int
         The lag :math:`L` of the runs that produced the meeting times.
     t : array_like of int
@@ -46,7 +47,7 @@ def tv_bound(meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike) -> FloatA
     if tau.ndim != 1 or len(tau) == 0 or not integral(tau, 0):
         raise ValueError(
             "meeting_times must be a non-empty one-dimensional array of non-negative "
-            "integers: give a censored pair as its cap"
+            "integers: give a censored pair as its cap plus 1"
         )
     survival = 1.0 - np.cumsum(np.bincount(tau.astype(np.int64))) / len(tau)
     bound: FloatArray = np.minimum(1.0, _lagged_tail(survival, lag, t))
@@ -258,7 +259,7 @@ def issues(result: Result) -> list[Issue]:
     if disagreement:
         found.append(Issue("tuning", disagreement))
     threshold = slow_pair_threshold(result.lag, result.m)
-    if np.max(result._stopped) > threshold:
+    if np.max(result._earliest_meeting) > threshold:
         found.append(
             Issue(
                 "slow",

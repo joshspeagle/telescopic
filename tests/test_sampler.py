@@ -10,7 +10,7 @@ import pytest
 
 import telescopic
 from references import Normal as Conditional
-from references import gaussian_log_prob
+from references import gaussian_log_prob, synthetic
 from telescopic import CoupledSampler, __version__, sample
 from telescopic.engine import Settings, Status
 from telescopic.initial import Empirical, Normal
@@ -242,6 +242,14 @@ def test_a_slow_pair_warns_once_when_unmet_at_the_threshold():
     with pytest.warns(ConvergenceWarning, match="replicate 3 has not met after 10000"):
         slow(Status(0, 3, 10_000))
     slow(Status(0, 3, 10_001))  # a second warning would fail under -W error
+
+
+def test_a_pair_censored_at_the_threshold_warns_as_slow_after_a_run():
+    # The engine frees a censored pair's lane before its status is read, so only the
+    # check after the run sees a pair censored at t = 10^4.
+    replicates = synthetic([2, -1], [0.0], m=10, max_iter=10_000)._replicates
+    with pytest.warns(ConvergenceWarning, match="replicate 1 has not met after 10000"):
+        _SlowPairs(lag=1, m=10, kind="replicate").after(replicates)
 
 
 def test_tuning_chains_in_separate_modes_warn():
