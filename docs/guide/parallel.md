@@ -10,7 +10,8 @@ mystnb:
 
 Replicates are independent, so they run in parallel without communicating. The `pool`
 argument of {func}`telescopic.sample` and {class}`telescopic.CoupledSampler` decides where
-the meeting-time pilot and the replicates run; the kernel is tuned in this process.
+the meeting-time pilot and the replicates run, and `n_workers` how many workers a pool of
+your own has; the kernel is tuned in this process.
 
 ## Pools
 
@@ -75,8 +76,38 @@ pool with only `map` receives them in waves of one chunk per worker.
 telescopic reads the number of workers of an integer pool, a `concurrent.futures`
 executor, a `multiprocessing` pool and a schwimmbad pool. It counts any other pool as
 having as many workers as this process may use CPUs, so the chunks of a larger pool, such
-as a cluster's, can leave workers idle. To use them all, give such a pool an attribute
-`size`, its number of workers, as schwimmbad's pools have.
+as a cluster's, can leave workers idle. The argument `n_workers` states the number of
+workers of an executor or a pool, and replaces the size that the pool reports, if any. It
+sets the chunks and the waves, and with a log-density evaluated point by point it changes
+no replicate. State the pool's real number of workers: a larger value makes smaller
+chunks, which run fewer replicates together. The executor below shows only `submit`, as a
+cluster's may, so telescopic cannot read its two workers:
+
+```{code-cell} python
+class Unsized:
+    """An executor that does not report its number of workers."""
+
+    def __init__(self, executor):
+        self.submit = executor.submit
+
+
+with ProcessPoolExecutor(2, mp_context=spawn) as executor:
+    stated = telescopic.sample(
+        gaussian.log_prob, gaussian.initial, pool=Unsized(executor), n_workers=2, rng=3
+    )
+stated.n_replicates
+```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claim that n_workers changes no replicate: the same seed as the first run above.
+assert np.array_equal(stated.measure.atoms, first.measure.atoms)
+assert np.array_equal(stated.measure.weights, first.measure.weights)
+```
+
+`n_workers` is only for an executor or a pool of your own: with `pool=None` or an integer,
+which already is the number of workers, it raises `ValueError`.
 
 Each chunk carries the whole job: the target with its `args` and `kwargs`, the kernel, the
 initial distribution, the root seed and the settings. The results are joined in index

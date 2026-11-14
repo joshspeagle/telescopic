@@ -462,7 +462,8 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
   - `None` runs in-process;
   - an integer creates that many worker processes;
   - an object with `submit` (a `concurrent.futures.Executor`), or with `map` (emcee/dynesty/schwimmbad style), is used as given.
-- **Tasks:** chunks of consecutive replicate indices, one per worker at least, more where a chunk would exceed a full set of lanes, 256, and four per worker at most. The workers are counted by the pool's size: an executor's `_max_workers`, a multiprocessing pool's `_processes`, a schwimmbad pool's `size`, or else the CPUs the process may use. Each worker runs the engine on its chunk. Chunks are submitted at once, in index order; a pool with only `map` runs them in waves of one per worker. The job (target, kernel, initial distribution, root and settings) travels with each task (DECISIONS #23).
+- **`n_workers`:** `None`, or the number of workers of an executor or a pool, as dynesty's `queue_size`: a positive integer, which replaces the size the pool reports (DECISIONS #149, #166, #167). It is checked when the sampler is made: a value that is not an integer raises `TypeError`, one below 1 `ValueError`, each naming `n_workers`; with `pool` `None` or an integer, which already is the number of workers, it raises `ValueError` naming both (DECISIONS #168). It sets only the number of chunks and of waves, so no replicate depends on it where none depends on the pool: with a log-density evaluated point by point (§6.1; DECISIONS #169). A value above the pool's real number of workers makes smaller chunks, which run fewer replicates in lockstep (§6.2); the documentation asks for the real number.
+- **Tasks:** chunks of consecutive replicate indices, one per worker at least, more where a chunk would exceed a full set of lanes, 256, and four per worker at most. The workers are counted by `n_workers` when given, else by the pool's size: an executor's `_max_workers`, a multiprocessing pool's `_processes`, a schwimmbad pool's `size`, or else the CPUs the process may use. The meeting-time pilot and the runs are chunked alike; tuning runs in the parent and uses no pool. Each worker runs the engine on its chunk. Chunks are submitted at once, in index order; a pool with only `map` runs them in waves of one per worker. The job (target, kernel, initial distribution, root and settings) travels with each task (DECISIONS #23).
 - **Results:** reduced in index order. The wall time of a pool run is the parent's.
 - **Worker hygiene:**
   - a task in the main thread of another process pins BLAS to one thread and ignores Ctrl-C, in user pools too. Tasks in the parent process, as on a thread pool, or in other threads leave those settings alone: they belong to the process, and concurrent tasks would restore each other's;
@@ -585,7 +586,8 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
    ```python
    telescopic.sample(log_prob, init, n_replicates=100, *, args=(), kwargs=None, grad=None,
                      vectorize=False, kernel="auto", k="auto", m="auto", lag="auto", thin=None,
-                     max_iter=None, pool=None, names=None, progress=False, rng=None) -> Result
+                     max_iter=None, names=None, pool=None, n_workers=None, progress=False,
+                     rng=None) -> Result
    ```
 
    `n_replicates` is at least 2, checked before any work, since the estimates need two replicates that met; `CoupledSampler.run`, whose runs accumulate, takes 1 (DECISIONS #92). `kernel` is a `Kernel` or one of the strings `"auto"`, `"rwmh"`, `"mala"`, `"hmc"` and `"independence"`. `"auto"` means RWMH, with or without a gradient; gradient kernels are requested by name (D-3).
@@ -594,7 +596,7 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
    ```python
    sampler = telescopic.CoupledSampler(log_prob, init, *, args=(), kwargs=None, grad=None,
                                        vectorize=False, kernel="auto", names=None, pool=None,
-                                       progress=False, rng=None)
+                                       n_workers=None, progress=False, rng=None)
    sampler.tune()                                  # pilot runs; freezes sampler.kernel
    times = sampler.meeting_times(n=100)            # pilot meeting times, lag 1
    result = sampler.run(500, k="auto", m="auto", lag="auto", thin=None, max_iter=None,
