@@ -357,6 +357,37 @@ def test_choose_k_failure_names_zero_density_starts():
         sampler.run(2)
 
 
+def tuned_sampler(kernel):
+    sampler = CoupledSampler(
+        log_prob, INIT, grad=lambda x: -x, kernel=kernel, check_grad=False, rng=0
+    )
+    sampler.tune()
+    return sampler
+
+
+@pytest.mark.parametrize(
+    ("kernel", "noted"),
+    [("hmc", True), ("mala", True), ("rwmh", False), (MALA(0.5, cov=np.eye(2)), False)],
+    ids=["hmc", "mala", "rwmh", "mala with its parameters"],
+)
+def test_choose_k_failure_points_tuned_gradient_kernels_to_their_step_size(kernel, noted):
+    # The automatic steps of MALA and HMC can fail to couple; a kernel without a gradient,
+    # or given with every parameter, has none.
+    with pytest.raises(ValueError, match="never met within their cap") as raised:
+        tuned_sampler(kernel)._choose_k(np.full(100, np.inf))
+    notes = getattr(raised.value, "__notes__", [])
+    assert any("step_size checked on pilot pairs" in note for note in notes) == noted
+
+
+def test_choose_k_failure_at_zero_density_starts_carries_no_note_on_the_step_size():
+    sampler = tuned_sampler("hmc")
+    sampler._pilot_zero_density = 1
+    with pytest.raises(ValueError, match="started where the target density is zero") as raised:
+        sampler._choose_k(np.full(100, np.inf))
+    assert not hasattr(raised.value, "__notes__")
+    assert not hasattr(raised.value.__cause__, "__notes__")
+
+
 def slow_pair_from_zero_density_as_it_happens(slow):
     slow(Status(0, 1, 10_000, 1, 1, True))
 

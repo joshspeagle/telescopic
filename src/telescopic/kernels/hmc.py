@@ -42,7 +42,10 @@ class HMC(Mixture):
     Coupled chains take the same component. Their trajectories share the momentum and the
     uniform, so the chains contract; the random-walk step couples them by the
     reflection-maximal coupling, so chains that have come close meet (Heng & Jacob 2019,
-    with a whitened meeting step).
+    with a whitened meeting step). When the step size is automatic, a given ``n_steps``,
+    or a given ``cov`` that does not whiten the target, can put the tuned step on a
+    resonance of the leapfrog, where the trajectories do not contract (When the automatic
+    step fails, in :doc:`/guide/kernels`).
 
     Parameters
     ----------

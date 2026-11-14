@@ -372,3 +372,7 @@ All notable changes to this project are documented here. The format follows
   error bars. Seeded outputs of vectorized runs change likewise. A target evaluated
   point by point keeps every bitwise guarantee. `couplings.reflection_maximal` takes
   `blas=True` to do the same.
+- The kernels guide names a resonance of HMC's leapfrog on Gaussians, on which a given
+  `n_steps`, or a given `cov` that does not whiten the target, can put the automatic step.
+  With MALA or HMC, the error raised when `k` cannot be chosen carries a note that points
+  to it.

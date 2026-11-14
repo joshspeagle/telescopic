@@ -61,7 +61,7 @@ Each item has the default that work proceeds on until Josh answers.
   the mixture (`i137_nongaussian.out`).
   Default: no change to the package's kernels or tuning until Josh rules on issue #137;
   meanwhile the kernels guide and the advice of the error raised when `k` cannot be
-  chosen are to name this case (an automatic step with a given `n_steps`, or with a given
+  chosen name this case (an automatic step with a given `n_steps`, or with a given
   covariance that does not whiten the target). Recommended: the guard as tested is not
   adopted, since it also lowers steps where the package already gives `k` (4 of the 12
   Gaussian configurations, `i137_remedies.out`) and has no step to return where the
