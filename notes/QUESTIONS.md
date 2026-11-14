@@ -66,11 +66,3 @@ Each item has the default that work proceeds on until Josh answers.
   guide "Check and set a step size" and a note on the error raised when `k` cannot be
   chosen name the case.
   Default, as ruled: no change until the test of issue #91 decides.
-- [ ] **The one-product reflection at every dimension (issue #83, pull request #159).** Josh
-  approved "the two-product reflection from about 50 dimensions", expecting seeded coupled
-  output to move "in the last bits". The form adopted reuses $Cz$ at every dimension,
-  since it was faster at every dimension measured (1.06 to 1.38 times per call at 256
-  rows, d = 2 to 200), and with HMC it moved 1 of 100 meeting times of a fixed-seed run
-  on a logistic regression in 6 dimensions, and the estimates by up to 0.075 standard
-  errors; RandomWalk and MALA moved no meeting time (DECISIONS #211). Default: keep the
-  one form at every dimension.
