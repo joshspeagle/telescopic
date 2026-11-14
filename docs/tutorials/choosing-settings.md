@@ -85,7 +85,7 @@ recipe.summary()
 
 The footer gives the cost of a replicate, its relative cost, and the fraction of pairs
 that met after $k + L$, the ones that carry a bias correction
-([Results](../guide/results.md#the-summary) defines each entry). That fraction need not
+([The summary](../reference/result-fields.md#the-summary) defines each entry). That fraction need not
 equal the pilot's fraction after $k + 1$: the lag changes the law of $\tau - L$.
 
 ## Other settings
@@ -93,7 +93,7 @@ equal the pilot's fraction after $k + 1$: the lag changes the law of $\tau - L$.
 Each setting below gets a sampler of its own, with its own seed, since a sampler keeps
 the settings of its first run. The samplers share the tuned kernel and so skip the
 tuning; with `k` given, they skip the pilot too. A run warns as it ends when a condition
-of [Diagnostics and warnings](../guide/diagnostics.md) holds:
+of [Warnings and errors](../reference/warnings.md) holds:
 
 ```{code-cell} python
 choices = {

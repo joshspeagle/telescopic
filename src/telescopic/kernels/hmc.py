@@ -45,7 +45,7 @@ class HMC(Mixture):
     with a whitened meeting step). When the step size is automatic, a given ``n_steps``,
     or a given ``cov`` that does not whiten the target, can put the tuned step on a
     resonance of the leapfrog, where the trajectories do not contract (When the automatic
-    step fails, in :doc:`/guide/kernels`).
+    step fails, in :doc:`/guide/step-size`).
 
     Parameters
     ----------

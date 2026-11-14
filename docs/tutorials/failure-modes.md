@@ -10,8 +10,8 @@ The estimates are unbiased for any settings and every initial distribution from 
 the chain converges ([Theory](../theory.md#guarantees-and-their-limits)), yet a run can
 miss the truth by many times its error bar, or cover it with an error bar too wide to
 use. This page runs such cases and shows what telescopic reports for each. A run's
-warnings appear under its cell; [Diagnostics and warnings](../guide/diagnostics.md)
-explains each one, and [Initial distributions](../guide/targets.md#choosing-one) gives
+warnings appear under its cell; [Warnings and errors](../reference/warnings.md)
+explains each one, and [Initial distributions](../guide/initial-distribution.md#choosing-one) gives
 the advice on choosing one.
 
 ```{code-cell} python
@@ -88,10 +88,10 @@ telescopic.diagnostics.issues(narrow)
 ```
 
 This is the failure of an initial distribution that misses a mode
-([Initial distributions](../guide/targets.md#choosing-one)): every chain starts on the
+([Initial distributions](../guide/initial-distribution.md#choosing-one)): every chain starts on the
 side of one mode, and the kernel rarely crosses to the other. Most seeds miss the truth
 in this setting without a warning
-([Measured rates](../guide/diagnostics.md#measured-rates)).
+([Measured rates](../reference/warnings.md#measured-rates)).
 
 ### A start that covers both modes
 
@@ -225,7 +225,7 @@ assert abs(2.38 * np.sqrt(tuned.kernel.cov[0, 0]) - 10) < 1
 The interval covers the truth. The wide start made the failure visible, and the kernel
 that crosses removed it. A target with several modes needs both: an initial
 distribution that covers every mode
-([Initial distributions](../guide/targets.md#choosing-one)), and a kernel that crosses
+([Initial distributions](../guide/initial-distribution.md#choosing-one)), and a kernel that crosses
 between them, such as this tuned random walk, or a
 {class}`~telescopic.kernels.Mixture` with a component whose proposals reach the other
 modes ([Kernels and couplings](../guide/kernels.md)). With a kernel that cannot cross,
@@ -337,14 +337,14 @@ modes, and the proposal fitted to them spans both. Agreeing tuning chains do not
 that the run found every mode. Some of the wrong runs emit no warning at all, and the
 others only the warning that one replicate holds most of the variance (`variance`),
 which does not name the cause
-([Diagnostics and warnings](../guide/diagnostics.md#measured-rates)).
+([Measured rates](../reference/warnings.md#measured-rates)).
 
 Two things help. Runs with different seeds disagree by far more than their error bars,
 so running more than one seed shows the failure whenever their tuning chains settle in
 different modes. They need not: on the same target with a second mode of standard
 deviation 0.3, the tuning chains of all 20 seeds tried settled in the wider mode, and
 every run estimated the weight 0.7 as 1 (runs of the same experiment, with the same setup,
-as the [measured rates](../guide/diagnostics.md#measured-rates) of the tuning warning),
+as the [measured rates](../reference/warnings.md#measured-rates) of the tuning warning),
 so agreement between seeds does not show that every mode was found. And when the modes are known, from optimizations started at
 several points or from the model, an {class}`~telescopic.kernels.Independence` proposal
 given explicitly can cover them all. It needs only where the modes are, not their
@@ -370,8 +370,8 @@ modes it is given: a mode that no optimization found stays as invisible as befor
 
 ## A start far wider than the target
 
-The line fit of [Getting started](../getting-started.md), on its data `x`, `y` and
-`yerr`, with the log-density of [telescopic beside emcee](beside-emcee.md), which takes
+The line fit of the [Quickstart](../start/quickstart.md#a-first-run), on its data `x`, `y` and
+`yerr`, with the log-density of [Coming from emcee](../start/coming-from-emcee.md), which takes
 one point or a batch, and its exact Gaussian posterior, computed as there:
 
 ```{code-cell} python
@@ -468,7 +468,7 @@ print(f"smallest {ratios[0]:.3f}, second largest {ratios[-2]:.3f}, largest {rati
 assert ratios[-1] > 10 * ratios[-2]
 ```
 
-One replicate causes it, as [Initial distributions](../guide/targets.md#choosing-one)
+One replicate causes it, as [Initial distributions](../guide/initial-distribution.md#choosing-one)
 explains for starts this far. A Gaussian centered on an optimizer's fit, with its inverse
 Hessian scaled by 100, is ten times wider than the posterior:
 
@@ -503,5 +503,5 @@ variances agree with the exact ones, with small error bars.
 
 Each run above printed its warnings as it ended, or, for a slow pair, as it happened,
 except the runs of `compare_seeds`, which listed them.
-[Diagnostics and warnings](../guide/diagnostics.md) shows how to read them from a result
+[Warnings and errors](../reference/warnings.md) shows how to read them from a result
 and how to turn them into errors.

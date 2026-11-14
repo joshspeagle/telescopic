@@ -58,8 +58,8 @@ result.plot_tv_bound()                       # with the plot extra: distance fro
 length of each run from the meeting times of pilot pairs, runs 100 replicates, and warns
 when the run shows signs that its error bars are unreliable. The chains should start
 wider than the posterior, but not by orders of magnitude
-([Initial distributions](docs/guide/targets.md#choosing-one)).
-[Getting started](docs/getting-started.md) explains this example, and the
+([Initial distributions](docs/guide/initial-distribution.md#choosing-one)).
+The [Quickstart](docs/start/quickstart.md) explains this example, and the
 [tutorials](docs/tutorials/) work through others.
 
 ## What it guarantees

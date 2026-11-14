@@ -1,6 +1,6 @@
 """The rates that the guide quotes from the review of x123, measured with the package.
 
-Question: the passage "Checking the gradient" of docs/guide/targets.md quotes warning
+Question: the passage "Checking the gradient" of docs/guide/log-density.md quotes warning
 rates of the check that the adversarial review (review/REVIEW.md) measured with the
 registered code (gradcheck.check). Does the package's own check,
 ``telescopic._gradient_check.check_gradient``, give the same rates on the same families

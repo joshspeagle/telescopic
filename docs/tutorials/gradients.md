@@ -100,7 +100,7 @@ same error bars, MALA and HMC evaluate the log-density {glue:text}`fewer_mala:.0
 often as the log-density. Whether that saves time depends on what a gradient costs, and
 on how much of its work the log-density shares: a function that returns both, passed as
 `log_prob_and_grad`, is called once where `log_prob` and `grad` are called one after the
-other ([Targets](../guide/targets.md#the-value-and-the-gradient-in-one-call)).
+other ([The value and the gradient in one call](../guide/log-density.md#the-value-and-the-gradient-in-one-call)).
 
 ## A logistic regression
 
@@ -127,7 +127,7 @@ def grad(beta, X, y):
 ```
 
 The pairs start from a Gaussian ten times wider than an optimizer's error bars
-([Initial distributions](../guide/targets.md#choosing-one)):
+([Initial distributions](../guide/initial-distribution.md#choosing-one)):
 
 ```{code-cell} python
 fit = optimize.minimize(
@@ -167,15 +167,15 @@ assert np.all(np.abs(z) < 3)
 
 The differences are of the size of their standard errors: the two kernels agree. Here
 their automatic step sizes coupled; on some targets, log-concave or not, they do not
-([When the automatic step fails](../guide/kernels.md#when-the-automatic-step-fails)), and
+([When the automatic step fails](../guide/step-size.md#when-the-automatic-step-fails)), and
 the step size must be given and checked against pilot meeting times
-([Checking a step size](../guide/kernels.md#checking-a-step-size)).
+([Checking a step size](../guide/step-size.md#checking-a-step-size)).
 
 ## A gradient that is not the derivative
 
 A sampler built with `grad` and a gradient kernel first compares `grad` with differences
 of `log_prob` at 8 draws of the initial distribution, before tuning
-([Checking the gradient](../guide/targets.md#checking-the-gradient)). A gradient that
+([Checking the gradient](../guide/log-density.md#checking-the-gradient)). A gradient that
 leaves out the prior's term, $-\beta/25$, is no longer the derivative of `log_prob`, and
 the sampler says so as it is built:
 

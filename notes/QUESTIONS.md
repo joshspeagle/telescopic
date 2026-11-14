@@ -63,7 +63,8 @@ Each item has the default that work proceeds on until Josh answers.
   tested is not adopted; a guard that acts only near a resonance and the jitter both
   enter the pre-registered test of issue #91, with the Gaussian of unequal scales added
   and the predictions posted on that issue before it runs (DECISIONS #199). Meanwhile the
-  kernels guide and a note on the error raised when `k` cannot be chosen name the case.
+  guide "Check and set a step size" and a note on the error raised when `k` cannot be
+  chosen name the case.
   Default, as ruled: no change until the test of issue #91 decides.
 - [ ] **The one-product reflection at every dimension (issue #83, pull request #159).** Josh
   approved "the two-product reflection from about 50 dimensions", expecting seeded coupled

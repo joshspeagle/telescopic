@@ -4,10 +4,23 @@ kernelspec:
   name: python3
 ---
 
-# telescopic beside emcee
+# Coming from emcee
 
-This page runs telescopic and emcee on the line fit of
-[Getting started](../getting-started.md), with the same number of log-density
+| emcee | telescopic |
+|---|---|
+| walkers, which move together as an ensemble | replicates: independent pairs of chains |
+| burn-in steps, discarded | `k`, chosen from pilot meeting times; the bias left at `k` is corrected, not ignored |
+| the autocorrelation time, which sets the error bars | meeting times, which set the cost; the error bars come from independent replicates |
+| `get_chain(flat=True)` | `result.measure`: atoms whose weights can be negative; they are not samples, so plot them with their weights ([Signed measures](../guide/estimates.md#signed-measures), [Plot a result](../guide/plots.md)) |
+| `log_prob_fn(theta, *args)`, `vectorize=True`, `pool=` | the same: `log_prob(theta, *args)`, `vectorize=True`, `pool=`, except that `log_prob` returns the log-density alone, without blobs; derived quantities come from `result.estimate` after the run |
+
+telescopic does not make chains mix faster. Where one chain mixes slowly, as between
+distant modes, pairs meet late and replicates cost more. Its gain is error bars that do
+not depend on judging convergence, from replicates that run in parallel without
+communication.
+
+The rest of this page runs telescopic and emcee on the line fit of
+the [Quickstart](quickstart.md), with the same number of log-density
 evaluations. The errors of the data are known, so the posterior is Gaussian and known
 exactly, and both samplers' estimates can be checked against it.
 
@@ -24,7 +37,7 @@ x, y, yerr = data()
 
 A line fit like that of emcee's tutorial, without its underestimated errors: 50 points
 `x`, `y` from the line $y = -0.9x + 4.3$, with Gaussian errors whose standard deviations
-`yerr`, between 0.1 and 0.6, are known; [Getting started](../getting-started.md#a-first-run)
+`yerr`, between 0.1 and 0.6, are known; the [Quickstart](quickstart.md#a-first-run)
 draws them. The log-density is the log-likelihood, so the prior is flat. It takes one
 point of shape `(2,)`, or a batch of shape `(n, 2)` as both samplers pass with
 `vectorize=True`. `Counted` wraps it to count the points at which a sampler evaluates it:
@@ -66,8 +79,8 @@ exact_std = np.sqrt(np.diag(np.linalg.inv(precision)))
 
 ## telescopic
 
-We run the line fit from Getting started, starting from a Gaussian ten times wider than an optimizer's error
-bars ([Initial distributions](../guide/targets.md#choosing-one)), with the log-density
+We run the line fit from the Quickstart, starting from a Gaussian ten times wider than an optimizer's error
+bars ([Initial distributions](../guide/initial-distribution.md#choosing-one)), with the log-density
 evaluated in batches:
 
 ```{code-cell} python
@@ -168,4 +181,4 @@ telescopic's is the standard error of a mean of independent replicates, whose es
 are unbiased for any burn-in `k` ([Theory](../theory.md#guarantees-and-their-limits)). It
 is valid as the number of replicates grows, provided their variance is finite, and it
 needs no judgment of convergence: the meeting times bound the distance from
-stationarity instead ([Getting started](../getting-started.md)).
+stationarity instead ([Quickstart](quickstart.md)).

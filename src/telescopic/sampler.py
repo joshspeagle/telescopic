@@ -127,7 +127,7 @@ class CoupledSampler:
         Compare the gradient with differences of the log-density at 8 draws of the
         initial distribution when the sampler is built, if the kernel evaluates a
         gradient, and warn where they disagree (Checking the gradient, in
-        :doc:`/guide/targets`): ``grad`` with differences of ``log_prob``, or the
+        :doc:`/guide/log-density`): ``grad`` with differences of ``log_prob``, or the
         gradient of ``log_prob_and_grad`` with differences of its own values. With
         ``grad`` it costs 40 evaluations of ``log_prob`` and 8 of ``grad`` for float64
         values, 8 more of each for a float32 ``grad`` and again for a float32
@@ -309,7 +309,7 @@ class CoupledSampler:
 
         The first call tunes the kernel, completes the pilot to 100 pairs for an automatic
         ``k``, and fixes the settings of the later calls. The result warns about the
-        conditions listed under Warnings, in :doc:`/guide/diagnostics`.
+        conditions listed under Warnings, in :doc:`/reference/warnings`.
 
         The first Ctrl-C during the replicates lets those in progress finish and returns a
         result flagged ``interrupted``; the next call runs the missing replicates first. A
@@ -494,7 +494,7 @@ class CoupledSampler:
                         "with MALA or HMC, an automatic step size can fail to couple: try a "
                         "step_size checked on pilot pairs, or, for HMC with a given n_steps "
                         "or cov, leaving them unset (When the automatic step fails, in the "
-                        "kernels guide)"
+                        "guide 'Check and set a step size')"
                     )
                 raise
             raise ValueError(
@@ -623,7 +623,7 @@ def sample(
         Its estimates are unbiased unless ``max_iter`` censors a pair, which biases them
         and warns, or a Ctrl-C interrupts the run, which leaves them consistent and flags
         the result ``interrupted``. It warns about the conditions listed under Warnings,
-        in :doc:`/guide/diagnostics`.
+        in :doc:`/reference/warnings`.
 
     Examples
     --------
