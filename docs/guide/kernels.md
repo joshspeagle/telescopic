@@ -180,7 +180,7 @@ such a step. Two settings expose it:
 The remedy is to leave `n_steps` and `cov` to the kernel: `HMC()` chose `k` at every seed
 of both examples.
 
-Setup of these runs: telescopic at commits COMMIT-A and ce89da8, Python 3.13.18, NumPy
+Setup of these runs: telescopic at commits 5b98f6c and ce89da8, Python 3.13.18, NumPy
 2.5.4 and SciPy 1.18.1, `OMP_NUM_THREADS=1`, on an Intel Xeon processor at 2.10 GHz with
 4 logical cores.
 
