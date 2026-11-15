@@ -11,6 +11,7 @@ from telescopic.diagnostics import (
     tv_bound,
     variance_share,
     w1_bound,
+    wide_start,
 )
 from telescopic.engine import run
 from telescopic.initial import Normal
@@ -197,6 +198,31 @@ def test_the_tuning_warning_names_coordinates_whose_r_hat_is_nan(rhat, disagree)
     assert (conditional in message) == disagree
     nan = [i for i, value in enumerate(rhat) if np.isnan(value)]
     assert f"never moved in coordinates {nan} (R-hat NaN)" in message
+
+
+@pytest.mark.parametrize(
+    ("width", "k_rule", "kinds"),
+    [
+        (None, 5, []),
+        (30.0, 5, []),
+        (30.1, 5, ["wide"]),
+        (30.1, 9, ["wide"]),
+        (30.1, 4, []),
+        (30.1, None, []),
+    ],
+)
+def test_a_start_wider_than_thirty_times_the_target_is_listed_unless_k_passes_the_rules(
+    width, k_rule, kinds
+):
+    # The run's k is 5: listed while it is at most the pilot rule's k.
+    report = TuningReport(np.zeros(2), np.eye(2), np.full(4, 0.23), np.ones(2), 100, None, width)
+    result = synthetic([2, 3], [0.0, 1.0], k=5, tuning=report)
+    result._k_rule = k_rule
+    assert [issue.kind for issue in issues(result)] == kinds
+    if kinds:
+        message = wide_start(report)
+        assert message.startswith("the initial distribution is about 30 times wider")
+        assert "use a narrower initial distribution, or else give a larger k" in message
 
 
 def test_the_tuning_warning_names_a_coordinate_whose_steps_round_away():

@@ -193,7 +193,8 @@ Kernel-specific tests:
   - more than 25% bias corrections;
   - one replicate holding more than half the variance at $R \ge 100$, and not one holding exactly half;
   - a tail index below 2 at $R \ge 500$;
-  - disagreeing pilots.
+  - disagreeing pilots;
+  - an initial width above 30, for a run whose `k` is at most the pilot rule's; not at exactly 30, not for a larger `k`, and not without a pilot (DECISIONS #259).
 
   `variance_share_of` names the moment and the coordinate that hold the largest variance share, the first coordinate included.
 

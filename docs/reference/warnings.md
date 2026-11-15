@@ -26,7 +26,7 @@ condition below that applies, at the time this table gives:
 | Warning | Emitted |
 |---|---|
 | `censored`, `late`, `variance`, `tail` | when the run ends, about the result of all its {term}`replicates <replicate>` so far |
-| `tuning` | when the kernel is tuned, before any {term}`pair` runs |
+| `tuning`, `wide` | when the kernel is tuned, before any {term}`pair` runs |
 | `slow` | when a pair passes the [threshold](#slow-pairs-slow) in this process, or when the run ends on a pool |
 
 {meth}`telescopic.Result.check`
@@ -66,7 +66,8 @@ holds it as `variance_share_of`, and the index of the replicate that holds it, w
 the warning names, as `variance_share_replicate`, whether or not the warning fires.
 **Meaning:** heavy tails or rare excursions make the error bars unreliable. A replicate
 whose chain is still on its way to the target at `k` does this, as from a start far
-wider than the target ([Initial distributions](../guide/initial-distribution.md#choosing-one)), and so does a
+wider than the target ([Initial distributions](../guide/initial-distribution.md#choosing-one)),
+which the `wide` warning looks for ([A start far wider than the target](#a-start-far-wider-than-the-target-wide)), and so does a
 replicate that found a mode that the others missed. **Remedy:** check the initial
 distribution, and look for a mode that the other replicates missed, starting with the
 one named; its row in the `replicates` of an estimate is its position among the
@@ -110,6 +111,29 @@ several modes, unless the initial distribution already covers every mode, one th
 coordinates centered near 0, or the kernel's parameters given instead of tuned
 ([Kernels](../guide/kernels.md)). Chains that agree can still all sit in one mode, and the
 warning is then silent ([Tuning](../guide/kernels.md#tuning)).
+
+### A start far wider than the target (`wide`)
+
+**Trigger:** the tuning pilot's initial width, `result.tuning.initial_width`, how many
+times wider than the target the initial distribution is
+({attr}`telescopic.tuning.PilotRun.initial_width` defines it), exceeds 30. It costs no
+evaluation of the target. The warning is emitted whenever tuning runs, from
+{meth}`~telescopic.CoupledSampler.tune`, {meth}`~telescopic.CoupledSampler.meeting_times`
+or the first {meth}`~telescopic.CoupledSampler.run`. {func}`telescopic.diagnostics.issues`
+and {meth}`telescopic.Result.check` list it unless the run's `k` is larger than the `k`
+that the meeting-time pilot's rule gave when the run's settings were fixed, or no such
+pilot had run then: a larger `k` is its remedy. A kernel given with every parameter has
+no tuning pilot, and the warning is then silent. **Meaning:** the
+automatic `k`, the 99% quantile of the pilot's meeting times, leaves about one pair in a
+hundred meeting while its chain is still on its way to the target; from a start this
+wide, those replicates can dominate the variance of the estimates
+([Initial distributions](../guide/initial-distribution.md#choosing-one)). **Remedy:**
+first a narrower initial distribution; failing that, a larger `k` given by hand; a
+confirmation round of pilot pairs at lag `k` is an option, which does not always raise
+`k` ([A start far wider than the target](../guide/settings.md#a-start-far-wider-than-the-target)).
+A geometric mean reads a start that is far too wide in only a few of many coordinates
+as moderately wide, and the warning can then stay silent; a start offset from the
+target but no wider does not trigger it either.
 
 ### Slow pairs (`slow`)
 
@@ -157,6 +181,27 @@ log-densities, and the first two targets `sample()`'s default settings:
   variance warning in 37 of 200 runs, whose 95% intervals of $E[x_0^2]$ covered the truth
   in 95% of them against 97% in the other runs; at $R = 500$, the variance warning in 4
   of 50 runs and the tail warning in 14.
+- The `wide` warning, over 200 tuning seeds of each case, with the random walk's
+  tuning pilot. From the default starts of {func}`~telescopic.examples.gaussian` in 1,
+  2, 10 and 50 dimensions, {func}`~telescopic.examples.banana`,
+  {func}`~telescopic.examples.mixture`, {func}`~telescopic.examples.funnel` and
+  {func}`~telescopic.examples.pumps`, and from the [Quickstart](../start/quickstart.md)'s
+  start ten times wider than the line fit's posterior, it fired in none of 1,800 runs,
+  whose largest initial width was 14.1 (the pump model). From starts
+  $\mathcal N(\mu, w^2\Sigma)$, with the exact mean $\mu$ and covariance $\Sigma$ of the
+  Gaussians in 1, 10 and 50 dimensions with correlation 0.9, the line fit and the
+  banana, it fired in none of 1,000 runs at $w = 10$, whose largest width was 21.5, and in
+  887 of 1,000 at $w = 100$: in every run on the four targets other than the banana, and in
+  87 of 200 on the banana, whose tuning chains often had not converged, so that their
+  spread was itself wide. The `tuning` warning fired in 112 of the 113 runs that the
+  `wide` warning missed. The threshold of 30 was chosen from these runs and then
+  checked on new seeds: on 500 runs each of the cases whose width had passed 10, it fired
+  in none from the pump model's and the line fit's default starts and from the 10-fold
+  starts of the Gaussians and the line fit, and in 1 of 500 from the banana's 10-fold
+  start, whose width there reached 38.3; on 200 runs of each 100-fold start, in every
+  run off the banana and in 69 of 200 on it, where the `tuning` warning fired in all but
+  one of the others. These runs used telescopic at commit 2707eb9 and NumPy 2.5.3, on the
+  machine below.
 - The bimodal mixture of Jacob, O'Leary & Atchadé (2020, §5.1),
   {func}`telescopic.examples.mixture`, from $\mathcal N(10, 1)$, with a random walk of
   proposal variance 1, `k = 50`, `m = 500`, `lag = 1` and $R = 1000$: the 95% intervals
