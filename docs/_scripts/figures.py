@@ -21,7 +21,9 @@
   error it raises and the remedy that its message names, checked against the messages of
   small runs made to raise them;
 * ``pipeline.svg`` (V9): the steps of an automatic run and the arguments that skip them,
-  checked against the package's constants and two small runs.
+  checked against the package's constants and two small runs;
+* ``result.svg`` (V13): the attributes of a :class:`telescopic.Result`, checked against a
+  small run's, and the methods that read its signed measures and meeting times.
 
 The figures are drawn on the light figure ground with the colors, faces, sizes and
 helpers of ``brand.py``: magenta for chain X, teal for chain Y, the ink of met chains once
@@ -1299,6 +1301,102 @@ def pipeline() -> str:
     return svg(width, 40.0 + 3 * row + tall + 12, label, "".join(body))
 
 
+# V13's groups of a Result's attributes: a heading and its lines, each a line of attributes
+# between backticks with their shapes; and the methods that read the first two groups.
+HOLDS = (
+    (
+        "`measure`: the kept replicates that met",
+        ("`atoms` (N, d)", "`weights` (N,)", "`replicate` (N,)"),
+        ("estimate(h)", "quantile(q)", "histogram(dims)"),
+    ),
+    (
+        "every replicate, censored ones included",
+        ("`index` (R_total,)", "`meeting_times` (R_total,)", "`costs` (R_total,)"),
+        ("tv_bound(t)",),
+    ),
+    (
+        "the run's settings and record",
+        (
+            "`k`, `m`, `lag`, `thin`, `max_iter`, `keep`",
+            "`seed`, `kernel`, `initial`, `tuning`, `pilot`",
+            "`names`, `ndim`",
+        ),
+        (),
+    ),
+    (
+        "counts",
+        (
+            "`n_replicates`, `n_kept`, `n_censored`",
+            "`n_log_prob`, `n_grad`, `n_grad_zeroed`",
+            "`wall_time`, `interrupted`, `abandoned`",
+        ),
+        (),
+    ),
+)
+
+
+def holds() -> str:
+    """V13: a Result's attributes in four groups, with arrows from the signed measures and
+    the meeting times to the methods that read them."""
+    name = "result"
+    result = quietly(
+        lambda: telescopic.sample(
+            log_density, initial(), 50, kernel=kernel(), k=2, m=12, lag=LAG, rng=SEED
+        )
+    )
+    measure = result.measure
+    n_atoms = len(measure.weights)
+    drawn = {a for head, lines, _ in HOLDS for a in "".join((head, *lines)).split("`")[1::2]}
+    public = {a for a in vars(result) if not a.startswith("_")}
+    check(drawn == public | {"atoms", "weights", "replicate"}, name, "every attribute drawn")
+    check(
+        {"atoms", "weights", "replicate"} <= set(vars(measure)), name, "the measure's arrays"
+    )
+    check(
+        measure.atoms.shape == (n_atoms, result.ndim)
+        and measure.replicate.shape == (n_atoms,)
+        and result.meeting_times.shape == result.costs.shape == result.index.shape,
+        name,
+        "the shapes of the arrays",
+    )
+    h = measure.per_replicate(lambda x: x[:, 0])
+    check(
+        np.isclose(result.estimate(lambda x: x[:, 0]).value, h.mean())
+        and np.array_equal(
+            result.tv_bound(np.arange(20)),
+            telescopic.diagnostics.tv_bound(result.meeting_times, result.lag, np.arange(20)),
+        ),
+        name,
+        "estimate reads the measure and tv_bound the meeting times",
+    )
+    width, line, gap = 640.0, 24.0, 22.0
+    left, span = 20.0, 400.0
+    method_x, method_span = left + span + 24, 176.0
+    body, described, y = [], [], 14.0
+    for heading, lines, methods in HOLDS:
+        tall = 40 + line * len(lines)
+        body += [
+            box(left, y, span, tall, MUTED),
+            text(left + 14, y + 26, words(heading), "start", MUTED),
+            *(text(left + 14, y + 52 + line * j, words(s)) for j, s in enumerate(lines)),
+        ]
+        for j, method in enumerate(methods):
+            middle = y + tall / 2 + (j - (len(methods) - 1) / 2) * 40
+            body += [
+                arrow(left + span + 4, middle, method_x - 6, middle, BLUE),
+                box(method_x, middle - 16, method_span, 32),
+                text(method_x + method_span / 2, middle + 6, words(f"`{method}`"), "middle", BLUE),
+            ]
+        read = f"; read by {', '.join(methods)}" if methods else ""
+        described.append(f"{heading}: {'; '.join(lines)}{read}".replace("`", ""))
+        y += tall + gap
+    label = (
+        "Four boxes of a Result's attributes, from top to bottom, with arrows from the first "
+        "two to the methods that read them. " + ". ".join(described) + "."
+    )
+    return svg(width, y - gap + 14, label, "".join(body))
+
+
 # --------------------------------------------------------------------------- output
 
 
@@ -1313,6 +1411,7 @@ def outputs() -> dict[Path, str]:
         OUT / "cost.svg": cost(),
         OUT / "remedies.svg": remedies(),
         OUT / "pipeline.svg": pipeline(),
+        OUT / "result.svg": holds(),
     }
 
 

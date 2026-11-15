@@ -20,6 +20,15 @@ result = telescopic.sample(
 
 ## What a result holds
 
+```{diagram} result
+The attributes of a {class}`telescopic.Result`, in four groups. `measure`, a
+{class}`telescopic.SignedMeasure`, holds the atoms, weights and replicate indices of the
+kept replicates that met, $N$ atoms in $d$ dimensions, which `estimate`, `quantile` and
+`histogram` read. The meeting times and costs cover every replicate, censored ones
+included, and `tv_bound` reads the meeting times. The settings, the record of the run and
+the counts complete it; the table below gives each.
+```
+
 | Attribute | Content |
 |---|---|
 | `n_replicates`, `n_censored` | $R$, the number of {term}`replicates <replicate>` whose {term}`pairs <pair>` met, and the number of pairs censored at `max_iter` ([Censored pairs](warnings.md#censored-pairs-censored)) |
