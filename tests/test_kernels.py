@@ -17,7 +17,6 @@ from telescopic.kernels import (
     State,
     hmc,
     independence,
-    mala,
 )
 from telescopic.kernels import metropolis as metropolis_hastings
 from telescopic.kernels.base import acceptance
@@ -316,7 +315,7 @@ def test_products_use_blas_exactly_for_a_vectorized_target(name, vectorize, monk
         flags.append(blas)
         return np.asarray(matvec(matrix, vectors.view(Recorded), blas=blas))
 
-    for module in (mala, metropolis_hastings, hmc, couplings, independence, tuning):
+    for module in (metropolis_hastings, hmc, couplings, independence, tuning):
         monkeypatch.setattr(module, "matvec", spy)
     target = Target(gaussian_log_prob, grad=lambda x: -x, vectorize=vectorize)
     if name == "pilot":
