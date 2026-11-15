@@ -83,27 +83,22 @@ table and its setup are read from the script's output:
 import json
 from pathlib import Path
 
-# The script's output, in the repository's benchmarks/results/.
-root = next(p for p in (Path.cwd(), *Path.cwd().parents) if (p / "benchmarks").is_dir())
-output = root / "benchmarks" / "results" / "run-faster.json"
-if not output.exists():
-    print("Not yet measured: run python benchmarks/run_faster.py.")
-else:
-    report = json.loads(output.read_text())
-    print(f"Seconds; {report['case']}.\n")
-    print(f"{'':20}{'point by point':>16}{'vectorized':>12}")
-    for row, seconds in report["seconds by pool and log-density"].items():
-        print(f"{row:20}{seconds['point by point']:>16.2f}{seconds['vectorized']:>12.2f}")
-    pilots = report["seconds with and without the pilots"]
-    print(
-        f"\nAutomatic pipeline: {pilots['automatic']:.2f} s, of which the replicates "
-        f"{pilots['of which the replicates']:.2f} s (k = {pilots['automatic k']}); "
-        f"kernel and k given: {pilots['kernel and k given']:.2f} s."
-    )
-    blas = ", ".join(f"{b['internal_api']} {b['version']}" for b in report["blas"])
-    print(
-        f"\nSetup: telescopic at commit {report['commit']}, Python {report['python']}, "
-        f"NumPy {report['numpy']} and SciPy {report['scipy']}, {blas} on one thread, "
-        f"on {report['machine']}, with {report['available CPUs']} CPUs available."
-    )
+# The script's output; the page runs in docs/guide/.
+report = json.loads(Path("../../benchmarks/results/run-faster.json").read_text())
+print(f"Seconds; {report['case']}.\n")
+print(f"{'':20}{'point by point':>16}{'vectorized':>12}")
+for row, seconds in report["seconds by pool and log-density"].items():
+    print(f"{row:20}{seconds['point by point']:>16.2f}{seconds['vectorized']:>12.2f}")
+pilots = report["seconds with and without the pilots"]
+print(
+    f"\nAutomatic pipeline: {pilots['automatic']:.2f} s, of which the replicates "
+    f"{pilots['of which the replicates']:.2f} s (k = {pilots['automatic k']}); "
+    f"kernel and k given: {pilots['kernel and k given']:.2f} s."
+)
+blas = ", ".join(f"{b['internal_api']} {b['version']}" for b in report["blas"])
+print(
+    f"\nSetup: telescopic at commit {report['commit']}, Python {report['python']}, "
+    f"NumPy {report['numpy']} and SciPy {report['scipy']}, {blas} on one thread, "
+    f"on {report['machine']}, with {report['available CPUs']} CPUs available."
+)
 ```
