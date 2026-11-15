@@ -414,6 +414,10 @@ All notable changes to this project are documented here. The format follows
 - `Independence` computes its weights with fewer operations per step, and a Student-t
   `MultivariateT` its normalizing constant once: a one-lane run with a Student-t
   proposal at d = 20 took 1.12 times less time. Its outputs are unchanged.
+- A request for random numbers costs less: on a nearly free target at d = 2, a step of
+  dual averaging (4 chains), or of the engine or a kernel at one lane, took 0.89 to 0.95
+  times the time, and 0.90 to 1.04 times at 256 lanes, within the spread of the runs.
+  Outputs are unchanged.
 - `CoupledSampler.resume(result)` continues a returned, loaded or merged result on a new
   sampler: it adopts the result's seed, replicates, settings, pilot and tuning, and the
   next `run` completes the replicates an interrupted run never started, then continues
