@@ -157,6 +157,84 @@ proposal mean $\rho x$ is not one of theirs, is a kernel of its own.
   $\{0, \dots, K-1\}$, given as log-probabilities of shape `(n, K)`, with 3 uniforms per
   row.
 
+## A template
+
+Every member a kernel needs, to copy and fill in: `step`, `coupled_step` and `__repr__`,
+then the members whose defaults the kernel may override, each returning its default:
+
+```{code-cell} python
+from telescopic.kernels import Kernel, State
+
+
+class MyKernel(Kernel):
+    def __init__(self, scale):
+        self.scale = scale  # parameters only: nothing is kept between steps
+
+    def step(self, target, state, draws):
+        # Move n chains, row i of every request of draws for chain i. Return the new
+        # states, with the fields of `state` valid at the new positions, and each chain's
+        # probability of accepting its proposal, shape (n,).
+        raise NotImplementedError
+
+    def coupled_step(self, target, state_x, state_y, draws):
+        # Move n pairs, each chain with exactly the law of step. Where the coupling makes
+        # the two positions equal, give the second chain a copy of the first chain's
+        # position, log-density, gradient and Markov fields.
+        raise NotImplementedError
+
+    def __repr__(self):
+        return f"MyKernel(scale={self.scale})"
+
+    # The members below have defaults; keep only those the kernel changes.
+
+    @property
+    def needs_grad(self):
+        return False  # True when the kernel evaluates the gradient
+
+    @property
+    def needs_log_prob(self):
+        return True  # False when it never evaluates the log-density
+
+    @property
+    def ndim(self):
+        return None  # the dimension that the kernel's parameters fix
+
+    @property
+    def is_tuned(self):
+        return True  # False while a parameter is unset
+
+    def tune(self, target, initial, rng=None, *, pilot=None):
+        # A tuned copy and its report; the kernel itself and None when nothing is unset.
+        return self, None
+
+    @property
+    def markov_fields(self):
+        return ()  # the fields of `extra` that are part of the Markov state
+
+    def init_extra(self, state):
+        return {}  # the initial values of the kernel's own fields, each of shape (n, ...)
+```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The template overrides only members of Kernel, the two abstract methods among them, and
+# returns their defaults.
+members = {name for name in vars(MyKernel) if not name.startswith("_")}
+assert members <= set(dir(Kernel)) and Kernel.__abstractmethods__ <= members
+
+
+class Bare(Kernel):
+    step = coupled_step = None
+
+
+template, bare = MyKernel(1.0), Bare()
+for name in ("needs_grad", "needs_log_prob", "ndim", "is_tuned", "markov_fields"):
+    assert getattr(template, name) == getattr(bare, name), name
+assert template.init_extra(None) == bare.init_extra(None)
+assert template.tune(None, None) == (template, None) and bare.tune(None, None) == (bare, None)
+```
+
 ## An example: AR(1)
 
 The kernel $x' = \rho x + \sqrt{1 - \rho^2}\,\xi$, with $\xi \sim \mathcal N(0, 1)$,
@@ -230,6 +308,64 @@ from telescopic.testing import check_coupling, fixed_draws
 
 report = check_coupling(AR1(0.9), target, x=[0.5], y=[0.8], rng=1)
 report, report.passed()
+```
+
+The check compares moves in distribution. Drawn by hand for the same kernel and points,
+the quantiles of each chain's coupled moves against those of the kernel alone lie on the
+diagonal:
+
+```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      Two quantile-quantile plots side by side, for chain X from 0.5 in magenta and
+      chain Y from 0.8 in teal: the quantiles of the coupled moves against those of
+      the kernel alone fall along the gray diagonal.
+  figure:
+    caption: >-
+      The quantiles of 10,000 coupled steps of AR(1) from $x = 0.5$ and $y = 0.8$,
+      chain $X$ in magenta and chain $Y$ in teal, against the quantiles of 10,000
+      steps of the kernel alone from the same points. Each chain's points fall on
+      the diagonal, so each chain of the coupling moves with the law of the
+      kernel, the first rule above.
+---
+import matplotlib.pyplot as plt
+from scipy import stats
+
+from telescopic import plotting
+from telescopic.testing import random_draws
+
+n = 10_000
+kernel = AR1(0.9)
+points = kernel.init_state(target, np.array([[0.5], [0.8]]))
+start_x, start_y = points.take(np.zeros(n, int)), points.take(np.ones(n, int))
+coupled = kernel.coupled_step(target, start_x, start_y, random_draws(n, rng=3))
+levels = np.linspace(0.005, 0.995, 199)
+fig, axes = plt.subplots(1, 2, figsize=(6, 3), sharex=True, sharey=True)
+qq = {}
+for ax, chain, start, moved, color, seed in zip(
+    axes, "XY", (start_x, start_y), coupled, (plotting.CHAIN_X, plotting.CHAIN_Y), (4, 5)
+):
+    alone = kernel.step(target, start, random_draws(n, rng=seed))[0]
+    qq[chain] = moved.x[:, 0], alone.x[:, 0]
+    ax.axline((0, 0), slope=1, color="gray", linewidth=0.8)
+    ax.plot(
+        np.quantile(alone.x[:, 0], levels),
+        np.quantile(moved.x[:, 0], levels),
+        ".",
+        color=color,
+        markersize=3,
+    )
+    ax.set(title=f"chain ${chain}$ from {start.x[0, 0]:g}", xlabel="kernel alone")
+axes[0].set(ylabel="coupled step");
+```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claim of the caption: the coupled and uncoupled moves agree in distribution.
+assert all(stats.ks_2samp(*qq[chain]).pvalue > 1e-3 for chain in "XY")
 ```
 
 {func}`telescopic.testing.fixed_draws` replays given random numbers, to compare a step
