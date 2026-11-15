@@ -229,21 +229,32 @@ ax.legend();
 ```{code-cell} python
 :tags: [remove-cell]
 
-# The claims of the next paragraph.
+from IPython.display import Markdown
+
+# The claims of the next paragraph; the first with a wide margin.
 median = {coupling: np.median(times) for coupling, times in tau.items()}
 assert median["crn"] > 10 * median["maximal"]
-assert median["maximal"] < median["two-scale"] < 2 * median["maximal"]
 glue("crn_over_maximal", float(median["crn"] / median["maximal"]), display=False)
+ratio = median["two-scale"] / median["maximal"]
+if ratio >= 0.9:
+    two_scale = (
+        f"has a median meeting time {ratio:.1f} times that of the maximal coupling alone:"
+        " on this model the maximal coupling succeeds from distant starts too, which"
+        " leaves the switch little to gain"
+    )
+else:
+    two_scale = (
+        f"has a median meeting time {ratio:.1f} times that of the maximal coupling alone:"
+        " here the common random numbers bring distant chains together faster"
+    )
+glue("two_scale", Markdown(two_scale), display=False)
 ```
 
-The {term}`maximal coupling` meets fastest.
 {term}`Common random numbers <common random numbers>` bring the two chains together but
 make them equal only when their distance reaches the rounding error of float64, so their
-median meeting time is {glue:text}`crn_over_maximal:.0f` times as long. The
-two-scale coupling switches to the maximal coupling only once the chains are within the
-threshold, and meets a little later than the maximal coupling alone: on this model the
-maximal coupling succeeds from distant starts too, which leaves the switch nothing to
-gain.
+median meeting time is {glue:text}`crn_over_maximal:.0f` times that of the
+{term}`maximal coupling`. The two-scale coupling, which switches to the maximal coupling
+only once the chains are within the threshold, {glue:md}`two_scale`.
 
 ## Estimates against the exact posterior
 
@@ -298,25 +309,14 @@ independent ones.
 ## What the warnings say
 
 ```{code-cell} python
-from telescopic import diagnostics
-
-checks = result.diagnostics()
-print(diagnostics.issues(result))
-print(f"largest share of one replicate: {checks['variance_share']:.2f}, in {checks['variance_share_of']}")
-print(f"pairs meeting after k + lag: {checks['late_fraction']:.3f}")
-print(f"tail index of the meeting times: {checks['tail_index']:.2f}")
-```
-
-```{code-cell} python
 :tags: [remove-cell]
 
-# The claim of the next paragraph.
-assert diagnostics.issues(result) == []
+from run_text import warnings_text
+
+glue("warnings_text", Markdown(warnings_text(result)), display=False)
 ```
 
-The run emits no warning: no pair was censored, and neither the fraction of pairs that
-met after $k + L$, nor the largest share of one replicate in a variance, nor the
-{term}`tail index` of the meeting times crosses the threshold of its warning. A Gibbs
-kernel has nothing to tune, so the warning about disagreeing
-tuning chains cannot apply. An empty list means only that none of the conditions of
-[Warnings and errors](../reference/warnings.md#warnings) holds, not that the run is right.
+{glue:md}`warnings_text` A Gibbs kernel has nothing to tune, so the warning about
+disagreeing tuning chains cannot apply. An empty list of warnings means only that none of
+the conditions of [Warnings and errors](../reference/warnings.md#warnings) holds, not
+that the run is right.
