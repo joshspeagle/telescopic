@@ -58,6 +58,7 @@ print(result.estimate(lambda t: t[:, 0] * t[:, 1]))
 :hidden:
 :caption: Start
 
+start/what-it-does
 start/is-it-right
 start/install
 start/quickstart
