@@ -336,5 +336,5 @@ replicates; the memory of this process does, since it keeps every chunk's replic
 then joins them. [Settings](settings.md#memory-and-thinning) gives their size, the
 {class}`telescopic.InputWarning <telescopic.warnings.InputWarning>` that the sampler emits
 when the run and its first estimates would take more than 1 GB, and `thin` and `keep`,
-which store fewer. With `keep`, each engine also holds the moments of its 256 lanes, 10.8
-MB at $d = 100$, so an integer pool holds that once per worker.
+which store fewer. With `keep`, each engine also holds the sums of the moments of its 256
+lanes, 20.9 MB at $d = 100$, so an integer pool holds that once per worker.

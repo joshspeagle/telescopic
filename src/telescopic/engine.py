@@ -40,9 +40,14 @@ LANES = 256
 MAX_TIME = 2**31 - 1
 
 # The dimension up to which a run that keeps a subset stores every second moment, and
-# above which only the squares: at d = 1,000 the full moments of 256 lanes would take
-# 1.03 GB (DECISIONS #236).
+# above which only the squares: at d = 1,000 the (d, d) sums of 256 lanes would take
+# 2.05 GB (DECISIONS #236, #245).
 FULL_MOMENTS = 100
+
+# The floats of a block of products that a run with keep adds at a time, 1 MiB, and the
+# dimension above which it adds the products of one atom at a time (DECISIONS #245).
+BLOCK = 2**17
+ROW_PRODUCTS = 24
 
 # The target's counters, which a run's replicates hold under the same names.
 COUNTS = ("n_log_prob", "n_grad", "n_grad_zeroed")
@@ -658,16 +663,20 @@ class _Batch:
         self.n_finished = 0
         self.counts = {name: getattr(target, name) for name in COUNTS}  # before any step
         # With keep: whether each lane's replicate stores its rows, and its center c_r and
-        # sums of w h_c(x), whose columns _pairs gives (spec R-EST-9).
+        # sums of w h_c(x): of x - c_r, and of the products, all of them up to FULL_MOMENTS
+        # dimensions, of which finish keeps those of _pairs, or the squares above it (spec
+        # R-EST-9).
         self.reducing = settings.keep is not None
         self.kept = np.ones(lanes, dtype=bool)
-        self.pairs = _pairs(ndim) if self.reducing else (np.zeros(0, int), np.zeros(0, int))
-        width = ndim + len(self.pairs[0]) if self.reducing else 0
-        self.center = np.zeros((lanes, ndim if self.reducing else 0))
-        self.sums = np.zeros((lanes, width))
-        self.reduced = _Chunks(integers, np.zeros((0, self.center.shape[1])), np.zeros((0, width)))
-        # Rows a block of the products holds, so that its temporary takes at most 1 MiB.
-        self.block = max(1, 2**17 // max(1, len(self.pairs[0])))
+        width = ndim if self.reducing else 0
+        self.full = self.reducing and ndim <= FULL_MOMENTS
+        self.center = np.zeros((lanes, width))
+        self.first = np.zeros((lanes, width))
+        self.second = np.zeros((lanes, width, width) if self.full else (lanes, width))
+        columns = width + len(_pairs(ndim)[0]) if self.reducing else 0
+        self.reduced = _Chunks(integers, np.zeros((0, width)), np.zeros((0, columns)))
+        # Rows a block of the products holds: its temporaries take at most a few MiB.
+        self.block = max(1, BLOCK // max(1, self.second[0].size))
 
     @property
     def active(self) -> BoolArray:
@@ -692,7 +701,8 @@ class _Batch:
         self.replicate[lanes] = [s.index for s in starting]
         if self.reducing:
             self.kept[lanes] = self.replicate[lanes] < cast(int, self.settings.keep)
-            self.sums[lanes] = 0.0
+            self.first[lanes] = 0.0
+            self.second[lanes] = 0.0
         self.t[lanes] = 0
         self.tau[lanes] = -1
         self._record(lanes, np.zeros(0, dtype=np.int64))
@@ -735,7 +745,10 @@ class _Batch:
         if len(lanes):
             self.finished.add(self.replicate[lanes], self.tau[lanes])
             if self.reducing:
-                center, sums = self.center[lanes], self.sums[lanes]
+                second = self.second[lanes]
+                if self.full:
+                    second = second[:, *_pairs(self.center.shape[1])]
+                center, sums = self.center[lanes], np.hstack([self.first[lanes], second])
                 censored = self.tau[lanes] < 0
                 center[censored], sums[censored] = np.nan, np.nan
                 self.reduced.add(self.replicate[lanes], center, sums)
@@ -803,12 +816,22 @@ class _Batch:
         if not store:
             return
         t = self.t[stepped]
-        averaged = stepped[(t >= k) & (t <= m) & ((t - k) % thin == 0)]
+        if t.max(initial=0) > MAX_TIME:
+            # A time beyond int32, reachable without a cap, raises naming its replicate,
+            # where the replicate stores the times of its atoms (spec R-EST-6).
+            late = stepped[(t > MAX_TIME) & self.kept[stepped]]
+            if len(late):
+                raise OverflowError(
+                    f"replicate {self.replicate[late[0]]} reached t = {self.t[late[0]]}, "
+                    "beyond the 2**31 - 1 that the times of its atoms hold; set max_iter"
+                )
+        chosen = (t >= k) & (t <= m) & ((t - k) % thin == 0)
+        averaged = stepped[chosen]
         if len(averaged):
             if self.reducing:
                 # c_r = X_k, before any atom of the replicate (the corrections start at
                 # k + L).
-                first = averaged[self.t[averaged] == k]
+                first = averaged[t[chosen] == k]
                 self.center[first] = self.x.x[first]
             self._add(averaged, self.x.x[averaged], np.full(len(averaged), self.weight))
         if not len(unmet):
@@ -836,31 +859,33 @@ class _Batch:
             lanes, points, weights = lanes[stored], points[stored], weights[stored]
             if not len(lanes):
                 return
-        self.atoms.add(self.replicate[lanes], points, weights, self._times(lanes))
+        self.atoms.add(self.replicate[lanes], points, weights, self.t[lanes].astype(np.int32))
 
     def _accumulate(self, lanes: IntArray, points: FloatArray, weights: FloatArray) -> None:
-        # Adds w h_c(x) to each lane's sums: x - c_r, then the products over _pairs, in
-        # blocks whose temporary holds at most 1 MiB (DECISIONS #180). Elementwise, with
-        # no BLAS, so that a row's sums do not depend on its batch (claims K1 and E1).
-        ndim, (i, j) = self.center.shape[1], self.pairs
+        # Adds w h_c(x) to each lane's sums: w (x - c_r), and w (x - c_r)_i (x - c_r)_j for
+        # every i, j, or i = j above FULL_MOMENTS. Elementwise, with no BLAS, so that a
+        # row's sums do not depend on its batch (claims K1 and E1). Up to ROW_PRODUCTS
+        # dimensions the products of a block of rows are formed at once, the block's
+        # temporaries within 1 MiB (DECISIONS #180); above, those of one row at a time,
+        # which skips gathering and scattering the lanes' (d, d) sums (DECISIONS #245).
+        dx = points - self.center[lanes]
+        self.first[lanes] += weights[:, None] * dx
+        if self.full and len(dx[0]) > ROW_PRODUCTS:
+            for lane, row, weight in zip(lanes.tolist(), dx, weights.tolist(), strict=True):
+                products = np.multiply.outer(row, row)
+                products *= weight
+                self.second[lane] += products
+            return
         for start in range(0, len(lanes), self.block):
             rows = slice(start, start + self.block)
-            lane, weight = lanes[rows], weights[rows, None]
-            dx = points[rows] - self.center[lane]
-            self.sums[lane, :ndim] += weight * dx
-            self.sums[lane, ndim:] += weight * (dx[:, i] * dx[:, j])
-
-    def _times(self, lanes: IntArray) -> npt.NDArray[np.int32]:
-        # The lanes' times as the atoms store them; a time beyond int32, reachable without
-        # a cap, raises naming its replicate (spec R-EST-6).
-        t = self.t[lanes]
-        late = t > MAX_TIME
-        if late.any():
-            raise OverflowError(
-                f"replicate {self.replicate[lanes[late][0]]} reached t = {t[late][0]}, beyond "
-                f"the 2**31 - 1 that the times of its atoms hold; set max_iter"
-            )
-        return t.astype(np.int32)
+            lane, weight, block = lanes[rows], weights[rows], dx[rows]
+            if self.full:
+                products = block[:, :, None] * block[:, None, :]
+                products *= weight[:, None, None]
+            else:
+                products = block * block
+                products *= weight[:, None]
+            self.second[lane] += products
 
 
 class _Chunks:
@@ -890,6 +915,12 @@ class _Chunks:
 
 def _concatenate(chunks: list[tuple[npt.NDArray[Any], ...]]) -> tuple[npt.NDArray[Any], ...]:
     return tuple(np.concatenate(parts) for parts in zip(*chunks, strict=True))
+
+
+def _lane_bytes(ndim: int) -> int:
+    # The bytes of one lane's center and sums in a run with keep: d, d and d^2 floats up to
+    # FULL_MOMENTS dimensions, 3 d above.
+    return 8 * (2 * ndim + (ndim * ndim if ndim <= FULL_MOMENTS else ndim))
 
 
 def _pairs(ndim: int) -> tuple[IntArray, IntArray]:

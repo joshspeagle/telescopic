@@ -14,7 +14,7 @@ time is the median of 7 runs, interleaved; the cost of the moments per atom is
 (keep=512 - keep=None) / atoms, and a mode's relative time is its time over keep=None's.
 BLAS is pinned to one thread. The script prints its setup.
 
-Also computed, for the documentation: the lane buffer of 256 lanes, 256 x 8 (p + d)
+Also computed, for the documentation: the sums of 256 lanes, 256 x engine._lane_bytes(d)
 bytes, and the stored rows per replicate above which keep saves memory,
 (p + d) / (d + 2.5), from 8 (p + d) bytes of moments against 8d + 20 per row.
 
@@ -106,7 +106,7 @@ def main():
             print(
                 f"{ndim:>4} {p:>6} {atoms:>8} {none:>8.3f} {every:>8.3f} {zero:>8.3f} "
                 f"{(every - none) / atoms * 1e9:>8.0f} {every / none:>8.2f} "
-                f"{zero / none:>8.2f} {256 * 8 * (p + ndim) / 1e6:>10.2f} "
+                f"{zero / none:>8.2f} {256 * engine._lane_bytes(ndim) / 1e6:>10.2f} "
                 f"{(p + ndim) / (ndim + 2.5):>6.1f}"
             )
 

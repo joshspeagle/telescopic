@@ -673,8 +673,8 @@ class CoupledSampler:
         # pass 1 GB. The pilot's meeting times stand in for those of the run, their tau - 1
         # for its tau - L; without a pilot, the run's pairs count as meeting at once. With
         # keep, only the kept replicates store atoms, and the peak adds the moments of every
-        # replicate, 8 (p + d) bytes each, a lane buffer of as many per lane in each engine
-        # (one per worker of an integer pool) and the block temporary, at most 1 MiB.
+        # replicate, 8 (p + d) bytes each, the lanes' sums in each engine (one per worker of
+        # an integer pool) and the block temporary, at most 1 MiB.
         coupled = np.zeros(1)
         if self.pilot is not None and np.isfinite(self.pilot).any():
             coupled = self.pilot[np.isfinite(self.pilot)] - 1
@@ -687,7 +687,7 @@ class CoupledSampler:
             engines = self.pool if isinstance(self.pool, int) else 1
             moments = n_replicates * row
             stored += moments
-            peak += moments + engines * engine.LANES * row + 2**20
+            peak += moments + engines * engine.LANES * engine._lane_bytes(self.ndim) + 2**20
             stored_what = "atoms, distances and moments"
         if peak > 1e9:
             # In one or two dimensions the peak can reach twice the factor's figure.
