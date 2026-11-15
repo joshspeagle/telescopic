@@ -1,4 +1,4 @@
-"""Draw the generated figures of the Concepts pages, as SVG files that the pages inline.
+"""Draw the generated figures of the documentation, as SVG files that the pages inline.
 
 ``python docs/_scripts/figures.py`` writes into ``docs/_static/figures/``:
 
@@ -14,7 +14,12 @@
   histogram of 1000 replicates run by :func:`telescopic.sample`;
 * ``tv-bound.svg`` (V6, a static frame): the survival function of the meeting times of
   1000 pairs run by :class:`telescopic.CoupledSampler`, its values that add up to the
-  bound on the total variation distance at one time, and that bound against time.
+  bound on the total variation distance at one time, and that bound against time;
+* ``cost.svg`` (V12): one coupled pair's kernel applications, from the same run as
+  ``two-chains.svg``, against the cost that the engine counts;
+* ``remedies.svg`` (V11): a chart from each condition that a run reports to the warning or
+  error it raises and the remedy that its message names, checked against the package's
+  source.
 
 The figures are drawn on the light figure ground with the colors, faces, sizes and
 helpers of ``brand.py``: magenta for chain X, teal for chain Y, the ink of met chains once
@@ -31,7 +36,9 @@ from __future__ import annotations
 
 import argparse
 import functools
+import inspect
 import itertools
+import re
 import sys
 import warnings
 from collections.abc import Callable
@@ -65,7 +72,7 @@ LIGHT = {name: value[0] for name, value in TOKENS.items()}
 CX, CY, MET, INK, MUTED, LINE = (LIGHT[n] for n in ("cx", "cy", "met", "ink", "muted", "line"))
 BLUE = CATEGORICAL[0]
 UPRIGHT = "ΔΦ"  # capital Greek letters are set upright, as in the theory's equations
-MINUS, PRIME = "\u2212", "\u2032"
+MINUS, PRIME, TIMES = "\u2212", "\u2032", "\u00d7"
 SIZE = FIGURE["text"]
 
 # The setting of the tutorial How it works: the target N(0, 1), random-walk Metropolis
@@ -930,6 +937,229 @@ def tv_bound() -> str:
     return svg(width, height, label, "".join(body))
 
 
+def cost() -> str:
+    """V12: one pair's kernel applications as cells along t: X alone for L steps, both
+    chains until they meet, then the met chain alone until m."""
+    name, lag, m = "cost", LAG, LAST
+    _, _, tau = first(lambda tau: lag + 5 <= tau <= m - 6, name)
+    total = lag + 2 * (tau - lag) + max(0, m - tau)
+    runs = pairs()
+    check(
+        np.all(runs.cost[runs.meeting_time == tau] == total),
+        name,
+        "the engine's cost equals L + 2(tau - L) + max(0, m - tau)",
+    )
+    width, height = 640.0, 308.0
+    t = Scale(0.0, m, 70.0, 610.0)
+    lane_x, lane_y, cell = 64.0, 112.0, 26.0
+
+    def cells(first_step: int, last_step: int, y: float, color: str) -> list[str]:
+        # The step from t - 1 to t fills the cell of t, with a gap between cells.
+        return [
+            f'<rect x="{_f(t(s - 1) + 1.5)}" y="{_f(y)}" width="{_f(t(s) - t(s - 1) - 3)}" '
+            f'height="{_f(cell)}" fill="{color}"/>'
+            for s in range(first_step, last_step + 1)
+        ]
+
+    body = [
+        text(
+            20,
+            30,
+            rich(
+                ("C", ""),
+                " = ",
+                ("L", ""),
+                " + 2(",
+                ("τ", ""),
+                f" {MINUS} ",
+                ("L", ""),
+                ") + max(0, ",
+                ("m", ""),
+                f" {MINUS} ",
+                ("τ", ""),
+                ")",
+            ),
+        ),
+        text(
+            20,
+            56,
+            f"= {lag} + 2 {TIMES} {tau - lag} + {m - tau} = {total} kernel applications",
+            "start",
+            MUTED,
+        ),
+        text(lane_x - 14, lane_y + 19, rich(("X", "")), "end", CX),
+        text(lane_x - 14, lane_y + cell + 27, rich(("Y", "")), "end", CY),
+        *cells(1, tau, lane_y, CX),
+        *cells(lag + 1, tau, lane_y + cell + 8, CY),
+        *cells(tau + 1, m, lane_y, MET),
+    ]
+    # A bracket under each part, with its number of steps and the applications of each.
+    bracket = lane_y + 2 * cell + 20
+    for a, b, count, what in (
+        (0, lag, rich(("L", ""), f" = {lag}"), f"{TIMES} 1"),
+        (lag, tau, rich(("τ", ""), f" {MINUS} ", ("L", ""), f" = {tau - lag}"), f"{TIMES} 2"),
+        (tau, m, rich(("m", ""), f" {MINUS} ", ("τ", ""), f" = {m - tau}"), f"{TIMES} 1"),
+    ):
+        x0, x1 = float(t(a)) + 2, float(t(b)) - 2
+        middle = (x0 + x1) / 2
+        body += [
+            _stroke(
+                np.array([[x0, bracket], [x0, bracket + 6], [x1, bracket + 6], [x1, bracket]]),
+                MUTED,
+                FIGURE["rule"],
+            ),
+            text(middle, bracket + 28, count, "middle"),
+            text(middle, bracket + 50, what, "middle", MUTED),
+        ]
+    marks = {0: "0", lag: rich(("L", "")), tau: rich(("τ", "")), m: rich(("m", ""))}
+    body.append(time_axis(t, bracket + 70, range(m + 1), marks))
+    body.append(text(float(t(m)), bracket + 112, rich(("t", "")), "end", MUTED))
+    label = (
+        f"A replicate's kernel applications as cells along time t, from 0 to m = {m}, for a "
+        f"pair with lag L = {lag} that meets at tau = {tau}. Chain X, magenta, takes the first "
+        f"{lag} steps alone; from L to tau both chains step, X in magenta above and Y, teal, "
+        f"below, {tau - lag} coupled steps counted twice; from tau to m the met chain, dark, "
+        f"steps alone, {m - tau} more. Under each part, its number of steps and the "
+        f"applications of each step: 1, 2 and 1. Text: C = L + 2(tau - L) + max(0, m - tau) = "
+        f"{lag} + 2 x {tau - lag} + {m - tau} = {total} kernel applications."
+    )
+    return svg(width, height, label, "".join(body))
+
+
+def words(line: str) -> str:
+    """A line of text whose parts between backticks are set in the code face."""
+    parts = line.replace(" ", "\u00a0").split("`")
+    mono = f'<tspan font-family="{FONTS["mono"][4]}" font-size="0.9em">'
+    return "".join(mono + p + "</tspan>" if i % 2 else p for i, p in enumerate(parts))
+
+
+# V11's rows, by when each condition arises: where a reader sees it, the warning or error it
+# raises, the remedy in a few words, and phrases of the package's source that the figure
+# checks, from the field or kind and from the message that names the remedy.
+CHART = (
+    (
+        "before the replicates",
+        (
+            (
+                ("pilot pairs unmet", "at their cap"),
+                "ValueError",
+                ("a checked step size, a", "wider start, or `k` given"),
+                (
+                    "pilot pairs never met within their cap",
+                    "step_size checked on pilot pairs",
+                    "wider initial distribution",
+                    "give k, lag and m explicitly",
+                ),
+            ),
+            (
+                ("`tuning.rhat`",),
+                "tuning",
+                ("a start that covers", "every mode"),
+                ("def rhat(", 'Issue("tuning"', "covers every mode, use one that does"),
+            ),
+        ),
+    ),
+    (
+        "while they run",
+        (
+            (
+                ("a pair unmet", "for long"),
+                "slow",
+                ("the kernel and", "the start"),
+                ('"slow"', "has not met after", "look at the kernel and the initial distribution"),
+            ),
+        ),
+    ),
+    (
+        "in the summary",
+        (
+            (
+                ("`censored`",),
+                "censored",
+                ("a larger `max_iter`,", "or none"),
+                ('"censored"', "a larger max_iter, or none"),
+            ),
+            (("`late_fraction`",), "late", ("a larger `k`",), ('"late_fraction"', "a larger k")),
+            (
+                ("`variance_share`",),
+                "variance",
+                ("the start, and a mode", "the others missed"),
+                (
+                    '"variance_share"',
+                    "check the initial distribution",
+                    "a mode that the other replicates missed",
+                ),
+            ),
+            (
+                ("`tail_index`",),
+                "tail",
+                ("the kernel, and the", "survival function"),
+                ('"tail_index"', "survival function of plot_meeting_times, and at the kernel"),
+            ),
+        ),
+    ),
+)
+
+
+def remedies() -> str:
+    """V11: from each condition a run reports, to the warning or error it raises, to the
+    remedy that the message names."""
+    name = "remedies"
+    # The package's source with adjacent string literals joined, as Python joins them.
+    modules = (telescopic.diagnostics, telescopic.results, telescopic.sampler, telescopic.tuning)
+    source = re.sub(r'"\s*\n\s*f?"', "", "".join(inspect.getsource(m) for m in modules))
+    for _, rows in CHART:
+        for _, raised, _, phrases in rows:
+            for phrase in phrases:
+                check(phrase in source, name, f"the {raised} row's {phrase!r}")
+    width, row, pill = 640.0, 58.0, (226.0, 136.0, 34.0)
+    rule = FIGURE["rule"]
+    body = [
+        text(20, 28, "what you see", "start", MUTED),
+        text(pill[0] + pill[1] / 2, 28, "raises", "middle", MUTED),
+        text(404, 28, "remedy", "start", MUTED),
+    ]
+    y = 44.0
+    described = []
+    for heading, rows in CHART:
+        body += [
+            segment(20, y, width - 20, y, LINE, width=rule),
+            text(20, y + 24, heading, "start", MUTED),
+        ]
+        y += 36
+        for seen, raised, remedy, _ in rows:
+            middle = y + row / 2
+            for lines, x in ((seen, 20.0), (remedy, 404.0)):
+                first_line = middle + 6 - 11 * (len(lines) - 1)
+                body += [text(x, first_line + 22 * i, words(s)) for i, s in enumerate(lines)]
+            left, span, tall = pill
+            body += [
+                (
+                    f'<rect x="{_f(left)}" y="{_f(middle - tall / 2)}" width="{_f(span)}" '
+                    f'height="{_f(tall)}" rx="{_f(tall / 2)}" fill="none" stroke="{BLUE}" '
+                    f'stroke-width="{FIGURE["outline"]}"/>'
+                ),
+                text(left + span / 2, middle + 6, words(f"`{raised}`"), "middle", BLUE),
+                arrow(198, middle, left - 4, middle, BLUE),
+                arrow(left + span + 4, middle, 396, middle, BLUE),
+            ]
+            described.append(
+                f"{' '.join(seen).replace('`', '')} raises {raised}; remedy: "
+                f"{' '.join(remedy).replace('`', '')}"
+            )
+            y += row
+    label = (
+        "A chart in three columns, what you see, the warning or error it raises, and the "
+        "remedy, with arrows from left to right, in three groups. "
+        + ". ".join(
+            f"{heading.capitalize()}: " + "; ".join(described.pop(0) for _ in rows)
+            for heading, rows in CHART
+        )
+        + "."
+    )
+    return svg(width, y + 8, label, "".join(body))
+
+
 # --------------------------------------------------------------------------- output
 
 
@@ -941,6 +1171,8 @@ def outputs() -> dict[Path, str]:
         OUT / "telescoping.svg": telescoping(),
         OUT / "signed-measure.svg": signed_measure(),
         OUT / "tv-bound.svg": tv_bound(),
+        OUT / "cost.svg": cost(),
+        OUT / "remedies.svg": remedies(),
     }
 
 

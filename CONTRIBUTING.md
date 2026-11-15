@@ -86,7 +86,7 @@ The hero is one coupled pair run by telescopic; `hero_pair.py --check`, which CI
 runs, fails when the package no longer produces the saved pair and says what moved. Save
 the new pair with `hero_pair.py`, then run `brand.py`, which draws the hero from it.
 
-The figures of the Concepts pages are drawn by `docs/_scripts/figures.py` in the
+The generated figures of the site are drawn by `docs/_scripts/figures.py` in the
 identity's colors, from the package's own runs and from computations the script shows,
 into `docs/_static/figures/`; a page inlines one with the `{diagram}` directive, whose
 content is its caption. After a change to a figure, or to the package that moves one, run
