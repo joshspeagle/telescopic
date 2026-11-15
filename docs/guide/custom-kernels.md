@@ -7,7 +7,7 @@ kernelspec:
 # Write a kernel
 
 A kernel is a subclass of {class}`telescopic.kernels.Kernel` with two methods: `step`
-moves a batch of chains, and `coupled_step` moves a batch of pairs. The engine does the
+moves a batch of chains, and `coupled_step` moves a batch of {term}`pairs <pair>`. The engine does the
 rest.
 
 ## The interface
@@ -91,14 +91,14 @@ that has met. To run on a pool of processes, the kernel must be picklable
 {func}`telescopic.engine.run`, which the sampler calls:
 
 - draws each pair's starting points, runs the first chain alone for `lag` steps, then
-  applies `coupled_step` to the pairs that have not met, many replicates at a time;
+  applies `coupled_step` to the pairs that have not met, many {term}`replicates <replicate>` at a time;
 - compares the positions of each pair after every coupled step, exactly, and records the
-  meeting time;
+  {term}`meeting time`;
 - after the meeting applies `step` to the first chain alone, so the chains stay together
-  whatever the coupling does, and a pair that has met costs one chain;
+  whatever the {term}`coupling` does, and a pair that has met costs one chain;
 - gives each replicate its own random streams, so that its numbers depend only on the
   seed, its index and its own requests;
-- stores the signed measures, counts the cost, and censors the pairs that reach
+- stores the {term}`signed measures <signed measure>`, counts the cost, and censors the pairs that reach
   `max_iter`.
 
 ## Coupling primitives
@@ -117,7 +117,7 @@ proposal mean $\rho x$ is not one of theirs, is a kernel of its own.
   uniform per row. It is maximal: the draws coincide with probability
   $2\Phi(-\lVert C^{-1}(\mu_x - \mu_y)\rVert/2)$. With `blas=True`, for a vectorized
   target, it computes its products with BLAS.
-- {func}`telescopic.couplings.maximal` is the rejection maximal coupling of two
+- {func}`telescopic.couplings.maximal` is the rejection {term}`maximal coupling` of two
   distributions per row, objects with `rvs(random_state=...)` and a normalized `logpdf`
   or `logpmf`. Its number of draws is random, so it draws from each row's generator.
 - {func}`telescopic.couplings.discrete_maximal` couples two distributions on
@@ -129,7 +129,7 @@ proposal mean $\rho x$ is not one of theirs, is a kernel of its own.
 The kernel $x' = \rho x + \sqrt{1 - \rho^2}\,\xi$, with $\xi \sim \mathcal N(0, 1)$,
 leaves $\mathcal N(0, 1)$ invariant and always moves. From $x$ it draws from
 $\mathcal N(\rho x, s^2)$ with $s^2 = 1 - \rho^2$, so its coupled step draws the two
-moves from the reflection-maximal coupling of $\mathcal N(\rho x, s^2)$ and
+moves from the {term}`reflection-maximal coupling` of $\mathcal N(\rho x, s^2)$ and
 $\mathcal N(\rho y, s^2)$:
 
 ```{code-cell} python

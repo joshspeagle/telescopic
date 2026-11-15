@@ -6,7 +6,7 @@ kernelspec:
 
 # Choose a kernel
 
-A kernel moves one chain and leaves the target invariant. Its coupling moves a pair of
+A kernel moves one chain and leaves the target invariant. Its {term}`coupling` moves a {term}`pair` of
 chains so that each chain, on its own, moves by the kernel, and so that the two can
 become equal ([Theory](../theory.md#coupled-chains)). Each kernel of
 {mod}`telescopic.kernels` comes with its coupling. The argument `kernel` of
@@ -23,7 +23,7 @@ the draws differ, the offset of the second from its mean mirrors that of the fir
 | `MALA` | `"mala"` | log-density, gradient | reflection-maximal proposals, common uniform | `cov`, `step_size` |
 | `HMC` | `"hmc"` | log-density, gradient | common step, momentum and uniform; reflection-maximal meeting step | `cov`, `step_size` |
 | `Independence` | `"independence"` | log-density | common proposal and uniform | `proposal` |
-| `Gibbs` | none | full conditionals | per block: maximal, common random numbers, or both | nothing |
+| `Gibbs` | none | full conditionals | per block: maximal, {term}`common random numbers`, or both | nothing |
 | `Mixture` | none | what its components need | common component | its components' parameters |
 
 `"auto"`, the default, is the random walk even when a gradient is given, as `grad` or
@@ -47,15 +47,15 @@ the draws differ, the offset of the second from its mean mirrors that of the fir
 
 Coupling does not make a kernel mix faster
 ([Theory](../theory.md#guarantees-and-their-limits)): a kernel that mixes slowly meets
-slowly. To compare kernels on a target, compare their inefficiency, the variance of a
-replicate's estimate times the cost of a replicate ([Settings](settings.md#cost)).
+slowly. To compare kernels on a target, compare their {term}`inefficiency`, the variance of a
+{term}`replicate`'s estimate times the cost of a replicate ([Settings](settings.md#cost)).
 [Gradients](../tutorials/gradients.md) compares the random walk, MALA and HMC on a
 Gaussian.
 
 ## Tuning
 
-Parameters left as `None` are tuned from four adaptive Metropolis chains, the tuning
-pilot ([Settings](settings.md)); parameters given are kept.
+Parameters left as `None` are tuned from four adaptive Metropolis chains, the
+{term}`tuning pilot` ([Settings](settings.md)); parameters given are kept.
 {meth}`telescopic.kernels.Kernel.tune` returns a tuned copy and the pilot's report. The
 sampler calls it once, before anything else runs, and keeps the tuned kernel:
 
@@ -91,11 +91,11 @@ Setup of these runs: telescopic at commit d014ac1, Python 3.13.18, NumPy 2.5.4 a
 $\log u < \log\pi(x') - \log\pi(x)$.
 
 - `coupling="reflection"`, the default, draws the two proposals from the
-  reflection-maximal coupling of their Gaussians and decides both acceptances with one
+  {term}`reflection-maximal coupling` of their Gaussians and decides both acceptances with one
   uniform, as in Jacob, O'Leary & Atchadé (2020) and O'Leary (2021). A coupled step
   evaluates the log-density at most twice per pair, once when the proposals coincide.
-- `coupling="maximal"` uses the rejection maximal coupling with independent residuals,
-  whose meeting times grow exponentially with the dimension (Jacob, O'Leary & Atchadé
+- `coupling="maximal"` uses the rejection {term}`maximal coupling` with independent residuals,
+  whose {term}`meeting times <meeting time>` grow exponentially with the dimension (Jacob, O'Leary & Atchadé
   2020, §4.2); it is there for comparison.
 - `coupling` also takes the coupling objects {class}`telescopic.couplings.Reflection()
   <telescopic.couplings.Reflection>` and {class}`telescopic.couplings.Maximal()

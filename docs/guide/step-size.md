@@ -23,7 +23,7 @@ the kernel alone, on chains near the bulk of the target, and Heng & Jacob (2019,
 show that settings that suit HMC alone can fail to bring coupled chains together. On
 targets that are not log-concave, such as the banana of
 {func}`telescopic.examples.banana` from its default initial distribution, the automatic
-steps of MALA and HMC leave pilot pairs apart. Log-concave targets can fail too, where
+steps of MALA and HMC leave pilot {term}`pairs <pair>` apart. Log-concave targets can fail too, where
 the log-density curves more sharply than where the step was tuned. Where the largest
 eigenvalue of $\Sigma H$, with $\Sigma$ = `cov` and $H$ the Hessian of $-\log\pi$,
 exceeds $4/\epsilon^2$, MALA's proposals overshoot: on a Gaussian of that Hessian, the
@@ -35,7 +35,7 @@ chain that starts in such a region can reject every proposal. On the logistic
 regression below, whose predictors nearly separate the outcomes, the automatic MALA
 leaves pilot pairs unmet. The symptom is pilot pairs still
 unmet at the cap, so that `sample` raises `ValueError` once the pilot has run, or very
-long meeting times. The remedy is an explicit `step_size`, checked as in
+long {term}`meeting times <meeting time>`. The remedy is an explicit `step_size`, checked as in
 [Checking a step size](#checking-a-step-size). On the banana, Heng & Jacob (2019, §5.2)
 report a mean meeting time of 158 with a fixed step of 1/500 and 500 leapfrog steps,
 `HMC(1/500, 500, cov=np.eye(2), jitter=0)`.
@@ -69,7 +69,7 @@ could not choose it at 2 of 10 seeds. The jitter costs little where there is no
 resonance: on {func}`telescopic.examples.gaussian` in 2 and 10 dimensions, at each
 `n_steps` where the fixed step does not resonate, the pilot's median meeting time times
 the gradients per iteration, a geometric mean over 30 seeds, was at most 1.17 times that
-of the fixed step. The inefficiency, the variance of a replicate's estimate times its
+of the fixed step. The {term}`inefficiency`, the variance of a {term}`replicate`'s estimate times its
 cost in gradients, a ratio of medians over seeds, was at most 1.31 times that of the
 fixed step, on {func}`telescopic.examples.mixture` with `n_steps=2`, and 1.13 times on
 the logistic regression below, over the seeds where the fixed step could choose `k`.
@@ -86,7 +86,7 @@ Intel Xeon processor at 2.10 GHz with 4 logical cores.
 ## Checking a step size
 
 Pilot pairs check a step size before a run. With every parameter of the kernel given,
-{meth}`telescopic.CoupledSampler.meeting_times` runs no tuning, only pairs with lag 1
+{meth}`telescopic.CoupledSampler.meeting_times` runs no tuning, only pairs with {term}`lag` 1
 until they meet or reach `max_iter`. Over a few step sizes, compare the mean cost of a
 pair: its evaluations per step times the mean meeting time, infinite when a pair is
 still unmet at the cap. Keep the step with the lowest cost.

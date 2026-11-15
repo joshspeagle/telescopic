@@ -1,6 +1,6 @@
 # Meeting times and distance to stationarity
 
-Every pair of a run has a meeting time, and the meeting times of many pairs say how
+Every {term}`pair` of a run has a {term}`meeting time`, and the meeting times of many pairs say how
 close the chain is to the target at each time. This page explains how to read their
 survival function and the bound on the distance to the target that it gives, and why the
 estimates do not rely on that bound. It uses the notation of
@@ -12,7 +12,7 @@ A pair's meeting time $\tau$ is the first time $t$ at which $X_t = Y_{t-L}$
 ([Two chains that meet](two-chains.md)). It is random, and it varies from pair to pair.
 Its **survival function** $P(\tau > t)$ is the probability that a pair has not yet met
 at time $t$, which a run estimates by the fraction of its pairs that have not. It is 1
-for every $t$ up to the lag: the chains are first compared at $t = L$, where $X_L$ and
+for every $t$ up to the {term}`lag`: the chains are first compared at $t = L$, where $X_L$ and
 $Y_0$, an independent draw, differ. It falls
 toward 0 as $t$ grows. How fast it falls depends on the kernel and on how far from the
 target the initial distribution starts the chains.
@@ -71,11 +71,11 @@ Four things to keep in mind when reading it:
   it is far below the bound at $k$ from pairs with a lag of 1.
 - **It bounds the law of the chain at one time.** The bound at $k$ says how far
   $\pi_k$, the law of the first averaged state, is from $\pi$, which is what a
-  burn-in chosen from a trace plot tries to judge by eye.
+  {term}`burn-in` chosen from a trace plot tries to judge by eye.
 
 ## The estimates do not rely on it
 
-The estimates of telescopic are unbiased for every burn-in $k$, whatever the bound at
+The estimates of telescopic are {term}`unbiased` for every burn-in $k$, whatever the bound at
 $k$ ([The telescoping correction](telescoping-correction.md#unbiased-for-any-burn-in)).
 The bound measures how much work the correction does. Its first term at $k$ is the
 fraction of pairs that meet after $k + L$, the pairs that carry a correction. Where the

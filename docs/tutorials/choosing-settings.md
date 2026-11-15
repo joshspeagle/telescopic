@@ -8,7 +8,7 @@ kernelspec:
 
 This page applies the automatic recipe of Atchadé & Jacob (2024) step by step on a
 correlated Gaussian, then measures the cost and the variance that other settings give.
-[Settings](../guide/settings.md) describes `k`, `m` and the lag.
+[Settings](../guide/settings.md) describes `k`, `m` and the {term}`lag`.
 
 ## The pilot
 
@@ -32,7 +32,7 @@ sampler.tune()
 sampler.kernel
 ```
 
-{meth}`~telescopic.CoupledSampler.meeting_times` runs 100 new pairs with lag 1 until
+{meth}`~telescopic.CoupledSampler.meeting_times` runs 100 new {term}`pairs <pair>` with lag 1 until
 they meet, and {func}`telescopic.tuning.choose_k` takes the 99% quantile of $\tau - 1$ as
 $k$:
 
@@ -42,7 +42,7 @@ k = telescopic.tuning.choose_k(times)
 print(f"k = {k}; pairs with tau - 1 > k: {np.sum(times - 1 > k)} of {len(times)}")
 ```
 
-The recipe then sets the lag to $k$ and $m$ to $10k$. The pilot's meeting times, with $k$
+The recipe then sets the lag to $k$ and $m$ to $10k$. The pilot's {term}`meeting times <meeting time>`, with $k$
 dashed and the level 0.01 dotted:
 
 ```{code-cell} python
@@ -83,7 +83,7 @@ recipe = sampler.run(500)
 recipe.summary()
 ```
 
-The footer gives the cost of a replicate, its relative cost, and the fraction of pairs
+The footer gives the cost of a {term}`replicate`, its {term}`relative cost`, and the fraction of pairs
 that met after $k + L$, the ones that carry a bias correction
 ([The summary](../reference/result-fields.md#the-summary) defines each entry). That fraction need not
 equal the pilot's fraction after $k + 1$: the lag changes the law of $\tau - L$.
@@ -161,7 +161,7 @@ assert "late" in rows["k_50"]["issues"]
 
 Every estimate lies within two standard errors of 1: the settings change the variance,
 not the bias ([Settings](../guide/settings.md)).
-The inefficiency compares settings at equal compute, and the recipe's is the lowest:
+The {term}`inefficiency` compares settings at equal compute, and the recipe's is the lowest:
 
 - **$m = 2k$** costs less per replicate, but averages only $k + 1$ states: its relative
   cost and its inefficiency are higher than the recipe's.
@@ -171,7 +171,7 @@ The inefficiency compares settings at equal compute, and the recipe's is the low
   bias correction: its inefficiency is orders of magnitude above the recipe's, and the
   run warns that $k$ may be too small.
 
-The variance of lag 1 comes from its late pairs. A difference $\Delta_t$ enters a
+The variance of lag 1 comes from its {term}`late pairs <late pair>`. A difference $\Delta_t$ enters a
 replicate's estimate with the weight $v_t/(m - k + 1)$ of the
 [theory](../theory.md#the-time-averaged-estimator), and $v_t$ grows by one every $L$
 steps from $t = k + L$ to $t = m + L$. A pair that meets at $\tau = k + L + 100$ carries

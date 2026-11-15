@@ -106,5 +106,5 @@ variance and the cost, and decides whether the chains find every mode.
   when the run ends on a pool, and its chains stay there until they accept a proposal of
   finite density. A start many proposal scales outside the support may never get one,
   and without `max_iter` the run then waits forever.
-- **The last state of an ensemble** keeps the estimates unbiased when the chain
+- **The last state of an ensemble** keeps the estimates {term}`unbiased` when the chain
   converges from it, but covers only the modes that the ensemble found.

@@ -9,9 +9,9 @@ kernelspec:
 With the gradient of the log-density, telescopic can run the Metropolis-adjusted Langevin
 algorithm ({class}`telescopic.kernels.MALA`) and Hamiltonian Monte Carlo
 ({class}`telescopic.kernels.HMC`), whose proposals follow the gradient. On targets like
-the Gaussian below, their pairs of chains meet sooner than those of random-walk
+the Gaussian below, their {term}`pairs <pair>` of chains meet sooner than those of random-walk
 Metropolis. The [kernels guide](../guide/kernels.md) describes each kernel and its
-coupling.
+{term}`coupling`.
 
 ```{code-cell} python
 :tags: [remove-cell]
@@ -26,7 +26,7 @@ correlation 0.9, with its log-density, its gradient and the initial distribution
 $\mathcal N(0, 4I)$. Its functions take batches of points, hence `vectorize=True`. The
 three kernels run with the same seed, so their pairs start from the same points. The
 random walk's runs are long, so it averages every tenth state (`thin=10`), which stores
-about a tenth of the atoms; thinning does not shorten a run ([Theory](../theory.md)).
+about a tenth of the {term}`atoms <atom>`; thinning does not shorten a run ([Theory](../theory.md)).
 
 ```{code-cell} python
 import numpy as np
@@ -48,10 +48,10 @@ for kernel in ("rwmh", "mala", "hmc"):
     )
 ```
 
-For each kernel: the median meeting time of the 100 pilot pairs, which run with lag 1
-(`Result.pilot`); the burn-in `k`, their 99% quantile minus 1; the relative cost
+For each kernel: the median {term}`meeting time` of the 100 pilot pairs, which run with {term}`lag` 1
+(`Result.pilot`); the {term}`burn-in` `k`, their 99% quantile minus 1; the {term}`relative cost`
 ([Theory](../theory.md#cost)); and the evaluations of the log-density and of its gradient
-per replicate in the main run.
+per {term}`replicate` in the main run.
 
 ```{code-cell} python
 print("kernel  median tau     k  relative cost  log_prob   grad")
@@ -64,7 +64,7 @@ for kernel, result in results.items():
     )
 ```
 
-With gradients the pairs meet sooner, and `k`, the lag and the run length `m` shrink with
+With gradients the pairs meet sooner, and `k`, the lag and the {term}`run length` `m` shrink with
 the meeting times, since the lag equals `k` and `m = 10k`. The relative cost is about the
 same for the three kernels. They differ in the steps a replicate takes and in what a step
 evaluates. MALA evaluates the log-density and its gradient once per chain and step, HMC
@@ -93,7 +93,7 @@ for kernel in ("mala", "hmc"):
     glue(f"fewer_{kernel}", float(evaluations["rwmh"] / evaluations[kernel]), display=False)
 ```
 
-The last column, times $0.01^2$, is the inefficiency $\mathbb E[C]\,\mathbb V[H]$
+The last column, times $0.01^2$, is the {term}`inefficiency` $\mathbb E[C]\,\mathbb V[H]$
 ([Theory](../theory.md#cost)) with the cost counted in log-density evaluations. For the
 same error bars, MALA and HMC evaluate the log-density {glue:text}`fewer_mala:.0f` and
 {glue:text}`fewer_hmc:.0f` times less often than the random walk, and the gradient as

@@ -1,7 +1,7 @@
 # Signed measures, not samples
 
-A run of telescopic does not return samples of the target. Each replicate returns a set
-of points, its atoms, each with a weight, and some of the weights are negative. This
+A run of telescopic does not return samples of the target. Each {term}`replicate` returns a set
+of points, its {term}`atoms <atom>`, each with a weight, and some of the weights are negative. This
 page explains where the negative weights come from, what can be computed from the
 atoms, and what cannot. It uses the notation of
 [Theory](../theory.md#signed-measures).
@@ -12,7 +12,7 @@ A replicate's estimate of the expectation $\pi(h)$ has two parts
 ([The telescoping correction](telescoping-correction.md)): the average of $h$ over the
 states of $X$ at the averaged times $S$, which run from $k$ to $m$, and the bias
 correction, a weighted sum of the differences $\Delta_t = h(X_t) - h(Y_{t-L})$ from
-$t = k + L$ up to the meeting time $\tau$. Both parts add up values of $h$ at points,
+$t = k + L$ up to the {term}`meeting time` $\tau$. Both parts add up values of $h$ at points,
 each with a coefficient, so the estimate is the weighted sum of $h$ over a set of
 weighted points. Written with $\delta_x$, a unit mass at the point $x$, that set is a
 **signed measure**:
@@ -33,8 +33,8 @@ with the weight $c_t$ and $Y_{t-L}$ with the weight $-c_t$. The two weights of a
 difference cancel, so a replicate's weights sum to 1, the weight of the average alone.
 
 The negative weights sit on the states of $Y$, the chain that runs $L$ steps behind. A
-pair that meets within $k + L$ steps has no difference to add, and its weights are the
-$1/|S|$ of an ordinary average after a burn-in. A pair that meets later carries the
+{term}`pair` that meets within $k + L$ steps has no difference to add, and its weights are the
+$1/|S|$ of an ordinary average after a {term}`burn-in`. A pair that meets later carries the
 correction, its atoms on $X$ with positive weights and its atoms on $Y$ with negative
 weights together. The correction as a whole has expected value equal to minus the bias
 that the average after a burn-in of $k$ steps leaves
@@ -63,7 +63,7 @@ $\pi(h)$, and three kinds of results follow from the atoms and their weights
 ([Estimate anything from a result](../guide/estimates.md)).
 
 - **Expectations** of any function, such as means, probabilities and covariances, are
-  unbiased, with error bars from the replicates
+  {term}`unbiased`, with error bars from the replicates
   ([Error bars from replicates](error-bars.md)). Since some weights are negative, an
   estimate can fall outside the range of $h$, such as a probability below 0 or a
   variance below 0 ([Covariances and variances](../guide/estimates.md#covariances-and-variances)).
@@ -73,7 +73,7 @@ $\pi(h)$, and three kinds of results follow from the atoms and their weights
   these signed histograms, for each coordinate and for each pair of coordinates
   ([Plot a result](../guide/plots.md)).
 - **Quantiles** and credible intervals come from the atoms of all the replicates pooled,
-  with their cumulative weights made non-decreasing. They are consistent as the number
+  with their cumulative weights made non-decreasing. They are {term}`consistent` as the number
   of replicates grows, but not unbiased, and they come without standard errors
   ([Theory](../theory.md#estimates-from-many-replicates)).
 

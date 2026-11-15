@@ -1,8 +1,8 @@
 # Two chains that meet
 
-telescopic runs its chains in pairs that are built to become exactly equal. This page
+telescopic runs its chains in {term}`pairs <pair>` that are built to become exactly equal. This page
 explains what such a pair is, how two chains on a continuous space can land on the same
-point, why they stay together once they have, and what the lag between them is for. It
+point, why they stay together once they have, and what the {term}`lag` between them is for. It
 uses the notation of [Theory](../theory.md#coupled-chains).
 
 ## A coupling
@@ -13,7 +13,7 @@ moves the two chains together: it draws the random numbers of their two moves jo
 so that the moves are related, while each chain on its own moves exactly as $P$ would
 move it. Someone who watched only $X$, or only $Y$, would see an ordinary Markov chain
 with kernel $P$, and at each time $t$ each chain has the law $\pi_t$ of an uncoupled chain
-started from $\pi_0$. The coupling changes how the two chains move relative to each
+started from $\pi_0$. The {term}`coupling` changes how the two chains move relative to each
 other, and nothing about either one alone; in particular it does not make either chain
 approach the target faster ([Theory](../theory.md#guarantees-and-their-limits)).
 
@@ -44,7 +44,7 @@ probability $2\Phi(-\delta/2)$, with $\delta$ the distance between the centers.
 
 The probability $2\Phi(-\delta/2)$ falls quickly as the two centers move apart,
 measured in units of the proposal's spread, so the proposals of chains several
-proposal widths apart rarely coincide. The meeting time of a pair is random, and it
+proposal widths apart rarely coincide. The {term}`meeting time` of a pair is random, and it
 varies from pair to pair.
 
 ## Equal, and then together
@@ -79,7 +79,7 @@ The lag sets which differences the pair provides. A difference between $X_t$ and
 $Y_{t-L}$ compares the chain at two times $L$ steps apart, which is what
 [the telescoping correction](telescoping-correction.md) adds up. The lag also sets how
 much correction a pair needs: a pair that meets within $k + L$ steps contributes no
-correction, and its estimate is the ordinary average after the burn-in. telescopic's
+correction, and its estimate is the ordinary average after the {term}`burn-in`. telescopic's
 automatic settings take $L = \max(1, k)$, so that most pairs meet that early
 ([Settings](../guide/settings.md#the-settings)), and
 [Choosing k, m and the lag](../tutorials/choosing-settings.md) compares a lag of 1 with
