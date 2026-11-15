@@ -122,13 +122,23 @@ print("TV bound at t = 0, 500, 1000:", tv[[0, 500, 1000]])
 ```{code-cell} python
 :tags: [remove-cell]
 
-# The claims of the next paragraph.
+from IPython.display import Markdown
+
+# The claims of the next paragraph, from this run.
 assert not np.isinf(pairs.meeting_time).any() and not np.isinf(lag_one).any()
-assert tv_lag_one[500] == 1 and tv[500] < 0.2
+informative_one = int(np.argmax(tv_lag_one < 1))
+below = int(np.argmax(tv < 0.2))
+glue(
+    "bounds_text",
+    Markdown(
+        f"The lag-1 bound is 1, which says nothing, until $t = {informative_one}$; the bound"
+        f" with lag {lag} falls below 0.2 at $t = {below}$."
+    ),
+    display=False,
+)
 ```
 
-The lag-1 bound is 1, which says nothing, until long after the bound with the longer lag
-has fallen below 0.2. {func}`telescopic.diagnostics.w1_bound` bounds the 1-Wasserstein
+{glue:md}`bounds_text` {func}`telescopic.diagnostics.w1_bound` bounds the 1-Wasserstein
 distance in the same way, from the distances $\lVert X_t - Y_{t-L} \rVert$ that the
 engine records before each pair meets; it depends on the units of the coordinates
 ([Distance to stationarity](../guide/meeting-times.md#distance-to-stationarity)).
@@ -216,13 +226,13 @@ bias_error = np.array(spreads) / np.sqrt(len(x))
 assert np.all(gap <= tv[times] + 3 * np.hypot(tv_error[times], gap_error))
 assert np.all(bias <= w1[times] + 3 * np.hypot(w1_error[times], bias_error))
 early = (times >= 100) & (times <= 400)
-assert np.all(gap[early] > tv[times][early] / 2)
+glue("tightness", float(np.max(tv[times][early] / gap[early])), display=False)
 ```
 
-The figure compares them. Every measured difference lies below its bound, within three
-standard errors of their difference, and from $t = 100$ to $400$, while the chains are
-still on their way to the target, the TV bound is less than twice the measured
-difference.
+The figure below compares them. Every measured difference lies below its bound, within
+three standard errors of their difference. From $t = 100$ to $400$, while the chains are
+still on their way to the target, the TV bound is at most
+{glue:text}`tightness:.1f` times the measured difference.
 
 ```{code-cell} python
 ---
@@ -269,9 +279,8 @@ for ax in (left, right):
     ax.legend(fontsize=8)
 ```
 
-No warning was raised. {meth}`~telescopic.CoupledSampler.meeting_times` warns of a pair
-that is slow to meet ([Slow pairs](../reference/warnings.md#slow-pairs-slow)), and none
-was.
+{meth}`~telescopic.CoupledSampler.meeting_times` warns of a pair that is slow to meet
+([Slow pairs](../reference/warnings.md#slow-pairs-slow)), below the cell that ran it.
 {func}`telescopic.engine.run` emits no warning: it records what its caller would warn
 about, so this page checked its pairs itself and found none unmet at the cap. An unmet
 pair would make each bound an underestimate.
