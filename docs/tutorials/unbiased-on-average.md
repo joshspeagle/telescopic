@@ -29,9 +29,9 @@ init = telescopic.initial.Normal(mean=[5.0], cov=[1.0])
 k, m = 5, 20
 ```
 
-From a start five standard deviations away, a burn-in of 5 steps is too short, and the
-MCMC average is biased. The bias correction removes this bias on average. 4000 replicates
-for each of two lags, 1 and $k$, estimate the mean of the target, 0, with `z` the estimate
+From a start five standard deviations away, a {term}`burn-in` of 5 steps is too short, and the
+MCMC average is biased. The bias correction removes this bias on average. 4000 {term}`replicates <replicate>`
+for each of two {term}`lags <lag>`, 1 and $k$, estimate the mean of the target, 0, with `z` the estimate
 in units of its error bar:
 
 ```{code-cell} python

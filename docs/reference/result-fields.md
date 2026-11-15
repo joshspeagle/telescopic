@@ -22,12 +22,12 @@ result = telescopic.sample(
 
 | Attribute | Content |
 |---|---|
-| `n_replicates`, `n_censored` | $R$, the number of replicates whose pairs met, and the number of pairs censored at `max_iter` ([Censored pairs](warnings.md#censored-pairs-censored)) |
+| `n_replicates`, `n_censored` | $R$, the number of {term}`replicates <replicate>` whose {term}`pairs <pair>` met, and the number of pairs censored at `max_iter` ([Censored pairs](warnings.md#censored-pairs-censored)) |
 | `k`, `m`, `lag`, `thin`, `max_iter` | the settings of the run ([Settings](../guide/settings.md)) |
 | `names`, `ndim` | the parameter names and the dimension $d$ |
-| `measure` | the replicates' signed measures |
-| `index`, `meeting_times`, `costs` | for every replicate, censored ones included: its index, its meeting time (`inf` if censored) and its kernel applications |
-| `n_log_prob`, `n_grad`, `wall_time` | the evaluations of the log-density and of its gradient, and the seconds, of the replicates, without tuning, the meeting-time pilot and the gradient check, which runs when the sampler is built |
+| `measure` | the replicates' {term}`signed measures <signed measure>` |
+| `index`, `meeting_times`, `costs` | for every replicate, censored ones included: its index, its {term}`meeting time` (`inf` if censored) and its kernel applications |
+| `n_log_prob`, `n_grad`, `wall_time` | the evaluations of the log-density and of its gradient, and the seconds, of the replicates, without tuning, the {term}`meeting-time pilot` and the gradient check, which runs when the sampler is built |
 | `kernel`, `initial` | the frozen kernel and the initial distribution |
 | `tuning`, `pilot` | the report of the tuning chains, and the meeting times of the lag-1 pilot pairs that chose `k`; `None` when not run |
 | `seed` | the root `numpy.random.SeedSequence`, which reproduces the run |
@@ -50,10 +50,10 @@ summary
 The columns of the table:
 
 - `mean`: the average of the replicates' estimates of the parameter's mean, which is
-  unbiased; `standard_error`: its Monte Carlo error, valid as the number of replicates
+  {term}`unbiased`; `standard_error`: its Monte Carlo error, valid as the number of replicates
   grows, however short each run.
 - `std`: $\sqrt{\max(0, \widehat{\mathrm{Var}})}$, from the unbiased estimate of the
-  variance; consistent, not unbiased.
+  variance; {term}`consistent`, not unbiased.
 - `q16`, `q50` and `q84`: the 16%, 50% and 84% quantiles of the pooled signed measures;
   consistent, not unbiased.
 
@@ -67,13 +67,13 @@ The lines below it:
   "no kept replicate" when none met, with the quantile columns then `nan`
   ([Keeping a subset](../guide/settings.md#keeping-a-subset));
 - the median, the 90% and 99% quantiles and the maximum of the meeting times of every
-  pair, where censored pairs sort above every pair that met, and a quantile that falls
+  pair, where {term}`censored pairs <censored pair>` sort above every pair that met, and a quantile that falls
   on one shows as `>` and the cap, such as `> 12` for `max_iter=12`; from 500
-  replicates, the tail index of those that met
+  replicates, the {term}`tail index` of those that met
   ([`tail`](warnings.md#heavy-tailed-meeting-times-tail)); and the number of censored
   pairs ([`censored`](warnings.md#censored-pairs-censored));
-- the mean cost of a replicate in kernel applications and in seconds, and the relative
-  cost, the mean cost over $m - k + 1$ ([Settings](../guide/settings.md#cost));
+- the mean cost of a replicate in kernel applications and in seconds, and the
+  {term}`relative cost`, the mean cost over $m - k + 1$ ([Settings](../guide/settings.md#cost));
 - the fraction of pairs that met after `k + lag`, censored ones included, with a
   one-sided 95% upper bound: only these replicates carry a bias correction, and with
   `lag = k` the fraction is close to the bound on the total variation distance at `k`

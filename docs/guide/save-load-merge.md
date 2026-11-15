@@ -22,7 +22,7 @@ result = telescopic.sample(
 
 ## Merging runs
 
-A sampler needs no merging: each call of `run` returns the result of all its replicates
+A sampler needs no merging: each call of `run` returns the result of all its {term}`replicates <replicate>`
 so far, and a new sampler continues a returned or loaded result with `resume`
 ([Continuing a run](#continuing-a-run)). {meth}`telescopic.Result.merge` joins runs made
 apart, such as runs of {func}`telescopic.engine.run` on separate ranges of replicate
@@ -51,7 +51,7 @@ merged.n_replicates
 
 The merged result is `interrupted` if a replicate requested in either run ran in neither.
 It keeps the names of the result whose `merge` was called, and its kernel, initial
-distribution, tuning report and pilot meeting times, each taken from the other result
+distribution, tuning report and pilot {term}`meeting times <meeting time>`, each taken from the other result
 where this one has none.
 
 ## Saving and loading
@@ -63,7 +63,7 @@ that lacks it. The kernel and the initial distribution are saved as their descri
 that the engine keeps for teaching are not saved. Loading a file whose schema is newer
 than the installed telescopic's raises `ValueError`. The file names the estimator family
 of the result, and a file of a family the installed telescopic does not know raises
-`ValueError` naming it. Files written before the times of the atoms were stored load with
+`ValueError` naming it. Files written before the times of the {term}`atoms <atom>` were stored load with
 those times rebuilt exactly from their settings and meeting times.
 
 ```{code-cell} python
@@ -81,7 +81,7 @@ loaded.kernel, np.array_equal(loaded.cov(), result.cov())
 {meth}`telescopic.CoupledSampler.resume` continues a result on a new sampler, built with
 the result's target, initial distribution and kernel. It adopts the result's seed,
 replicates, settings, pilot meeting times and tuning report, so the next `run` keeps
-`k`, `m`, the lag, `thin` and `max_iter`, first runs the replicates that an interrupted
+`k`, `m`, the {term}`lag`, `thin` and `max_iter`, first runs the replicates that an interrupted
 run never started, then new replicate indices above the highest the result requested.
 For a result returned in this session, pass its tuned kernel:
 
@@ -169,7 +169,7 @@ The replicates in progress when the error came are listed in the result's `aband
 and nothing of them is kept. They are the ones with the longest meeting times, since
 the others had finished, so leaving them out biases the estimates more than an
 interruption does; the summary says so until they have run. An error that recurs at a
-replicate recurs there when it runs again. An error in tuning or in the meeting-time
-pilot is raised as it is, and keeps nothing. With a log-density evaluated point by
+replicate recurs there when it runs again. An error in tuning or in the
+{term}`meeting-time pilot` is raised as it is, and keeps nothing. With a log-density evaluated point by
 point that gives the same value at a point on every call, the completed run's
 replicates are bitwise those of a run that did not fail.

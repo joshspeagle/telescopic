@@ -8,17 +8,17 @@ kernelspec:
 
 ## What a run does
 
-A run is a set of independent **replicates**. Each replicate is a pair of Markov chains,
+A run is a set of independent **replicates**. Each {term}`replicate` is a {term}`pair` of Markov chains,
 $X$ and $Y$, started from two independent draws of an initial distribution. $X$ runs
-ahead of $Y$ by the lag $L$ (the argument `lag`): it first takes $L$ steps alone; then
+ahead of $Y$ by the {term}`lag` $L$ (the argument `lag`): it first takes $L$ steps alone; then
 the two take coupled steps, which leave each an ordinary MCMC chain but make them likely
 to land on the same point. They **meet** when $X_t = Y_{t-L}$, and move together
-afterwards. The replicate's estimate is the average of $X$ from step $k$, the burn-in
+afterwards. The replicate's estimate is the average of $X$ from step $k$, the {term}`burn-in`
 (the argument `k`), to step $m$ (`m`), plus a correction made of the differences between
 the chains before they met, which removes the bias that the burn-in leaves. The estimate
-is a **signed measure**: points with weights that sum to 1, some of them negative.
+is a **{term}`signed measure`**: points with weights that sum to 1, some of them negative.
 
-The average of the replicates' estimates is **unbiased**: its expectation is the
+The average of the replicates' estimates is **{term}`unbiased`**: its expectation is the
 posterior expectation, whatever $k$, $m$ and $L$, from every initial distribution from
 which the chain converges, and its error bar is valid as the number of replicates grows.
 [How it works](../tutorials/how-it-works.md) shows a pair meeting, and [Theory](../theory.md)
@@ -76,14 +76,14 @@ result.summary()
 ```
 
 Before the replicates, `sample` ran two short pilots: four adaptive chains, which tuned
-the proposal of a random-walk kernel, and 100 pairs, whose meeting times chose `k`, the
+the proposal of a random-walk kernel, and 100 pairs, whose {term}`meeting times <meeting time>` chose `k`, the
 lag and `m`. It then ran 100 replicates.
 
 ## Reading the summary
 
 The table has one row per parameter: the estimate of the posterior mean, which is
 unbiased, with its standard error, and the standard deviation and the 16th, 50th and
-84th percentiles, which are **consistent**: they converge to the posterior's values as
+84th percentiles, which are **{term}`consistent`**: they converge to the posterior's values as
 the number of replicates grows, but are not unbiased at a fixed number. Below it are the
 run's diagnostics and the warnings that apply: [The summary](../reference/result-fields.md#the-summary)
 defines each entry, and [Warnings and errors](../reference/warnings.md) says what each
@@ -129,7 +129,7 @@ result.plot_tv_bound();
 
 ## A slow log-density
 
-Before the replicates run, tuning and the meeting-time pilot evaluate the log-density
+Before the replicates run, tuning and the {term}`meeting-time pilot` evaluate the log-density
 thousands of times, and tuning does so in this process.
 [A slow log-density](../guide/settings.md#a-slow-log-density) counts them and says how to
 skip either step, and [Parallel runs](../guide/parallel.md) how to run the pilot and the

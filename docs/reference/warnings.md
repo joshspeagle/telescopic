@@ -25,8 +25,8 @@ condition below that applies, at the time this table gives:
 
 | Warning | Emitted |
 |---|---|
-| `censored`, `late`, `variance`, `tail` | when the run ends, about the result of all its replicates so far |
-| `tuning` | when the kernel is tuned, before any pair runs |
+| `censored`, `late`, `variance`, `tail` | when the run ends, about the result of all its {term}`replicates <replicate>` so far |
+| `tuning` | when the kernel is tuned, before any {term}`pair` runs |
 | `slow` | when a pair passes the [threshold](#slow-pairs-slow) in this process, or when the run ends on a pool |
 
 {meth}`telescopic.Result.check`
@@ -42,11 +42,11 @@ elsewhere.
 
 **Trigger:** a pair reached `max_iter` without meeting. Without a cap, the default, every
 pair runs until it meets. With `max_iter`, a pair still unmet when $t$ reaches it is
-censored: its meeting time is `inf`, and it is left out of the estimates, of $R$ and of
-the signed measure. `result.n_censored` counts them. **Meaning:** leaving them out biases
+censored: its {term}`meeting time` is `inf`, and it is left out of the estimates, of $R$ and of
+the {term}`signed measure`. `result.n_censored` counts them. **Meaning:** leaving them out biases
 the estimates, since they are the replicates whose chains take longest to meet.
 **Remedy:** a new sampler with a larger `max_iter`, or none; a sampler keeps the cap of
-its first run. When censored pairs started where the target density is zero, the warning
+its first run. When {term}`censored pairs <censored pair>` started where the target density is zero, the warning
 says how many and advises an initial distribution inside the support first: such a pair
 may never meet, so a run without a cap could wait forever.
 
@@ -76,7 +76,7 @@ checks a function of your own.
 
 ### Heavy-tailed meeting times (`tail`)
 
-**Trigger:** with at least 500 replicates, Hill's estimate of the tail index of
+**Trigger:** with at least 500 replicates, Hill's estimate of the {term}`tail index` of
 $\tau - L + 1$ ({func}`telescopic.diagnostics.hill`), from its $\lfloor R/10 \rfloor$
 largest values, is below 2. `result.diagnostics()` reports it as `tail_index` whether or
 not the warning fires. Ties among the earliest meeting times can leave the estimate
@@ -118,7 +118,7 @@ sampler names the replicate in one warning per run. **Meaning:** the meeting tim
 heavy-tailed, and the run waits for that pair: a first Ctrl-C starts no new replicate
 but lets the pairs in progress finish, this one too, and a second stops the run without
 a result ([Parallel runs](../guide/parallel.md#interrupting-a-run)). **Remedy:** look at the
-kernel and the initial distribution. In the meeting-time pilot, whose own cap is on
+kernel and the initial distribution. In the {term}`meeting-time pilot`, whose own cap is on
 [Settings](../guide/settings.md#the-automatic-pipeline), the threshold is $10^4$.
 
 ## A run that warns

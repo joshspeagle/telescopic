@@ -24,7 +24,7 @@ mean, sd = np.array([1.0, -2.0]), np.array([0.5, 2.0])
 
 ## Initial distributions
 
-Each replicate draws the starting points $X_0$ and $Y_0$ of its pair independently from
+Each {term}`replicate` draws the starting points $X_0$ and $Y_0$ of its {term}`pair` independently from
 the initial distribution $\pi_0$, with its own random stream. `init` can be:
 
 - an object with a method `rvs(random_state=generator)` that returns one point:
@@ -70,7 +70,7 @@ for name, init in inits.items():
 
 ## Choosing one
 
-The estimates are unbiased for every initial distribution from which the chain
+The estimates are {term}`unbiased` for every initial distribution from which the chain
 converges ([Theory](../theory.md#guarantees-and-their-limits)), but the choice sets their
 variance and the cost, and decides whether the chains find every mode.
 
@@ -86,11 +86,11 @@ variance and the cost, and decides whether the chains find every mode.
   have several modes
   ([Disagreeing tuning chains](../reference/warnings.md#disagreeing-tuning-chains-tuning)), but
   chains that agree can all sit in one mode. From a start that covers every mode, pairs
-  that start in different modes take longer to meet, which the meeting times show,
+  that start in different modes take longer to meet, which the {term}`meeting times <meeting time>` show,
   unless the kernel was tuned to one mode and meets quickly inside it
   ([A tuned proposal that covers one mode](../tutorials/failure-modes.md#a-tuned-proposal-that-covers-one-mode)).
 - **Wider than the target, but not by orders of magnitude.** The automatic settings take
-  `k` at the 99% quantile of the pilot's meeting times and the lag equal to `k`, so
+  `k` at the 99% quantile of the pilot's meeting times and the {term}`lag` equal to `k`, so
   about one pair in a hundred meets while its chain is still on its way to the target.
   That replicate averages states far from the target without correction, and only rarer
   replicates whose other chain is late balance it, in expectation. From a start orders

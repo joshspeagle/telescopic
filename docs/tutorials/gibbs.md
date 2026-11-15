@@ -37,22 +37,22 @@ $$\lambda_i \mid \beta \sim \mathrm{Gamma}(1.802 + s_i, \text{rate } \beta + t_i
 coordinates of the point `x`, as a small object with `rvs`, `logpdf` and `ppf`, quicker
 to build than a frozen SciPy distribution ([Kernels](../guide/kernels.md#gibbs)).
 `pumps.blocks` lists the 11 blocks, one coordinate each. A Gibbs kernel never evaluates
-the log-density, so the sampler gets `log_prob=None`. The pairs start from
+the log-density, so the sampler gets `log_prob=None`. The {term}`pairs <pair>` start from
 `pumps.initial`, uniform on $(0.001, 5)$ in each coordinate.
 
 ## Three couplings
 
-The [kernels guide](../guide/kernels.md#gibbs) defines the three couplings of `Gibbs`:
+The [kernels guide](../guide/kernels.md#gibbs) defines the three {term}`couplings <coupling>` of `Gibbs`:
 
-- `"maximal"`, the default: the rejection maximal coupling of each block's two
+- `"maximal"`, the default: the rejection {term}`maximal coupling` of each block's two
   conditionals;
-- `"crn"`: common random numbers, here one uniform through both conditionals' `ppf`;
+- `"crn"`: {term}`common random numbers`, here one uniform through both conditionals' `ppf`;
 - `"two-scale"`: common random numbers while the chains are farther apart than
   `threshold`, the maximal coupling after; here `threshold` is the square root of the
   trace of the exact covariance `pumps.cov`.
 
-{meth}`telescopic.CoupledSampler.meeting_times` runs pilot pairs with lag 1 and returns
-their meeting times, counted in sweeps. With one seed for the three couplings, their
+{meth}`telescopic.CoupledSampler.meeting_times` runs pilot pairs with {term}`lag` 1 and returns
+their {term}`meeting times <meeting time>`, counted in sweeps. With one seed for the three couplings, their
 pairs start from the same points:
 
 ```{code-cell} python
@@ -100,7 +100,7 @@ distant chains rarely succeed.
 
 ## Estimates against the exact posterior
 
-A run of 1000 replicates with the maximal coupling:
+A run of 1000 {term}`replicates <replicate>` with the maximal coupling:
 
 ```{code-cell} python
 names = [f"lambda{i}" for i in range(1, 11)] + ["beta"]

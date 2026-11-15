@@ -6,7 +6,7 @@ kernelspec:
 
 # Read meeting times and the distance to stationarity
 
-The meeting times of the pairs bound the distance of the chains from the target and set
+The {term}`meeting times <meeting time>` of the {term}`pairs <pair>` bound the distance of the chains from the target and set
 the cost of a run. [Meeting times and distance to stationarity](../concepts/meeting-times.md)
 explains the bound. The examples use the run of
 [Estimate anything from a result](estimates.md):
@@ -26,11 +26,11 @@ result = telescopic.sample(
 `result.meeting_times` holds each pair's meeting time $\tau$
 ([Theory](../theory.md#coupled-chains)), `inf` for a pair censored at `max_iter`
 ([`censored`](../reference/warnings.md#censored-pairs-censored)); `result.costs` holds its kernel applications
-and `result.index` its replicate index.
+and `result.index` its {term}`replicate` index.
 
 {meth}`telescopic.Result.plot_meeting_times` draws a histogram of $\tau - L$ and its
 survival function on a log scale, where a straight tail means geometric meeting times. A
-censored pair counts in the survival function at every time up to its cap, where the
+{term}`censored pair` counts in the survival function at every time up to its cap, where the
 curve ends at the fraction of pairs censored, and not in the histogram.
 
 ```{code-cell} python

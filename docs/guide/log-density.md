@@ -7,7 +7,7 @@ kernelspec:
 # Write the log-density and constraints
 
 A run needs two inputs: the log-density of the target, and the initial distribution from
-which each pair of chains starts ([Choose an initial distribution](initial-distribution.md)).
+which each {term}`pair` of chains starts ([Choose an initial distribution](initial-distribution.md)).
 
 ## The log-density
 
@@ -73,7 +73,7 @@ one.log_prob(points), batch.log_prob(points), one.n_log_prob
 ```
 
 With `vectorize=True`, the kernels also compute their matrix products with BLAS, for a
-batch of chains at once, so a replicate's results can differ by rounding with how the
+batch of chains at once, so a {term}`replicate`'s results can differ by rounding with how the
 replicates are batched and with the number of BLAS threads, and through an acceptance
 or a meeting that the rounding moves, in its whole output; the estimates agree within
 their error bars ([Parallel runs](parallel.md#reproducibility)).
@@ -213,7 +213,7 @@ For the gradient:
 
 The log-density must be deterministic: the same point must always give the same value.
 Pairs meet when their states are equal, and a log-density estimated by simulation breaks
-the couplings.
+the {term}`couplings <coupling>`.
 
 ## Checking the gradient
 

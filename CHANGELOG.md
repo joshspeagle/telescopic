@@ -106,6 +106,10 @@ All notable changes to this project are documented here. The format follows
   solves, what it returns and what it does not do; Is telescopic right for my problem?
   places a problem among good and poor fits, each with its reason and a link to the page
   that holds the fact.
+- Three Reference pages: a Glossary of the package's terms, linked from each term's first
+  use on the pages of the other sections but Theory; Notation, which maps each
+  symbol of the theory page to its argument or attribute; and an FAQ whose answers link
+  to the page that holds each fact.
 - The API reference is an index of one-line summaries grouped by section, with a page for
   each class, its attributes and methods, a page for `sample`, and a page for each module
   that the index lists, its functions and a table of its classes. The page of a class with
