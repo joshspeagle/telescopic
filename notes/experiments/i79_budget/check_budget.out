@@ -1,0 +1,16 @@
+1. lane rule: 5 hand-made cases pass
+2. B = 1: E[lane estimate] = 9/10 = E[H] exactly; completed-only average 0 (bias -0.9000)
+2. B = 2: E[lane estimate] = 9/10 = E[H] exactly; completed-only average 3/10 (bias -0.6000)
+2. B = 3: E[lane estimate] = 9/10 = E[H] exactly; completed-only average 13/10 (bias +0.4000)
+2. B = 4: E[lane estimate] = 9/10 = E[H] exactly; completed-only average 13/10 (bias +0.4000)
+2. B = 5: E[lane estimate] = 9/10 = E[H] exactly; completed-only average 13/10 (bias +0.4000)
+2. B = 6: E[lane estimate] = 9/10 = E[H] exactly; completed-only average 9/10 (bias +0.0000)
+2. B = 7: E[lane estimate] = 9/10 = E[H] exactly; completed-only average 9/10 (bias +0.0000)
+2. B = 8: E[lane estimate] = 9/10 = E[H] exactly; completed-only average 9/10 (bias +0.0000)
+3. B = 20: 12 lanes run one replicate at a time with abandonment match budget_cell (completed per lane [0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0])
+3. B = 41: 12 lanes run one replicate at a time with abandonment match budget_cell (completed per lane [1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0])
+3. B = 123: 12 lanes run one replicate at a time with abandonment match budget_cell (completed per lane [1, 3, 2, 4, 4, 5, 4, 1, 1, 2, 1, 2])
+4. B = 20: pilot mean charged cost 40.99 over 1720 lanes agrees
+4. B = 41: pilot mean charged cost 51.58 over 1182 lanes agrees
+4. B = 123: pilot mean charged cost 123.28 over 540 lanes agrees
+all checks pass

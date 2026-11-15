@@ -1,0 +1,71 @@
+{
+ "gaussian": {
+  "mean_cost": 41.00165,
+  "plan": {
+   "1": {
+    "budget": 41,
+    "size": 40,
+    "lane_cost": 51.193771043771044,
+    "pilot_lanes": 11880
+   },
+   "3": {
+    "budget": 123,
+    "size": 96,
+    "lane_cost": 123.32686980609418,
+    "pilot_lanes": 5415
+   },
+   "10": {
+    "budget": 410,
+    "size": 320,
+    "lane_cost": 410.0,
+    "pilot_lanes": 1866
+   }
+  }
+ },
+ "mixture": {
+  "mean_cost": 264.68415,
+  "plan": {
+   "1": {
+    "budget": 265,
+    "size": 37,
+    "lane_cost": 304.4313110493772,
+    "pilot_lanes": 11159
+   },
+   "3": {
+    "budget": 794,
+    "size": 97,
+    "lane_cost": 799.5413223140496,
+    "pilot_lanes": 5566
+   },
+   "10": {
+    "budget": 2647,
+    "size": 320,
+    "lane_cost": 2647.0,
+    "pilot_lanes": 1880
+   }
+  }
+ },
+ "banana": {
+  "mean_cost": 354.82985,
+  "plan": {
+   "1": {
+    "budget": 355,
+    "size": 39,
+    "lane_cost": 430.7999000333222,
+    "pilot_lanes": 12004
+   },
+   "3": {
+    "budget": 1064,
+    "size": 96,
+    "lane_cost": 1066.198459280998,
+    "pilot_lanes": 5452
+   },
+   "10": {
+    "budget": 3548,
+    "size": 320,
+    "lane_cost": 3548.0,
+    "pilot_lanes": 1873
+   }
+  }
+ }
+}
