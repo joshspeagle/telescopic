@@ -68,6 +68,7 @@ start/coming-from-emcee
 :caption: Concepts
 
 concepts/burn-in-bias
+concepts/two-chains
 ```
 
 ```{toctree}

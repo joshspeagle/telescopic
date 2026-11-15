@@ -99,7 +99,7 @@ All notable changes to this project are documented here. The format follows
   the notebook's temporary file, and wrap within the column.
 - Every figure on the executed pages has alternative text and a caption.
 - A Concepts section explains the method without code, one idea per page with its
-  figures: why a burn-in biases MCMC.
+  figures: why a burn-in biases MCMC, and two chains that meet.
 - The API reference is an index of one-line summaries grouped by section, with a page for
   each class, its attributes and methods, a page for `sample`, and a page for each module
   that the index lists, its functions and a table of its classes. The page of a class with

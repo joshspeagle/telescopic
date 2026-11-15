@@ -61,7 +61,7 @@ the differences between the two chains become zero after a finite time, which re
 the two chains to become exactly equal and to stay equal. Two independent chains on a
 continuous space never do: two independent continuous random variables are equal with
 probability zero ([Theory](../theory.md#coupled-chains)). The chains must be built to
-move together, by a coupling.
+move together, by a coupling ([Two chains that meet](two-chains.md)).
 
 telescopic keeps the burn-in and the average, and adds the correction that removes
 their bias on average, so $k$ changes the cost and the variance of its estimates but not
