@@ -50,8 +50,10 @@ With the defaults, before the replicates run:
    the pilot's time and memory. Chains that disagree raise a warning that the target may
    have several modes or the chains may not have converged
    ([Disagreeing tuning chains](../reference/warnings.md#disagreeing-tuning-chains-tuning)); chains
-   that agree can still all sit in one mode. A chain that accepts no proposal in its
-   second half raises `ValueError`.
+   that agree can still all sit in one mode. A start far wider than the target raises
+   a warning too
+   ([A start far wider than the target](../reference/warnings.md#a-start-far-wider-than-the-target-wide)). A chain
+   that accepts no proposal in its second half raises `ValueError`.
 2. **The meeting-time pilot.** 100 pairs with {term}`lag` 1 run until they meet, or until
    100,000 iterations, where they are censored.
 3. **The settings.** `k`, `lag` and `m` follow the recipe of Atchadé & Jacob (2024) from
@@ -190,6 +192,59 @@ assert calls == quick_result.n_log_prob and quick.pilot is None
 ```
 
 Every evaluation belongs to the run, and no pilot ran.
+
+## A start far wider than the target
+
+The automatic `k` is the 99% quantile of the pilot's meeting times, so about one pair in
+a hundred meets while its chain is still on its way to the target. From a start orders
+of magnitude wider than the target, those replicates can dominate the variance of the
+estimates ([Initial distributions](initial-distribution.md#choosing-one)), and tuning
+warns of such a start
+([A start far wider than the target](../reference/warnings.md#a-start-far-wider-than-the-target-wide)).
+The first remedy is a narrower start. Where none is at hand, a larger `k` can be given
+by hand. A confirmation round is an option: the pilot's quantile gives $k_0$, 100 more pairs run
+at lag $k_0$, the 99% quantile of their $\tau - k_0$ gives $k_1$, and the run takes
+$k = \max(k_0, k_1)$, with `lag = k` and `m = 10k` as usual, at the cost of one more
+pilot round. The confirmation pairs run with a seed of their own, so that the settings
+stay independent of the replicates and the estimates unbiased. From a start a hundred
+times wider than the line fit's posterior:
+
+```{code-cell} python
+wide = telescopic.initial.Normal(fit.x, 100**2 * fit.hess_inv)
+cautious = telescopic.CoupledSampler(log_prob, wide, args=(x, y, yerr), rng=42)
+k0 = telescopic.tuning.choose_k(cautious.meeting_times())
+confirmation = telescopic.engine.run(
+    cautious.target,
+    cautious.kernel,
+    wide,
+    np.arange(100),
+    k=k0,
+    m=k0,
+    lag=k0,
+    store=False,
+    rng=43,
+)
+k1 = telescopic.tuning.choose_k(confirmation.meeting_time - k0 + 1)
+cautious_result = cautious.run(100, k=max(k0, k1))
+print("k0:", k0, "k1:", k1, "k:", cautious_result.k)
+```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claims of the next paragraph.
+assert cautious.tuning.initial_width > 30
+assert cautious_result.k == max(k0, k1)
+assert k1 < k0
+assert "variance" in [issue.kind for issue in telescopic.diagnostics.issues(cautious_result)]
+```
+
+Tuning warned of the wide start, before any pair ran; `cautious.tuning.initial_width`
+holds the width it measured. {func}`telescopic.engine.run` runs the confirmation pairs
+without storing their states, and its `meeting_time` holds their $\tau$; the run then
+keeps the `k` given, and takes `lag` and `m` from it. The round does not always raise
+`k`: here its pairs met sooner than the pilot's, so $k = k_0$, and one replicate still
+holds most of the variance of an estimate, as the run's warning says.
 
 ## How many replicates
 

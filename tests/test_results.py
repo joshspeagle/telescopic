@@ -478,6 +478,18 @@ def test_a_merge_keeps_this_results_records_and_fills_the_missing_ones_from_the_
     assert merged.tuning is None
 
 
+@pytest.mark.parametrize(
+    ("rules", "merged_rule"), [((3, 7), 7), ((5, None), 5), ((None, None), None)]
+)
+def test_a_merge_takes_the_larger_of_the_pilot_rules_k(rules, merged_rule):
+    # A wide start stays listed when either part's pilot rule reached the shared k.
+    first = Result(gaussian_run(range(3), **SETTINGS))
+    second = Result(gaussian_run(range(3, 5), **SETTINGS))
+    first._k_rule, second._k_rule = rules
+    assert first.merge(second)._k_rule == merged_rule
+    assert second.merge(first)._k_rule == merged_rule
+
+
 def test_the_default_w1_times_reach_a_censored_pairs_last_distance():
     replicates = gaussian_run(range(40), **SETTINGS, max_iter=13)
     result = Result(replicates)

@@ -425,10 +425,11 @@ far.summary()
 
 # The claims of the next paragraph.
 assert far.diagnostics()["variance_share"] > 0.5
-assert "variance" in [issue.kind for issue in telescopic.diagnostics.issues(far)]
+assert {"variance", "wide"} <= {issue.kind for issue in telescopic.diagnostics.issues(far)}
 ```
 
-One replicate holds most of the variance of an estimate, and the run warns. Against the
+Tuning warned first, before any pair ran, that the start is far wider than the target.
+One replicate then holds most of the variance of an estimate, and the run warns again. Against the
 exact posterior, with the variances estimated as the expectations of
 $(\theta - \mu)^2$ for the exact mean $\mu$:
 

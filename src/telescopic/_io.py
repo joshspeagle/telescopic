@@ -70,9 +70,14 @@ def save(result: Result, path: str | os.PathLike[str] | IO[bytes]) -> None:
         "kernel": None if result.kernel is None else str(result.kernel),
         "initial": None if result.initial is None else str(result.initial),
         "counts": {name: getattr(replicates, name) for name in (*COUNTS, "seconds")},
+        "k_rule": result._k_rule,
         "tuning": None
         if tuning is None
-        else {"n_steps": tuning.n_steps, "max_weight_ratio": tuning.max_weight_ratio},
+        else {
+            "n_steps": tuning.n_steps,
+            "max_weight_ratio": tuning.max_weight_ratio,
+            "initial_width": tuning.initial_width,
+        },
     }
     # NumPy numbers and arrays in the metadata become Python ones, which JSON writes;
     # Python integers keep a seed's entropy of any size exactly.
@@ -120,7 +125,7 @@ def load(path: str | os.PathLike[str] | IO[bytes], cls: type[Result]) -> Result:
             tuning = TuningReport(
                 **{name: data[f"tuning.{name}"] for name in TUNING_ARRAYS}, **tuning
             )
-        return cls(
+        result = cls(
             replicates,
             names=metadata["names"],
             kernel=metadata["kernel"],
@@ -128,6 +133,8 @@ def load(path: str | os.PathLike[str] | IO[bytes], cls: type[Result]) -> Result:
             tuning=tuning,
             pilot=data.get("pilot"),
         )
+        result._k_rule = metadata.get("k_rule")
+        return result
 
 
 def record_times(

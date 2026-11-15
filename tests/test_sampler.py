@@ -29,7 +29,7 @@ from references import (
     synthetic,
 )
 from references import Normal as Conditional
-from telescopic import CoupledSampler, Result, __version__, engine, sample
+from telescopic import CoupledSampler, Result, __version__, engine, sample, tuning
 from telescopic._parallel import Interrupt
 from telescopic.engine import Settings, Status
 from telescopic.initial import Empirical, Normal
@@ -511,6 +511,77 @@ def test_tuning_chains_in_separate_modes_warn():
     sampler = CoupledSampler(two_modes, lambda rng: next(starts), rng=12)
     with pytest.warns(ConvergenceWarning, match="or the chains may not have converged"):
         sampler.tune()
+
+
+WIDE = Normal(np.zeros(1), [[100.0**2]])  # 100 times wider than N(0, 1)
+
+
+def wide_runs(prepare, k_from_rule=None, n=50):
+    # A sampler from WIDE prepared by tune or meeting_times, then run with k the pilot
+    # rule's k plus k_from_rule (300 without a pilot, automatic for None): the sampler,
+    # its result, and how often it warned of the wide start.
+    sampler = CoupledSampler(gaussian_log_prob, WIDE, rng=0)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        getattr(sampler, prepare)()
+        rule = None if sampler.pilot is None else tuning.choose_k(sampler.pilot)
+        k = "auto" if k_from_rule is None else 300 if rule is None else rule + k_from_rule
+        result = sampler.run(n, k=k)
+    emitted = sum("times wider than the target" in str(w.message) for w in caught)
+    return sampler, result, emitted
+
+
+def is_listed(result):
+    return "wide" in [issue.kind for issue in telescopic.diagnostics.issues(result)]
+
+
+def test_a_wide_start_warns_once_at_tuning_and_is_listed_for_the_rules_k():
+    sampler, result, emitted = wide_runs("meeting_times")
+    assert emitted == 1  # at tuning: the end of the run does not repeat it
+    assert result._k_rule == result.k
+    assert is_listed(result)
+    assert is_listed(reloaded(result))
+    assert is_listed(sampler.run(10))  # a second run keeps the rule's k
+
+
+@pytest.mark.parametrize(("prepare", "k_from_rule"), [("meeting_times", 0), ("meeting_times", -1)])
+def test_a_wide_start_stays_listed_for_k_at_most_the_rules(prepare, k_from_rule):
+    _, result, emitted = wide_runs(prepare, k_from_rule)
+    assert emitted == 1
+    assert is_listed(result)
+
+
+@pytest.mark.parametrize("prepare", ["tune", "meeting_times"])
+def test_a_larger_k_than_the_rules_warns_at_tuning_but_is_not_listed(prepare):
+    # After tune() no pilot has run, so no rule's k exists, and a k given is not listed.
+    _, result, emitted = wide_runs(prepare, 100)
+    assert emitted == 1
+    assert not is_listed(result)
+    raised = ""
+    try:
+        result.check(strict=True)
+    except RuntimeError as error:
+        raised = str(error)
+    assert "times wider" not in raised
+
+
+def test_a_given_k_without_a_pilot_is_never_listed_after_resume_or_sample():
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", ConvergenceWarning)
+        result = sample(gaussian_log_prob, WIDE, k=300, rng=0)
+        resumed = CoupledSampler(gaussian_log_prob, WIDE)
+        resumed.resume(reloaded(result))
+        continued = resumed.run(10)
+    assert result._k_rule is None
+    assert not is_listed(result)
+    assert not is_listed(continued)
+
+
+def reloaded(result):
+    buffer = io.BytesIO()
+    result.save(buffer)
+    buffer.seek(0)
+    return Result.load(buffer)
 
 
 def test_a_run_with_censored_pairs_warns():

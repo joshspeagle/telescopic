@@ -494,3 +494,11 @@ All notable changes to this project are documented here. The format follows
   and at the states without a valid value, usually n rows where they were 2n and 3n, and
   with `MultivariateT` every seeded output is unchanged. `Proposal.init_extra` gives a
   proposal's own fields.
+- A `wide` warning when the tuning pilot shows an initial distribution more than 30
+  times wider than the target, emitted when tuning runs and listed by `check` unless
+  the run's `k` exceeds the pilot rule's:
+  `TuningReport.initial_width` and `PilotRun.initial_width` hold the geometric mean over
+  coordinates of the ratio of the standard deviations of the initial draws to the
+  pilot's, `PilotRun.initial_var` the draws' variances, and `diagnostics.wide_start`
+  words the warning. The guide on settings shows a confirmation round of pilot pairs at
+  lag `k` as an option.

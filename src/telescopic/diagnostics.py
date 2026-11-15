@@ -24,7 +24,13 @@ __all__ = [
     "tv_bound",
     "variance_share",
     "w1_bound",
+    "wide_start",
 ]
+
+# The initial width above which a start counts as far wider than the target: silent on
+# the examples' default starts, which reached 14.1, and on the starts 10 times wider than the
+# target, which reached 21.5; above it on most starts 100 times wider (DECISIONS #259).
+WIDE_START = 30.0
 
 
 # Spec section 3.6.
@@ -279,7 +285,8 @@ class Issue(NamedTuple):
     Attributes
     ----------
     kind : str
-        ``"censored"``, ``"late"``, ``"variance"``, ``"tail"``, ``"tuning"`` or ``"slow"``.
+        ``"censored"``, ``"late"``, ``"variance"``, ``"tail"``, ``"tuning"``, ``"wide"`` or
+        ``"slow"``.
     message : str
     """
 
@@ -356,6 +363,11 @@ def issues(result: Result) -> list[Issue]:
     disagreement = tuning_disagreement(result.tuning)
     if disagreement:
         found.append(Issue("tuning", disagreement))
+    # Listed unless k exceeds the pilot rule's, since a larger k is the warning's remedy.
+    if result._k_rule is not None and result.k <= result._k_rule:
+        wide = wide_start(result.tuning)
+        if wide:
+            found.append(Issue("wide", wide))
     threshold = slow_pair_threshold(result.lag, result.m)
     if np.max(result._earliest_meeting) > threshold:
         found.append(
@@ -426,3 +438,35 @@ def tuning_disagreement(tuning: TuningReport | None) -> str | None:
             "parameters"
         )
     return "; and ".join(parts)
+
+
+def wide_start(tuning: TuningReport | None) -> str | None:
+    r"""The warning about an initial distribution far wider than the target, or ``None``.
+
+    The tuning pilot shows a start far wider than the target when the report's
+    ``initial_width``, defined in :attr:`telescopic.tuning.PilotRun.initial_width`,
+    exceeds 30. From such a start, ``k`` from the 99% quantile of the pilot's meeting
+    times can leave a few replicates still on their way to the target, and those can
+    dominate the variance of the estimates. When the warning is emitted and listed is
+    stated in :doc:`/reference/warnings`.
+
+    Parameters
+    ----------
+    tuning : TuningReport or None
+        The report of the tuning pilot; ``None`` when nothing was tuned.
+
+    Returns
+    -------
+    str or None
+    """
+    if tuning is None or tuning.initial_width is None or tuning.initial_width <= WIDE_START:
+        return None
+    return (
+        f"the initial distribution is about {tuning.initial_width:.0f} times wider than the "
+        "target, by the standard deviations of its draws against those of the tuning "
+        "chains: k from the 99% quantile of the pilot meeting times can leave a few "
+        "replicates on their way to the target, which can dominate the variance; use a "
+        "narrower initial distribution, or else give a larger k by hand; a confirmation "
+        "round of pilot pairs at lag k is an option (A start far wider than the target, "
+        "in the guide 'Set k, m, the lag, thin and max_iter')"
+    )
