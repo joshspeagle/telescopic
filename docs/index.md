@@ -72,6 +72,7 @@ concepts/two-chains
 concepts/telescoping-correction
 concepts/signed-measures
 concepts/error-bars
+concepts/meeting-times
 ```
 
 ```{toctree}

@@ -25,7 +25,7 @@ the same pull request. The documentation states only what the code does now.
 | `_progress.py` | `start/install.md`, `guide/parallel.md` | | |
 | `estimators.py`, `measure.py`, `results.py` | `start/coming-from-emcee.md`, `guide/estimates.md`, `guide/plots.md`, `guide/save-load-merge.md`, `guide/meeting-times.md` | `tutorials/how-it-works.md`, `tutorials/unbiased-on-average.md` | `concepts/burn-in-bias.md`, `concepts/telescoping-correction.md`, `concepts/signed-measures.md`, `concepts/error-bars.md`, `theory.md`, `reference/result-fields.md`, `reference/warnings.md`, `api.md` (Results, Building blocks) |
 | `_io.py` (saving and loading) | `guide/save-load-merge.md` | | `api.md` (Results) |
-| `diagnostics.py`, `warnings.py` | `guide/meeting-times.md` | `tutorials/failure-modes.md`, `tutorials/choosing-settings.md` | `concepts/error-bars.md`, `theory.md`, `reference/result-fields.md`, `reference/warnings.md`, `api.md` (Diagnostics, plots and checks; Warnings) |
+| `diagnostics.py`, `warnings.py` | `guide/meeting-times.md` | `tutorials/failure-modes.md`, `tutorials/choosing-settings.md` | `concepts/error-bars.md`, `concepts/meeting-times.md`, `theory.md`, `reference/result-fields.md`, `reference/warnings.md`, `api.md` (Diagnostics, plots and checks; Warnings) |
 | `plotting.py` | `guide/plots.md`, `guide/meeting-times.md` | `tutorials/how-it-works.md` | `api.md` (Diagnostics, plots and checks) |
 | `examples.py` | `guide/kernels.md`, `guide/step-size.md` | every tutorial that uses the target | `api.md` (Examples) |
 | `testing.py` | `guide/custom-kernels.md` | | `api.md` (Diagnostics, plots and checks) |

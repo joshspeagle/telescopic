@@ -58,7 +58,7 @@ that the chains have converged. Three things take the place of $\hat R$:
 - **The meeting times** bound the total variation distance between the law $\pi_k$ of
   the chain after the burn-in and the target. The bound tells how much correction the
   replicates need, which sets their variance and cost
-  ([Read meeting times and the distance to stationarity](../guide/meeting-times.md)).
+  ([Meeting times and distance to stationarity](meeting-times.md)).
 - **The tuning chains.** When the kernel has parameters to tune, the sampler tunes them
   from four adaptive chains before any pair runs, and their $\hat R$ is the only one
   that telescopic computes. Above $\sqrt 2$ in some coordinate, a warning says that the chains may sit
@@ -103,7 +103,7 @@ Quote:
 - the median, 90% and 99% quantiles and the maximum of the meeting times, and the number
   of censored pairs, and the bound on the total variation distance at $k$, which says
   how far $\pi_k$ was from $\pi$
-  ([Distance to stationarity](../guide/meeting-times.md#distance-to-stationarity));
+  ([Meeting times and distance to stationarity](meeting-times.md#the-bound));
 - each warning that the run emitted, and what was done about it;
 - that $R$ was fixed before any result was seen. If the run was extended until the error
   bar was small enough, say so: the estimates are then consistent and their large-$R$
