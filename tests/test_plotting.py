@@ -45,6 +45,32 @@ def test_the_survival_curve_ends_at_the_censored_fraction():
     assert survival.get_yscale() == "log"
 
 
+def test_the_survival_curve_of_an_array_is_that_of_its_result():
+    # RESULT has censored pairs, which the array gives as inf with the cap beside it.
+    _, expected = RESULT.plot_meeting_times()
+    ax = plotting.survival(RESULT.meeting_times, RESULT.lag, max_iter=RESULT.max_iter)
+    for mine, theirs in zip(ax.lines[0].get_data(), expected.lines[0].get_data(), strict=True):
+        np.testing.assert_array_equal(mine, theirs)
+    assert ax.get_yscale() == "log"
+    plotting.survival(RESULT.meeting_times[np.isfinite(RESULT.meeting_times)], RESULT.lag, ax)
+    assert len(ax.lines) == 2
+
+
+@pytest.mark.parametrize(
+    ("times", "options", "message"),
+    [
+        ([3.0, np.inf], {}, "give their max_iter"),
+        ([0.0, 3.0], {}, "integers from lag = 1 on"),
+        ([2.5, 3.0], {}, "integers from lag = 1 on"),
+        ([3.0, -np.inf], {"max_iter": 9}, "integers from lag = 1 on"),
+        ([], {}, "non-empty"),
+    ],
+)
+def test_the_survival_curve_refuses_invalid_meeting_times(times, options, message):
+    with pytest.raises(ValueError, match=message):
+        plotting.survival(times, 1, **options)
+
+
 def test_the_tv_bound_plot_draws_the_bound_and_marks_k():
     ax = RESULT.plot_tv_bound()
     t, bound = ax.lines[0].get_data()

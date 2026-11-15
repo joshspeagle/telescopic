@@ -516,3 +516,8 @@ All notable changes to this project are documented here. The format follows
   `engine.Replicates` holds it, since the error needs each record's replicate.
   `plot_tv_bound` draws a band of two standard errors. Code that used the single array
   breaks.
+- `plotting.survival(meeting_times, lag, ax=None, *, max_iter=None, label=None)` draws
+  the survival function of an array of meeting times, such as
+  `CoupledSampler.meeting_times` returns, into a given axis, so that several runs share
+  one; a censored pair (`inf`) counts up to `max_iter`, as in
+  `plotting.meeting_times`, which now draws its curve with it.

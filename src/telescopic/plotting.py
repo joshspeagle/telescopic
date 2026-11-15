@@ -6,8 +6,9 @@ from collections.abc import Sequence
 from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 
-from telescopic._types import coordinates, integer
+from telescopic._types import coordinates, integer, integral, real_array
 from telescopic.engine import Replicates
 from telescopic.results import Result
 
@@ -19,6 +20,7 @@ __all__ = [
     "marginals",
     "meeting_times",
     "paths",
+    "survival",
     "tv_bound",
 ]
 
@@ -47,9 +49,9 @@ MET = "#062A4F"
 def meeting_times(result: Result, axes: Sequence[Axes] | None = None) -> list[Axes]:
     r"""The meeting times: a histogram of :math:`\tau - L`, and its survival function.
 
-    The survival function :math:`P(\tau - L > t)` is on a log scale, where a straight
-    tail means geometric meeting times. A censored pair counts in it
-    at every time up to the cap, where the curve ends at the fraction censored, and not
+    The survival function :math:`P(\tau - L > t)`, drawn by :func:`survival`, is on a log
+    scale, where a straight tail means geometric meeting times. A censored pair counts in
+    it at every time up to the cap, where the curve ends at the fraction censored, and not
     in the histogram.
 
     Parameters
@@ -63,22 +65,72 @@ def meeting_times(result: Result, axes: Sequence[Axes] | None = None) -> list[Ax
     -------
     list of two Axes
     """
-    histogram, survival = (
-        plt.subplots(1, 2, figsize=(9, 3.5))[1] if axes is None else _axes(axes, 2)
-    )
+    histogram, curve = plt.subplots(1, 2, figsize=(9, 3.5))[1] if axes is None else _axes(axes, 2)
     shifted = result.meeting_times - result.lag
     histogram.hist(shifted[np.isfinite(shifted)], bins="auto")
     histogram.set(xlabel=r"$\tau - L$", ylabel="pairs")
+    survival(result.meeting_times, result.lag, curve, max_iter=result.max_iter)
+    return [histogram, curve]
+
+
+# Spec section 7.5.
+def survival(
+    meeting_times: npt.ArrayLike,
+    lag: int,
+    ax: Axes | None = None,
+    *,
+    max_iter: int | None = None,
+    label: str | None = None,
+) -> Axes:
+    r"""The survival function :math:`P(\tau - L > t)` of meeting times, on a log scale.
+
+    The curve steps at each meeting time, from :math:`t = 0`. A censored pair, given as
+    ``inf``, counts at every time up to the cap, ``max_iter``, where the curve ends at
+    the fraction censored. Several calls on one ``ax`` overlay their curves.
+
+    Parameters
+    ----------
+    meeting_times : array_like, shape (R,)
+        Meeting times :math:`\tau`, integers from ``lag`` on, ``inf`` for a censored
+        pair, as :meth:`telescopic.CoupledSampler.meeting_times` and
+        ``Result.meeting_times`` give them.
+    lag : int
+        The lag :math:`L` of the runs that produced them.
+    ax : Axes, optional
+        By default, that of a new figure.
+    max_iter : int, optional
+        The cap of the runs, needed when a pair is censored.
+    label : str, optional
+        The curve's label, for a legend.
+
+    Returns
+    -------
+    Axes
+    """
+    lag = integer("lag", lag, minimum=1)
+    tau = real_array("meeting_times", meeting_times, "real numbers of shape (R,)")
+    met = np.isfinite(tau)
+    if tau.ndim != 1 or len(tau) == 0 or not integral(tau[met], lag) or np.any(tau == -np.inf):
+        raise ValueError(
+            f"meeting_times must be a non-empty one-dimensional array of integers from lag "
+            f"= {lag} on, with inf for a censored pair"
+        )
+    stopped = tau[met]
+    if not met.all():
+        if max_iter is None:
+            raise ValueError("meeting_times holds censored pairs (inf): give their max_iter")
+        stopped = np.append(stopped, integer("max_iter", max_iter, minimum=lag))
+    ax = plt.subplots(figsize=(5, 3.5))[1] if ax is None else ax
     # Censored pairs, at inf, sort above every time, so the curve, which steps at the
     # times the pairs stopped, ends at the cap at the fraction censored.
-    t = np.union1d(0, result._stopped - result.lag)
-    fraction = 1 - np.searchsorted(np.sort(shifted), t, side="right") / len(shifted)
-    survival.step(t, fraction, where="post")
-    survival.set(xlabel="$t$", ylabel=r"$P(\tau - L > t)$")
+    t = np.union1d(0, stopped - lag)
+    fraction = 1 - np.searchsorted(np.sort(tau - lag), t, side="right") / len(tau)
+    ax.step(t, fraction, where="post", label=label)
+    ax.set(xlabel="$t$", ylabel=r"$P(\tau - L > t)$")
     # A log scale needs a positive value: none when every pair met at t = L.
     if np.any(fraction > 0):
-        survival.set(yscale="log")
-    return [histogram, survival]
+        ax.set(yscale="log")
+    return ax
 
 
 # Spec section 3.6.

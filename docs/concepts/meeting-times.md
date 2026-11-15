@@ -16,8 +16,9 @@ for every $t$ up to the {term}`lag`: the chains are first compared at $t = L$, w
 $Y_0$, an independent draw, differ. It falls
 toward 0 as $t$ grows. How fast it falls depends on the kernel and on how far from the
 target the initial distribution starts the chains.
-{meth}`~telescopic.Result.plot_meeting_times` draws it for $\tau - L$, which shifts the
-curve by $L$ to the left, on a log scale, where a straight tail means meeting times with
+{meth}`~telescopic.Result.plot_meeting_times` and {func}`telescopic.plotting.survival`,
+which takes an array of meeting times, draw it for $\tau - L$, which shifts the curve by
+$L$ to the left, on a log scale, where a straight tail means meeting times with
 a geometric tail
 ([Meeting times](../guide/meeting-times.md#meeting-times)).
 

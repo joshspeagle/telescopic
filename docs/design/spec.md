@@ -633,7 +633,7 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
 
 ### 7.5 Plotting (optional dependency)
 
-- **Meeting times:** a histogram of $\tau - L$, and a log-scale survival curve.
+- **Meeting times:** a histogram of $\tau - L$, and a log-scale survival curve. `plotting.survival(meeting_times, lag, ax=None, *, max_iter=None, label=None)` draws the curve alone from an array of meeting times, `inf` for a censored pair, which needs `max_iter`, into a given axis, so that several runs share one; `plotting.meeting_times` draws its curve with it (DECISIONS #262).
 - **TV bound:** the bound against $t$ on a log scale, with a band of two standard errors, and $k$ marked.
 - **Marginals:** signed histograms with ±2 standard-error boxes. Negative bins are allowed, and the docstring explains them.
 - **Corner plot:** signed 2-D histograms. Telescopic never passes signed weights to `corner` or ArviZ, whose weighted quantiles assume non-negative weights.

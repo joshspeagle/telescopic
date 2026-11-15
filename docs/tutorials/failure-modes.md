@@ -116,7 +116,8 @@ assert high - low > 10
 ```
 
 The interval now covers the truth, but it is far wider than the range of a probability.
-The {term}`meeting times <meeting time>` show why:
+The {term}`meeting times <meeting time>` show why, in survival curves that
+{func}`telescopic.plotting.survival` overlays on one axis:
 
 ```{code-cell} python
 ---
@@ -129,16 +130,17 @@ mystnb:
   figure:
     caption: >-
       The survival functions of the meeting times from $\mathcal N(10, 1)$ and
-      from $\mathcal N(10, 10^2)$, on log-log axes: from the wider start, the
-      slowest pairs take more than $10^4$ steps to meet.
+      from $\mathcal N(10, 10^2)$, less the lag of 1, on log-log axes: from the wider
+      start, the slowest pairs take more than $10^4$ steps to meet.
 ---
+from telescopic import plotting
+
 fig, ax = plt.subplots(figsize=(5, 3.5))
 for label, result in (("$N(10, 1)$", narrow), ("$N(10, 10^2)$", wide)):
-    tau = np.sort(result.meeting_times)
-    survival = 1 - np.arange(1, len(tau) + 1) / len(tau)
-    survival[-1] = survival[-2]  # the last step falls to 0, off a log scale
-    ax.step(tau, survival, where="post", label=label)
-ax.set(xscale="log", yscale="log", xlabel="$t$", ylabel=r"$P(\tau > t)$")
+    plotting.survival(
+        result.meeting_times, result.lag, ax, max_iter=result.max_iter, label=label
+    )
+ax.set(xscale="log", ylabel=r"$P(\tau - 1 > t)$")
 ax.legend();
 ```
 

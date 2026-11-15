@@ -43,7 +43,8 @@ print(f"k = {k}; pairs with tau - 1 > k: {np.sum(times - 1 > k)} of {len(times)}
 ```
 
 The recipe then sets the lag to $k$ and $m$ to $10k$. The pilot's {term}`meeting times <meeting time>`, with $k$
-dashed and the level 0.01 dotted:
+dashed and the level 0.01 dotted, and their survival function drawn by
+{func}`telescopic.plotting.survival` from the array and its lag:
 
 ```{code-cell} python
 ---
@@ -59,15 +60,14 @@ mystnb:
       (left) and survival function on a log scale (right), with $k$ dashed and the
       level 0.01 dotted.
 ---
-shifted = np.sort(times - 1)
-survival = 1 - np.arange(1, len(shifted) + 1) / len(shifted)
-survival[-1] = survival[-2]  # the last step falls to 0, off a log scale
+from telescopic import plotting
+
 fig, (left, right) = plt.subplots(1, 2, figsize=(9, 3.5))
-left.hist(shifted, bins=20)
+left.hist(times - 1, bins=20)
 left.set(xlabel=r"$\tau - 1$", ylabel="pilot pairs")
-right.step(shifted, survival, where="post")
+plotting.survival(times, 1, right)
 right.axhline(0.01, color="gray", linestyle=":")
-right.set(yscale="log", xlabel="$t$", ylabel=r"$P(\tau - 1 > t)$")
+right.set(ylabel=r"$P(\tau - 1 > t)$")
 for ax in (left, right):
     ax.axvline(k, color="gray", linestyle="--", label="$k$")
 right.legend();

@@ -212,17 +212,16 @@ mystnb:
   figure:
     caption: >-
       The survival functions of the meeting times of 100 pilot pairs for each
-      coupling, in sweeps, on log-log axes.
+      coupling, less the lag of 1, in sweeps, on log-log axes.
 ---
 import matplotlib.pyplot as plt
 
+from telescopic import plotting
+
 fig, ax = plt.subplots(figsize=(6, 3.5))
 for coupling, times in tau.items():
-    times = np.sort(times)
-    survival = 1 - np.arange(1, len(times) + 1) / len(times)
-    survival[-1] = survival[-2]  # the last step falls to 0, off a log scale
-    ax.step(times, survival, where="post", label=coupling)
-ax.set(xscale="log", yscale="log", xlabel="sweeps $t$", ylabel=r"$P(\tau > t)$")
+    plotting.survival(times, 1, ax, label=coupling)
+ax.set(xscale="log", xlabel="sweeps $t$", ylabel=r"$P(\tau - 1 > t)$")
 ax.legend();
 ```
 

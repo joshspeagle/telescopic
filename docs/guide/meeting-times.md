@@ -48,6 +48,28 @@ mystnb:
 result.plot_meeting_times();
 ```
 
+{func}`telescopic.plotting.survival` draws the survival function alone, from an array of
+meeting times and their lag, such as the times that
+{meth}`telescopic.CoupledSampler.meeting_times` returns, into a given axis, so that the
+curves of several runs share one; censored pairs, `inf`, need their cap as `max_iter`:
+
+```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      The fraction of pairs with tau minus L above t, on a logarithmic scale,
+      falling with t.
+  figure:
+    caption: >-
+      The survival function $P(\tau - L > t)$ of the run's meeting times, drawn from
+      the array.
+---
+from telescopic import plotting
+
+plotting.survival(result.meeting_times, result.lag, max_iter=result.max_iter);
+```
+
 ## Distance to stationarity
 
 With `keep`, the 1-Wasserstein bound comes from the distances of the kept replicates,
