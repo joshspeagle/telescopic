@@ -12,14 +12,9 @@ from scipy.special import gammaln
 from telescopic._linalg import covariance, inverse_lower, matvec
 from telescopic._random import Draws
 from telescopic._types import FloatArray, ProposalDistribution, Seed, integer, vector
+from telescopic.couplings import Coupling, Shared
 from telescopic.kernels.base import Kernel
-from telescopic.kernels.metropolis import (
-    Coupling,
-    IndependenceProposal,
-    MetropolisHastings,
-    Proposal,
-    Shared,
-)
+from telescopic.kernels.metropolis import IndependenceProposal, MetropolisHastings, Proposal
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport
 
@@ -128,7 +123,10 @@ class Independence(MetropolisHastings):
     ``sample`` drew a point that ``log_density`` gives no mass, such as a draw clipped onto
     the edge of an open support. The coupled step shares the proposal and :math:`u`
     between the chains, which is a maximal kernel coupling (O'Leary, Wang & Jacob 2021):
-    a pair meets when both chains accept.
+    a pair meets when both chains accept. It is a
+    :class:`~telescopic.kernels.MetropolisHastings` with an
+    :class:`~telescopic.kernels.IndependenceProposal` and
+    :class:`~telescopic.couplings.Shared`.
 
     Parameters
     ----------

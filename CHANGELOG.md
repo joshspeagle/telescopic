@@ -414,3 +414,10 @@ All notable changes to this project are documented here. The format follows
   are the caller's to match. An untuned kernel, as a loaded result needs, is tuned again
   from the result's seed; an `InputWarning` says when the kernel's tuning or description
   differs from the result's.
+- Proposal and coupling objects: `kernels.MetropolisHastings(proposal, coupling)` with
+  the proposals `RandomWalkProposal`, `LangevinProposal` and `IndependenceProposal`, and
+  the couplings `couplings.Reflection`, `couplings.Maximal` and `couplings.Shared`, each
+  of which supports only the proposals it was published for. `RandomWalk`, `MALA` and
+  `Independence` are built on them, and their seeded outputs are unchanged bit for bit.
+  `RandomWalk(coupling=...)` also takes `Reflection()` or `Maximal()`;
+  `RandomWalk.coupling` and `Independence.proposal` can no longer be reassigned.

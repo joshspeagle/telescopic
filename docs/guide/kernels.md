@@ -97,6 +97,10 @@ $\log u < \log\pi(x') - \log\pi(x)$.
 - `coupling="maximal"` uses the rejection maximal coupling with independent residuals,
   whose meeting times grow exponentially with the dimension (Jacob, O'Leary & Atchadé
   2020, §4.2); it is there for comparison.
+- `coupling` also takes the coupling objects {class}`telescopic.couplings.Reflection()
+  <telescopic.couplings.Reflection>` and {class}`telescopic.couplings.Maximal()
+  <telescopic.couplings.Maximal>`, which give the same numbers as their names. The
+  attribute `coupling` returns what was given and cannot be reassigned.
 - `tune` sets `cov` to the covariance of the pilot chains. `scale` defaults to
   $2.38/\sqrt d$, the optimal scale of Roberts, Gelman & Gilks (1997) for a Gaussian
   target of covariance `cov`, and is not tuned.
@@ -111,7 +115,8 @@ Metropolis-Hastings ratio, which includes the proposal densities.
 
 - The coupled step draws the two proposals from the reflection-maximal coupling of their
   distributions, which share the covariance $\epsilon^2\Sigma$, and shares the uniform,
-  as in Jacob, O'Leary & Atchadé (2020, §4.4). It is MALA's only coupling.
+  as in Jacob, O'Leary & Atchadé (2020, §4.4). It is MALA's only coupling,
+  {class}`telescopic.couplings.Reflection`.
 - `tune` sets `cov` to the covariance of the pilot chains, then `step_size` by dual
   averaging toward the acceptance rate of 0.574 that Roberts & Rosenthal (1998) found
   optimal, on four chains started from the pilot's last states.
@@ -152,7 +157,10 @@ mass, such as a draw clipped onto the edge of an open support.
 
 - The coupled step gives both chains the same proposal and the same uniform, so a pair
   meets when both accept. It is a maximal coupling of the kernel (O'Leary, Wang & Jacob
-  2021).
+  2021), {class}`telescopic.couplings.Shared`. It evaluates `log_density` once per
+  coupled step, at the proposals and at both chains' states.
+- The attribute `proposal` returns the distribution given and cannot be reassigned;
+  tuning builds a new kernel.
 - `proposal` is a {class}`telescopic.kernels.MultivariateT`, a Student-$t$ with location
   `mean`, scale matrix `cov` and `df` degrees of freedom, a positive integer (`df=None`
   gives a Gaussian). A proposal of your own has `sample(draws)` and `log_density(x)`,
@@ -270,6 +278,40 @@ A sweep calls `conditional` once per chain and block, in Python, so building the
 distributions can dominate its cost. A small class with only the methods used is faster
 than a frozen SciPy distribution, as in {func}`telescopic.examples.pumps`. Worked
 example: [Gibbs](../tutorials/gibbs.md).
+
+## Proposals and coupling objects
+
+The random walk, MALA and the independence kernel are one Metropolis-Hastings kernel,
+{class}`telescopic.kernels.MetropolisHastings`, with three proposals. Each proposal draws
+$x' \sim q(\cdot \mid x)$ and gives the log acceptance ratio
+$\log\pi(x') - \log\pi(x) + \log q(x \mid x') - \log q(x' \mid x)$, and a coupling
+object draws the proposals of both chains of a pair. `MetropolisHastings(proposal,
+coupling)` raises `ValueError` unless the coupling supports the proposal. The couplings
+of {mod}`telescopic.couplings` support these proposals, matched by their exact class, so
+that a subclass whose draws differ from its parent's is refused rather than coupled as
+its parent:
+
+| Coupling | Proposal | The kernel it gives |
+|---|---|---|
+| `Reflection()` | `RandomWalkProposal(factor, inverse)`: $x' = x + Bz$ | `RandomWalk` |
+| `Maximal()` | `RandomWalkProposal(factor, inverse)` | `RandomWalk(coupling="maximal")` |
+| `Reflection()` | `LangevinProposal(factor, inverse)`: $x' = x + B(h/2 + z)$, $h = B^\top\nabla\log\pi(x)$ | `MALA` |
+| `Shared()` | `IndependenceProposal(distribution)`: $x' \sim q$ | `Independence` |
+
+Here $B$ is a lower-triangular factor of the proposal covariance $BB^\top$, and `inverse`
+is $B^{-1}$. These are the compositions with a published analysis (Jacob, O'Leary &
+Atchadé 2020, §4.1, §4.4 and Algorithm 2; O'Leary, Wang & Jacob 2021). A kernel with a
+proposal of another kind is written as a kernel of its own, with its own coupling
+([Write a custom kernel](custom-kernels.md)).
+
+```{code-cell} python
+from telescopic import couplings
+
+cov = np.eye(2)
+chol = np.linalg.cholesky(cov)
+walk = kernels.RandomWalkProposal(chol, np.linalg.inv(chol))
+kernels.MetropolisHastings(walk, couplings.Maximal())
+```
 
 ## Mixtures
 

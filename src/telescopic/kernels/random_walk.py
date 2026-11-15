@@ -9,15 +9,9 @@ import numpy.typing as npt
 
 from telescopic._linalg import covariance, inverse_lower
 from telescopic._types import FloatArray, Seed, real
+from telescopic.couplings import Coupling, Maximal, Reflection
 from telescopic.kernels.base import Kernel
-from telescopic.kernels.metropolis import (
-    Coupling,
-    Maximal,
-    MetropolisHastings,
-    Proposal,
-    RandomWalkProposal,
-    Reflection,
-)
+from telescopic.kernels.metropolis import MetropolisHastings, Proposal, RandomWalkProposal
 from telescopic.target import Target
 from telescopic.tuning import OPTIMAL_SCALE, PilotRun, TuningReport
 
@@ -28,7 +22,9 @@ class RandomWalk(MetropolisHastings):
 
     The proposal is :math:`x' = x + \lambda C z` with :math:`CC^\top = \Sigma` (``cov``),
     :math:`\lambda` (``scale``) and :math:`z \sim \mathcal N(0, I)`; it is accepted when
-    :math:`\log u < \log\pi(x') - \log\pi(x)`.
+    :math:`\log u < \log\pi(x') - \log\pi(x)`. It is a
+    :class:`~telescopic.kernels.MetropolisHastings` with a
+    :class:`~telescopic.kernels.RandomWalkProposal`.
 
     Parameters
     ----------
@@ -39,12 +35,14 @@ class RandomWalk(MetropolisHastings):
     scale : float, optional
         Scale :math:`\lambda`; defaults to :math:`2.38/\sqrt d`, the optimal scale for a
         Gaussian target whose covariance is ``cov`` (Roberts, Gelman & Gilks 1997).
-    coupling : {"reflection", "maximal"}
-        ``"reflection"`` couples the proposals by the reflection-maximal coupling and
-        uses one uniform for both acceptances (Jacob, O'Leary & Atchadé 2020; O'Leary
-        2021). ``"maximal"`` uses the rejection maximal coupling with independent
-        residuals, whose meeting times grow exponentially with the dimension; it is for
-        comparison only.
+    coupling : {"reflection", "maximal"}, Reflection or Maximal
+        ``"reflection"``, or :class:`~telescopic.couplings.Reflection`, couples the
+        proposals by the reflection-maximal coupling and uses one uniform for both
+        acceptances (Jacob, O'Leary & Atchadé 2020; O'Leary 2021). ``"maximal"``, or
+        :class:`~telescopic.couplings.Maximal`, uses the rejection maximal coupling with
+        independent residuals, whose meeting times grow exponentially with the
+        dimension; it is for comparison only. The attribute ``coupling`` returns what
+        was given, and cannot be reassigned.
 
     Notes
     -----
@@ -76,20 +74,36 @@ class RandomWalk(MetropolisHastings):
         cov: npt.ArrayLike | None = None,
         *,
         scale: float | None = None,
-        coupling: Literal["reflection", "maximal"] = "reflection",
+        coupling: Literal["reflection", "maximal"] | Reflection | Maximal = "reflection",
     ) -> None:
-        if coupling not in ("reflection", "maximal"):
-            raise ValueError(f"coupling must be 'reflection' or 'maximal', not {coupling!r}")
+        if isinstance(coupling, Reflection | Maximal):
+            self._coupling: Coupling = coupling
+        elif isinstance(coupling, str) and coupling in ("reflection", "maximal"):
+            self._coupling = Reflection() if coupling == "reflection" else Maximal()
+        else:
+            raise ValueError(
+                "coupling must be 'reflection', 'maximal', Reflection() or Maximal(), not "
+                f"{coupling!r}"
+            )
         self.scale = None if scale is None else real("scale", scale, 0, np.inf)
-        self.coupling = coupling
+        self._given_coupling = coupling
         self.cov: FloatArray | None = None
         self._proposal: Proposal | None = None
-        self._coupling: Coupling = Reflection() if coupling == "reflection" else Maximal()
         if cov is not None:
             self.cov, chol = covariance("cov", cov)
             scale = OPTIMAL_SCALE / np.sqrt(len(chol)) if self.scale is None else self.scale
             scaled = scale * chol
             self._proposal = RandomWalkProposal(scaled, inverse_lower(scaled))
+
+    @property
+    def coupling(self) -> Literal["reflection", "maximal"] | Reflection | Maximal:
+        """The coupling as it was given: a name or a coupling object.
+
+        Returns
+        -------
+        str, Reflection or Maximal
+        """
+        return self._given_coupling
 
     @property
     def is_tuned(self) -> bool:

@@ -1,17 +1,21 @@
+import pickle
+
 import _frozen_kernels as frozen
 import numpy as np
 import pytest
 
 from references import dense
-from telescopic.kernels import MALA, Independence, MultivariateT, RandomWalk, State
-from telescopic.kernels.metropolis import (
+from telescopic.couplings import Maximal, Reflection, Shared
+from telescopic.kernels import (
+    MALA,
+    Independence,
     IndependenceProposal,
     LangevinProposal,
-    Maximal,
     MetropolisHastings,
+    MultivariateT,
+    RandomWalk,
     RandomWalkProposal,
-    Reflection,
-    Shared,
+    State,
 )
 from telescopic.target import Target
 from telescopic.testing import fixed_draws
@@ -148,3 +152,75 @@ def test_metropolis_hastings_reproduces_shipped_kernels_bitwise(name, grad, d, v
             x, y = kernel.coupled_step(target, x, y, draws)
             assert_same_states((x, y), expected)
             assert_same_next_numbers(draws, reference)
+
+
+@pytest.mark.parametrize(("name", "coupling"), [("reflection", Reflection), ("maximal", Maximal)])
+def test_random_walk_gives_the_same_bits_with_a_coupling_object_and_its_string(name, coupling):
+    d, n = 3, 200
+    target = bounded_target(d, False)
+    by_name = RandomWalk(dense(d), coupling=name)
+    by_object = RandomWalk(dense(d), coupling=coupling())
+    state_x, state_y = starts(n, d, 6, False, target)
+    draws, reference = twin_draws(n, d, 7)
+    for _ in range(3):
+        expected = by_name.coupled_step(target, state_x, state_y, reference)
+        state_x, state_y = by_object.coupled_step(target, state_x, state_y, draws)
+        assert_same_states((state_x, state_y), expected)
+    assert_same_next_numbers(draws, reference)
+    assert isinstance(by_object.coupling, coupling)
+    assert by_name.coupling == name
+
+
+class ShiftedWalk(RandomWalkProposal):
+    """A subclass whose draw differs from its parent's: Reflection's coupled step would
+    not have its law."""
+
+    def sample(self, target, state, draws):
+        x, forward = super().sample(target, state, draws)
+        return x + 1.0, forward
+
+
+@pytest.mark.parametrize(
+    ("proposal", "coupling"),
+    [
+        (LangevinProposal(np.eye(2), np.eye(2)), Maximal()),
+        (LangevinProposal(np.eye(2), np.eye(2)), Shared()),
+        (RandomWalkProposal(np.eye(2), np.eye(2)), Shared()),
+        (IndependenceProposal(MultivariateT(np.zeros(2), np.eye(2))), Reflection()),
+        (IndependenceProposal(MultivariateT(np.zeros(2), np.eye(2))), Maximal()),
+        (ShiftedWalk(np.eye(2), np.eye(2)), Reflection()),
+        (ShiftedWalk(np.eye(2), np.eye(2)), Maximal()),
+    ],
+)
+def test_metropolis_hastings_refuses_a_coupling_for_a_proposal_or_subclass_it_does_not_support(
+    proposal, coupling
+):
+    with pytest.raises(ValueError, match="does not couple"):
+        MetropolisHastings(proposal, coupling)
+
+
+def test_random_walk_refuses_a_coupling_object_of_another_proposal():
+    with pytest.raises(ValueError, match="coupling must be"):
+        RandomWalk(np.eye(2), coupling=Shared())
+
+
+def test_kernels_with_coupling_objects_survive_pickling():
+    d, n = 2, 50
+    target = bounded_target(d, False)
+    q = MultivariateT(np.zeros(d), 2 * np.eye(d))
+    kernels = [
+        RandomWalk(np.eye(d), coupling=Maximal()),
+        RandomWalk(np.eye(d), coupling=Reflection()),
+        MALA(0.5, cov=np.eye(d)),
+        Independence(q),
+        MetropolisHastings(RandomWalkProposal(np.eye(d), np.eye(d)), Maximal()),
+        MetropolisHastings(IndependenceProposal(q), Shared()),
+    ]
+    for kernel in kernels:
+        copy = pickle.loads(pickle.dumps(kernel))
+        assert repr(copy) == repr(kernel)
+        grad = kernel.needs_grad
+        state_x, state_y = starts(n, d, 8, grad, target)
+        draws, reference = twin_draws(n, d, 9)
+        expected = kernel.coupled_step(target, state_x, state_y, reference)
+        assert_same_states(copy.coupled_step(target, state_x, state_y, draws), expected)

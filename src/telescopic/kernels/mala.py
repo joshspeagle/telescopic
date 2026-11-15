@@ -8,14 +8,9 @@ import numpy.typing as npt
 
 from telescopic._linalg import inverse_lower
 from telescopic._types import FloatArray
+from telescopic.couplings import Coupling, Reflection
 from telescopic.kernels.base import GradientKernel
-from telescopic.kernels.metropolis import (
-    Coupling,
-    LangevinProposal,
-    MetropolisHastings,
-    Proposal,
-    Reflection,
-)
+from telescopic.kernels.metropolis import LangevinProposal, MetropolisHastings, Proposal
 
 
 # Spec R-KER-MALA and section 5.4.
@@ -29,7 +24,10 @@ class MALA(GradientKernel, MetropolisHastings):
     proposal with a log-density of ``-inf`` or a non-finite position is rejected. Coupled
     chains draw their proposals from the reflection-maximal coupling of their proposal
     distributions, which share the covariance :math:`\epsilon^2\Sigma`, and share the
-    uniform (Jacob, O'Leary & Atchadé 2020, section 4.4).
+    uniform (Jacob, O'Leary & Atchadé 2020, section 4.4): a
+    :class:`~telescopic.kernels.MetropolisHastings` with a
+    :class:`~telescopic.kernels.LangevinProposal` and
+    :class:`~telescopic.couplings.Reflection`.
 
     Parameters
     ----------
