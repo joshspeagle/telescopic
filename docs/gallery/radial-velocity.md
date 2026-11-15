@@ -223,7 +223,7 @@ glue("unmet_10", int(np.sum(np.isinf(pilot[10]))), display=False)
 ```
 
 From the start 10 times wider, {glue:text}`unmet_10:d` of the 100 pairs had not met
-after 2,000 iterations, more than the 1% that the automatic choice of the
+after 2,000 iterations, more unmet pairs than the automatic choice of the
 {term}`burn-in` `k` allows
 ([The automatic pipeline](../guide/settings.md#the-automatic-pipeline)); from the start 3
 times wider, every pair met. The run starts 3 times wider.
@@ -368,14 +368,15 @@ glue("mean_share", float(mean_share), display=False)
 Replicate {glue:text}`named:d` holds {glue:text}`share:.2f` of the sample variance of
 the estimate of the posterior variance of $M_0$. Its pair met last of the 500, at
 $\tau =$ {glue:text}`tau_named:.0f`, after $k + L =$ {glue:text}`k_lag:d`, so its
-estimate carries the longest bias correction of the run: it is a {term}`late pair`. The error bar of that
-variance rests on one replicate and is not reliable. In the means, the shares
-are below the warning's threshold of one half, but not far below: one replicate holds
+estimate carries the longest bias correction of the run: it is a {term}`late pair`.
+The error bar of that variance rests on one replicate and is not reliable. The means do
+not cross the warning's threshold, but come near it: one replicate holds
 {glue:text}`mean_share:.2f` of the variance of the estimate of some mean. The other
-conditions do not apply: no pair was censored, few pairs met after $k + L$, and the
-{term}`tail index` of the meeting times is above 2.
+warnings do not fire: no pair was censored, and neither the fraction of
+late pairs nor the {term}`tail index` of the meeting times crosses
+its threshold.
 [One replicate dominating the variance](../reference/warnings.md#one-replicate-dominating-the-variance-variance)
-gives the warning's meaning and remedy: check the initial distribution, and look for a
+gives the threshold, the warning's meaning and its remedy: check the initial distribution, and look for a
 mode that the other replicates missed. For error bars that rest on many replicates,
 plan a second run with more of them, its number fixed before it runs
 ([How many replicates](../guide/settings.md#how-many-replicates)).
