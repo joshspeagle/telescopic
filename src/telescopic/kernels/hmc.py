@@ -11,7 +11,14 @@ import numpy.typing as npt
 from telescopic._linalg import matvec
 from telescopic._random import Draws
 from telescopic._types import FloatArray, integer, real
-from telescopic.kernels.base import GradientKernel, State, acceptance, evaluate_proposal, select
+from telescopic.kernels.base import (
+    GradientKernel,
+    State,
+    acceptance,
+    carried,
+    evaluate_proposal,
+    select,
+)
 from telescopic.kernels.mixture import Mixture
 from telescopic.kernels.random_walk import RandomWalk
 from telescopic.target import Target
@@ -226,8 +233,8 @@ class _Leapfrog(GradientKernel):
         moved = select(np.concatenate([log_u, log_u]) < log_alpha, end, both)
         grad = cast(FloatArray, moved.grad)
         # The trajectory knows no field of extra: each chain carries its own unchanged.
-        first = State(moved.x[:n], moved.log_prob[:n], grad[:n], dict(state_x.extra))
-        return first, State(moved.x[n:], moved.log_prob[n:], grad[n:], dict(state_y.extra))
+        first = State(moved.x[:n], moved.log_prob[:n], grad[:n], carried(state_x.extra))
+        return first, State(moved.x[n:], moved.log_prob[n:], grad[n:], carried(state_y.extra))
 
     def _with_cov(self, cov: FloatArray) -> _Leapfrog:
         return _Leapfrog(self.step_size, self._n_steps, cov, self.jitter)

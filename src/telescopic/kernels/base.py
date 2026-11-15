@@ -553,6 +553,24 @@ def evaluate_pair(
     return first, both.take(source)
 
 
+def carried(extra: dict[str, npt.NDArray[Any]]) -> dict[str, npt.NDArray[Any]]:
+    """Copies of the fields of ``extra``, for a kernel that carries them unchanged.
+
+    A returned state shares no array with an input state, so that writing into it, as
+    :meth:`State.put` does, never changes the input.
+
+    Parameters
+    ----------
+    extra : dict of str to ndarray
+        The fields of an input state.
+
+    Returns
+    -------
+    dict of str to ndarray
+    """
+    return {name: value.copy() for name, value in extra.items()}
+
+
 def acceptance(log_alpha: FloatArray) -> FloatArray:
     r"""Metropolis acceptance probabilities :math:`\min(1, e^{\log\alpha})`, 0 for NaN.
 
@@ -606,11 +624,13 @@ def select(accepted: BoolArray, proposal: State, current: State) -> State:
     -------
     State
     """
-    extra = dict(current.extra)
-    for name, value in proposal.extra.items():
-        if name in extra:
-            rows = accepted.reshape(-1, *[1] * (value.ndim - 1))
-            extra[name] = np.where(rows, value, extra[name])
+    extra = {}
+    for name, value in current.extra.items():
+        proposed = proposal.extra.get(name)
+        if proposed is None:
+            extra[name] = value.copy()  # an array of its own, as np.where gives
+        else:
+            extra[name] = np.where(accepted.reshape(-1, *[1] * (value.ndim - 1)), proposed, value)
     return State(
         np.where(accepted[:, None], proposal.x, current.x),
         np.where(accepted, proposal.log_prob, current.log_prob),

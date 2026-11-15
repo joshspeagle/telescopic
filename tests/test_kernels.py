@@ -1568,6 +1568,8 @@ def test_a_kernel_carries_unchanged_the_fields_it_does_not_know(name):
         for key, value in extra.items():
             np.testing.assert_array_equal(new.extra[key], value)
             assert new.extra[key].dtype == value.dtype
+            # Arrays of their own: a write into a returned state never reaches the input.
+            assert not any(np.shares_memory(new.extra[key], chain.extra[key]) for chain in start)
 
 
 class WithMomentum(RandomWalk):

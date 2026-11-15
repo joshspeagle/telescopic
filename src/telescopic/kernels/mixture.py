@@ -11,7 +11,7 @@ import numpy.typing as npt
 
 from telescopic._random import Draws
 from telescopic._types import FloatArray, IndexArray, Seed, instance, real_array
-from telescopic.kernels.base import Kernel, State
+from telescopic.kernels.base import Kernel, State, carried
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport
 
@@ -219,6 +219,8 @@ def _merged(new: State, old: State, index: int) -> State:
     if not (new.extra or old.extra):
         return new
     prefix = f"{index}/"
-    extra = {name: value for name, value in old.extra.items() if not name.startswith(prefix)}
+    extra = carried(
+        {name: value for name, value in old.extra.items() if not name.startswith(prefix)}
+    )
     extra.update((prefix + name, value) for name, value in new.extra.items())
     return State(new.x, new.log_prob, new.grad, extra)
