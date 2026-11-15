@@ -102,6 +102,8 @@ All notable changes to this project are documented here. The format follows
   figures: why a burn-in biases MCMC, two chains that meet, the telescoping
   correction, signed measures, not samples, error bars from replicates and what
   replaces R-hat and ESS, and meeting times and the distance to stationarity.
+- A Start page, Is telescopic right for my problem?, places a problem among good and
+  poor fits, each with its reason and a link to the page that holds the fact.
 - The API reference is an index of one-line summaries grouped by section, with a page for
   each class, its attributes and methods, a page for `sample`, and a page for each module
   that the index lists, its functions and a table of its classes. The page of a class with
