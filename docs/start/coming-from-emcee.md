@@ -182,4 +182,5 @@ telescopic's is the standard error of a mean of independent replicates, whose es
 are unbiased for any burn-in `k` ([Theory](../theory.md#guarantees-and-their-limits)). It
 is valid as the number of replicates grows, provided their variance is finite, and it
 needs no judgment of convergence: the meeting times bound the distance from
-stationarity instead ([Quickstart](quickstart.md)).
+stationarity instead ([Quickstart](quickstart.md),
+[Error bars from replicates](../concepts/error-bars.md)).

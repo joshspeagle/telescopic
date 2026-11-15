@@ -71,6 +71,7 @@ concepts/burn-in-bias
 concepts/two-chains
 concepts/telescoping-correction
 concepts/signed-measures
+concepts/error-bars
 ```
 
 ```{toctree}

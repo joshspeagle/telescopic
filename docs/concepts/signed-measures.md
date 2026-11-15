@@ -59,7 +59,8 @@ $\pi(h)$, and three kinds of results follow from the atoms and their weights
 ([Estimate anything from a result](../guide/estimates.md)).
 
 - **Expectations** of any function, such as means, probabilities and covariances, are
-  unbiased, with error bars from the replicates. Since some weights are negative, an
+  unbiased, with error bars from the replicates
+  ([Error bars from replicates](error-bars.md)). Since some weights are negative, an
   estimate can fall outside the range of $h$, such as a probability below 0 or a
   variance below 0 ([Covariances and variances](../guide/estimates.md#covariances-and-variances)).
 - **Histograms** with bins fixed before the run are unbiased in each bin, with a
