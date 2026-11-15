@@ -105,12 +105,9 @@ pool; with a vectorized one, only with the same pool, workers, BLAS build and th
 
 ### Why does my run stop with a `ValueError` before any replicate?
 
-When its message says that more than 1% of the pilot pairs never met, `k` could not be
-chosen. With MALA or HMC, the automatic step size is the usual cause, and an explicit
-`step_size` the remedy
-([When the automatic step fails](../guide/step-size.md#when-the-automatic-step-fails));
-otherwise look at the kernel and the initial distribution
-([Warnings and errors](warnings.md)).
+When its message says that `k` cannot be chosen, too many pilot pairs never met;
+[k cannot be chosen](../guide/troubleshooting.md#k-cannot-be-chosen) gives the causes,
+a check and the fixes.
 
 ### My run warns. Are the estimates wrong?
 

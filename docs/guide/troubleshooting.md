@@ -8,10 +8,10 @@ mystnb:
 
 # Troubleshoot chains that do not meet
 
-This page is indexed by what a run shows: the text of an error or a warning, or a result
-that looks wrong. Each entry gives the cause, a check in code and the fix, and links to
-the page that holds each fact. [Warnings and errors](../reference/warnings.md) gives the
-threshold and the meaning of every warning.
+This page is indexed by what a run shows: an error or a warning, or a result that looks
+wrong. Each entry gives the cause, a check in code and the fix, and links to the page
+that holds each fact. [Warnings and errors](../reference/warnings.md) gives the text,
+threshold and meaning of every warning.
 
 ```{diagram} remedies
 Each condition that a run reports, grouped by when it arises, with the warning or error
@@ -38,7 +38,7 @@ result = sampler.run(100)
 
 ## Before any replicate
 
-### "k cannot be chosen"
+### k cannot be chosen
 
 The run raises `ValueError` after the {term}`meeting-time pilot`, before any
 {term}`replicate` runs. The message is that of {func}`telescopic.tuning.choose_k`, here
@@ -53,21 +53,16 @@ except ValueError as error:
     print("ValueError:", error)
 ```
 
-When MALA or HMC tuned their step size, a note follows the message:
-
-> with MALA or HMC, an automatic step size can fail to couple: try a step_size checked on
-> pilot pairs, or, for HMC with jitter=0 and a given n_steps or cov, the default jitter
-> (When the automatic step fails, in the guide 'Check and set a step size')
-
-When some pilot {term}`pairs <pair>` started where the target density is zero, the
-message begins instead "k cannot be chosen: too many pilot pairs never met within their
-cap, and" and says how many.
+With MALA or HMC whose parameters were tuned, a note on the step size follows the message
+([When the automatic step fails](step-size.md#when-the-automatic-step-fails)). When some
+pilot {term}`pairs <pair>` started where the target density is zero, the message says
+how many instead
+([Choosing one](initial-distribution.md#choosing-one), "Inside the support").
 
 **Cause.** The pilot's pairs run until they meet or reach the pilot's cap, and `k` is a
 quantile of their {term}`meeting times <meeting time>`, which cannot be chosen when too
 many are censored ([The automatic pipeline](settings.md#the-automatic-pipeline)). The
-usual causes are an automatic step size of MALA or HMC that does not couple
-([When the automatic step fails](step-size.md#when-the-automatic-step-fails)), a target
+usual causes are an automatic step size of MALA or HMC that does not couple, a target
 with several modes from a start that covers them, and a start outside the support of
 the target.
 
@@ -88,21 +83,22 @@ support ([Choosing one](initial-distribution.md#choosing-one)). Giving `k` skips
 pilot ([The automatic pipeline](settings.md#the-automatic-pipeline)), but the pairs that
 the pilot could not bring together then make the run slow or warn.
 
-### "the tuning chains disagree"
+### The tuning chains disagree
 
-The tuning warning comes before the pilot and the replicates; it reads "the tuning chains
-disagree (R-hat up to ...)" or "the tuning chains never moved in coordinates ...".
+The tuning warning comes before the pilot and the replicates.
 [Disagreeing tuning chains](../reference/warnings.md#disagreeing-tuning-chains-tuning)
-gives its cause, its check, `result.tuning.rhat`, and its fix.
+gives its text, its cause and its fix; `sampler.tuning.rhat`, printed above, is its
+check.
 
 ## While the replicates run
 
-### "has not met after ... iterations", or a run that seems to hang
+### A pair that has not met, or a run that seems to hang
 
-A pair that has not met at a threshold raises one `ConvergenceWarning` per run while it
-runs. For a replicate it reads "replicate ... has not met after ... iterations, and the
-run waits for it", followed by what Ctrl-C does and the remedy; for a pilot pair, as here
-with a random walk whose proposals are far too small to meet:
+A pair still unmet at a threshold raises one `ConvergenceWarning` per run: in this
+process as soon as the pair passes it, and on a pool only when the run ends
+([Slow pairs](../reference/warnings.md#slow-pairs-slow), which gives the text for a
+replicate). For a pilot pair, as here with a random walk whose proposals are far too
+small to meet, it reads:
 
 ```{code-cell} python
 :tags: [wrap-output]
@@ -124,19 +120,17 @@ stuck_tau = stuck.meeting_times(1, max_iter=10_001)
 assert np.isinf(stuck_tau).all()
 ```
 
-A pair whose chain started where the target density is zero ends the message with
-"it started where the target density is zero, so draw the initial distribution inside
-the support of the target", and such a start also raises an `InputWarning` that begins
-"replicates start where the target density is zero".
+A pair that started where the target density is zero says so in this warning, and its
+start also raises an `InputWarning`
+([Warning classes](../reference/warnings.md#warning-classes)).
 
 **Cause.** Heavy-tailed meeting times, from a kernel that mixes slowly or a start far from
-the target, or a chain that cannot leave a region of zero density
-([Slow pairs](../reference/warnings.md#slow-pairs-slow)). A run without `max_iter` waits
-for every pair, so a pair that never meets keeps the run waiting.
+the target, or a chain that cannot leave a region of zero density. A run without
+`max_iter` waits for every pair, so a pair that never meets keeps the run waiting.
 
 **Check.** `progress=True` shows the replicates finished as the run goes
-([Progress](parallel.md#progress)). Pilot pairs with a cap, as in the previous entry,
-show the tail of the meeting times without waiting for it, and
+([Progress](parallel.md#progress)). Pilot pairs with a cap, as in the first entry, show
+the tail of the meeting times without waiting for it, and
 {meth}`~telescopic.Result.plot_meeting_times` draws their survival function for a result
 ([Meeting times](meeting-times.md#meeting-times)).
 
@@ -149,23 +143,25 @@ estimates ([Censored pairs](../reference/warnings.md#censored-pairs-censored)).
 ### MALA or HMC meets far more slowly than the random walk
 
 A gradient kernel whose pairs take much longer to meet than the random walk's, or that
-raises the note above, often has an automatic step that does not couple
-([When the automatic step fails](step-size.md#when-the-automatic-step-fails)).
+adds the note on the step size to the error above, often has an automatic step that does
+not couple ([When the automatic step fails](step-size.md#when-the-automatic-step-fails)).
 
-**Check.** Pilot pairs with a given step size and covariance run no tuning; compare the
-unmet pairs and the mean meeting time over a few step sizes:
+**Check.** Pilot pairs with a given step size and covariance run no tuning; over a few
+step sizes, compare the unmet pairs and the median meeting time of the others:
 
 ```{code-cell} python
-mala = telescopic.CoupledSampler(
-    gaussian.log_prob,
-    gaussian.initial,
-    grad=gaussian.grad,
-    vectorize=True,
-    kernel=kernels.MALA(0.5, cov=gaussian.cov),
-    rng=5,
-)
-mala_tau = mala.meeting_times(100, max_iter=3000)
-print("unmet:", np.isinf(mala_tau).sum(), "mean:", mala_tau.mean())
+for step in [0.25, 0.5, 1.0]:
+    mala = telescopic.CoupledSampler(
+        gaussian.log_prob,
+        gaussian.initial,
+        grad=gaussian.grad,
+        vectorize=True,
+        kernel=kernels.MALA(step, cov=gaussian.cov),
+        rng=5,
+    )
+    mala_tau = mala.meeting_times(100, max_iter=3000)
+    met = mala_tau[np.isfinite(mala_tau)]
+    print(f"step {step}: {len(mala_tau) - len(met)} unmet, median {np.median(met):.0f}")
 ```
 
 **Fix.** The step size with the lowest cost of a pair
@@ -174,17 +170,13 @@ print("unmet:", np.isinf(mala_tau).sum(), "mean:", mala_tau.mean())
 
 ## When the run ends
 
-The warnings below apply to the result of all the replicates; the summary lists them, and
-{func}`telescopic.diagnostics.issues` returns them. Each message begins as in the first
-column, with the numbers of the run in place of the dots:
-
-| The message begins | Warning |
-|---|---|
-| "... of ... pairs reached max_iter = ... without meeting" | [`censored`](../reference/warnings.md#censored-pairs-censored) |
-| "...% of the pairs met after k + lag, so k may be too small" | [`late`](../reference/warnings.md#late-pairs-late) |
-| "replicate ... holds ...% of the variance of" | [`variance`](../reference/warnings.md#one-replicate-dominating-the-variance-variance) |
-| "the meeting times look heavy-tailed (tail index" | [`tail`](../reference/warnings.md#heavy-tailed-meeting-times-tail) |
-| "a pair was still unmet after ... iterations" | [`slow`](../reference/warnings.md#slow-pairs-slow) |
+The warnings `censored`, `late`, `variance` and `tail` apply to the result of all the
+replicates; the summary lists them, and {func}`telescopic.diagnostics.issues` returns
+them, with `slow` and `tuning` when they apply. Each has its entry in Warnings and errors:
+[`censored`](../reference/warnings.md#censored-pairs-censored),
+[`late`](../reference/warnings.md#late-pairs-late),
+[`variance`](../reference/warnings.md#one-replicate-dominating-the-variance-variance) and
+[`tail`](../reference/warnings.md#heavy-tailed-meeting-times-tail).
 
 **Check.** The values behind them are in `result.diagnostics()`
 ([The diagnostics of a run](../reference/result-fields.md#the-diagnostics-of-a-run)), and
@@ -203,21 +195,14 @@ telescopic.diagnostics.issues(result)
 assert telescopic.diagnostics.issues(result) == []
 ```
 
-**Fix.** Each warning's entry in [Warnings and errors](../reference/warnings.md) gives its
-remedy.
+**Fix.** Each warning's entry gives its remedy.
 
 ## In the estimates
 
 ### A negative variance, or a standard deviation of zero
 
-`result.var()` returns a negative value, or the `std` column of the summary shows 0.
-
-**Cause.** The variances are {term}`unbiased`, and an unbiased estimate of a variance can
-be negative; `std` is $\sqrt{\max(0, \widehat{\mathrm{Var}})}$
-([Covariances and variances](estimates.md#covariances-and-variances)). A start orders of
-magnitude wider than the target makes this likely: rare replicates whose chain is still
-on its way to the target dominate the estimates of variances
-([Choosing one](initial-distribution.md#choosing-one)).
+An unbiased variance can be negative, and the summary's `std` is then 0
+([Why is my variance negative?](../reference/faq.md#why-is-my-variance-negative-or-a-probability-outside-0-1)).
 
 **Check.** The variances, and the largest share of one replicate in the variance of an
 estimate, with the replicate that holds it:
@@ -238,15 +223,10 @@ A run whose pairs all met in one mode warns of nothing: its meeting times and es
 cannot show a mode that no replicate visited
 ([A run that never left one mode](../reference/warnings.md#a-run-that-never-left-one-mode)).
 
-**Check.** The tuning chains' $\hat R$, which raises the tuning warning when the chains
-disagree ([Disagreeing tuning chains](../reference/warnings.md#disagreeing-tuning-chains-tuning)),
-though chains that agree can still all sit in one mode ([Tuning](kernels.md#tuning));
-and the same estimate from a second run with a wider
-initial distribution, which should agree within the error bars:
-
-```{code-cell} python
-result.tuning.rhat
-```
+**Check.** The tuning chains' $\hat R$, printed in the first entry, which raises the
+tuning warning when the chains disagree, though chains that agree can still all sit in
+one mode ([Tuning](kernels.md#tuning)); and the same estimate from a second run with a
+wider initial distribution, which should agree within the error bars.
 
 **Fix.** An initial distribution that covers every mode, and a kernel that reaches every
 mode from it ([Choosing one](initial-distribution.md#choosing-one));
