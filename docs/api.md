@@ -60,7 +60,17 @@ and, for `telescopic.plotting`, its three colors, and a table of its classes.
    ~telescopic.kernels.MultivariateT
    ~telescopic.kernels.Gibbs
    ~telescopic.kernels.Mixture
+   ~telescopic.kernels.MetropolisHastings
+   ~telescopic.kernels.Proposal
+   ~telescopic.kernels.RandomWalkProposal
+   ~telescopic.kernels.LangevinProposal
+   ~telescopic.kernels.IndependenceProposal
    telescopic.couplings
+   ~telescopic.couplings.Coupling
+   ~telescopic.couplings.CoupledProposals
+   ~telescopic.couplings.Reflection
+   ~telescopic.couplings.Maximal
+   ~telescopic.couplings.Shared
 ```
 
 ## Diagnostics, plots and checks

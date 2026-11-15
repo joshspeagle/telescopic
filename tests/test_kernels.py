@@ -17,9 +17,8 @@ from telescopic.kernels import (
     State,
     hmc,
     independence,
-    mala,
-    random_walk,
 )
+from telescopic.kernels import metropolis as metropolis_hastings
 from telescopic.kernels.base import acceptance
 from telescopic.target import Target
 from telescopic.testing import check_coupling, fixed_draws, random_draws
@@ -316,7 +315,7 @@ def test_products_use_blas_exactly_for_a_vectorized_target(name, vectorize, monk
         flags.append(blas)
         return np.asarray(matvec(matrix, vectors.view(Recorded), blas=blas))
 
-    for module in (random_walk, mala, hmc, couplings, independence, tuning):
+    for module in (metropolis_hastings, hmc, couplings, independence, tuning):
         monkeypatch.setattr(module, "matvec", spy)
     target = Target(gaussian_log_prob, grad=lambda x: -x, vectorize=vectorize)
     if name == "pilot":
@@ -549,7 +548,7 @@ def test_independence_takes_a_proposal_whose_mean_is_a_method():
 
 
 def test_independence_refuses_a_proposal_without_sample_and_log_density():
-    with pytest.raises(TypeError, match="proposal must have sample"):
+    with pytest.raises(TypeError, match="proposal distribution must have sample"):
         Independence(stats.multivariate_normal(np.zeros(2)))
 
 

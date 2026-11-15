@@ -2,29 +2,19 @@
 
 from __future__ import annotations
 
-from functools import partial
 from typing import cast
 
-import numpy as np
 import numpy.typing as npt
 
-from telescopic._linalg import inverse_lower, matvec
-from telescopic._random import Draws
+from telescopic._linalg import inverse_lower
 from telescopic._types import FloatArray
-from telescopic.couplings import _reflection
-from telescopic.kernels.base import (
-    GradientKernel,
-    State,
-    acceptance,
-    evaluate_pair,
-    evaluate_proposal,
-    select,
-)
-from telescopic.target import Target
+from telescopic.couplings import Reflection
+from telescopic.kernels.base import GradientKernel
+from telescopic.kernels.metropolis import LangevinProposal, MetropolisHastings
 
 
 # Spec R-KER-MALA and section 5.4.
-class MALA(GradientKernel):
+class MALA(GradientKernel, MetropolisHastings):
     r"""The Metropolis-adjusted Langevin algorithm.
 
     The proposal is :math:`x' = x + \tfrac{\epsilon^2}{2}\Sigma\nabla\log\pi(x) + \epsilon Cz`,
@@ -34,7 +24,10 @@ class MALA(GradientKernel):
     proposal with a log-density of ``-inf`` or a non-finite position is rejected. Coupled
     chains draw their proposals from the reflection-maximal coupling of their proposal
     distributions, which share the covariance :math:`\epsilon^2\Sigma`, and share the
-    uniform (Jacob, O'Leary & Atchadé 2020, section 4.4).
+    uniform (Jacob, O'Leary & Atchadé 2020, section 4.4): a
+    :class:`~telescopic.kernels.MetropolisHastings` with a
+    :class:`~telescopic.kernels.LangevinProposal` and
+    :class:`~telescopic.couplings.Reflection`.
 
     Parameters
     ----------
@@ -74,58 +67,18 @@ class MALA(GradientKernel):
     """
 
     target_acceptance = 0.574
+    _untuned = "MALA needs step_size and cov; give them, or tune the kernel on a pilot run"
 
     def __init__(
         self, step_size: float | None = None, *, cov: npt.ArrayLike | None = None
     ) -> None:
-        super().__init__(step_size, cov)
+        GradientKernel.__init__(self, step_size, cov)
         self._inverse = None if self._chol is None else inverse_lower(self._chol)
-        self._factors = self._scaled()
-
-    def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
-        chol, _ = self._ready()
-        blas = target.vectorize
-        drift = _drift(state, chol, blas)
-        z = draws.normal(len(chol))
-        proposal = evaluate_proposal(target, state.x + matvec(chol, 0.5 * drift + z, blas=blas))
-        log_alpha = _log_alpha(state, proposal, z, drift, chol, blas)
-        accepted = draws.log_uniform() < log_alpha
-        return select(accepted, proposal, state), acceptance(log_alpha)
-
-    def coupled_step(
-        self, target: Target, state_x: State, state_y: State, draws: Draws
-    ) -> tuple[State, State]:
-        chol, inverse = self._ready()
-        blas = target.vectorize
-        drift_x, drift_y = _drift(state_x, chol, blas), _drift(state_y, chol, blas)
-        # The whitened difference of the proposals' means, B^{-1}(mu_x - mu_y). Infinite
-        # drifts, from a gradient that overflowed, can give inf - inf = NaN, which fails
-        # the meeting test as in reflection_maximal.
-        with np.errstate(over="ignore", invalid="ignore"):
-            delta = matvec(inverse, state_x.x - state_y.x, blas=blas) + 0.5 * (drift_x - drift_y)
-        z, identical, shift = _reflection(delta, draws, delta)
-        # y's whitened residual: the reflected z, or z + delta where the pair is identical,
-        # since there y' = x' = mu_y + B(z + delta).
-        residual_y = np.where(identical[:, None], z + delta, z - shift)
-        x = state_x.x + matvec(chol, 0.5 * drift_x + z, blas=blas)
-        y = np.where(
-            identical[:, None], x, state_y.x + matvec(chol, 0.5 * drift_y + residual_y, blas=blas)
-        )
-        proposal_x, proposal_y = evaluate_pair(partial(evaluate_proposal, target), x, y, identical)
-        log_u = draws.log_uniform()
-        state_x = select(
-            log_u < _log_alpha(state_x, proposal_x, z, drift_x, chol, blas), proposal_x, state_x
-        )
-        state_y = select(
-            log_u < _log_alpha(state_y, proposal_y, residual_y, drift_y, chol, blas),
-            proposal_y,
-            state_y,
-        )
-        return state_x, state_y
+        MetropolisHastings.__init__(self, self._langevin(), Reflection())
 
     def with_step_size(self, step_size: float) -> MALA:
         kernel = cast(MALA, super().with_step_size(step_size))
-        kernel._factors = kernel._scaled()
+        MetropolisHastings.__init__(kernel, kernel._langevin(), kernel._coupling)
         return kernel
 
     def _with_cov(self, cov: FloatArray) -> MALA:
@@ -134,48 +87,16 @@ class MALA(GradientKernel):
     def _first_step_size(self, d: int) -> float:
         return float(1.65 * d ** (-1 / 6))
 
-    def _scaled(self) -> tuple[FloatArray, FloatArray] | None:
-        # The factor of the proposal covariance epsilon^2 Sigma, and its inverse, computed
-        # once per step size: per step they would cost a third of a step at d = 200.
+    def _langevin(self) -> LangevinProposal | None:
+        # The proposal with the factor of its covariance epsilon^2 Sigma, and its inverse,
+        # computed once per step size: per step they would cost a third of a step at
+        # d = 200.
         if self._chol is None or self._inverse is None or self.step_size is None:
             return None
-        return self.step_size * self._chol, self._inverse / self.step_size
-
-    def _ready(self) -> tuple[FloatArray, FloatArray]:
-        if self._factors is None:
-            raise ValueError(
-                "MALA needs step_size and cov; give them, or tune the kernel on a pilot run"
-            )
-        return self._factors
+        return LangevinProposal._trusted(
+            self.step_size * self._chol, self._inverse / self.step_size
+        )
 
     def __repr__(self) -> str:
         cov = "None" if self.cov is None else f"<{len(self.cov)}x{len(self.cov)}>"
         return f"MALA(step_size={self.step_size}, cov={cov})"
-
-
-def _drift(state: State, chol: FloatArray, blas: bool) -> FloatArray:
-    # The whitened drift h = B^T grad log pi(x), with chol = B = epsilon C, so that the
-    # mean of q(. | x) is x + B h / 2.
-    drift: FloatArray = matvec(chol.T, cast(FloatArray, state.grad), blas=blas)
-    return drift
-
-
-def _log_alpha(
-    current: State,
-    proposal: State,
-    residual: FloatArray,
-    drift: FloatArray,
-    chol: FloatArray,
-    blas: bool,
-) -> FloatArray:
-    # log pi(x') - log pi(x) + log q(x | x') - log q(x' | x): x' = x + B(h / 2 + r) gives
-    # B^{-1}(x' - mu(x)) = r and B^{-1}(x - mu(x')) = -(r + (h + h') / 2); the Gaussian
-    # constants cancel. A rejected proposal (log pi = -inf) carries a zero gradient and may
-    # hold non-finite positions: no warnings, and a NaN ratio rejects as -inf does.
-    with np.errstate(over="ignore", invalid="ignore"):
-        back = residual + 0.5 * (drift + _drift(proposal, chol, blas))
-        log_q = 0.5 * (
-            np.einsum("ij,ij->i", residual, residual) - np.einsum("ij,ij->i", back, back)
-        )
-        log_alpha: FloatArray = proposal.log_prob - current.log_prob + log_q
-    return log_alpha

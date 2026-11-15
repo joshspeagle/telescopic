@@ -1,0 +1,54 @@
+setup: commit 9fb63e8 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1
+numpy build: name: scipy-openblas; openblas configuration: OpenBLAS 0.3.34.106.0  USE64BITINT DYNAMIC_ARCH NO_AFFINITY; version: 0.3.34.106.0; name: gcc; version: 14.2.1; name: cython; version: 3.3.0; version: '3.13'
+threads pinned: True
+engine gaussian  rw reflection vectorize=False lanes= 1  9370243da487e266
+engine gaussian  rw reflection vectorize=False lanes=16  9370243da487e266
+engine gaussian  rw maximal    vectorize=False lanes= 1  31bb771043fd1b80
+engine gaussian  rw maximal    vectorize=False lanes=16  31bb771043fd1b80
+engine gaussian  mala          vectorize=False lanes= 1  b00e6bf0d389edb6
+engine gaussian  mala          vectorize=False lanes=16  b00e6bf0d389edb6
+engine gaussian  independence  vectorize=False lanes= 1  31cfa0cd92fd7668
+engine gaussian  independence  vectorize=False lanes=16  31cfa0cd92fd7668
+engine gaussian  hmc           vectorize=False lanes= 1  a216688d3a8821b3
+engine gaussian  hmc           vectorize=False lanes=16  a216688d3a8821b3
+engine gaussian  mixture       vectorize=False lanes= 1  2b6e5e1a38722832
+engine gaussian  mixture       vectorize=False lanes=16  2b6e5e1a38722832
+engine gaussian  rw reflection vectorize=True  lanes= 1  25f0596b8c777b69
+engine gaussian  rw reflection vectorize=True  lanes=16  cf410d93253d203f
+engine gaussian  rw maximal    vectorize=True  lanes= 1  2629e56f58469d38
+engine gaussian  rw maximal    vectorize=True  lanes=16  31bb771043fd1b80
+engine gaussian  mala          vectorize=True  lanes= 1  e2dc429d46ec4929
+engine gaussian  mala          vectorize=True  lanes=16  6bbd3e0b62155d90
+engine gaussian  independence  vectorize=True  lanes= 1  31cfa0cd92fd7668
+engine gaussian  independence  vectorize=True  lanes=16  31cfa0cd92fd7668
+engine gaussian  hmc           vectorize=True  lanes= 1  af3acd22e67fa5cd
+engine gaussian  hmc           vectorize=True  lanes=16  f589078f3a6a7e2e
+engine gaussian  mixture       vectorize=True  lanes= 1  5d283190ac8f016c
+engine gaussian  mixture       vectorize=True  lanes=16  41c273ae215aa198
+engine truncated rw reflection vectorize=False lanes= 1  56f48def9af307ce
+engine truncated rw reflection vectorize=False lanes=16  56f48def9af307ce
+engine truncated mala          vectorize=False lanes= 1  c07330659f5a6caa
+engine truncated mala          vectorize=False lanes=16  c07330659f5a6caa
+engine truncated independence  vectorize=False lanes= 1  89ad21ef0f05c30b
+engine truncated independence  vectorize=False lanes=16  89ad21ef0f05c30b
+engine truncated rw reflection vectorize=True  lanes= 1  7ec7f37b22fde44a
+engine truncated rw reflection vectorize=True  lanes=16  2e609ad22ea3ee94
+engine truncated mala          vectorize=True  lanes= 1  8b3998167f76cf29
+engine truncated mala          vectorize=True  lanes=16  944108e63c2e21ce
+engine truncated independence  vectorize=True  lanes= 1  89ad21ef0f05c30b
+engine truncated independence  vectorize=True  lanes=16  89ad21ef0f05c30b
+engine pumps     gibbs         lanes= 1  0e9bc3c31a097252
+engine pumps     gibbs         lanes=16  0e9bc3c31a097252
+sample untuned   rw reflection vectorize=False  d765413e66b6735e kernel d4c294a170068619
+sample untuned   rw maximal    vectorize=False  2eba5dc8852e9a82 kernel e675b4d43797ac3c
+sample untuned   mala          vectorize=False  cf62d81f2193b7d3 kernel c574e502e1325b58
+sample untuned   independence  vectorize=False  e4fa96db53e9e397 kernel b42ef0e83641877e
+sample untuned   hmc           vectorize=False  5d18f137f19bd3a6 kernel 639ee8fa7d222376
+sample untuned   mixture       vectorize=False  a4ef2f414c696959 kernel a06feb81a74da064
+sample untuned   rw reflection vectorize=True   171813303efef68d kernel 93ebaf408437fec5
+sample untuned   rw maximal    vectorize=True   3f1cf05c35dd89a9 kernel f4ff99c8a5442781
+sample untuned   mala          vectorize=True   9810da2049a77f3e kernel b0bd8747bd111d6a
+sample untuned   independence  vectorize=True   c4480d1c57d0b56a kernel a162b6283672872a
+sample untuned   hmc           vectorize=True   8a986ac8ca7ad556 kernel 214a403957b7599e
+sample untuned   mixture       vectorize=True   42d21862ff89b933 kernel 35999e23a243c094
+sample pool=2    rw reflection                     6f6d655f9f51c69a

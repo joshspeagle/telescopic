@@ -1,0 +1,738 @@
+setup: commit 3bf5f62 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1 
+records of commit 3bf5f62 printed with the setup above
+processor seconds recorded: 17988 in all, 16470 in tier 1
+cut cells: none; incomplete cells: none
+check_coupling: failed none
+
+Cells
+A gaussian2 n=default
+  P      30/ 30 seeds, eps median 1.1635, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 26.2, T 132, largest factor max 0.412447
+  G      30/ 30 seeds, eps median 1.1635, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 26.2, T 132, largest factor max 0.412447, kept 30
+  J2     30/ 30 seeds, eps median 1.1516, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 26.2, T 131, largest factor max 0.403948
+  J3     30/ 30 seeds, eps median 1.1400, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 25.8, T 128, largest factor max 0.378690
+  J5     30/ 30 seeds, eps median 1.1123, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 27.0, T 139, largest factor max 0.315550
+  CF     30/ 30 seeds, eps median 0.3175, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 23.0, T 376, largest factor max 0.510762
+  P.2    30/ 30 seeds, eps median 1.1635, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 18.0, T 66, largest factor max 0.412447
+  CF.2   30/ 30 seeds, eps median 0.3175, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 14.0, T 192, largest factor max 0.510762
+A gaussian2 n=1
+  P      30/ 30 seeds, eps median 1.1653, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 26.2, T 133, largest factor max 0.414663
+  G      30/ 30 seeds, eps median 1.1653, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 26.2, T 133, largest factor max 0.414663, kept 30
+  J2     30/ 30 seeds, eps median 1.1528, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 26.2, T 129, largest factor max 0.404270
+  J3     30/ 30 seeds, eps median 1.1368, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 25.5, T 126, largest factor max 0.375398
+  J5     30/ 30 seeds, eps median 1.0964, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 27.0, T 138, largest factor max 0.321086
+  CF     30/ 30 seeds, eps median 0.4341, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 104.8, T 348, largest factor max 0.918406
+A gaussian2 n=2
+  P       7/  5 seeds, eps median 1.4954, unmet 0.1329 (cap) 0.1357 (budget), k failed 1, median of medians 2161.5, T 32832, largest factor max 0.999999
+  G      30/ 30 seeds, eps median 0.9580, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 29.0, T 406, largest factor max 0.996374, kept 2, moved 28
+  J2     30/ 30 seeds, eps median 1.4146, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 122.8, T 909, largest factor max 0.895844
+  J3     30/ 30 seeds, eps median 1.3452, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 63.8, T 522, largest factor max 0.769686
+  J5     30/ 30 seeds, eps median 1.2342, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 31.0, T 309, largest factor max 0.457612
+  CF     30/ 30 seeds, eps median 0.3566, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 45.0, T 409, largest factor max 0.772513
+A gaussian2 n=3
+  P      30/ 30 seeds, eps median 1.2584, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 46.8, T 634, largest factor max 0.791195
+  G      30/ 30 seeds, eps median 1.2584, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 46.8, T 634, largest factor max 0.791195, kept 30
+  J2     30/ 30 seeds, eps median 1.2760, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 32.2, T 543, largest factor max 0.499165
+  J3     30/ 30 seeds, eps median 1.2851, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 39.0, T 570, largest factor max 0.528247
+  J5     30/ 30 seeds, eps median 1.2138, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 41.2, T 606, largest factor max 0.592030
+  CF     30/ 30 seeds, eps median 0.3263, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 28.0, T 390, largest factor max 0.554471
+A gaussian2 n=5
+  P      30/ 30 seeds, eps median 1.3075, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 71.5, T 1353, largest factor max 0.942432
+  G      30/ 30 seeds, eps median 1.3075, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 68.5, T 1323, largest factor max 0.942432, kept 28, moved 2
+  J2     30/ 30 seeds, eps median 1.3154, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 40.2, T 983, largest factor max 0.567059
+  J3     30/ 30 seeds, eps median 1.2815, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 36.0, T 937, largest factor max 0.572902
+  J5     30/ 30 seeds, eps median 1.2087, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 36.2, T 929, largest factor max 0.539863
+  CF     30/ 30 seeds, eps median 0.3648, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 25.0, T 560, largest factor max 0.440733
+A gaussian2 n=10
+  P      30/ 30 seeds, eps median 1.3189, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 37.0, T 2110, largest factor max 0.875315
+  G      30/ 30 seeds, eps median 1.3066, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 35.5, T 1903, largest factor max 0.875315, kept 26, moved 4
+  J2     30/ 30 seeds, eps median 1.2983, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 36.0, T 1864, largest factor max 0.545708
+  J3     30/ 30 seeds, eps median 1.2764, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 38.0, T 1932, largest factor max 0.526121
+  J5     30/ 30 seeds, eps median 1.2016, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 36.5, T 1923, largest factor max 0.530168
+  CF     30/ 30 seeds, eps median 0.3604, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 30.2, T 1565, largest factor max 0.528056
+A gaussian10 n=default
+  P      30/ 30 seeds, eps median 0.7801, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 25.8, T 350, largest factor max 0.383500
+  G      30/ 30 seeds, eps median 0.7801, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 25.8, T 350, largest factor max 0.383500, kept 30
+  J2     30/ 30 seeds, eps median 0.7850, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 24.5, T 334, largest factor max 0.341279
+  J3     30/ 30 seeds, eps median 0.7955, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 25.0, T 340, largest factor max 0.291623
+  J5     30/ 30 seeds, eps median 0.8218, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 29.0, T 356, largest factor max 0.400151
+  CF     30/ 30 seeds, eps median 0.2047, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 34.8, T 967, largest factor max 0.694063
+  P.2    30/ 30 seeds, eps median 0.7801, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 17.0, T 116, largest factor max 0.383500
+  CF.2   30/ 30 seeds, eps median 0.2047, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 28.0, T 386, largest factor max 0.694063
+A gaussian10 n=1
+  P      30/ 30 seeds, eps median 0.8481, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 57.8, T 251, largest factor max 0.799307
+  G      30/ 30 seeds, eps median 0.8481, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 57.8, T 251, largest factor max 0.799307, kept 30
+  J2     30/ 30 seeds, eps median 0.8369, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 59.2, T 248, largest factor max 0.806206
+  J3     30/ 30 seeds, eps median 0.8265, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 60.0, T 248, largest factor max 0.809482
+  J5     30/ 30 seeds, eps median 0.7942, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 63.0, T 257, largest factor max 0.811690
+  CF     30/ 30 seeds, eps median 0.3164, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 266.5, T 779, largest factor max 0.969674
+A gaussian10 n=2
+  P      30/ 30 seeds, eps median 0.7807, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 25.8, T 350, largest factor max 0.376690
+  G      30/ 30 seeds, eps median 0.7807, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 25.8, T 350, largest factor max 0.376690, kept 30
+  J2     30/ 30 seeds, eps median 0.7891, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 24.2, T 334, largest factor max 0.332806
+  J3     30/ 30 seeds, eps median 0.8019, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 25.0, T 336, largest factor max 0.303687
+  J5     30/ 30 seeds, eps median 0.8343, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 29.8, T 364, largest factor max 0.416971
+  CF     30/ 30 seeds, eps median 0.2561, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 110.0, T 729, largest factor max 0.921247
+A gaussian10 n=3
+  P       5/  5 seeds, eps median 1.0526, unmet 0.1540 (cap) 0.4000 (budget), k failed 2, median of medians 20313.5, T 276547, largest factor max 0.999936
+  G      30/ 30 seeds, eps median 0.6666, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 45.2, T 651, largest factor max 0.812299, moved 30
+  J2     30/ 30 seeds, eps median 0.9970, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 177.8, T 2033, largest factor max 0.920646
+  J3     30/ 30 seeds, eps median 0.9592, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 85.8, T 961, largest factor max 0.822608
+  J5     30/ 30 seeds, eps median 0.8842, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 37.0, T 590, largest factor max 0.494863
+  CF     30/ 30 seeds, eps median 0.2288, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 68.5, T 764, largest factor max 0.861488
+A gaussian10 n=5
+  P      30/ 30 seeds, eps median 0.8442, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 183.5, T 3146, largest factor max 0.991906
+  G      30/ 30 seeds, eps median 0.8442, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 183.5, T 3146, largest factor max 0.991906, kept 30
+  J2     30/ 30 seeds, eps median 0.8743, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 60.2, T 1279, largest factor max 0.900294
+  J3     30/ 30 seeds, eps median 0.8778, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 44.8, T 1079, largest factor max 0.785542
+  J5     30/ 30 seeds, eps median 0.8594, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 49.0, T 1120, largest factor max 0.608891
+  CF     30/ 30 seeds, eps median 0.2056, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 35.0, T 939, largest factor max 0.693706
+A gaussian10 n=10
+  P      10/  5 seeds, eps median 0.9033, unmet 0.1090 (cap) 0.4060 (budget), k failed 2, median of medians 5577.0, T 96597, largest factor max 0.999998
+  G      30/ 30 seeds, eps median 0.2063, unmet 0.0000 (cap) 0.0413 (budget), k failed 0, median of medians 45.0, T 3873, largest factor max 0.999623, kept 5, moved 25
+  J2     30/ 30 seeds, eps median 0.8922, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 45.2, T 2062, largest factor max 0.610113
+  J3     30/ 30 seeds, eps median 0.8842, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 47.5, T 2190, largest factor max 0.610194
+  J5     30/ 30 seeds, eps median 0.8510, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 42.8, T 2038, largest factor max 0.541595
+  CF     30/ 30 seeds, eps median 0.2594, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 34.0, T 1866, largest factor max 0.529448
+A' gaussian5 n=3
+  P      24/  5 seeds, eps median 1.1538, unmet 0.0004 (cap) 0.0183 (budget), k failed 0, median of medians 704.2, T 11078, largest factor max 0.999825
+  G      30/ 30 seeds, eps median 1.1474, unmet 0.0003 (cap) 0.0147 (budget), k failed 0, median of medians 533.5, T 5470, largest factor max 0.999825, kept 22, moved 8
+  J2     30/ 30 seeds, eps median 1.1243, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 147.8, T 1520, largest factor max 0.920386
+  J3     30/ 30 seeds, eps median 1.0911, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 79.8, T 886, largest factor max 0.822595
+  J5     30/ 30 seeds, eps median 1.0148, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 37.0, T 599, largest factor max 0.525644
+A' gaussian5 n=4
+  P      30/  5 seeds, eps median 1.0016, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 64.0, T 1085, largest factor max 0.920015
+  G      30/ 30 seeds, eps median 1.0016, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 64.0, T 1085, largest factor max 0.920015, kept 30
+  J2     30/ 30 seeds, eps median 1.0278, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 36.0, T 793, largest factor max 0.754434
+  J3     30/ 30 seeds, eps median 1.0463, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 40.5, T 822, largest factor max 0.519268
+  J5     30/ 30 seeds, eps median 1.0213, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 46.5, T 862, largest factor max 0.606327
+A' gaussian5 n=6
+  P      23/  5 seeds, eps median 1.0912, unmet 0.0643 (cap) 0.1148 (budget), k failed 2, median of medians 3056.0, T 39850, largest factor max 0.999989
+  G      30/ 30 seeds, eps median 1.0884, unmet 0.0493 (cap) 0.0880 (budget), k failed 2, median of medians 1180.8, T 16708, largest factor max 0.999989, kept 23, moved 7
+  J2     30/ 30 seeds, eps median 1.0677, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 46.5, T 1289, largest factor max 0.657750
+  J3     30/ 30 seeds, eps median 1.0465, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 40.0, T 1205, largest factor max 0.600146
+  J5     30/ 30 seeds, eps median 1.0082, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 42.0, T 1236, largest factor max 0.534255
+B unequal10 n=default
+  P      30/ 30 seeds, eps median 0.3110, unmet 0.0350 (cap) 0.1433 (budget), k failed 4, median of medians 2348.2, T 53389, largest factor max 0.999983
+  G      30/ 30 seeds, eps median 0.3110, unmet 0.0350 (cap) 0.1433 (budget), k failed 4, median of medians 2348.2, T 53389, largest factor max 0.999983, fallback 30
+  J2     30/ 30 seeds, eps median 0.3180, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 116.8, T 1598, largest factor max 0.921167
+  J3     30/ 30 seeds, eps median 0.3163, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 66.8, T 1034, largest factor max 0.818437
+  J5     30/ 30 seeds, eps median 0.2976, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 42.2, T 780, largest factor max 0.605777
+  CF     30/ 30 seeds, eps median 0.0900, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 34.0, T 1788, largest factor max 0.590876
+B unequal10 n=3
+  P      30/ 30 seeds, eps median 0.3242, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 634.5, T 8334, largest factor max 0.993455
+  G      30/ 30 seeds, eps median 0.1596, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 84.2, T 912, largest factor max 0.907203, moved 30
+  J2     30/ 30 seeds, eps median 0.3219, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 115.2, T 1231, largest factor max 0.918322
+  J3     30/ 30 seeds, eps median 0.3158, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 64.0, T 742, largest factor max 0.820437
+  J5     30/ 30 seeds, eps median 0.2976, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 39.0, T 551, largest factor max 0.586818
+  CF     30/ 30 seeds, eps median 0.0832, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 240.2, T 2141, largest factor max 0.967979
+B unequal10 n=10
+  P      30/ 30 seeds, eps median 0.3244, unmet 0.0000 (cap) 0.0037 (budget), k failed 0, median of medians 1615.2, T 61860, largest factor max 0.999013
+  G      30/ 30 seeds, eps median 0.0494, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 76.0, T 2862, largest factor max 0.901507, moved 30
+  J2     30/ 30 seeds, eps median 0.3214, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 146.0, T 4582, largest factor max 0.932271
+  J3     30/ 30 seeds, eps median 0.3140, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 74.0, T 2786, largest factor max 0.848921
+  J5     30/ 30 seeds, eps median 0.2982, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 44.0, T 1924, largest factor max 0.609353
+  CF     30/ 30 seeds, eps median 0.0889, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 33.5, T 1476, largest factor max 0.604013
+B' unequal8 n=default
+  P      30/ 30 seeds, eps median 0.2865, unmet 0.0000 (cap) 0.0303 (budget), k failed 0, median of medians 1100.2, T 30818, largest factor max 0.999890
+  G      30/ 30 seeds, eps median 0.2865, unmet 0.0000 (cap) 0.0303 (budget), k failed 0, median of medians 1100.2, T 30818, largest factor max 0.999890, fallback 30
+  J2     30/ 30 seeds, eps median 0.2716, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 90.2, T 1249, largest factor max 0.894013
+  J3     30/ 30 seeds, eps median 0.2644, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 58.0, T 932, largest factor max 0.787359
+  J5     30/ 30 seeds, eps median 0.2506, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 42.0, T 832, largest factor max 0.600502
+T0 A gaussian2 n=2
+  G     300/300 seeds, moved 298, fallback 0, factor > 0.9998 at 0
+T1 A gaussian10 n=3
+  G     300/300 seeds, moved 300, fallback 0, factor > 0.9998 at 0
+T2 A gaussian10 n=10
+  G     300/300 seeds, moved 275, fallback 0, factor > 0.9998 at 0
+T3 B unequal10 n=default
+  G     300/300 seeds, moved 0, fallback 298, factor > 0.9998 at 18
+T4 B unequal10 n=3
+  G     300/300 seeds, moved 300, fallback 0, factor > 0.9998 at 0
+T5 B unequal10 n=10
+  G     300/300 seeds, moved 298, fallback 1, factor > 0.9998 at 0
+T6 A' gaussian5 n=3
+  G     300/300 seeds, moved 100, fallback 0, factor > 0.9998 at 1
+T7 A' gaussian5 n=6
+  G     300/300 seeds, moved 78, fallback 0, factor > 0.9998 at 25
+T8 B' unequal8 n=default
+  G     300/300 seeds, moved 0, fallback 298, factor > 0.9998 at 48
+C1 banana_exact n=2
+  P      20/ 20 seeds, eps median 0.2842, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 71.2, T 4514, replicates at 20 seeds
+  G      20/ 20 seeds, eps median 0.2842, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 71.2, T 4514, kept 20, replicates at 20 seeds
+  J2     20/ 20 seeds, eps median 0.2791, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 69.8, T 3984, replicates at 20 seeds
+  J3     20/ 20 seeds, eps median 0.2713, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 74.2, T 2820, replicates at 20 seeds
+  J5     20/ 20 seeds, eps median 0.2639, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 81.8, T 2552, replicates at 20 seeds
+  CF     20/ 20 seeds, eps median 0.0817, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 373.2, T 6285, replicates at 20 seeds
+C2 banana_exact n=default
+  P      10/ 10 seeds, eps median 0.2704, unmet 0.0010 (cap) 0.0080 (budget), k failed 3, median of medians 171.8, T 55319, replicates at 7 seeds
+  G      10/ 10 seeds, eps median 0.2704, unmet 0.0010 (cap) 0.0080 (budget), k failed 3, median of medians 171.8, T 55319, kept 10, replicates at 7 seeds
+  J2     10/ 10 seeds, eps median 0.2525, unmet 0.0030 (cap) 0.0050 (budget), k failed 3, median of medians 153.5, T 17380, replicates at 7 seeds
+  J3     10/ 10 seeds, eps median 0.2505, unmet 0.0010 (cap) 0.0020 (budget), k failed 1, median of medians 161.2, T 13976, replicates at 9 seeds
+  J5     10/ 10 seeds, eps median 0.2409, unmet 0.0000 (cap) 0.0010 (budget), k failed 0, median of medians 163.8, T 7140, replicates at 10 seeds
+  CF     10/ 10 seeds, eps median 0.0875, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 90.2, T 6644, replicates at 10 seeds
+C3 mixture n=2
+  P      20/ 20 seeds, eps median 0.3804, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 163.2, T 8877, replicates at 20 seeds
+  G      20/ 20 seeds, eps median 0.3804, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 163.2, T 8877, kept 20, replicates at 20 seeds
+  J2     20/ 20 seeds, eps median 0.3697, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 121.0, T 8780, replicates at 20 seeds
+  J3     20/ 20 seeds, eps median 0.3547, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 85.2, T 10710, replicates at 20 seeds
+  J5     20/ 20 seeds, eps median 0.3262, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 60.8, T 11813, replicates at 20 seeds
+  CF     20/ 20 seeds, eps median 0.1047, unmet 0.0000 (cap) 0.0010 (budget), k failed 19, median of medians 38.5, T 96284, replicates at 1 seeds
+C4 mixture n=default
+  P      20/ 20 seeds, eps median 0.3530, unmet 0.0000 (cap) 0.0015 (budget), k failed 5, median of medians 210.8, T 94755, replicates at 15 seeds
+  G      20/ 20 seeds, eps median 0.3530, unmet 0.0000 (cap) 0.0015 (budget), k failed 5, median of medians 210.8, T 94755, kept 20, replicates at 15 seeds
+  J2     20/ 20 seeds, eps median 0.3578, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 73.0, T 18264, replicates at 20 seeds
+  J3     20/ 20 seeds, eps median 0.3472, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 73.8, T 14598, replicates at 20 seeds
+  J5     20/ 20 seeds, eps median 0.3213, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 65.0, T 14557, replicates at 20 seeds
+  CF     20/ 20 seeds, eps median 0.1269, unmet 0.0000 (cap) 0.0065 (budget), k failed 0, median of medians 68.2, T 164016, replicates at 20 seeds
+C5 logistic n=default
+  P      20/ 20 seeds, eps median 0.8901, unmet 0.0045 (cap) 0.0050 (budget), k failed 9, median of medians 32.0, T 668, replicates at 11 seeds
+  G      20/ 20 seeds, eps median 0.8901, unmet 0.0045 (cap) 0.0050 (budget), k failed 9, median of medians 32.0, T 668, kept 20, replicates at 11 seeds
+  J2     20/ 20 seeds, eps median 0.8942, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 30.8, T 327, replicates at 20 seeds
+  J3     20/ 20 seeds, eps median 0.8922, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 31.2, T 323, replicates at 20 seeds
+  J5     20/ 20 seeds, eps median 0.8732, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 33.2, T 351, replicates at 20 seeds
+  CF     20/ 20 seeds, eps median 0.2319, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 33.8, T 716, replicates at 20 seeds
+  P.2    20/ 20 seeds, eps median 0.8901, unmet 0.0045 (cap) 0.0045 (budget), k failed 1, median of medians 24.0, T 403, replicates at 0 seeds
+  CF.2   20/ 20 seeds, eps median 0.2319, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 26.2, T 371, replicates at 0 seeds
+D3 banana_U n=default
+  P      10/  3 seeds, eps median 0.2688, unmet 0.9130 (cap) 0.9420 (budget), k failed 10, median of medians inf, T inf, replicates at 0 seeds
+  G      10/ 10 seeds, eps median 0.2688, unmet 0.9130 (cap) 0.9420 (budget), k failed 10, median of medians inf, T inf, kept 10, replicates at 0 seeds
+  J5      5/  5 seeds, eps median 0.2683, unmet 0.4300 (cap) 0.5460 (budget), k failed 5, median of medians 79069.0, T inf, replicates at 0 seeds
+  CF     10/ 10 seeds, eps median 0.0876, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 115.2, T 9005, replicates at 10 seeds
+D2 banana20 n=default
+  P       5/  5 seeds, eps median 0.1182, unmet 0.3940 (cap) 0.5320 (budget), k failed 5, median of medians 2395.0, T inf, replicates at 0 seeds
+  G       5/  5 seeds, eps median 0.1182, unmet 0.3940 (cap) 0.5320 (budget), k failed 5, median of medians 2395.0, T inf, kept 5, replicates at 0 seeds
+  J5      5/  5 seeds, eps median 0.0821, unmet 0.2220 (cap) 0.3640 (budget), k failed 4, median of medians 1930.0, T 299465, replicates at 1 seeds
+  CF     10/ 10 seeds, eps median 0.0398, unmet 0.1000 (cap) 0.1270 (budget), k failed 1, median of medians 569.0, T 124975, replicates at 9 seeds
+D1 rotated20 n=default
+  P      10/ 10 seeds, eps median 0.6832, unmet 0.0050 (cap) 0.0230 (budget), k failed 1, median of medians 3342.5, T 17367, largest factor max 0.999898
+  G      10/ 10 seeds, eps median 0.6832, unmet 0.0050 (cap) 0.0230 (budget), k failed 1, median of medians 3342.5, T 17367, largest factor max 0.999898, kept 10
+  J2     10/ 10 seeds, eps median 0.6854, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 3312.0, T 16617, largest factor max 0.998386
+  J3     10/ 10 seeds, eps median 0.6869, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 3273.0, T 16927, largest factor max 0.998507
+  J5     10/ 10 seeds, eps median 0.6650, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 3265.5, T 17285, largest factor max 0.998628
+  CF     10/ 10 seeds, eps median 0.1753, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 3999.2, T 60556, largest factor max 0.998553
+  P.2    10/ 10 seeds, eps median 0.6832, unmet 0.0020 (cap) 0.0150 (budget), k failed 1, median of medians 3604.5, T 17439, largest factor max 0.999898
+  CF.2   10/ 10 seeds, eps median 0.1753, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 4352.5, T 59286, largest factor max 0.998553
+E1 banana_U
+  MP      3/  3 seeds, eps median 0.3394, unmet 0.9767 (cap) 0.9767 (budget), k failed 3, median of medians inf, T inf, replicates at 0 seeds
+  MJ5     5/  5 seeds, eps median 0.4092, unmet 0.8920 (cap) 0.8920 (budget), k failed 5, median of medians inf, T inf, replicates at 0 seeds
+  MCF     5/  5 seeds, eps median 0.0756, unmet 0.0000 (cap) 0.0000 (budget), k failed 1, median of medians 1482.0, T 38248, replicates at 4 seeds
+E2 logistic
+  MP     10/ 10 seeds, eps median 1.2258, unmet 0.1740 (cap) 0.1740 (budget), k failed 10, median of medians 13.0, T inf, replicates at 0 seeds
+  MJ5    10/ 10 seeds, eps median 1.1983, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 10.0, T 47, replicates at 10 seeds
+  MCF    10/ 10 seeds, eps median 0.3500, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 77.2, T 317, replicates at 10 seeds
+E3 gaussian10
+  MP     10/ 10 seeds, eps median 1.1165, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 6.0, T 33, replicates at 10 seeds
+  MJ5    10/ 10 seeds, eps median 1.0955, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 6.0, T 37, replicates at 10 seeds
+  MCF    10/ 10 seeds, eps median 0.3189, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 59.8, T 302, replicates at 10 seeds
+E4 banana_exact
+  MP     10/ 10 seeds, eps median 0.3631, unmet 0.0010 (cap) 0.0010 (budget), k failed 1, median of medians 12.0, T 1729, replicates at 9 seeds
+  MJ5    10/ 10 seeds, eps median 0.4094, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 12.2, T 1867, replicates at 10 seeds
+  MCF    10/ 10 seeds, eps median 0.0808, unmet 0.0000 (cap) 0.0000 (budget), k failed 0, median of medians 108.8, T 6316, replicates at 10 seeds
+F funnel10 n=default
+  P       3/  3 seeds, eps median 0.2316, unmet 0.8967 (cap) 0.8967 (budget), k failed 3, median of medians inf, T inf
+  J5      3/  3 seeds, eps median 0.1704, unmet 0.6633 (cap) 0.6633 (budget), k failed 3, median of medians inf, T inf
+  CF      3/  3 seeds, eps median 0.0084, unmet 0.1300 (cap) 0.6433 (budget), k failed 3, median of medians 2908.5, T inf
+
+logistic reference: mean [-0.6402, 1.394, -1.7734, 0.6579, 0.1824, 2.9057], se [0.0003, 0.00035, 0.00044, 0.0003, 0.00029, 0.00059], ESS 705510 of 1000000 draws
+
+G's tuning test (at most 3 of 300 above 0.9998 after the guard)
+  T0 A gaussian2 n=2: 0 of 300 above; holds
+  T1 A gaussian10 n=3: 0 of 300 above; holds
+  T2 A gaussian10 n=10: 0 of 300 above; holds
+  T3 B unequal10 n=default: 18 of 300 above; fails
+  T4 B unequal10 n=3: 0 of 300 above; holds
+  T5 B unequal10 n=10: 0 of 300 above; holds
+  T6 A' gaussian5 n=3: 1 of 300 above; holds
+  T7 A' gaussian5 n=6: 25 of 300 above; fails
+  T8 B' unequal8 n=default: 48 of 300 above; fails
+  proxy check: 14 of 347 pilot records of P and G above 0.9998, k not chosen at 11: T is judged
+
+Criteria (holds, fails, or reported)
+G
+  A gaussian2 n=default        U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=default        K                      holds    0 of 30 seeds without k
+  A gaussian2 n=default        M                      holds    rho_M 1.000
+  A gaussian2 n=1              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=1              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=1              M                      holds    rho_M 1.000
+  A gaussian2 n=2              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=2              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=2              L                      holds    T 406, smallest 309
+  A gaussian2 n=3              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=3              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=3              M                      holds    rho_M 1.000
+  A gaussian2 n=5              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=5              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=5              M                      holds    rho_M 0.960
+  A gaussian2 n=10             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=10             K                      holds    0 of 30 seeds without k
+  A gaussian2 n=10             M                      holds    rho_M 0.921
+  A gaussian10 n=default       U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=default       K                      holds    0 of 30 seeds without k
+  A gaussian10 n=default       M                      holds    rho_M 1.000
+  A gaussian10 n=1             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=1             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=1             M                      holds    rho_M 1.000
+  A gaussian10 n=2             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=2             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=2             M                      holds    rho_M 1.000
+  A gaussian10 n=3             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=3             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=3             L                      holds    T 651, smallest 590
+  A gaussian10 n=5             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=5             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=5             M                      holds    rho_M 1.000
+  A gaussian10 n=10            U                      FAILS    unmet 0.0000 at the cap, 0.0413 at the budget
+  A gaussian10 n=10            K                      holds    0 of 30 seeds without k
+  A gaussian10 n=10            L                      holds    T 3873, smallest 1866
+  A' gaussian5 n=3             U                      holds    unmet 0.0003 at the cap, 0.0147 at the budget (reported)
+  A' gaussian5 n=3             K                      holds    0 of 30 seeds without k
+  A' gaussian5 n=3             L                      FAILS    T 5470, smallest 599
+  A' gaussian5 n=4             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A' gaussian5 n=4             K                      holds    0 of 30 seeds without k
+  A' gaussian5 n=4             M                      holds    rho_M 1.000
+  A' gaussian5 n=6             U                      FAILS    unmet 0.0493 at the cap, 0.0880 at the budget
+  A' gaussian5 n=6             K                      FAILS    2 of 30 seeds without k
+  A' gaussian5 n=6             L                      reported T nan, smallest 1205
+  B unequal10 n=default        U                      FAILS    unmet 0.0350 at the cap, 0.1433 at the budget
+  B unequal10 n=default        K                      FAILS    4 of 30 seeds without k
+  B unequal10 n=default        L                      reported T nan, smallest 780
+  B unequal10 n=3              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  B unequal10 n=3              K                      holds    0 of 30 seeds without k
+  B unequal10 n=3              L                      holds    T 912, smallest 551
+  B unequal10 n=10             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  B unequal10 n=10             K                      holds    0 of 30 seeds without k
+  B unequal10 n=10             L                      holds    T 2862, smallest 1476
+  B' unequal8 n=default        U                      holds    unmet 0.0000 at the cap, 0.0303 at the budget (reported)
+  B' unequal8 n=default        K                      holds    0 of 30 seeds without k
+  B' unequal8 n=default        L                      FAILS    T 30818, smallest 832
+  C1 banana_exact n=2          U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  C1 banana_exact n=2          K                      holds    0 of 20 seeds without k
+  C1 banana_exact n=2          M                      holds    rho_M 1.000
+  C1 banana_exact n=2          V                      holds    rho_V 1.000, 5% point 0.302, 20 seeds
+  C1 banana_exact n=2          Z                      holds    holds; z [-1.07, -1.51]
+  C2 banana_exact n=default    U                      holds    unmet 0.0010 at the cap, 0.0080 at the budget
+  C2 banana_exact n=default    K                      FAILS    3 of 10 seeds without k
+  C2 banana_exact n=default    L                      reported T nan, smallest 6644
+  C2 banana_exact n=default    V                      holds    rho_V 1.000, 5% point 0.141, 7 seeds
+  C2 banana_exact n=default    Z                      holds    holds; z [-1.24, -1.29]
+  C3 mixture n=2               U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  C3 mixture n=2               K                      holds    0 of 20 seeds without k
+  C3 mixture n=2               M                      holds    rho_M 1.000
+  C3 mixture n=2               V                      holds    rho_V 1.000, 5% point 0.879, 20 seeds
+  C3 mixture n=2               Z                      holds    holds; z [0.52, 1.09]
+  C4 mixture n=default         U                      holds    unmet 0.0000 at the cap, 0.0015 at the budget
+  C4 mixture n=default         K                      FAILS    5 of 20 seeds without k
+  C4 mixture n=default         M                      holds    rho_M 1.000
+  C4 mixture n=default         V                      holds    rho_V 1.000, 5% point 0.838, 15 seeds
+  C4 mixture n=default         Z                      holds    holds; z [-0.82, -1.09]
+  C5 logistic n=default        U                      holds    unmet 0.0045 at the cap, 0.0050 at the budget
+  C5 logistic n=default        K                      FAILS    9 of 20 seeds without k
+  C5 logistic n=default        L                      reported T nan, smallest 323
+  C5 logistic n=default        V                      holds    rho_V 1.000, 5% point 0.006, 11 seeds
+  C5 logistic n=default        Z                      holds    holds; z [-0.22, 1.25, -1.06, 1.75, -0.59, 1.31]
+  D3 banana_U n=default        U (reported)           reported unmet 0.9130 at the cap, 0.9420 at the budget
+  D3 banana_U n=default        K (reported)           reported 10 of 10 seeds without k
+  D2 banana20 n=default        U (reported)           reported unmet 0.3940 at the cap, 0.5320 at the budget
+  D2 banana20 n=default        K (reported)           reported 5 of 5 seeds without k
+  D1 rotated20 n=default       U                      holds    unmet 0.0050 at the cap, 0.0230 at the budget (reported)
+  D1 rotated20 n=default       K                      holds    1 of 10 seeds without k
+  D1 rotated20 n=default       L                      holds    T 17367, smallest 16617
+J2
+  A gaussian2 n=default        U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=default        K                      holds    0 of 30 seeds without k
+  A gaussian2 n=default        M                      holds    rho_M 0.977
+  A gaussian2 n=1              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=1              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=1              M                      holds    rho_M 0.977
+  A gaussian2 n=2              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=2              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=2              L                      holds    T 909, smallest 309
+  A gaussian2 n=3              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=3              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=3              M                      holds    rho_M 0.698
+  A gaussian2 n=5              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=5              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=5              M                      holds    rho_M 0.573
+  A gaussian2 n=10             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=10             K                      holds    0 of 30 seeds without k
+  A gaussian2 n=10             M                      holds    rho_M 0.926
+  A gaussian10 n=default       U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=default       K                      holds    0 of 30 seeds without k
+  A gaussian10 n=default       M                      holds    rho_M 0.970
+  A gaussian10 n=1             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=1             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=1             M                      holds    rho_M 1.028
+  A gaussian10 n=2             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=2             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=2             M                      holds    rho_M 0.960
+  A gaussian10 n=3             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=3             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=3             L                      FAILS    T 2033, smallest 590
+  A gaussian10 n=5             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=5             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=5             M                      holds    rho_M 0.305
+  A gaussian10 n=10            U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=10            K                      holds    0 of 30 seeds without k
+  A gaussian10 n=10            L                      holds    T 2062, smallest 1866
+  A' gaussian5 n=3             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget (reported)
+  A' gaussian5 n=3             K                      holds    0 of 30 seeds without k
+  A' gaussian5 n=3             L                      holds    T 1520, smallest 599
+  A' gaussian5 n=4             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A' gaussian5 n=4             K                      holds    0 of 30 seeds without k
+  A' gaussian5 n=4             M                      holds    rho_M 0.551
+  A' gaussian5 n=6             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A' gaussian5 n=6             K                      holds    0 of 30 seeds without k
+  A' gaussian5 n=6             L                      holds    T 1289, smallest 1205
+  B unequal10 n=default        U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  B unequal10 n=default        K                      holds    0 of 30 seeds without k
+  B unequal10 n=default        L                      holds    T 1598, smallest 780
+  B unequal10 n=3              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  B unequal10 n=3              K                      holds    0 of 30 seeds without k
+  B unequal10 n=3              L                      holds    T 1231, smallest 551
+  B unequal10 n=10             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  B unequal10 n=10             K                      holds    0 of 30 seeds without k
+  B unequal10 n=10             L                      FAILS    T 4582, smallest 1476
+  B' unequal8 n=default        U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget (reported)
+  B' unequal8 n=default        K                      holds    0 of 30 seeds without k
+  B' unequal8 n=default        L                      holds    T 1249, smallest 832
+  C1 banana_exact n=2          U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  C1 banana_exact n=2          K                      holds    0 of 20 seeds without k
+  C1 banana_exact n=2          M                      holds    rho_M 0.994
+  C1 banana_exact n=2          V                      holds    rho_V 0.703, 5% point 0.237, 20 seeds
+  C1 banana_exact n=2          Z                      holds    holds; z [-0.07, -0.98]
+  C2 banana_exact n=default    U                      holds    unmet 0.0030 at the cap, 0.0050 at the budget
+  C2 banana_exact n=default    K                      FAILS    3 of 10 seeds without k
+  C2 banana_exact n=default    L                      reported T nan, smallest 6644
+  C2 banana_exact n=default    V                      holds    rho_V 8.210, 5% point 0.023, 6 seeds
+  C2 banana_exact n=default    Z                      holds    holds; z [-0.25, -0.32]
+  C3 mixture n=2               U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  C3 mixture n=2               K                      holds    0 of 20 seeds without k
+  C3 mixture n=2               M                      holds    rho_M 0.747
+  C3 mixture n=2               V                      holds    rho_V 1.047, 5% point 0.924, 20 seeds
+  C3 mixture n=2               Z                      holds    holds; z [-0.05, 0.61]
+  C4 mixture n=default         U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  C4 mixture n=default         K                      holds    0 of 20 seeds without k
+  C4 mixture n=default         M                      holds    rho_M 0.393
+  C4 mixture n=default         V                      holds    rho_V 0.159, 5% point 0.143, 15 seeds
+  C4 mixture n=default         Z                      holds    holds; z [-0.85, -0.44]
+  C5 logistic n=default        U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  C5 logistic n=default        K                      holds    0 of 20 seeds without k
+  C5 logistic n=default        L                      holds    T 327, smallest 323
+  C5 logistic n=default        V                      holds    rho_V 0.996, 5% point 0.000, 11 seeds
+  C5 logistic n=default        Z                      holds    holds; z [-0.79, 0.8, -0.98, 1.04, 0.76, 0.97]
+  D1 rotated20 n=default       U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget (reported)
+  D1 rotated20 n=default       K                      holds    0 of 10 seeds without k
+  D1 rotated20 n=default       L                      holds    T 16617, smallest 16617
+J3
+  A gaussian2 n=default        U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=default        K                      holds    0 of 30 seeds without k
+  A gaussian2 n=default        M                      holds    rho_M 0.952
+  A gaussian2 n=1              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=1              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=1              M                      holds    rho_M 0.952
+  A gaussian2 n=2              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=2              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=2              L                      holds    T 522, smallest 309
+  A gaussian2 n=3              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=3              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=3              M                      holds    rho_M 0.831
+  A gaussian2 n=5              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=5              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=5              M                      holds    rho_M 0.507
+  A gaussian2 n=10             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=10             K                      holds    0 of 30 seeds without k
+  A gaussian2 n=10             M                      holds    rho_M 0.946
+  A gaussian10 n=default       U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=default       K                      holds    0 of 30 seeds without k
+  A gaussian10 n=default       M                      holds    rho_M 1.001
+  A gaussian10 n=1             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=1             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=1             M                      holds    rho_M 1.047
+  A gaussian10 n=2             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=2             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=2             M                      holds    rho_M 0.999
+  A gaussian10 n=3             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=3             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=3             L                      holds    T 961, smallest 590
+  A gaussian10 n=5             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=5             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=5             M                      holds    rho_M 0.223
+  A gaussian10 n=10            U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=10            K                      holds    0 of 30 seeds without k
+  A gaussian10 n=10            L                      holds    T 2190, smallest 1866
+  A' gaussian5 n=3             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget (reported)
+  A' gaussian5 n=3             K                      holds    0 of 30 seeds without k
+  A' gaussian5 n=3             L                      holds    T 886, smallest 599
+  A' gaussian5 n=4             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A' gaussian5 n=4             K                      holds    0 of 30 seeds without k
+  A' gaussian5 n=4             M                      holds    rho_M 0.600
+  A' gaussian5 n=6             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A' gaussian5 n=6             K                      holds    0 of 30 seeds without k
+  A' gaussian5 n=6             L                      holds    T 1205, smallest 1205
+  B unequal10 n=default        U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  B unequal10 n=default        K                      holds    0 of 30 seeds without k
+  B unequal10 n=default        L                      holds    T 1034, smallest 780
+  B unequal10 n=3              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  B unequal10 n=3              K                      holds    0 of 30 seeds without k
+  B unequal10 n=3              L                      holds    T 742, smallest 551
+  B unequal10 n=10             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  B unequal10 n=10             K                      holds    0 of 30 seeds without k
+  B unequal10 n=10             L                      holds    T 2786, smallest 1476
+  B' unequal8 n=default        U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget (reported)
+  B' unequal8 n=default        K                      holds    0 of 30 seeds without k
+  B' unequal8 n=default        L                      holds    T 932, smallest 832
+  C1 banana_exact n=2          U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  C1 banana_exact n=2          K                      holds    0 of 20 seeds without k
+  C1 banana_exact n=2          M                      holds    rho_M 1.029
+  C1 banana_exact n=2          V                      holds    rho_V 0.608, 5% point 0.129, 20 seeds
+  C1 banana_exact n=2          Z                      holds    holds; z [1.35, 1.29]
+  C2 banana_exact n=default    U                      holds    unmet 0.0010 at the cap, 0.0020 at the budget
+  C2 banana_exact n=default    K                      holds    1 of 10 seeds without k
+  C2 banana_exact n=default    L                      holds    T 13976, smallest 6644
+  C2 banana_exact n=default    V                      holds    rho_V 0.109, 5% point 0.000, 6 seeds
+  C2 banana_exact n=default    Z                      holds    holds; z [-1.7, -2.11]
+  C3 mixture n=2               U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  C3 mixture n=2               K                      holds    0 of 20 seeds without k
+  C3 mixture n=2               M                      holds    rho_M 0.556
+  C3 mixture n=2               V                      holds    rho_V 1.167, 5% point 1.035, 20 seeds
+  C3 mixture n=2               Z                      holds    holds; z [-0.24, -1.32]
+  C4 mixture n=default         U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  C4 mixture n=default         K                      holds    0 of 20 seeds without k
+  C4 mixture n=default         M                      holds    rho_M 0.396
+  C4 mixture n=default         V                      holds    rho_V 0.132, 5% point 0.123, 15 seeds
+  C4 mixture n=default         Z                      holds    holds; z [0.53, 0.53]
+  C5 logistic n=default        U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  C5 logistic n=default        K                      holds    0 of 20 seeds without k
+  C5 logistic n=default        L                      holds    T 323, smallest 323
+  C5 logistic n=default        V                      holds    rho_V 0.913, 5% point 0.000, 11 seeds
+  C5 logistic n=default        Z                      holds    holds; z [1.24, -1.65, 0.14, -0.22, -0.52, -1.06]
+  D1 rotated20 n=default       U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget (reported)
+  D1 rotated20 n=default       K                      holds    0 of 10 seeds without k
+  D1 rotated20 n=default       L                      holds    T 16927, smallest 16617
+J5
+  A gaussian2 n=default        U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=default        K                      holds    0 of 30 seeds without k
+  A gaussian2 n=default        M                      holds    rho_M 1.029
+  A gaussian2 n=1              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=1              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=1              M                      holds    rho_M 1.027
+  A gaussian2 n=2              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=2              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=2              L                      holds    T 309, smallest 309
+  A gaussian2 n=3              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=3              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=3              M                      holds    rho_M 0.886
+  A gaussian2 n=5              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=5              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=5              M                      holds    rho_M 0.510
+  A gaussian2 n=10             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=10             K                      holds    0 of 30 seeds without k
+  A gaussian2 n=10             M                      holds    rho_M 0.934
+  A gaussian10 n=default       U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=default       K                      holds    0 of 30 seeds without k
+  A gaussian10 n=default       M                      holds    rho_M 1.159
+  A gaussian10 n=1             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=1             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=1             M                      holds    rho_M 1.095
+  A gaussian10 n=2             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=2             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=2             M                      holds    rho_M 1.174
+  A gaussian10 n=3             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=3             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=3             L                      holds    T 590, smallest 590
+  A gaussian10 n=5             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=5             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=5             M                      holds    rho_M 0.239
+  A gaussian10 n=10            U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=10            K                      holds    0 of 30 seeds without k
+  A gaussian10 n=10            L                      holds    T 2038, smallest 1866
+  A' gaussian5 n=3             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget (reported)
+  A' gaussian5 n=3             K                      holds    0 of 30 seeds without k
+  A' gaussian5 n=3             L                      holds    T 599, smallest 599
+  A' gaussian5 n=4             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A' gaussian5 n=4             K                      holds    0 of 30 seeds without k
+  A' gaussian5 n=4             M                      holds    rho_M 0.701
+  A' gaussian5 n=6             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A' gaussian5 n=6             K                      holds    0 of 30 seeds without k
+  A' gaussian5 n=6             L                      holds    T 1236, smallest 1205
+  B unequal10 n=default        U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  B unequal10 n=default        K                      holds    0 of 30 seeds without k
+  B unequal10 n=default        L                      holds    T 780, smallest 780
+  B unequal10 n=3              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  B unequal10 n=3              K                      holds    0 of 30 seeds without k
+  B unequal10 n=3              L                      holds    T 551, smallest 551
+  B unequal10 n=10             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  B unequal10 n=10             K                      holds    0 of 30 seeds without k
+  B unequal10 n=10             L                      holds    T 1924, smallest 1476
+  B' unequal8 n=default        U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget (reported)
+  B' unequal8 n=default        K                      holds    0 of 30 seeds without k
+  B' unequal8 n=default        L                      holds    T 832, smallest 832
+  C1 banana_exact n=2          U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  C1 banana_exact n=2          K                      holds    0 of 20 seeds without k
+  C1 banana_exact n=2          M                      holds    rho_M 1.122
+  C1 banana_exact n=2          V                      holds    rho_V 0.289, 5% point 0.054, 20 seeds
+  C1 banana_exact n=2          Z                      holds    holds; z [-0.85, -0.78]
+  C2 banana_exact n=default    U                      holds    unmet 0.0000 at the cap, 0.0010 at the budget
+  C2 banana_exact n=default    K                      holds    0 of 10 seeds without k
+  C2 banana_exact n=default    L                      holds    T 7140, smallest 6644
+  C2 banana_exact n=default    V                      holds    rho_V 0.019, 5% point 0.003, 7 seeds
+  C2 banana_exact n=default    Z                      holds    holds; z [0.96, 1.13]
+  C3 mixture n=2               U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  C3 mixture n=2               K                      holds    0 of 20 seeds without k
+  C3 mixture n=2               M                      holds    rho_M 0.370
+  C3 mixture n=2               V                      holds    rho_V 1.314, 5% point 1.177, 20 seeds
+  C3 mixture n=2               Z                      holds    holds; z [0.55, -0.45]
+  C4 mixture n=default         U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  C4 mixture n=default         K                      holds    0 of 20 seeds without k
+  C4 mixture n=default         M                      holds    rho_M 0.504
+  C4 mixture n=default         V                      holds    rho_V 0.123, 5% point 0.116, 15 seeds
+  C4 mixture n=default         Z                      holds    holds; z [0.19, 0.28]
+  C5 logistic n=default        U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  C5 logistic n=default        K                      holds    0 of 20 seeds without k
+  C5 logistic n=default        L                      holds    T 351, smallest 323
+  C5 logistic n=default        V                      holds    rho_V 1.127, 5% point 0.000, 11 seeds
+  C5 logistic n=default        Z                      holds    holds; z [0.01, -1.24, -0.69, 0.78, -0.52, -0.22]
+  D3 banana_U n=default        U (reported)           reported unmet 0.4300 at the cap, 0.5460 at the budget
+  D3 banana_U n=default        K (reported)           reported 5 of 5 seeds without k
+  D2 banana20 n=default        U (reported)           reported unmet 0.2220 at the cap, 0.3640 at the budget
+  D2 banana20 n=default        K (reported)           reported 4 of 5 seeds without k
+  D2 banana20 n=default        Z                      holds    holds; z [1.29, 1.13]
+  D1 rotated20 n=default       U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget (reported)
+  D1 rotated20 n=default       K                      holds    0 of 10 seeds without k
+  D1 rotated20 n=default       L                      holds    T 17285, smallest 16617
+CF
+  A gaussian2 n=default        U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=default        K                      holds    0 of 30 seeds without k
+  A gaussian2 n=default        M                      FAILS    rho_M 3.260
+  A gaussian2 n=1              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=1              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=1              M                      FAILS    rho_M 3.946
+  A gaussian2 n=2              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=2              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=2              L                      holds    T 409, smallest 309
+  A gaussian2 n=3              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=3              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=3              M                      holds    rho_M 0.606
+  A gaussian2 n=5              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=5              K                      holds    0 of 30 seeds without k
+  A gaussian2 n=5              M                      holds    rho_M 0.347
+  A gaussian2 n=10             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian2 n=10             K                      holds    0 of 30 seeds without k
+  A gaussian2 n=10             M                      holds    rho_M 0.760
+  A gaussian10 n=default       U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=default       K                      holds    0 of 30 seeds without k
+  A gaussian10 n=default       M                      FAILS    rho_M 3.401
+  A gaussian10 n=1             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=1             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=1             M                      FAILS    rho_M 4.693
+  A gaussian10 n=2             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=2             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=2             M                      FAILS    rho_M 4.414
+  A gaussian10 n=3             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=3             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=3             L                      holds    T 764, smallest 590
+  A gaussian10 n=5             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=5             K                      holds    0 of 30 seeds without k
+  A gaussian10 n=5             M                      holds    rho_M 0.172
+  A gaussian10 n=10            U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  A gaussian10 n=10            K                      holds    0 of 30 seeds without k
+  A gaussian10 n=10            L                      holds    T 1866, smallest 1866
+  B unequal10 n=default        U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  B unequal10 n=default        K                      holds    0 of 30 seeds without k
+  B unequal10 n=default        L                      holds    T 1788, smallest 780
+  B unequal10 n=3              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  B unequal10 n=3              K                      holds    0 of 30 seeds without k
+  B unequal10 n=3              L                      FAILS    T 2141, smallest 551
+  B unequal10 n=10             U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  B unequal10 n=10             K                      holds    0 of 30 seeds without k
+  B unequal10 n=10             L                      holds    T 1476, smallest 1476
+  C1 banana_exact n=2          U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  C1 banana_exact n=2          K                      holds    0 of 20 seeds without k
+  C1 banana_exact n=2          M                      FAILS    rho_M 5.436
+  C1 banana_exact n=2          V                      holds    rho_V 0.710, 5% point 0.035, 20 seeds
+  C1 banana_exact n=2          Z                      holds    holds; z [0.28, -0.38]
+  C2 banana_exact n=default    U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  C2 banana_exact n=default    K                      holds    0 of 10 seeds without k
+  C2 banana_exact n=default    L                      holds    T 6644, smallest 6644
+  C2 banana_exact n=default    V                      holds    rho_V 0.013, 5% point 0.002, 7 seeds
+  C2 banana_exact n=default    Z                      holds    holds; z [-0.37, -0.88]
+  C3 mixture n=2               U                      holds    unmet 0.0000 at the cap, 0.0010 at the budget
+  C3 mixture n=2               K                      FAILS    19 of 20 seeds without k
+  C3 mixture n=2               M                      holds    rho_M 0.241
+  C3 mixture n=2               V                      reported void, 1 seeds
+  C3 mixture n=2               Z                      holds    holds; z [-0.16, 2.52]
+  C4 mixture n=default         U                      holds    unmet 0.0000 at the cap, 0.0065 at the budget
+  C4 mixture n=default         K                      holds    0 of 20 seeds without k
+  C4 mixture n=default         M                      holds    rho_M 1.061
+  C4 mixture n=default         V                      holds    rho_V 0.989, 5% point 0.875, 15 seeds
+  C4 mixture n=default         Z                      holds    holds; z [0.08, -0.98]
+  C5 logistic n=default        U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  C5 logistic n=default        K                      holds    0 of 20 seeds without k
+  C5 logistic n=default        L                      holds    T 716, smallest 323
+  C5 logistic n=default        V                      holds    rho_V 4.810, 5% point 0.000, 11 seeds
+  C5 logistic n=default        Z                      holds    holds; z [0.42, -1.91, 0.42, -0.26, -0.7, -0.73]
+  D3 banana_U n=default        U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  D3 banana_U n=default        K                      holds    0 of 10 seeds without k
+  D3 banana_U n=default        Z                      holds    holds; z [0.56, 0.65]
+  D2 banana20 n=default        U                      FAILS    unmet 0.1000 at the cap, 0.1270 at the budget
+  D2 banana20 n=default        K                      holds    1 of 10 seeds without k
+  D2 banana20 n=default        Z                      holds    holds; z [0.06, -0.1]
+  D1 rotated20 n=default       U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget (reported)
+  D1 rotated20 n=default       K                      holds    0 of 10 seeds without k
+  D1 rotated20 n=default       L                      FAILS    T 60556, smallest 16617
+MJ5
+  E1 banana_U                  U                      FAILS    unmet 0.8920 at the cap, 0.8920 at the budget
+  E1 banana_U                  K                      FAILS    5 of 5 seeds without k
+  E2 logistic                  U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  E2 logistic                  K                      holds    0 of 10 seeds without k
+  E2 logistic                  Z                      holds    holds; z [-1.0, -0.21, -0.53, 0.79, -1.17, 0.38]
+  E3 gaussian10                U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  E3 gaussian10                K                      holds    0 of 10 seeds without k
+  E3 gaussian10                M                      holds    rho_M 1.069
+  E3 gaussian10                Z                      holds    holds; z [0.15, 0.83]
+  E4 banana_exact              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  E4 banana_exact              K                      holds    0 of 10 seeds without k
+  E4 banana_exact              M                      holds    rho_M 1.035
+  E4 banana_exact              Z                      holds    holds; z [-0.54, -0.25]
+MCF
+  E1 banana_U                  U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  E1 banana_U                  K                      holds    1 of 5 seeds without k
+  E1 banana_U                  Z                      holds    holds; z [0.94, 0.92]
+  E2 logistic                  U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  E2 logistic                  K                      holds    0 of 10 seeds without k
+  E2 logistic                  Z                      holds    holds; z [-1.05, -0.81, 0.85, 0.23, -1.05, -0.45]
+  E3 gaussian10                U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  E3 gaussian10                K                      holds    0 of 10 seeds without k
+  E3 gaussian10                M                      FAILS    rho_M 11.065
+  E3 gaussian10                Z                      holds    holds; z [1.07, -0.61]
+  E4 banana_exact              U                      holds    unmet 0.0000 at the cap, 0.0000 at the budget
+  E4 banana_exact              K                      holds    0 of 10 seeds without k
+  E4 banana_exact              M                      FAILS    rho_M 9.761
+  E4 banana_exact              Z                      holds    holds; z [0.74, 0.02]
+CF.2
+  A gaussian2 n=default        M                      FAILS    rho_M 2.659
+  A gaussian10 n=default       M                      FAILS    rho_M 3.869
+
+Verdicts (section 8)
+M of MJ5 and MCF: on E3 and E4 whatever MP shows there, on E2 only where MP left no pair unmet at the cap (section 7's table)
+  G: refused
+  J2: opt-in
+  J3: default candidate
+  J5: default candidate
+  CF: refused
+  MJ5: refused
+  MCF: opt-in
+
+Between the remedies
+  jitter: the widest default candidate, J5, is recommended
+  G passes its purpose (U, K, L on A and A', and T there): False
+  G holds U, K, L and the tuning test on B unequal10 n=3: True
+  G holds U, K, L and the tuning test on B unequal10 n=10: True
+  G holds U, K, L and the tuning test on B unequal10 n=default: False
+  G holds U, K, L and the tuning test on B' unequal8 n=default: False
+  G covers a given covariance with given n_steps (B's 3 and 10): True
+  G covers a given covariance with default n_steps (B's default and B'): False
+  CF refuted as the default at the package's meeting step: True
+  CF refuted as an opt-in for curvature: True
+  CF.2 against P.2 on M: 0 of 2 cells pass

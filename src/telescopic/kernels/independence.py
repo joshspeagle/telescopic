@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -11,8 +11,10 @@ from scipy.special import gammaln
 
 from telescopic._linalg import covariance, inverse_lower, matvec
 from telescopic._random import Draws
-from telescopic._types import FloatArray, Proposal, Seed, integer, log_densities, vector
-from telescopic.kernels.base import Kernel, State, acceptance, evaluate, log_ratio, select
+from telescopic._types import FloatArray, ProposalDistribution, Seed, integer, vector
+from telescopic.couplings import Shared
+from telescopic.kernels.base import Kernel
+from telescopic.kernels.metropolis import IndependenceProposal, MetropolisHastings
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport
 
@@ -110,7 +112,7 @@ class MultivariateT:
 
 
 # Spec R-KER-IMH; the tuned proposal is that of spec section 5.6 and D-25.
-class Independence(Kernel):
+class Independence(MetropolisHastings):
     r"""Independence Metropolis-Hastings.
 
     A proposal :math:`x' \sim q` is accepted when
@@ -121,7 +123,10 @@ class Independence(Kernel):
     ``sample`` drew a point that ``log_density`` gives no mass, such as a draw clipped onto
     the edge of an open support. The coupled step shares the proposal and :math:`u`
     between the chains, which is a maximal kernel coupling (O'Leary, Wang & Jacob 2021):
-    a pair meets when both chains accept.
+    a pair meets when both chains accept. It is a
+    :class:`~telescopic.kernels.MetropolisHastings` with an
+    :class:`~telescopic.kernels.IndependenceProposal` and
+    :class:`~telescopic.couplings.Shared`.
 
     Parameters
     ----------
@@ -173,24 +178,24 @@ class Independence(Kernel):
     True
     """
 
-    def __init__(self, proposal: Proposal | None = None) -> None:
-        if proposal is not None and not (
-            hasattr(proposal, "sample") and hasattr(proposal, "log_density")
-        ):
-            raise TypeError(
-                "proposal must have sample(draws) and log_density(x), as MultivariateT "
-                f"does, not {type(proposal).__name__}"
-            )
-        self.proposal = proposal
+    _untuned = "Independence needs a proposal; give one, or tune the kernel"
+
+    def __init__(self, proposal: ProposalDistribution | None = None) -> None:
+        super().__init__(None if proposal is None else IndependenceProposal(proposal), Shared())
 
     @property
-    def is_tuned(self) -> bool:
-        return self.proposal is not None
+    def proposal(self) -> ProposalDistribution | None:
+        """The proposal distribution :math:`q` as it was given, or ``None`` while untuned.
 
-    @property
-    def ndim(self) -> int | None:
-        mean = getattr(self.proposal, "mean", None)
-        return None if mean is None or callable(mean) else int(np.size(mean))
+        It is read-only: tuning builds a new kernel.
+
+        Returns
+        -------
+        object or None
+        """
+        if self._proposal is None:
+            return None
+        return cast(IndependenceProposal, self._proposal).distribution
 
     def _tuned(
         self, target: Target, initial: Any, pilot: PilotRun, rng: Seed
@@ -201,48 +206,5 @@ class Independence(Kernel):
         ratio = float(np.exp(np.max(log_weights) - np.median(log_weights)))
         return Independence(proposal), pilot.report(max_weight_ratio=ratio)
 
-    def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
-        q = self._ready()
-        proposal = evaluate(target, q.sample(draws), state.grad is not None)
-        new, old = _log_weights(q, proposal, state)
-        log_alpha = log_ratio(new, old)
-        accepted = draws.log_uniform() < log_alpha
-        return select(accepted, proposal, state), acceptance(log_alpha)
-
-    def coupled_step(
-        self, target: Target, state_x: State, state_y: State, draws: Draws
-    ) -> tuple[State, State]:
-        q = self._ready()
-        proposal = evaluate(target, q.sample(draws), state_x.grad is not None)
-        log_u = draws.log_uniform()
-        new, old_x, old_y = _log_weights(q, proposal, state_x, state_y)
-        state_x = select(log_u < log_ratio(new, old_x), proposal, state_x)
-        state_y = select(log_u < log_ratio(new, old_y), proposal, state_y)
-        return state_x, state_y
-
-    def _ready(self) -> Proposal:
-        if self.proposal is None:
-            raise ValueError("Independence needs a proposal; give one, or tune the kernel")
-        return self.proposal
-
     def __repr__(self) -> str:
         return f"Independence(proposal={self.proposal!r})"
-
-
-def _log_weights(q: Proposal, proposal: State, *states: State) -> list[FloatArray]:
-    # log pi - log q at the proposal's positions, then at each state's, from one call of
-    # q.log_density, whose rows do not depend on each other (spec R-KER-6). A NaN log q
-    # would make every move to its point a rejection, and so bias the chain without an
-    # error.
-    x = np.concatenate([proposal.x, *(state.x for state in states)])
-    log_q = log_densities("proposal log_density", q.log_density(x), x).reshape(1 + len(states), -1)
-    # A proposal where log q = -inf has weight -inf, so it is rejected: sample drew a point
-    # that log_density gives no mass, such as a draw clipped onto the edge of an open
-    # support, and a weight of +inf would accept it and never leave it.
-    new = proposal.log_prob - np.where(log_q[0] == -np.inf, np.inf, log_q[0])
-    # Where log pi = -inf a state's weight is -inf even where log q = -inf too: -inf - -inf
-    # would be NaN, which rejects every proposal, so such a chain would never move.
-    return [new] + [
-        state.log_prob - np.where(state.log_prob == -np.inf, 0.0, part)
-        for state, part in zip(states, log_q[1:], strict=True)
-    ]

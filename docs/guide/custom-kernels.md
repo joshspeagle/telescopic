@@ -105,7 +105,12 @@ that has met. To run on a pool of processes, the kernel must be picklable
 
 {mod}`telescopic.couplings` holds the couplings of the built-in kernels, and
 `discrete_maximal` for kernels on finite state spaces. Each works on a batch, and on
-rows where the two draws coincide it returns a copy.
+rows where the two draws coincide it returns a copy. Its coupling objects,
+{class}`~telescopic.couplings.Reflection`, {class}`~telescopic.couplings.Maximal` and
+{class}`~telescopic.couplings.Shared`, couple only the proposals of
+{class}`telescopic.kernels.MetropolisHastings` that the package ships (Proposals and
+coupling objects, in [Choose a kernel](kernels.md)); the AR(1) example below, whose
+proposal mean $\rho x$ is not one of theirs, is a kernel of its own.
 
 - {func}`telescopic.couplings.reflection_maximal` couples $\mathcal N(\mu_x, CC^\top)$
   and $\mathcal N(\mu_y, CC^\top)$, given $C$ and $C^{-1}$, with $d$ normals and 1

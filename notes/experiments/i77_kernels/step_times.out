@@ -1,0 +1,32 @@
+setup: 9fb63e8 (before) and 8387fe7 (after, the change with the code review's fixes), each run from a copy of its src;
+Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores, load average 4.8 to 5.9 from other jobs (uptime before and after the runs);
+OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.3,
+SciPy 1.18.1, OpenBLAS 0.3.34. Four rounds, alternating before and after; each round runs
+step_times.py once. Columns: the median over the rounds of each round's median CPU time per
+call (us), before and after; their ratio; and each round's ratio of after to before.
+
+kernel       operation       d lanes   before    after  ratio  rounds
+RandomWalk   step            2     1     37.6     37.9  1.008  0.952 0.768 0.992 1.100
+RandomWalk   coupled_step    2     1     84.2     85.7  1.017  1.031 0.921 0.913 1.081
+MALA         step            2     1     65.7     66.5  1.013  1.011 1.173 0.980 1.026
+MALA         coupled_step    2     1    140.4    146.5  1.044  1.026 0.865 1.362 0.849
+Independence step            2     1     86.7     76.5  0.882  0.996 0.864 0.852 1.087
+Independence coupled_step    2     1     84.5     88.5  1.047  1.231 0.775 1.120 0.978
+RandomWalk   step            2   256     78.3     78.9  1.007  1.014 1.052 1.032 0.663
+RandomWalk   coupled_step    2   256    165.9    175.1  1.055  1.098 1.149 1.032 0.960
+MALA         step            2   256    123.4    124.8  1.012  0.999 1.017 1.054 1.014
+MALA         coupled_step    2   256    264.5    242.4  0.916  0.958 0.906 0.990 0.824
+Independence step            2   256    201.8    199.5  0.989  0.969 0.924 1.878 0.984
+Independence coupled_step    2   256    235.4    216.8  0.921  1.022 0.877 0.970 0.687
+RandomWalk   step          100     1     46.9     43.8  0.933  1.186 1.044 0.720 0.920
+RandomWalk   coupled_step  100     1    103.8    101.2  0.975  1.041 0.913 1.877 0.590
+MALA         step          100     1    104.0     84.8  0.815  1.104 0.872 0.662 0.731
+MALA         coupled_step  100     1    170.2    176.4  1.036  1.042 1.031 1.518 0.950
+Independence step          100     1    106.8    101.7  0.951  0.901 1.122 1.425 0.646
+Independence coupled_step  100     1    103.1    104.6  1.015  1.035 0.905 1.068 0.993
+RandomWalk   step          100   256   1365.1   1392.3  1.020  1.234 1.048 0.948 0.977
+RandomWalk   coupled_step  100   256   2498.9   2569.6  1.028  1.057 1.228 1.001 0.948
+MALA         step          100   256   2785.2   2549.9  0.916  1.029 0.752 0.881 1.003
+MALA         coupled_step  100   256   6309.2   5218.4  0.827  0.868 0.830 0.771 0.824
+Independence step          100   256   3550.3   3600.4  1.014  1.323 0.993 0.931 1.190
+Independence coupled_step  100   256   4316.8   4428.8  1.026  1.031 1.266 1.008 0.959

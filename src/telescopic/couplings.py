@@ -5,7 +5,8 @@ from __future__ import annotations
 import functools
 import math
 import sys
-from typing import Any
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
 import numpy as np
 from scipy.special import softmax
@@ -14,7 +15,204 @@ from telescopic._linalg import matvec
 from telescopic._random import Draws
 from telescopic._types import BoolArray, Distribution, FloatArray, IndexArray, real
 
-__all__ = ["discrete_maximal", "maximal", "reflection_maximal"]
+if TYPE_CHECKING:
+    from telescopic.kernels.base import State
+    from telescopic.kernels.metropolis import (
+        Proposal,
+        RandomWalkProposal,
+        SharedCovarianceGaussian,
+    )
+    from telescopic.target import Target
+
+__all__ = [
+    "CoupledProposals",
+    "Coupling",
+    "Maximal",
+    "Reflection",
+    "Shared",
+    "discrete_maximal",
+    "maximal",
+    "reflection_maximal",
+]
+
+
+class CoupledProposals(NamedTuple):
+    """The coupled proposals of ``n`` pairs of chains, with what each proposal's ratio needs.
+
+    Attributes
+    ----------
+    x, y : ndarray, shape (n, d)
+        The proposals of the first and the second chains. On identical rows ``y``
+        equals ``x``: a copy of its rows, or ``x`` itself when every pair shares one
+        draw, as under :class:`Shared`; a coupled step then evaluates it once.
+    identical : ndarray of bool, shape (n,)
+        Rows where the two proposals are equal.
+    forward_x, forward_y : object
+        What :meth:`~telescopic.kernels.Proposal.log_alpha` needs of each chain's draw, as
+        :meth:`~telescopic.kernels.Proposal.sample` returns it.
+    """
+
+    x: FloatArray
+    y: FloatArray
+    identical: BoolArray
+    forward_x: Any
+    forward_y: Any
+
+
+class Coupling(ABC):
+    """A coupling of the proposals of two chains under one proposal.
+
+    Each chain's proposal must have exactly the law of the proposal's
+    :meth:`~telescopic.kernels.Proposal.sample` from its state, and two chains in equal
+    states must receive identical proposals, with ``y`` equal to ``x``, a copy of its
+    rows or ``x`` itself, never a recomputation.
+    """
+
+    @abstractmethod
+    def couple(
+        self,
+        target: Target,
+        proposal: Proposal,
+        state_x: State,
+        state_y: State,
+        draws: Draws,
+    ) -> CoupledProposals:
+        """Draw the coupled proposals of ``n`` pairs.
+
+        Parameters
+        ----------
+        target : Target
+            The target that the chains sample.
+        proposal : Proposal
+            The proposal of both chains, one that :meth:`supports` accepts.
+        state_x, state_y : State
+            The first and the second chains of the pairs.
+        draws : Draws
+            Random numbers for the ``n`` pairs.
+
+        Returns
+        -------
+        CoupledProposals
+        """
+
+    @abstractmethod
+    def supports(self, proposal: Proposal) -> bool:
+        """Whether this coupling couples ``proposal``, matched by its exact type.
+
+        Parameters
+        ----------
+        proposal : Proposal
+            The proposal to check.
+
+        Returns
+        -------
+        bool
+        """
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}()"
+
+
+# Spec R-CPL-1.
+class Reflection(Coupling):
+    r"""The reflection-maximal coupling of two Gaussian proposals with a shared covariance.
+
+    With :math:`\delta = B^{-1}(\mu_x - \mu_y)`, the whitened difference of the proposals'
+    means, :math:`z \sim \mathcal N(0, I)` and :math:`x' = \mu_x + Bz`, the proposals are
+    identical when :math:`\log u < -z\cdot\delta - \lVert\delta\rVert^2/2`; otherwise
+    :math:`y' = \mu_y + B(z - 2(e\cdot z)e)` with :math:`e = \delta/\lVert\delta\rVert`
+    (Jacob, O'Leary & Atchadé 2020, sections 4.1 and 4.4). It couples the random-walk
+    and the Langevin proposals.
+    """
+
+    def couple(
+        self,
+        target: Target,
+        proposal: Proposal,
+        state_x: State,
+        state_y: State,
+        draws: Draws,
+    ) -> CoupledProposals:
+        return cast("SharedCovarianceGaussian", proposal).reflect(target, state_x, state_y, draws)
+
+    def supports(self, proposal: Proposal) -> bool:
+        from telescopic.kernels.metropolis import LangevinProposal, RandomWalkProposal
+
+        return type(proposal) in (RandomWalkProposal, LangevinProposal)
+
+
+# Spec R-CPL-2, with eta = 1.
+class Maximal(Coupling):
+    r"""The rejection maximal coupling of two random-walk proposals.
+
+    Each pair draws from its own generator by the rejection maximal coupling with
+    :math:`\eta = 1` of :math:`\mathcal N(x, BB^\top)` and
+    :math:`\mathcal N(y, BB^\top)` (Jacob, O'Leary & Atchadé 2020, Algorithm 2). Its
+    meeting probability is maximal, but its meeting times grow exponentially with the
+    dimension; it is for comparison.
+    """
+
+    def couple(
+        self,
+        target: Target,
+        proposal: Proposal,
+        state_x: State,
+        state_y: State,
+        draws: Draws,
+    ) -> CoupledProposals:
+        walk = cast("RandomWalkProposal", proposal)
+        factor, inverse = walk.factor, walk.inverse
+        x, y, identical, _ = maximal(
+            [_Gaussian(mean, factor, inverse) for mean in state_x.x],
+            [_Gaussian(mean, factor, inverse) for mean in state_y.x],
+            draws,
+        )
+        return CoupledProposals(x, y, identical, None, None)
+
+    def supports(self, proposal: Proposal) -> bool:
+        from telescopic.kernels.metropolis import RandomWalkProposal
+
+        return type(proposal) is RandomWalkProposal
+
+
+class _Gaussian:
+    # A Gaussian proposal for the rejection coupling; both members of a pair share chol,
+    # so the normalizing constants cancel and are left out.
+    def __init__(self, mean: FloatArray, chol: FloatArray, inverse: FloatArray) -> None:
+        self.mean, self.chol, self.inverse = mean, chol, inverse
+
+    def rvs(self, *, random_state: np.random.Generator) -> FloatArray:
+        return self.mean + self.chol @ random_state.standard_normal(len(self.mean))
+
+    def logpdf(self, x: FloatArray) -> float:
+        z = self.inverse @ (x - self.mean)
+        return float(-0.5 * z @ z)
+
+
+# Spec section 5.6: the coupled step shares the proposal and the uniform.
+class Shared(Coupling):
+    """The coupling of two independence proposals that gives both chains one proposal.
+
+    With the shared uniform of the acceptance, it is a maximal coupling of the two
+    kernels: a pair meets when both chains accept (O'Leary, Wang & Jacob 2021).
+    """
+
+    def couple(
+        self,
+        target: Target,
+        proposal: Proposal,
+        state_x: State,
+        state_y: State,
+        draws: Draws,
+    ) -> CoupledProposals:
+        # One array for both chains, which the coupled step evaluates once.
+        x, forward = proposal.sample(target, state_x, draws)
+        return CoupledProposals(x, x, np.ones(len(x), dtype=bool), forward, forward)
+
+    def supports(self, proposal: Proposal) -> bool:
+        from telescopic.kernels.metropolis import IndependenceProposal
+
+        return type(proposal) is IndependenceProposal
 
 
 # Spec R-CPL-1.
