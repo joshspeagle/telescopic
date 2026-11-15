@@ -65,41 +65,24 @@ def reflection_maximal(
     with np.errstate(invalid="ignore"):
         difference = mu_x - mu_y
         delta = matvec(inverse, difference, blas=blas)
-    z, identical, coefficient, finite = _reflection(delta, draws)
     # C e = (mu_x - mu_y) / |delta|, so C(z - 2(e.z)e) = Cz - 2(z.delta)/|delta|^2
-    # (mu_x - mu_y), which reuses Cz. e = 0 where |delta|^2 is 0 or not finite, so the
-    # shift is 0 there and y is mu_y + Cz, which keeps its law; the mask also keeps
-    # 0 * inf out where mu_x - mu_y is not finite.
-    shift = np.multiply(
-        coefficient[:, None], difference, out=np.zeros_like(difference), where=finite[:, None]
-    )
+    # (mu_x - mu_y), which reuses Cz.
+    z, identical, shift = _reflection(delta, draws, difference)
     step = matvec(chol, z, blas=blas)
     x = mu_x + step
     y = np.where(identical[:, None], x, mu_y + step - shift)
     return x, y, identical
 
 
-def _whitened_reflection(
-    delta: FloatArray, draws: Draws
-) -> tuple[FloatArray, FloatArray, BoolArray]:
-    # reflection_maximal in whitened coordinates, without its products: for whitened means
-    # delta and 0, it returns z with x = delta + z, the reflected z_y with y = z_y, and the
-    # rows where x = y, on which a caller copies x in place of z_y. It reads the same draws
-    # and is reflection_maximal with C = I, mu_x = delta and mu_y = 0.
-    z, identical, coefficient, finite = _reflection(delta, draws)
-    shift = np.multiply(
-        coefficient[:, None], delta, out=np.zeros_like(delta), where=finite[:, None]
-    )
-    return z, z - shift, identical
-
-
 def _reflection(
-    delta: FloatArray, draws: Draws
-) -> tuple[FloatArray, BoolArray, FloatArray, BoolArray]:
-    # The draws and the meeting test of the reflection-maximal coupling for the whitened
-    # difference of the means delta: z, the identical rows, the reflection's coefficient
-    # 2 (z.delta) / |delta|^2, and the rows where it is defined (|delta|^2 positive and
-    # finite). A NaN in delta fails the test.
+    delta: FloatArray, draws: Draws, direction: FloatArray
+) -> tuple[FloatArray, BoolArray, FloatArray]:
+    # The reflection-maximal coupling for the whitened difference of the means delta, which
+    # MALA's whitened step also uses: the normals z, the rows where the pair is identical
+    # (log u < -z.delta - |delta|^2 / 2; a NaN in delta fails the test), and the shift
+    # 2 (z.delta) / |delta|^2 direction that reflects z, with direction = delta in whitened
+    # coordinates. The shift is 0 where |delta|^2 is 0 or not finite, so y keeps its law
+    # there; the mask also keeps 0 * inf out where direction is not finite.
     z = draws.normal(delta.shape[1])
     log_u = draws.log_uniform()
     with np.errstate(invalid="ignore", divide="ignore"):
@@ -107,7 +90,11 @@ def _reflection(
         along = np.einsum("ij,ij->i", z, delta)
         identical = log_u < -along - 0.5 * squared
         coefficient = 2.0 * along / squared
-    return z, identical, coefficient, (squared > 0) & (squared < np.inf)
+    finite = (squared > 0) & (squared < np.inf)
+    shift = np.multiply(
+        coefficient[:, None], direction, out=np.zeros_like(direction), where=finite[:, None]
+    )
+    return z, identical, shift
 
 
 # Spec R-CPL-2.

@@ -7,7 +7,7 @@ from scipy.integrate import quad
 
 from references import P_MIN, Normal, maximal_table, reflection
 from telescopic.couplings import (
-    _whitened_reflection,
+    _reflection,
     discrete_maximal,
     maximal,
     reflection_maximal,
@@ -61,7 +61,7 @@ def test_reflection_maximal_flags_exactly_the_equal_pairs(seed, d, scale):
 @example(seed=2, d=3, scale=0.0)  # delta = 0: no reflection
 def test_the_whitened_reflection_is_reflection_maximal_with_an_identity_factor(seed, d, scale):
     # MALA's coupled step relies on this: with C = I, mu_x = delta and mu_y = 0, the same
-    # draws give x = delta + z and, off the identical rows, y = z_y.
+    # draws give x = delta + z and, off the identical rows, y = z - shift.
     rng = np.random.default_rng(seed)
     n = 64
     delta = scale * rng.standard_normal((n, d))
@@ -71,11 +71,11 @@ def test_the_whitened_reflection_is_reflection_maximal_with_an_identity_factor(s
     x, y, identical = reflection_maximal(
         delta, np.zeros((n, d)), eye, eye, fixed_draws(normals, uniforms)
     )
-    z, z_y, flags = _whitened_reflection(delta, fixed_draws(normals, uniforms))
+    z, flags, shift = _reflection(delta, fixed_draws(normals, uniforms), delta)
     np.testing.assert_array_equal(flags, identical)
     np.testing.assert_array_equal(z, normals)
     np.testing.assert_array_equal((delta + z)[1:], x[1:])
-    np.testing.assert_array_equal(z_y[~identical], y[~identical])
+    np.testing.assert_array_equal((z - shift)[~identical], y[~identical])
 
 
 @pytest.mark.parametrize("d", [1, 3, 10])

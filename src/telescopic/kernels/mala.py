@@ -11,7 +11,7 @@ import numpy.typing as npt
 from telescopic._linalg import inverse_lower, matvec
 from telescopic._random import Draws
 from telescopic._types import FloatArray
-from telescopic.couplings import _whitened_reflection
+from telescopic.couplings import _reflection
 from telescopic.kernels.base import (
     GradientKernel,
     State,
@@ -103,14 +103,18 @@ class MALA(GradientKernel):
         # the meeting test as in reflection_maximal.
         with np.errstate(over="ignore", invalid="ignore"):
             delta = matvec(inverse, state_x.x - state_y.x, blas=blas) + 0.5 * (drift_x - drift_y)
-        z, z_y, identical = _whitened_reflection(delta, draws)
+        z, identical, shift = _reflection(delta, draws, delta)
+        # y's whitened residual: the reflected z, or z + delta where the pair is identical,
+        # since there y' = x' = mu_y + L(z + delta).
+        with np.errstate(over="ignore", invalid="ignore"):
+            residual_y = np.where(identical[:, None], z + delta, z - shift)
         x = state_x.x + matvec(chol, 0.5 * drift_x + z, blas=blas)
         with np.errstate(over="ignore", invalid="ignore"):
             y = np.where(
-                identical[:, None], x, state_y.x + matvec(chol, 0.5 * drift_y + z_y, blas=blas)
+                identical[:, None],
+                x,
+                state_y.x + matvec(chol, 0.5 * drift_y + residual_y, blas=blas),
             )
-            # On identical rows y' = mu_y + L(z + delta), so y's residual is z + delta.
-            residual_y = np.where(identical[:, None], z + delta, z_y)
         proposal_x, proposal_y = evaluate_pair(partial(evaluate_proposal, target), x, y, identical)
         log_u = draws.log_uniform()
         state_x = select(
@@ -169,12 +173,10 @@ def _log_alpha(
     chol: FloatArray,
     blas: bool,
 ) -> FloatArray:
-    # log pi(x') - log pi(x) + log q(x | x') - log q(x' | x), with the residuals whitened:
-    # x' = x + L(h / 2 + r) gives L^{-1}(x' - mu(x)) = r and L^{-1}(x - mu(x')) =
-    # -(r + (h + h') / 2), so the log ratio of q is (|r|^2 - |r + (h + h')/2|^2) / 2; the
-    # Gaussian constants cancel. A rejected proposal (log pi = -inf) carries a zero
-    # gradient and may hold non-finite positions: no warnings, and a NaN ratio rejects as
-    # -inf does.
+    # log pi(x') - log pi(x) + log q(x | x') - log q(x' | x): x' = x + L(h / 2 + r) gives
+    # L^{-1}(x' - mu(x)) = r and L^{-1}(x - mu(x')) = -(r + (h + h') / 2); the Gaussian
+    # constants cancel. A rejected proposal (log pi = -inf) carries a zero gradient and may
+    # hold non-finite positions: no warnings, and a NaN ratio rejects as -inf does.
     with np.errstate(over="ignore", invalid="ignore"):
         back = residual + 0.5 * (drift + _drift(proposal, chol, blas))
         log_q = 0.5 * (
