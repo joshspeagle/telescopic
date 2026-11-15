@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import copy
+import functools
 from collections.abc import Callable, Mapping
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 from numpy.random import Generator, SeedSequence
@@ -24,6 +25,35 @@ SAFETY = 10.0  # a line disagrees above SAFETY times its estimated error
 EPS64 = np.finfo(np.float64).eps
 STENCIL = np.array([1.0, -1.0, 2.0, -2.0])
 SIGNS = np.array([-1.0, 1.0])
+
+
+class _Recorder:
+    # The user's function, recording the narrowest float dtype of each of its outputs since
+    # reset: of its one output, or of the two of a log_prob_and_grad (parts=2).
+    def __init__(self, function: Callable[..., Any], parts: int = 1) -> None:
+        functools.update_wrapper(self, function, updated=())  # its name, for errors
+        self.function, self.itemsizes = function, [8] * parts
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        out = self.function(*args, **kwargs)
+        outputs = (out,) if len(self.itemsizes) == 1 else out
+        # A log_prob_and_grad that returns no pair records nothing: the Target raises.
+        if isinstance(outputs, tuple | list) and len(outputs) == len(self.itemsizes):
+            for part, output in enumerate(outputs):
+                dtype = np.asarray(output).dtype
+                if dtype.kind in "fc":  # a complex output counts as its real part, as the Target's
+                    size = np.finfo(dtype).dtype.itemsize
+                    self.itemsizes[part] = min(self.itemsizes[part], size)
+        return out
+
+    def reset(self) -> None:
+        self.itemsizes = [8] * len(self.itemsizes)
+
+
+def _itemsizes(recorders: tuple[_Recorder, ...]) -> tuple[int, int]:
+    # The narrowest itemsizes of the log-density and of the gradient since the last reset.
+    f, g = (size for recorder in recorders for size in recorder.itemsizes)
+    return f, g
 
 
 def _signs(generator: Generator, d: int) -> FloatArray:
@@ -71,6 +101,7 @@ def _direction(
 
 def _sweep(
     target: Target,
+    recorders: tuple[_Recorder, ...],
     values_at: Callable[[FloatArray], FloatArray],
     initial: Distribution,
     seed: SeedSequence,
@@ -94,10 +125,11 @@ def _sweep(
         u = _direction(x, a, b, spread, _signs(fallback_signs, d))
         probe_sign = _signs(probe_signs, d)
 
-        target._itemsizes = [8, 8]
+        for recorder in recorders:
+            recorder.reset()
         zeroed = target.n_grad_zeroed
         f0, g = target.log_prob_and_grad(x[None])
-        seen_f = min(seen_f, target._itemsizes[0])
+        seen_f = min(seen_f, _itemsizes(recorders)[0])
         if p == 0:
             itemsize_f = min(itemsize_f, seen_f)
         dtype_f = np.dtype(f"f{itemsize_f}")
@@ -108,7 +140,7 @@ def _sweep(
             zeroed = target.n_grad_zeroed
             f0, g = target.log_prob_and_grad(x[None])
         f0, g, zeroed = f0[0], g[0], target.n_grad_zeroed > zeroed
-        seen_g = min(seen_g, target._itemsizes[1])
+        seen_g = min(seen_g, _itemsizes(recorders)[1])
         if p == 0:
             itemsize_g = min(itemsize_g, seen_g)
             eps_g = float(np.finfo(np.dtype(f"f{itemsize_g}")).eps)
@@ -183,18 +215,16 @@ def check_gradient(
     # could be compared. A log_prob_and_grad, which the chains then evaluate wherever they
     # evaluate a gradient, is compared with differences of its own values, and log_prob
     # is not called.
-    target = Target(
-        log_prob,
-        grad,
-        log_prob_and_grad=log_prob_and_grad,
-        args=args,
-        kwargs=kwargs,
-        vectorize=vectorize,
-    )
     if grad is not None:
+        recorders: tuple[_Recorder, ...] = (_Recorder(log_prob), _Recorder(grad))
+        target = Target(*recorders, args=args, kwargs=kwargs, vectorize=vectorize)
         values_at = target.log_prob
         evaluated, gradient_name, values_name = "log_prob and grad", "grad", "log_prob"
     else:
+        recorders = (_Recorder(cast(Callable[..., Any], log_prob_and_grad), parts=2),)
+        target = Target(
+            log_prob, log_prob_and_grad=recorders[0], args=args, kwargs=kwargs, vectorize=vectorize
+        )
 
         def values_at(x: FloatArray) -> FloatArray:
             return target.log_prob_and_grad(x)[0]
@@ -209,7 +239,7 @@ def check_gradient(
             # A function whose dtype narrows after the first draw restarts the sweep with
             # the narrowest dtype; for any other function this runs once.
             rows, unusable, skipped, used, seen, h = _sweep(
-                target, values_at, initial, seed, assumed
+                target, recorders, values_at, initial, seed, assumed
             )
             narrowest = (min(seen[0], used[0]), min(seen[1], used[1]))
             if narrowest == used:
