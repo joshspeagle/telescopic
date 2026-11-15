@@ -1,6 +1,7 @@
 import itertools
 import sys
 from dataclasses import replace
+from types import SimpleNamespace
 from xml.etree import ElementTree
 
 import numpy as np
@@ -617,6 +618,38 @@ def test_chains_are_the_averaged_states_of_the_kept_replicates():
         np.testing.assert_array_equal(chain, replicates.paths[index][0][[3, 7, 11, 15]])
     with pytest.raises(ValueError, match="without the times"):
         synthetic([1, 2, 3], [0.0, 1.0, 2.0]).chains()
+
+
+def test_datatree_holds_the_chains_by_name_replicate_and_time():
+    pytest.importorskip("arviz_base")
+    result = Result(
+        gaussian_run(range(30), k=3, m=15, lag=2, thin=4, max_iter=17, keep=20),
+        names=["a", "b"],
+    )
+    posterior = result.to_datatree()["posterior"]
+    kept = result.index[np.isfinite(result.meeting_times) & (result.index < 20)]
+    np.testing.assert_array_equal(posterior["chain"], kept)
+    np.testing.assert_array_equal(posterior["draw"], [3, 7, 11, 15])
+    assert list(posterior.data_vars) == result.names
+    chains = result.chains()
+    for i, name in enumerate(result.names):
+        assert posterior[name].dims == ("chain", "draw")
+        np.testing.assert_array_equal(posterior[name], chains[..., i])
+
+
+@pytest.mark.parametrize("names", [["chain", "b"], ["a", "draw"], ["a/1", "b"]])
+def test_to_datatree_refuses_names_that_arviz_reserves(names):
+    result = Result(RESULT._replicates, names=names)
+    with pytest.raises(ValueError, match=r"names \[.+\] cannot name ArviZ variables"):
+        result.to_datatree()
+
+
+@pytest.mark.parametrize("arviz_base", [None, SimpleNamespace(__version__="0.6.0")])
+def test_without_arviz_1_to_datatree_names_the_extra_to_install(monkeypatch, arviz_base):
+    # None makes the import fail; the namespace stands for the standalone arviz-base 0.x.
+    monkeypatch.setitem(sys.modules, "arviz_base", arviz_base)
+    with pytest.raises(ImportError, match=r"ArviZ 1\.0 or later.*telescopic\[arviz\]"):
+        RESULT.to_datatree()
 
 
 def test_writing_to_the_replicates_of_a_reduced_mean_changes_no_later_estimate():
