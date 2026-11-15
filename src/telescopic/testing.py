@@ -7,11 +7,11 @@ from dataclasses import dataclass
 
 import numpy as np
 import numpy.typing as npt
-from numpy.random import Generator
+from numpy.random import Generator, SeedSequence
 
 from telescopic._random import Draws, Streams, root_seed
 from telescopic._types import FloatArray, Seed, instance, integer, real, real_array
-from telescopic.kernels.base import Kernel, State, evaluate
+from telescopic.kernels.base import Kernel, State, check_markov_fields, evaluate, meets
 from telescopic.target import Target
 
 __all__ = ["CouplingReport", "check_coupling", "fixed_draws", "random_draws"]
@@ -40,10 +40,14 @@ class CouplingReport:
         positions of a coupled step with those of a step alone, along random directions
         and in the distance moved; NaN where a position is NaN.
     met : float
-        The fraction of pairs that met: a coupling that never meets gives no estimate.
+        The fraction of pairs that met, with equal positions and equal
+        :attr:`~telescopic.kernels.Kernel.markov_fields`: a coupling that never meets
+        gives no estimate.
     stale : int
         Chains whose returned log-density or gradient differs from a fresh evaluation at
-        their position; the engine reuses them.
+        their position, which the engine reuses, and chains whose next step with the
+        kernel's caches, the fields of ``extra`` outside its Markov fields, differs from
+        the same step without them.
     near_misses : int
         Pairs whose positions differ by at most 64 units in the last place in every
         coordinate: a coupling that recomputes Y where it should copy X's proposal
@@ -96,8 +100,9 @@ def check_coupling(
     with one step of the kernel alone from the first points and one from the second: how
     often each chain stays put, and where it moves to. Swapped pairs in one batch catch a
     coupling that reads another row's state. It also counts the pairs that meet, the
-    states whose cached log-density or gradient is stale, and the pairs that nearly
-    meet. Custom kernels should pass it before use.
+    states whose cached log-density or gradient is stale, the states whose caches change
+    the next step, and the pairs that nearly meet. Custom kernels should pass it before
+    use.
 
     Parameters
     ----------
@@ -117,10 +122,16 @@ def check_coupling(
     -------
     CouplingReport
 
+    Raises
+    ------
+    ValueError
+        When a returned state lacks one of the kernel's Markov fields.
+
     Notes
     -----
     Costs one coupled step and two steps of ``n`` chains, and an evaluation of the target
-    at each of their ``4n`` new positions.
+    at each of their ``4n`` new positions. A kernel whose states carry caches costs eight
+    more steps of ``n`` chains, two from each returned state.
 
     Examples
     --------
@@ -141,7 +152,7 @@ def check_coupling(
     if x.ndim != 1 or x.shape != y.shape:
         raise ValueError(f"x and y must be points of one shape (d,), not {x.shape} and {y.shape}")
     n = integer("n", n, minimum=2)
-    seeds = root_seed(rng).spawn(4)
+    seeds = root_seed(rng).spawn(5)
     generator = np.random.default_rng(seeds[3])
     swapped = (generator.random(n) < 0.5).astype(np.intp)
     starts = kernel.init_state(target, np.stack([x, y]))
@@ -168,12 +179,14 @@ def check_coupling(
     gap = np.abs(new_x.x - new_y.x)
     ulp = np.spacing(np.maximum(np.abs(new_x.x), np.abs(new_y.x)))
     near = np.any(gap > 0, axis=1) & np.all(gap <= NEAR_MISS_ULPS * ulp, axis=1)
+    returned = (new_x, new_y, *alone)
+    for state in returned:
+        check_markov_fields(kernel, state)
+    met = meets(kernel.markov_fields, new_x, new_y, slice(None))
+    stale = sum(_stale(target, state) for state in returned)
+    stale += sum(_cache_errors(kernel, target, state, seeds[4]) for state in returned)
     return CouplingReport(
-        (stay[0], stay[1]),
-        (moves[0], moves[1]),
-        float(np.mean(np.all(gap == 0, axis=1))),
-        sum(_stale(target, state) for state in (new_x, new_y, *alone)),
-        int(near.sum()),
+        (stay[0], stay[1]), (moves[0], moves[1]), float(np.mean(met)), stale, int(near.sum())
     )
 
 
@@ -206,6 +219,24 @@ def _stale(target: Target, state: State) -> int:
     if state.grad is not None and fresh.grad is not None:
         error = np.linalg.norm(state.grad - fresh.grad, axis=1)
         close &= error <= 1e-9 * np.linalg.norm(fresh.grad, axis=1)
+    return int(np.sum(~close))
+
+
+def _cache_errors(kernel: Kernel, target: Target, state: State, seed: SeedSequence) -> int:
+    # Chains whose next step with the kernel's caches differs, beyond the rounding that
+    # _stale allows, from the same step, with the same draws, without them.
+    markov = set(kernel.markov_fields)
+    if not set(state.extra) - markov:
+        return 0
+    bare = State(
+        state.x,
+        state.log_prob,
+        state.grad,
+        {name: value for name, value in state.extra.items() if name in markov},
+    )
+    cached, fresh = (kernel.step(target, s, random_draws(len(s), seed))[0] for s in (state, bare))
+    close = np.isclose(cached.log_prob, fresh.log_prob, rtol=1e-9, atol=0)
+    close &= np.all(np.isclose(cached.x, fresh.x, rtol=1e-9, atol=0), axis=1)
     return int(np.sum(~close))
 
 

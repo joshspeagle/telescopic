@@ -165,8 +165,14 @@ mass, such as a draw clipped onto the edge of an open support.
 
 - The coupled step gives both chains the same proposal and the same uniform, so a pair
   meets when both accept. It is a maximal coupling of the kernel (O'Leary, Wang & Jacob
-  2021), {class}`telescopic.couplings.Shared`. It evaluates `log_density` once per
-  coupled step, at the proposals and at both chains' states.
+  2021), {class}`telescopic.couplings.Shared`.
+- The chains' states keep $\log q$ at their positions with the point at which it was
+  computed, and use it only where that point is the position bit for bit, so that a
+  chain moved by another kernel of a mixture gets a fresh value. A step and a coupled
+  step evaluate `log_density` once, at the proposals and at the states without a valid
+  value: usually $n$ rows, where without the cache they were $2n$ and $3n$. Where
+  `log_density` gives a point the same value in any batch, as `MultivariateT` does, no
+  number changes.
 - The attribute `proposal` returns the distribution given and cannot be reassigned;
   tuning builds a new kernel.
 - `proposal` is a {class}`telescopic.kernels.MultivariateT`, a Student-$t$ with location

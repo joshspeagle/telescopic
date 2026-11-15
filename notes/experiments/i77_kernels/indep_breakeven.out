@@ -1,0 +1,177 @@
+# Issue #77, second pull request: notes/experiments/i77_kernels/indep_breakeven.py run
+# 5 times on the base (f058aba) and 5 times on the change (e226b4e), alternating, on an
+# otherwise idle machine. Median over the runs of the per-run medians, and the ratio.
+
+kernel        operation       d lanes   base us    new us  ratio
+Independence  step            2   256     212.9     228.6  1.074
+Independence  coupled_step    2   256     258.4     245.7  0.951
+Independence  step            3   256     256.9     261.6  1.018
+Independence  coupled_step    3   256     273.6     282.0  1.031
+Independence  step            5   256     291.1     275.7  0.947
+Independence  coupled_step    5   256     322.0     306.5  0.952
+Independence  step           10   256     379.7     340.9  0.898
+Independence  coupled_step   10   256     426.6     362.8  0.850
+Independence  step           20   256     532.4     477.3  0.897
+Independence  coupled_step   20   256     641.2     487.6  0.760
+Independence  step           50   256    1569.1    1070.2  0.682
+Independence  coupled_step   50   256    1642.8    1104.0  0.672
+
+## run 1, base
+setup: commit f058aba of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1
+kernel        operation       d lanes  median us
+Independence  step            2   256      212.9
+Independence  coupled_step    2   256      230.1
+Independence  step            3   256      266.6
+Independence  coupled_step    3   256      250.5
+Independence  step            5   256      291.1
+Independence  coupled_step    5   256      391.7
+Independence  step           10   256      348.0
+Independence  coupled_step   10   256      398.3
+Independence  step           20   256      546.1
+Independence  coupled_step   20   256      641.2
+Independence  step           50   256     1436.1
+Independence  coupled_step   50   256     1524.8
+
+## run 1, new
+setup: commit e226b4e of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1
+kernel        operation       d lanes  median us
+Independence  step            2   256      213.5
+Independence  coupled_step    2   256      218.9
+Independence  step            3   256      224.4
+Independence  coupled_step    3   256      234.3
+Independence  step            5   256      251.5
+Independence  coupled_step    5   256      306.5
+Independence  step           10   256      335.2
+Independence  coupled_step   10   256      337.7
+Independence  step           20   256      436.4
+Independence  coupled_step   20   256      453.7
+Independence  step           50   256      971.5
+Independence  coupled_step   50   256     1104.0
+
+## run 2, base
+setup: commit f058aba of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1
+kernel        operation       d lanes  median us
+Independence  step            2   256      207.4
+Independence  coupled_step    2   256      262.2
+Independence  step            3   256      235.5
+Independence  coupled_step    3   256      272.8
+Independence  step            5   256      265.4
+Independence  coupled_step    5   256      311.8
+Independence  step           10   256      342.3
+Independence  coupled_step   10   256      386.9
+Independence  step           20   256      497.3
+Independence  coupled_step   20   256      565.9
+Independence  step           50   256     1522.7
+Independence  coupled_step   50   256     2253.3
+
+## run 2, new
+setup: commit e226b4e of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1
+kernel        operation       d lanes  median us
+Independence  step            2   256      276.8
+Independence  coupled_step    2   256      245.5
+Independence  step            3   256      284.2
+Independence  coupled_step    3   256      282.0
+Independence  step            5   256      265.2
+Independence  coupled_step    5   256      304.3
+Independence  step           10   256      340.9
+Independence  coupled_step   10   256      350.5
+Independence  step           20   256      443.9
+Independence  coupled_step   20   256      487.6
+Independence  step           50   256     1071.7
+Independence  coupled_step   50   256     1082.3
+
+## run 3, base
+setup: commit f058aba of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1
+kernel        operation       d lanes  median us
+Independence  step            2   256      210.1
+Independence  coupled_step    2   256      245.2
+Independence  step            3   256      235.5
+Independence  coupled_step    3   256      273.6
+Independence  step            5   256      277.8
+Independence  coupled_step    5   256      312.9
+Independence  step           10   256      379.7
+Independence  coupled_step   10   256      426.6
+Independence  step           20   256      529.2
+Independence  coupled_step   20   256      650.0
+Independence  step           50   256     1569.1
+Independence  coupled_step   50   256     1577.4
+
+## run 3, new
+setup: commit e226b4e of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1
+kernel        operation       d lanes  median us
+Independence  step            2   256      222.0
+Independence  coupled_step    2   256      269.0
+Independence  step            3   256      266.0
+Independence  coupled_step    3   256      270.9
+Independence  step            5   256      309.1
+Independence  coupled_step    5   256      320.9
+Independence  step           10   256      345.6
+Independence  coupled_step   10   256      377.9
+Independence  step           20   256      507.7
+Independence  coupled_step   20   256      514.2
+Independence  step           50   256     1081.9
+Independence  coupled_step   50   256     1229.8
+
+## run 4, base
+setup: commit f058aba of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1
+kernel        operation       d lanes  median us
+Independence  step            2   256      254.6
+Independence  coupled_step    2   256      286.0
+Independence  step            3   256      256.9
+Independence  coupled_step    3   256      287.2
+Independence  step            5   256      298.1
+Independence  coupled_step    5   256      323.7
+Independence  step           10   256      397.3
+Independence  coupled_step   10   256      453.2
+Independence  step           20   256      532.4
+Independence  coupled_step   20   256      630.3
+Independence  step           50   256     1595.4
+Independence  coupled_step   50   256     1642.8
+
+## run 4, new
+setup: commit e226b4e of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1
+kernel        operation       d lanes  median us
+Independence  step            2   256      228.6
+Independence  coupled_step    2   256      245.7
+Independence  step            3   256      261.6
+Independence  coupled_step    3   256      286.4
+Independence  step            5   256      275.7
+Independence  coupled_step    5   256      301.7
+Independence  step           10   256      332.2
+Independence  coupled_step   10   256      362.8
+Independence  step           20   256      478.6
+Independence  coupled_step   20   256      478.0
+Independence  step           50   256     1070.2
+Independence  coupled_step   50   256     1142.1
+
+## run 5, base
+setup: commit f058aba of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1
+kernel        operation       d lanes  median us
+Independence  step            2   256      233.5
+Independence  coupled_step    2   256      258.4
+Independence  step            3   256      260.4
+Independence  coupled_step    3   256      288.2
+Independence  step            5   256      297.0
+Independence  coupled_step    5   256      322.0
+Independence  step           10   256      395.4
+Independence  coupled_step   10   256      463.6
+Independence  step           20   256      555.9
+Independence  coupled_step   20   256      658.0
+Independence  step           50   256     1634.8
+Independence  coupled_step   50   256     1773.4
+
+## run 5, new
+setup: commit e226b4e of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1
+kernel        operation       d lanes  median us
+Independence  step            2   256      232.8
+Independence  coupled_step    2   256      271.1
+Independence  step            3   256      260.5
+Independence  coupled_step    3   256      285.9
+Independence  step            5   256      298.8
+Independence  coupled_step    5   256      335.0
+Independence  step           10   256      371.1
+Independence  coupled_step   10   256      402.3
+Independence  step           20   256      477.3
+Independence  coupled_step   20   256      508.5
+Independence  step           50   256     1037.2
+Independence  coupled_step   50   256     1079.0

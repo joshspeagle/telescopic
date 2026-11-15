@@ -11,19 +11,26 @@ import numpy.typing as npt
 
 from telescopic._random import Draws
 from telescopic._types import FloatArray, IndexArray, Seed, instance, real_array
-from telescopic.kernels.base import Kernel, State
+from telescopic.kernels.base import Kernel, State, carried
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport
 
 
 # Spec R-KER-MIX.
 class Mixture(Kernel):
-    """A mixture of kernels.
+    r"""A mixture of kernels.
 
     Each step draws one uniform and applies the component it selects. The coupled step
     gives both chains the same component and applies that component's coupling. The
     choice never depends on the states, which keeps each marginal the mixture
     (Atchadé & Jacob 2024, section 4.2).
+
+    The field that component ``i`` names ``name`` in a :class:`~telescopic.kernels.State`'s
+    ``extra`` is named ``f"{i}/{name}"`` in the mixture's states. Each component sees only
+    its own fields, under their own names, and every other field is carried unchanged. A
+    component with Markov fields (:attr:`~telescopic.kernels.Kernel.markov_fields`) raises
+    ``ValueError``: the mixture leaves a joint law :math:`\pi(x)\psi(v)` invariant only when
+    :math:`\psi` does not depend on :math:`x`, which cannot be checked.
 
     Parameters
     ----------
@@ -69,11 +76,14 @@ class Mixture(Kernel):
             )
         if len({kernel.ndim for kernel in self.kernels} - {None}) > 1:
             raise ValueError("the kernels work in different dimensions")
+        _check_markov(self.kernels)
         self.weights = weights / total
         # Rounding can leave the cumulative weights' last below 1, so _choose clamps the
         # index to the last component of positive weight.
         self._last = int(np.nonzero(self.weights)[0][-1])
         self._cumulative = np.cumsum(self.weights)
+        # The prefixes of the components' fields, f"{i}/{name}".
+        self._prefixes = [f"{i}/" for i in range(len(self.kernels))]
 
     @property
     def needs_grad(self) -> bool:
@@ -112,20 +122,33 @@ class Mixture(Kernel):
         # A copy keeps the class and settings of a subclass, such as HMC.
         mixture = copy.copy(self)
         mixture.kernels = [kernel for kernel, _ in tuned]
+        _check_markov(mixture.kernels)
         return mixture, pilot.report(ratio)
+
+    def init_extra(self, state: State) -> dict[str, npt.NDArray[Any]]:
+        return {
+            prefix + name: value
+            for prefix, kernel in zip(self._prefixes, self.kernels, strict=True)
+            for name, value in kernel.init_extra(state).items()
+        }
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         component = self._choose(draws)
         if (component == component[0]).all():
             # One component for every row, always so at one lane: no copies.
-            return self.kernels[int(component[0])].step(target, state, draws)
+            index = int(component[0])
+            prefix = self._prefixes[index]
+            new, probability = self.kernels[index].step(target, _own(state, prefix), draws)
+            return _merged(new, state, prefix), probability
         state = state.take(slice(None))
         probability = np.zeros(len(state))
-        for index, kernel in enumerate(self.kernels):
+        for index, (prefix, kernel) in enumerate(zip(self._prefixes, self.kernels, strict=True)):
             rows = (component == index).nonzero()[0]
             if len(rows):
-                new, probability[rows] = kernel.step(target, state.take(rows), draws.subset(rows))
-                state.put(rows, new)
+                new, probability[rows] = kernel.step(
+                    target, _own(state, prefix).take(rows), draws.subset(rows)
+                )
+                state.put(rows, _prefixed(new, prefix))
         return state, probability
 
     def coupled_step(
@@ -133,16 +156,24 @@ class Mixture(Kernel):
     ) -> tuple[State, State]:
         component = self._choose(draws)
         if (component == component[0]).all():
-            return self.kernels[int(component[0])].coupled_step(target, state_x, state_y, draws)
+            index = int(component[0])
+            prefix = self._prefixes[index]
+            new_x, new_y = self.kernels[index].coupled_step(
+                target, _own(state_x, prefix), _own(state_y, prefix), draws
+            )
+            return _merged(new_x, state_x, prefix), _merged(new_y, state_y, prefix)
         state_x, state_y = state_x.take(slice(None)), state_y.take(slice(None))
-        for index, kernel in enumerate(self.kernels):
+        for index, (prefix, kernel) in enumerate(zip(self._prefixes, self.kernels, strict=True)):
             rows = (component == index).nonzero()[0]
             if len(rows):
                 new_x, new_y = kernel.coupled_step(
-                    target, state_x.take(rows), state_y.take(rows), draws.subset(rows)
+                    target,
+                    _own(state_x, prefix).take(rows),
+                    _own(state_y, prefix).take(rows),
+                    draws.subset(rows),
                 )
-                state_x.put(rows, new_x)
-                state_y.put(rows, new_y)
+                state_x.put(rows, _prefixed(new_x, prefix))
+                state_y.put(rows, _prefixed(new_y, prefix))
         return state_x, state_y
 
     def _choose(self, draws: Draws) -> IndexArray:
@@ -151,3 +182,47 @@ class Mixture(Kernel):
 
     def __repr__(self) -> str:
         return f"Mixture({self.kernels!r}, weights={self.weights.tolist()})"
+
+
+def _check_markov(kernels: list[Kernel]) -> None:
+    for i, kernel in enumerate(kernels):
+        if kernel.markov_fields:
+            raise ValueError(
+                f"kernels[{i}] has the Markov fields {kernel.markov_fields}, which a mixture "
+                "refuses: it leaves a joint law pi(x) psi(v) invariant only when psi does "
+                "not depend on x"
+            )
+
+
+# Component i names its fields without the prefix f"{i}/" that the mixture's states give
+# them. Each helper returns its input when no state has fields, as for every shipped
+# kernel but Independence.
+def _own(state: State, prefix: str) -> State:
+    # The state that the component of this prefix sees: its own fields, without it.
+    if not state.extra:
+        return state
+    return state._with_extra(
+        {
+            name[len(prefix) :]: value
+            for name, value in state.extra.items()
+            if name.startswith(prefix)
+        }
+    )
+
+
+def _prefixed(state: State, prefix: str) -> State:
+    if not state.extra:
+        return state
+    return state._with_extra({prefix + name: value for name, value in state.extra.items()})
+
+
+def _merged(new: State, old: State, prefix: str) -> State:
+    # The component's output, with its fields prefixed again and every other field of the
+    # mixture's input carried unchanged.
+    if not (new.extra or old.extra):
+        return new
+    extra = carried(
+        {name: value for name, value in old.extra.items() if not name.startswith(prefix)}
+    )
+    extra.update((prefix + name, value) for name, value in new.extra.items())
+    return new._with_extra(extra)
