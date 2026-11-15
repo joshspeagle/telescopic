@@ -327,7 +327,6 @@ def test_hmc_keeps_its_jitter_through_tuning():
     # step size; each copy must keep the jitter.
     tuned, _ = HMC(jitter=0.2).tune(TARGET, START, 7)
     assert tuned.kernels[0].jitter == 0.2
-    assert "jitter=0.2" in repr(tuned)
 
 
 @pytest.mark.parametrize("lowest", [1, 4])

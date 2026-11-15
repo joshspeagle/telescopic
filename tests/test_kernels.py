@@ -185,18 +185,17 @@ def test_mixture_gives_both_chains_the_component_its_uniform_selects(weights):
 # Marginals: each chain of a coupled step has exactly the law of one step.
 
 
-def leapfrog_density(e, n, x, t):
-    # A leapfrog trajectory of n steps of size e is linear on N(0, 1):
-    # (x', v') = P (x, v), P = M^n; the density of an accepted move from x to t.
-    one = np.array([[1 - e * e / 2, e], [-e * (1 - e * e / 4), 1 - e * e / 2]])
-    (a, b), (c, d) = np.linalg.matrix_power(one, n)
-    v = (t - a * x) / b
-    energy = 0.5 * (x * x + v * v) - 0.5 * (t * t + (c * x + d * v) ** 2)
-    return stats.norm.pdf(v) / abs(b) * np.minimum(1.0, np.exp(energy))
-
-
 def one_step_law(kernel, x):
     """For a 1-D kernel on N(0, 1): the probability of staying at x, and the CDF of moves."""
+
+    def leapfrog_density(e, n, t):
+        # A leapfrog trajectory of n steps of size e is linear on N(0, 1):
+        # (x', v') = P (x, v), P = M^n; the density of an accepted move from x to t.
+        one = np.array([[1 - e * e / 2, e], [-e * (1 - e * e / 4), 1 - e * e / 2]])
+        (a, b), (c, d) = np.linalg.matrix_power(one, n)
+        v = (t - a * x) / b
+        energy = 0.5 * (x * x + v * v) - 0.5 * (t * t + (c * x + d * v) ** 2)
+        return stats.norm.pdf(v) / abs(b) * np.minimum(1.0, np.exp(energy))
 
     def moved(k, t):
         if isinstance(k, Mixture):  # HMC included: a leapfrog and a random-walk component
@@ -222,7 +221,7 @@ def one_step_law(kernel, x):
         # Monte Carlo error of the tests.
         u = (np.arange(400) + 0.5) / 400
         steps = k.step_size * (1 + k.jitter * (2 * u - 1)) if k.jitter else [k.step_size]
-        return np.mean([leapfrog_density(e, k.n_steps, x, t) for e in steps], axis=0)
+        return np.mean([leapfrog_density(e, k.n_steps, t) for e in steps], axis=0)
 
     # The moved density is negligible beyond 15 units; a fine grid makes the trapezoid
     # error (about 1e-6) far below the Monte Carlo error of the tests.
