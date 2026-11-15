@@ -450,3 +450,12 @@ All notable changes to this project are documented here. The format follows
 - Results are saved in schema 2, which names the estimator family and keeps `keep`, the
   times, the moments and the abandoned replicates; files of schema 1 load with their
   times rebuilt.
+- `HMC` jitters its step by default: each trajectory takes a step drawn uniformly
+  between `(1 - jitter)` and `(1 + jitter)` times `step_size`, the same for both chains
+  of a pair, with `n_steps` fixed by `step_size`, and the automatic step is tuned on the
+  jittered kernel. The new argument `jitter`, in [0, 1), is 0.5 by default and shown in
+  the repr; `jitter=0` gives the fixed-step kernel, bit for bit. The jitter keeps the
+  step off the leapfrog's resonance: on the Gaussians where a given `n_steps`, or a
+  given `cov` that does not whiten the target, left pilot pairs unmet, `k` is chosen. Every seeded output of
+  `HMC` with the default changes, and the note on the error raised when `k` cannot be
+  chosen now suggests the default jitter for HMC with `jitter=0`.

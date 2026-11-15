@@ -78,17 +78,26 @@ def instance(name: str, value: Any, kind: type) -> None:
 
 
 def real(
-    name: str, value: Any, low: float = -np.inf, high: float = np.inf, *, closed: bool = False
+    name: str,
+    value: Any,
+    low: float = -np.inf,
+    high: float = np.inf,
+    *,
+    closed_low: bool = False,
+    closed_high: bool = False,
 ) -> float:
-    # A float in (low, high), or in (low, high] if closed, from a Python or NumPy real
-    # number. A bool, a string, an array or None raises TypeError, and a number outside,
-    # NaN included, ValueError, each naming the argument (DECISIONS #50).
+    # A float in (low, high), with low included if closed_low and high if closed_high,
+    # from a Python or NumPy real number. A bool, a string, an array or None raises
+    # TypeError, and a number outside, NaN included, ValueError, each naming the argument
+    # (DECISIONS #50).
     if not isinstance(value, numbers.Real) or isinstance(value, bool):
         raise TypeError(f"{name} must be a real number, not {value!r}")
     number = float(value)
-    if not (low < number < high or (closed and number == high)):
-        bracket = "]" if closed else ")"
-        raise ValueError(f"{name} must be in ({low:g}, {high:g}{bracket}, not {number}")
+    above = low < number or (closed_low and number == low)
+    below = number < high or (closed_high and number == high)
+    if not (above and below):
+        interval = f"{'[' if closed_low else '('}{low:g}, {high:g}{']' if closed_high else ')'}"
+        raise ValueError(f"{name} must be in {interval}, not {number}")
     return number
 
 

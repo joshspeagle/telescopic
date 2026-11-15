@@ -203,16 +203,21 @@ class _ContractionLeapfrog(_Leapfrog):
 
 # Remedy c.
 class _JitterLeapfrog(_Leapfrog):
+    # Since issue #91 the package's _Leapfrog takes a jitter of its own; this one keeps
+    # its width there and computes its steps itself, on copies whose package jitter is 0.
     jitter = JITTER
+
+    def __init__(self, step_size, n_steps, cov):
+        super().__init__(step_size, n_steps, cov, self.jitter)
 
     def _with_cov(self, cov):
         kernel = copy.copy(self)
-        _Leapfrog.__init__(kernel, self.step_size, self._n_steps, cov)
+        _Leapfrog.__init__(kernel, self.step_size, self._n_steps, cov, self.jitter)
         return kernel
 
     def _at(self, u, copies):
         kernel = copy.copy(self)
-        kernel._n_steps = self.n_steps
+        kernel._n_steps, kernel.jitter = self.n_steps, 0.0
         steps = self.step_size * (1 + self.jitter * (2 * u - 1))
         kernel.step_size = np.tile(steps, copies)[:, None]
         return kernel

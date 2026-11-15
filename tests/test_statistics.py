@@ -89,6 +89,9 @@ CASES = {
     "hmc-nan-gradient": Case(
         BROKEN_GRADIENT, HMC(0.5, 4, cov=G1.cov), Empirical([[-1.0]]), k=5, m=50, lag=5
     ),
+    # A nominal step on the resonance 3 theta = pi, theta = 2 arcsin(1/2), which the
+    # jitter spreads over steps from 0.5 to 1.5.
+    "hmc-d5-resonant-step": Case(G5, HMC(1.0, 3, cov=G5.cov), far(5), k=2, m=20),
 }
 
 
@@ -241,9 +244,9 @@ def test_bimodal_meeting_times_match_jacob_oleary_atchade():
 def test_banana_meeting_times_match_heng_jacob():
     # Heng & Jacob (2019), section 5.2: HMC with step 1/500 and 500 leapfrog steps, and a
     # random-walk meeting step of scale 1e-3 with probability 1/20, from U[-5, 5]^2: mean
-    # meeting time 158 with synchronous momenta.
+    # meeting time 158 with synchronous momenta, and a fixed step.
     target = Target(BANANA.log_prob, grad=BANANA.grad, vectorize=True)
-    kernel = HMC(1 / 500, 500, cov=np.eye(2), meeting_weight=1 / 20, meeting_scale=1e-3)
+    kernel = HMC(1 / 500, 500, cov=np.eye(2), jitter=0, meeting_weight=1 / 20, meeting_scale=1e-3)
     tau = pairs(target, kernel, BANANA.initial, 200, 32).meeting_time
     assert 118 < np.mean(tau) < 198
 
