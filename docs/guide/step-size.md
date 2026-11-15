@@ -28,14 +28,17 @@ the log-density curves more sharply than where the step was tuned. Where the lar
 eigenvalue of $\Sigma H$, with $\Sigma$ = `cov` and $H$ the Hessian of $-\log\pi$,
 exceeds $4/\epsilon^2$, MALA's proposals overshoot: on a Gaussian of that Hessian, the
 proposal mean lands farther from the mode than the chain. HMC's leapfrog steps are
-unstable beyond the same bound. A chain that starts in such a region can reject every
-proposal. On the logistic regression below, whose predictors nearly separate the
-outcomes, the automatic MALA leaves pilot pairs unmet. The symptom is pilot pairs still
+unstable beyond the same bound for the largest step a trajectory can take,
+$(1 + j)\epsilon$ with $j$ = `jitter`: from an eigenvalue of $4/((1 + j)\epsilon)^2$,
+about $1.78/\epsilon^2$ at the default $j = 0.5$, some trajectories are unstable. A
+chain that starts in such a region can reject every proposal. On the logistic
+regression below, whose predictors nearly separate the outcomes, the automatic MALA
+leaves pilot pairs unmet. The symptom is pilot pairs still
 unmet at the cap, so that `sample` raises `ValueError` once the pilot has run, or very
 long meeting times. The remedy is an explicit `step_size`, checked as in
 [Checking a step size](#checking-a-step-size). On the banana, Heng & Jacob (2019, §5.2)
-report a mean meeting time of 158 with a step of 1/500 and 500 leapfrog steps,
-`HMC(1/500, 500, cov=np.eye(2))`.
+report a mean meeting time of 158 with a fixed step of 1/500 and 500 leapfrog steps,
+`HMC(1/500, 500, cov=np.eye(2), jitter=0)`.
 
 HMC's automatic step could also fail on a Gaussian, through a resonance of the
 leapfrog, which the default jitter of the step removes. With a shared momentum, an
@@ -66,7 +69,10 @@ could not choose it at 2 of 10 seeds. The jitter costs little where there is no
 resonance: on {func}`telescopic.examples.gaussian` in 2 and 10 dimensions, at each
 `n_steps` where the fixed step does not resonate, the pilot's median meeting time times
 the gradients per iteration, a geometric mean over 30 seeds, was at most 1.17 times that
-of the fixed step.
+of the fixed step. The inefficiency, the variance of a replicate's estimate times its
+cost in gradients, a ratio of medians over seeds, was at most 1.31 times that of the
+fixed step, on {func}`telescopic.examples.mixture` with `n_steps=2`, and 1.13 times on
+the logistic regression below, over the seeds where the fixed step could choose `k`.
 
 The jitter does not cure every failure: on the banana from its default initial
 distribution, pilot pairs are still unmet at the cap. All of these runs ran the pilot
