@@ -100,3 +100,4 @@ When a tool needs draws, {meth}`~telescopic.Result.chains` returns the states of
 at the averaged times of each kept replicate that met, without the correction. They are
 the ordinary MCMC chains after a burn-in of $k$ steps, one per replicate: they carry the
 bias of that burn-in, which the estimates of telescopic remove and the chains do not.
+{meth}`~telescopic.Result.to_datatree` gives them to ArviZ as its chains.

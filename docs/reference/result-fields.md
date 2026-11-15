@@ -38,7 +38,7 @@ censored pair as meeting at `max_iter` + 1.
 | `tuning`, `pilot` | the report of the tuning chains, and the meeting times of the lag-1 pilot pairs that chose `k`; `None` when not run |
 | `seed` | the root `numpy.random.SeedSequence`, which reproduces the run |
 | `interrupted` | whether a requested replicate never ran ([Parallel runs](../guide/parallel.md#interrupting-a-run)) |
-| `keep`, `n_kept` | the run's `keep`, `None` when every replicate stored its signed measure, and the number of kept replicates that met, which `measure`, the quantiles, the histograms, `estimate` and `chains()` read ([Keeping a subset](../guide/settings.md#keeping-a-subset)) |
+| `keep`, `n_kept` | the run's `keep`, `None` when every replicate stored its signed measure, and the number of kept replicates that met, which `measure`, the quantiles, the histograms, `estimate`, `chains()` and `to_datatree()` read ([Keeping a subset](../guide/settings.md#keeping-a-subset)) |
 | `abandoned` | the replicates that an error stopped while they ran and that have not run since ([Continuing after an error](../guide/save-load-merge.md#continuing-after-an-error)) |
 
 ## The summary

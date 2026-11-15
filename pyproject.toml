@@ -35,7 +35,9 @@ progress = ["tqdm>=4.66"]
 # Ships functions defined in notebooks and scripts to worker processes.
 parallel = ["cloudpickle>=3.0"]
 pandas = ["pandas>=2.1"]
-all = ["telescopic[plot,progress,parallel,pandas]"]
+# ArviZ 1.0, whose data structure is xarray's DataTree, needs Python 3.12 and NumPy 2.
+arviz = ["arviz>=1.0; python_version >= '3.12'"]
+all = ["telescopic[plot,progress,parallel,pandas,arviz]"]
 
 [project.urls]
 Documentation = "https://joshspeagle.com/telescopic/"
@@ -52,6 +54,8 @@ test = [
     "tqdm>=4.66",
     "matplotlib>=3.8",
     "pandas>=2.1",
+    # The export's tests skip on Python 3.11.
+    "arviz>=1.0; python_version >= '3.12'",
 ]
 dev = [
     { include-group = "test" },

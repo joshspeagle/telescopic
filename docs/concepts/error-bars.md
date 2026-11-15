@@ -70,7 +70,8 @@ that the chains have converged. Three things take the place of $\hat R$:
   ([A start far wider than the target](../reference/warnings.md#a-start-far-wider-than-the-target-wide)).
 - **The chains themselves**, for readers who want $\hat R$ and effective sample sizes
   anyway: {meth}`~telescopic.Result.chains` returns the averaged states of each kept
-  replicate, one chain per replicate, in the shape that ArviZ takes. They describe the
+  replicate, one chain per replicate, and {meth}`~telescopic.Result.to_datatree`
+  passes them to ArviZ, whose $\hat R$ and effective sample sizes then describe the
   ordinary MCMC chains after a burn-in of $k$, without the correction, and not the error
   of the estimates.
 

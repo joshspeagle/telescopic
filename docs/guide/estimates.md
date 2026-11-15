@@ -161,8 +161,8 @@ replicate's moments but the signed measures of the replicates of index below `ke
 only. {meth}`~telescopic.Result.mean`, {meth}`~telescopic.Result.var`,
 {meth}`~telescopic.Result.std` and, up to 100 dimensions, {meth}`~telescopic.Result.cov`
 come from all $R$ replicates that met. {meth}`~telescopic.Result.estimate`, the quantiles,
-the credible intervals, the histograms and their plots, `measure` and
-{meth}`~telescopic.Result.chains` come from the `n_kept` kept replicates that met, and so
+the credible intervals, the histograms and their plots, `measure`,
+{meth}`~telescopic.Result.chains` and {meth}`~telescopic.Result.to_datatree` come from the `n_kept` kept replicates that met, and so
 does `cov` above 100 dimensions, whose diagonal can then differ from `var`. Each set gives
 unbiased estimates, or consistent ones for quantiles, with error bars from its own
 replicates, and the summary names the replicates behind each column. The two sets are not

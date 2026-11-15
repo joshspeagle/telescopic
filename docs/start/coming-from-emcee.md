@@ -12,6 +12,7 @@ kernelspec:
 | {term}`burn-in` steps, discarded | `k`, chosen from pilot {term}`meeting times <meeting time>`; the bias left at `k` is corrected, not ignored |
 | the autocorrelation time, which sets the error bars | meeting times, which set the cost; the error bars come from independent replicates |
 | `get_chain(flat=True)` | `result.measure`: {term}`atoms <atom>` whose weights can be negative; they are not samples, so plot them with their weights ([Signed measures](../guide/estimates.md#signed-measures), [Plot a result](../guide/plots.md)) |
+| `get_chain()`, and `arviz.from_emcee` | `result.chains()`, and `result.to_datatree()`: one ordinary chain per kept replicate after `k` ([What replaces a judgment of convergence](../concepts/error-bars.md#what-replaces-a-judgment-of-convergence)) |
 | `log_prob_fn(theta, *args)`, `vectorize=True`, `pool=` | the same: `log_prob(theta, *args)`, `vectorize=True`, `pool=`, except that `log_prob` returns the log-density alone, without blobs; derived quantities come from `result.estimate` after the run |
 | `run_mcmc(None, n_steps)` continues the chains; an `HDFBackend` keeps them in a file to continue later | `sampler.run(n)` adds replicates to the same sampler; a new sampler continues a returned or saved result with `sampler.resume(result)` ([Continuing a run](../guide/save-load-merge.md#continuing-a-run)) |
 
