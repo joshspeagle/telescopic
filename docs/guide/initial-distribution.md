@@ -97,10 +97,9 @@ variance and the cost, and decides whether the chains find every mode.
   of magnitude wider than the target, these replicates dominate the estimates of
   variances, which can come out negative
   ([When unbiased is not enough](../tutorials/failure-modes.md#a-start-far-wider-than-the-target)).
-  A start a few to ten times wider than the target avoids this. The tuning chains warn
-  when the start is more than 30 times wider
-  ([A start far wider than the target](../reference/warnings.md#a-start-far-wider-than-the-target-wide)),
-  when `k` is left to the pilot.
+  A start a few to ten times wider than the target avoids this. Tuning warns of a start
+  far wider than the target
+  ([A start far wider than the target](../reference/warnings.md#a-start-far-wider-than-the-target-wide)).
 - **For a target with one mode,** a Gaussian centered on an optimizer's fit, with its
   inverse Hessian scaled by 100, is ten times wider than the fit's error bars
   ([Quickstart](../start/quickstart.md#a-first-run)).

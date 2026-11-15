@@ -50,9 +50,9 @@ With the defaults, before the replicates run:
    the pilot's time and memory. Chains that disagree raise a warning that the target may
    have several modes or the chains may not have converged
    ([Disagreeing tuning chains](../reference/warnings.md#disagreeing-tuning-chains-tuning)); chains
-   that agree can still all sit in one mode. When `k` is left to the pilot, a start
-   more than 30 times wider than the target raises a warning too
-   ([A start far wider than the target](#a-start-far-wider-than-the-target)). A chain
+   that agree can still all sit in one mode. A start far wider than the target raises
+   a warning too
+   ([A start far wider than the target](../reference/warnings.md#a-start-far-wider-than-the-target-wide)). A chain
    that accepts no proposal in its second half raises `ValueError`.
 2. **The meeting-time pilot.** 100 pairs with {term}`lag` 1 run until they meet, or until
    100,000 iterations, where they are censored.
@@ -198,12 +198,11 @@ Every evaluation belongs to the run, and no pilot ran.
 The automatic `k` is the 99% quantile of the pilot's meeting times, so about one pair in
 a hundred meets while its chain is still on its way to the target. From a start orders
 of magnitude wider than the target, those replicates can dominate the variance of the
-estimates ([Initial distributions](initial-distribution.md#choosing-one)), and the
-tuning pilot warns when the start is more than 30 times wider than the target
+estimates ([Initial distributions](initial-distribution.md#choosing-one)), and tuning
+warns of such a start
 ([A start far wider than the target](../reference/warnings.md#a-start-far-wider-than-the-target-wide)).
 The first remedy is a narrower start. Where none is at hand, a larger `k` can be given
-by hand, and the warning, whose remedy that is, then neither fires nor is listed. A
-confirmation round is an option: the pilot's quantile gives $k_0$, 100 more pairs run
+by hand. A confirmation round is an option: the pilot's quantile gives $k_0$, 100 more pairs run
 at lag $k_0$, the 99% quantile of their $\tau - k_0$ gives $k_1$, and the run takes
 $k = \max(k_0, k_1)$, with `lag = k` and `m = 10k` as usual, at the cost of one more
 pilot round. The confirmation pairs run with a seed of their own, so that the settings

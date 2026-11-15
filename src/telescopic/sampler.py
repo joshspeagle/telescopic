@@ -346,7 +346,8 @@ class CoupledSampler:
         """Meeting times of ``n`` new pilot pairs with lag 1.
 
         Each call runs new pilot replicates, continuing their indices, and adds them to
-        ``pilot``.
+        ``pilot``. The first tunes the kernel when it needs tuning, with the warnings of
+        :meth:`tune`.
 
         Parameters
         ----------

@@ -114,14 +114,16 @@ warning is then silent ([Tuning](../guide/kernels.md#tuning)).
 
 ### A start far wider than the target (`wide`)
 
-**Trigger:** the initial distribution is more than 30 times wider than the target, as
-the tuning pilot measures it: `result.tuning.initial_width`, the geometric mean over
-coordinates of the ratio of the standard deviations of the 100 draws of the initial
-distribution that set the tuning chains' first covariance to the standard deviations of
-the chains' second halves. It costs no evaluation of the target. It applies only where
-the pilot's quantile chooses `k`: with `k` given, to the sampler's `run`, to `sample` or
-in a resumed result, it is neither emitted nor listed. A kernel given with every
-parameter has no tuning pilot, and the warning is then silent too. **Meaning:** the
+**Trigger:** the tuning pilot's initial width, `result.tuning.initial_width`, how many
+times wider than the target the initial distribution is
+({attr}`telescopic.tuning.PilotRun.initial_width` defines it), exceeds 30. It costs no
+evaluation of the target. The warning is emitted whenever tuning runs, from
+{meth}`~telescopic.CoupledSampler.tune`, {meth}`~telescopic.CoupledSampler.meeting_times`
+or the first {meth}`~telescopic.CoupledSampler.run`. {func}`telescopic.diagnostics.issues`
+and {meth}`telescopic.Result.check` list it unless the run's `k` is larger than the `k`
+that the meeting-time pilot's rule gave when the run's settings were fixed, or no such
+pilot had run then: a larger `k` is its remedy. A kernel given with every parameter has
+no tuning pilot, and the warning is then silent. **Meaning:** the
 automatic `k`, the 99% quantile of the pilot's meeting times, leaves about one pair in a
 hundred meeting while its chain is still on its way to the target; from a start this
 wide, those replicates can dominate the variance of the estimates
@@ -198,7 +200,7 @@ log-densities, and the first two targets `sample()`'s default settings:
   starts of the Gaussians and the line fit, and in 1 of 500 from the banana's 10-fold
   start, whose width there reached 38.3; on 200 runs of each 100-fold start, in every
   run off the banana and in 69 of 200 on it, where the `tuning` warning fired in all but
-  one of the others. These runs used telescopic at commit 4e91557 and NumPy 2.5.3, on the
+  one of the others. These runs used telescopic at commit 2707eb9 and NumPy 2.5.3, on the
   machine below.
 - The bimodal mixture of Jacob, O'Leary & Atchadé (2020, §5.1),
   {func}`telescopic.examples.mixture`, from $\mathcal N(10, 1)$, with a random walk of
