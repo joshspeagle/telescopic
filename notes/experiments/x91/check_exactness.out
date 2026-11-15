@@ -1,0 +1,72 @@
+setup: commit f4caf3e of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, MKL_NUM_THREADS=1; Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1
+uncommitted files: none
+J2   d= 2 n_steps=2    eps=1.3806 near: stay p=0.375,0.446 moves p=0.342,0.029 met=0.0459 stale=0 near_misses=0 passed=True
+J2   d= 2 n_steps=2    eps=1.3806 far : stay p=0.375,0.446 moves p=0.342,0.148 met=0.0000 stale=0 near_misses=0 passed=True
+J2   d= 2 n_steps=5    eps=1.2876 near: stay p=1.000,1.000 moves p=1.000,0.671 met=0.0459 stale=0 near_misses=0 passed=True
+J2   d= 2 n_steps=5    eps=1.2876 far : stay p=0.263,0.563 moves p=0.361,0.143 met=0.0000 stale=0 near_misses=0 passed=True
+J2   d= 2 n_steps=None eps=1.1154 near: stay p=0.622,1.000 moves p=1.000,0.857 met=0.0459 stale=0 near_misses=0 passed=True
+J2   d= 2 n_steps=None eps=1.1154 far : stay p=0.431,1.000 moves p=1.000,0.857 met=0.0000 stale=0 near_misses=0 passed=True
+J2   d=10 n_steps=2    eps=0.7917 near: stay p=0.144,0.115 moves p=0.822,0.293 met=0.0457 stale=0 near_misses=0 passed=True
+J2   d=10 n_steps=2    eps=0.7917 far : stay p=0.076,0.115 moves p=0.469,0.566 met=0.0000 stale=0 near_misses=0 passed=True
+J2   d=10 n_steps=5    eps=0.8444 near: stay p=0.213,0.297 moves p=1.000,0.215 met=0.0457 stale=0 near_misses=0 passed=True
+J2   d=10 n_steps=5    eps=0.8444 far : stay p=0.212,0.297 moves p=0.071,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+J2   d=10 n_steps=None eps=0.7781 near: stay p=0.145,0.099 moves p=0.679,0.303 met=0.0457 stale=0 near_misses=0 passed=True
+J2   d=10 n_steps=None eps=0.7781 far : stay p=0.059,0.099 moves p=0.724,0.434 met=0.0000 stale=0 near_misses=0 passed=True
+J3   d= 2 n_steps=2    eps=1.2990 near: stay p=0.251,0.578 moves p=0.106,0.179 met=0.0459 stale=0 near_misses=0 passed=True
+J3   d= 2 n_steps=2    eps=1.2990 far : stay p=1.000,0.578 moves p=0.106,0.442 met=0.0000 stale=0 near_misses=0 passed=True
+J3   d= 2 n_steps=5    eps=1.2436 near: stay p=0.494,1.000 moves p=0.044,0.150 met=0.0459 stale=0 near_misses=0 passed=True
+J3   d= 2 n_steps=5    eps=1.2436 far : stay p=0.494,1.000 moves p=0.044,0.039 met=0.0000 stale=0 near_misses=0 passed=True
+J3   d= 2 n_steps=None eps=1.1087 near: stay p=0.369,1.000 moves p=1.000,0.942 met=0.0459 stale=0 near_misses=0 passed=True
+J3   d= 2 n_steps=None eps=1.1087 far : stay p=0.369,1.000 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+J3   d=10 n_steps=2    eps=0.8059 near: stay p=0.086,0.034 moves p=0.652,0.143 met=0.0457 stale=0 near_misses=0 passed=True
+J3   d=10 n_steps=2    eps=0.8059 far : stay p=0.070,0.034 moves p=0.652,0.616 met=0.0000 stale=0 near_misses=0 passed=True
+J3   d=10 n_steps=5    eps=0.8630 near: stay p=0.576,0.392 moves p=0.562,0.400 met=0.0457 stale=0 near_misses=0 passed=True
+J3   d=10 n_steps=5    eps=0.8630 far : stay p=0.280,0.392 moves p=0.015,0.748 met=0.0000 stale=0 near_misses=0 passed=True
+J3   d=10 n_steps=None eps=0.7909 near: stay p=0.044,0.026 moves p=0.790,0.156 met=0.0457 stale=0 near_misses=0 passed=True
+J3   d=10 n_steps=None eps=0.7909 far : stay p=0.056,0.026 moves p=0.790,0.971 met=0.0000 stale=0 near_misses=0 passed=True
+J5   d= 2 n_steps=2    eps=1.1903 near: stay p=1.000,0.907 moves p=1.000,0.546 met=0.0459 stale=0 near_misses=0 passed=True
+J5   d= 2 n_steps=2    eps=1.1903 far : stay p=0.840,0.630 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+J5   d= 2 n_steps=5    eps=1.1612 near: stay p=0.733,0.906 moves p=0.142,0.191 met=0.0459 stale=0 near_misses=0 passed=True
+J5   d= 2 n_steps=5    eps=1.1612 far : stay p=0.733,0.562 moves p=0.142,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+J5   d= 2 n_steps=None eps=1.1023 near: stay p=0.738,1.000 moves p=1.000,0.938 met=0.0459 stale=0 near_misses=0 passed=True
+J5   d= 2 n_steps=None eps=1.1023 far : stay p=0.738,0.829 moves p=1.000,0.938 met=0.0000 stale=0 near_misses=0 passed=True
+J5   d=10 n_steps=2    eps=0.8221 near: stay p=0.245,0.514 moves p=1.000,1.000 met=0.0457 stale=0 near_misses=0 passed=True
+J5   d=10 n_steps=2    eps=0.8221 far : stay p=0.100,0.514 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+J5   d=10 n_steps=5    eps=0.8437 near: stay p=0.897,0.186 moves p=0.290,0.037 met=0.0457 stale=0 near_misses=0 passed=True
+J5   d=10 n_steps=5    eps=0.8437 far : stay p=0.595,0.186 moves p=0.290,0.082 met=0.0000 stale=0 near_misses=0 passed=True
+J5   d=10 n_steps=None eps=0.8166 near: stay p=0.330,0.855 moves p=0.924,1.000 met=0.0457 stale=0 near_misses=0 passed=True
+J5   d=10 n_steps=None eps=0.8166 far : stay p=0.100,0.855 moves p=0.820,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+CF   d= 2 n_steps=2    eps=0.3455 near: stay p=0.662,0.367 moves p=1.000,1.000 met=0.0459 stale=0 near_misses=0 passed=True
+CF   d= 2 n_steps=2    eps=0.3455 far : stay p=0.077,0.507 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+CF   d= 2 n_steps=5    eps=0.3474 near: stay p=0.662,0.129 moves p=1.000,1.000 met=0.0459 stale=0 near_misses=0 passed=True
+CF   d= 2 n_steps=5    eps=0.3474 far : stay p=0.686,0.060 moves p=0.697,0.834 met=0.0000 stale=0 near_misses=0 passed=True
+CF   d= 2 n_steps=None eps=0.3097 near: stay p=0.562,0.153 moves p=1.000,1.000 met=0.0459 stale=0 near_misses=0 passed=True
+CF   d= 2 n_steps=None eps=0.3097 far : stay p=0.942,0.109 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+CF   d=10 n_steps=2    eps=0.2476 near: stay p=0.246,0.032 moves p=0.756,0.323 met=0.0457 stale=0 near_misses=0 passed=True
+CF   d=10 n_steps=2    eps=0.2476 far : stay p=0.246,0.038 moves p=0.756,0.926 met=0.0000 stale=0 near_misses=0 passed=True
+CF   d=10 n_steps=5    eps=0.1996 near: stay p=0.221,0.020 moves p=0.560,0.317 met=0.0457 stale=0 near_misses=0 passed=True
+CF   d=10 n_steps=5    eps=0.1996 far : stay p=0.441,0.020 moves p=0.560,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+CF   d=10 n_steps=None eps=0.1973 near: stay p=0.072,0.014 moves p=0.719,0.325 met=0.0457 stale=0 near_misses=0 passed=True
+CF   d=10 n_steps=None eps=0.1973 far : stay p=0.166,0.014 moves p=0.293,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+CF.2 d= 2 n_steps=2    eps=0.3455 near: stay p=1.000,0.350 moves p=1.000,0.944 met=0.1847 stale=0 near_misses=0 passed=True
+CF.2 d= 2 n_steps=2    eps=0.3455 far : stay p=0.563,0.350 moves p=1.000,0.866 met=0.0000 stale=0 near_misses=0 passed=True
+CF.2 d= 2 n_steps=5    eps=0.3474 near: stay p=0.645,0.048 moves p=1.000,1.000 met=0.1847 stale=0 near_misses=0 passed=True
+CF.2 d= 2 n_steps=5    eps=0.3474 far : stay p=0.376,0.043 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+CF.2 d= 2 n_steps=None eps=0.3097 near: stay p=0.797,0.082 moves p=1.000,1.000 met=0.1847 stale=0 near_misses=0 passed=True
+CF.2 d= 2 n_steps=None eps=0.3097 far : stay p=1.000,0.082 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+CF.2 d=10 n_steps=2    eps=0.2476 near: stay p=0.748,0.085 moves p=1.000,1.000 met=0.1793 stale=0 near_misses=0 passed=True
+CF.2 d=10 n_steps=2    eps=0.2476 far : stay p=0.748,0.085 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+CF.2 d=10 n_steps=5    eps=0.1996 near: stay p=1.000,0.242 moves p=1.000,1.000 met=0.1793 stale=0 near_misses=0 passed=True
+CF.2 d=10 n_steps=5    eps=0.1996 far : stay p=0.192,0.127 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+CF.2 d=10 n_steps=None eps=0.1973 near: stay p=0.632,0.289 moves p=1.000,1.000 met=0.1793 stale=0 near_misses=0 passed=True
+CF.2 d=10 n_steps=None eps=0.1973 far : stay p=0.861,0.168 moves p=1.000,1.000 met=0.0000 stale=0 near_misses=0 passed=True
+MJ5  d= 2              eps=1.4924 near: stay p=0.200,0.338 moves p=0.283,0.345 met=0.4600 stale=0 near_misses=0 passed=True
+MJ5  d= 2              eps=1.4924 far : stay p=0.258,0.327 moves p=0.283,0.116 met=0.3973 stale=0 near_misses=0 passed=True
+MJ5  d=10              eps=1.0926 near: stay p=0.303,0.294 moves p=1.000,1.000 met=0.2997 stale=0 near_misses=0 passed=True
+MJ5  d=10              eps=1.0926 far : stay p=0.235,0.168 moves p=1.000,1.000 met=0.1718 stale=0 near_misses=0 passed=True
+MCF  d= 2              eps=0.4186 near: stay p=0.098,0.975 moves p=0.315,1.000 met=0.9862 stale=0 near_misses=0 passed=True
+MCF  d= 2              eps=0.4186 far : stay p=0.098,0.502 moves p=0.895,0.514 met=0.2728 stale=0 near_misses=0 passed=True
+MCF  d=10              eps=0.3090 near: stay p=0.973,0.764 moves p=0.717,0.323 met=0.9808 stale=0 near_misses=0 passed=True
+MCF  d=10              eps=0.3090 far : stay p=1.000,1.000 moves p=0.717,0.022 met=0.0798 stale=0 near_misses=0 passed=True
+checks: 68
+kernels that failed their repeat: none
