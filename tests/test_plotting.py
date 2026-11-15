@@ -63,6 +63,7 @@ def test_the_survival_curve_of_an_array_is_that_of_its_result():
         ([0.0, 3.0], {}, "integers from lag = 1 on"),
         ([2.5, 3.0], {}, "integers from lag = 1 on"),
         ([3.0, -np.inf], {"max_iter": 9}, "integers from lag = 1 on"),
+        ([3.0, np.nan], {"max_iter": 9}, "integers from lag = 1 on"),
         ([], {}, "non-empty"),
     ],
 )

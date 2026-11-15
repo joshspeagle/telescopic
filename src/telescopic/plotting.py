@@ -109,8 +109,9 @@ def survival(
     """
     lag = integer("lag", lag, minimum=1)
     tau = real_array("meeting_times", meeting_times, "real numbers of shape (R,)")
-    met = np.isfinite(tau)
-    if tau.ndim != 1 or len(tau) == 0 or not integral(tau[met], lag) or np.any(tau == -np.inf):
+    # integral refuses nan and -inf among the times that are not censored.
+    met = tau != np.inf
+    if tau.ndim != 1 or len(tau) == 0 or not integral(tau[met], lag):
         raise ValueError(
             f"meeting_times must be a non-empty one-dimensional array of integers from lag "
             f"= {lag} on, with inf for a censored pair"

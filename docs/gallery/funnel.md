@@ -246,8 +246,7 @@ glue("slowest_new", float(slowest), display=False)
 ```
 
 Every pair of both kernels met, the slowest after {glue:text}`slowest_new:.0f`
-iterations. The survival functions of
-the meeting times, the fraction of pairs not yet met at each time
+iterations. The survival functions of $\tau - 1$, the meeting time less the lag
 ([Meeting times and distance to stationarity](../concepts/meeting-times.md)), drawn by
 {func}`telescopic.plotting.survival` from each pilot's times, its lag of 1 and its cap,
 put the four pilots side by side:
@@ -260,12 +259,13 @@ mystnb:
       Four survival curves of meeting times on logarithmic axes. In the new
       coordinates, the curves of the random walk and of HMC fall to zero early. On
       the funnel, the random walk's curve has a long tail, and HMC's curve ends well
-      above zero, at the fraction of its pairs unmet at the cap.
+      above zero, at the cap less 1, at the fraction of its pairs unmet at the cap.
   figure:
     caption: >-
-      The fraction of pilot pairs not yet met, $P(\tau - 1 > t)$, against $t$, for the
-      random walk and HMC on the funnel and in the new coordinates. A curve that ends
-      above 0 ends at the cap, at the fraction of pairs unmet there.
+      The survival function $P(\tau - 1 > t)$ of the pilots' meeting times less the
+      lag, against $t$, for the random walk and HMC on the funnel and in the new
+      coordinates. A curve that ends above 0 ends at the cap less 1, at the fraction
+      of pairs unmet at the cap.
 ---
 from telescopic import plotting
 
