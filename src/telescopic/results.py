@@ -731,7 +731,7 @@ class Result:
         Replicate :math:`r`'s chain is :math:`X_t` for :math:`t \in S = \{k, k + s, \dots\}
         \cap [k, m]`, ``s`` = ``thin``, in time order: the atoms of the time average,
         without the bias correction. Shaped as ArviZ takes chains, ``(chain, draw,
-        dim)``; :meth:`to_inference_data` passes them to ArviZ.
+        dim)``; :meth:`to_datatree` passes them to ArviZ.
 
         Returns
         -------
@@ -750,7 +750,7 @@ class Result:
         )
         return states
 
-    def to_inference_data(self) -> Any:
+    def to_datatree(self) -> Any:
         r"""The chains of :meth:`chains` as ArviZ data, without the bias correction (needs arviz).
 
         The ``posterior`` group holds one variable per coordinate, named by ``names``, of
@@ -780,7 +780,7 @@ class Result:
             too_old = True
         if too_old:
             raise ImportError(
-                "to_inference_data needs ArviZ 1.0 or later, which needs Python 3.12 or "
+                "to_datatree needs ArviZ 1.0 or later, which needs Python 3.12 or "
                 "newer: pip install 'telescopic[arviz]'"
             )
         chains = self.chains()

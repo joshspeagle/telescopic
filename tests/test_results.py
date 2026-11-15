@@ -620,13 +620,13 @@ def test_chains_are_the_averaged_states_of_the_kept_replicates():
         synthetic([1, 2, 3], [0.0, 1.0, 2.0]).chains()
 
 
-def test_inference_data_holds_the_chains_by_name_replicate_and_time():
+def test_datatree_holds_the_chains_by_name_replicate_and_time():
     pytest.importorskip("arviz_base")
     result = Result(
         gaussian_run(range(30), k=3, m=15, lag=2, thin=4, max_iter=17, keep=20),
         names=["a", "b"],
     )
-    posterior = result.to_inference_data()["posterior"]
+    posterior = result.to_datatree()["posterior"]
     kept = result.index[np.isfinite(result.meeting_times) & (result.index < 20)]
     np.testing.assert_array_equal(posterior["chain"], kept)
     np.testing.assert_array_equal(posterior["draw"], [3, 7, 11, 15])
@@ -637,11 +637,11 @@ def test_inference_data_holds_the_chains_by_name_replicate_and_time():
 
 
 @pytest.mark.parametrize("arviz", [None, SimpleNamespace(__version__="0.23.4")])
-def test_without_arviz_1_inference_data_names_the_extra_to_install(monkeypatch, arviz):
+def test_without_arviz_1_to_datatree_names_the_extra_to_install(monkeypatch, arviz):
     # None makes the import fail; the namespace stands for an ArviZ before 1.0.
     monkeypatch.setitem(sys.modules, "arviz_base", arviz)
     with pytest.raises(ImportError, match=r"ArviZ 1\.0 or later.*telescopic\[arviz\]"):
-        RESULT.to_inference_data()
+        RESULT.to_datatree()
 
 
 def test_writing_to_the_replicates_of_a_reduced_mean_changes_no_later_estimate():

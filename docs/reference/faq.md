@@ -14,7 +14,7 @@ quantiles that assume non-negative weights
 draw the signed histograms instead ([Plot a result](../guide/plots.md)), and
 {meth}`~telescopic.Result.chains` returns the ordinary MCMC chains of the kept
 {term}`replicates <replicate>`, without the bias correction, for tools that need draws,
-and {meth}`~telescopic.Result.to_inference_data` returns them as ArviZ data.
+and {meth}`~telescopic.Result.to_datatree` returns them as ArviZ data.
 
 ### Why is my variance negative, or a probability outside [0, 1]?
 

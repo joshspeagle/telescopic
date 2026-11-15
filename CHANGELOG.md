@@ -463,7 +463,7 @@ All notable changes to this project are documented here. The format follows
   `Result.chains()` returns the averaged states of each kept replicate as chains of equal
   length. `max_iter` must be at most 2**31 - 1 where times are stored, and a stored atom
   costs 8d + 20 bytes instead of 8d + 16.
-- `Result.to_inference_data()` returns the chains of `Result.chains()` as ArviZ data, one
+- `Result.to_datatree()` returns the chains of `Result.chains()` as ArviZ data, one
   variable per parameter name with the replicate indices and times as coordinates, without
   the bias correction, as an `xarray.DataTree`; it needs ArviZ 1.0 or newer, on Python 3.12 or
   newer, through the new extra `telescopic[arviz]`.
