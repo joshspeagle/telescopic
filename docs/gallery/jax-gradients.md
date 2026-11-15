@@ -161,14 +161,18 @@ print(f"largest difference between the estimates: {np.max(np.abs(batch.mean().va
 ```{code-cell} python
 :tags: [remove-cell]
 
-# The claims of the next paragraph.
-assert batch.wall_time < point.wall_time
-assert np.allclose(batch.mean().value, point.mean().value, rtol=0, atol=1e-8)
+# The claim of the next paragraph: the two runs batch differently, so they agree within
+# their error bars, not bit for bit.
+gap = np.abs(batch.mean().value - point.mean().value)
+assert np.all(gap < 3 * np.hypot(batch.mean().standard_error, point.mean().standard_error))
 ```
 
-The two runs have the same seed and give the same estimates up to rounding, and the
-batched run is faster; how much faster depends on the model, the number of chains and
-the machine ([Make a run faster](../guide/faster.md)). A function that returns the value
+The two runs have the same seed but evaluate the log-density in different batches, so
+their estimates agree within their error bars, and bit for bit only when rounding never
+changes an accept decision ([Reproducibility](../guide/parallel.md#reproducibility)).
+How much time the batches save depends on the model, the number of chains and the
+machine; the times above are those of the machine that built this page
+([Make a run faster](../guide/faster.md)). A function that returns the value
 and the gradient together, such as `jax.value_and_grad`, can be passed as
 `log_prob_and_grad` instead of `grad`
 ([The value and the gradient in one call](../guide/log-density.md#the-value-and-the-gradient-in-one-call)).
