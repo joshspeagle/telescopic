@@ -45,7 +45,7 @@ PILOT_SETTINGS = engine.Settings(0, 0, 1, max_iter=PILOT_MAX_ITER, store=False)
 PEAK_PER_STORED = 3
 # The warnings of spec section 7.4 that a run emits as they happen, not at its end, or as
 # it ends for slow pairs on a pool.
-_LIVE = ("slow", "tuning")
+_LIVE = ("slow", "tuning", "wide")
 
 
 # Spec R-API-1 and R-TUNE-2; pool, sections 6.1 and 6.4; rng, section 6.1.
@@ -300,9 +300,7 @@ class CoupledSampler:
         differs = False
         if report is not result.tuning:  # tuned again
             new, kept = cast(TuningReport, report), cast(TuningReport, result.tuning)
-            disagreement = diagnostics.tuning_disagreement(new)
-            if disagreement:
-                warn(disagreement, ConvergenceWarning)
+            _warn_tuning(new)
             differs = not (
                 np.array_equal(new.mean, kept.mean) and np.array_equal(new.cov, kept.cov)
             )
@@ -333,9 +331,7 @@ class CoupledSampler:
         if not self.kernel.is_tuned:
             with tuning(progress):
                 self.kernel, self.tuning = self.kernel.tune(self.target, self.initial, self.seed)
-            disagreement = diagnostics.tuning_disagreement(self.tuning)
-            if disagreement:
-                warn(disagreement, ConvergenceWarning)
+            _warn_tuning(self.tuning)
         return self.tuning
 
     # Spec R-TUNE-2 and section 6.3.
@@ -966,6 +962,13 @@ class _ZeroedGradients:
                 "scipy.special.logsumexp, or check it",
                 InputWarning,
             )
+
+
+def _warn_tuning(report: TuningReport | None) -> None:
+    # The warnings about the tuning pilot, emitted when the kernel is tuned (spec 7.4).
+    for message in (diagnostics.tuning_disagreement(report), diagnostics.wide_start(report)):
+        if message:
+            warn(message, ConvergenceWarning)
 
 
 def _settings(given: dict[str, int]) -> engine.Settings:

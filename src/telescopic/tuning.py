@@ -63,6 +63,9 @@ class TuningReport:
     max_weight_ratio : float, optional
         For an independence kernel, the largest weight :math:`\pi/q` of the pilot's draws
         relative to their median: large values announce heavy-tailed meeting times.
+    initial_width : float, optional
+        How many times wider than the target the initial distribution is, as
+        ``initial_width`` of :class:`PilotRun` defines it.
     """
 
     mean: FloatArray
@@ -71,6 +74,7 @@ class TuningReport:
     rhat: FloatArray
     n_steps: int
     max_weight_ratio: float | None = None
+    initial_width: float | None = None
 
 
 @dataclass(frozen=True, eq=False)
@@ -86,12 +90,22 @@ class PilotRun:
     acceptance : ndarray, shape (4,)
         Over all the steps of the second halves.
     n_steps : int
+    initial_width : float, optional
+        How many times wider than the target the initial distribution is: the geometric
+        mean, over the coordinates in which both spread, of the ratio of the standard
+        deviation :math:`s_{0,i}` of the 100 draws of the initial distribution that start
+        the chains to the standard deviation :math:`s_i` of the second halves,
+
+        .. math:: w = \exp\Big(\frac{1}{d'}\sum_i \log\frac{s_{0,i}}{s_i}\Big);
+
+        ``None`` when no coordinate spreads in both.
     """
 
     samples: FloatArray
     log_prob: FloatArray
     acceptance: FloatArray
     n_steps: int
+    initial_width: float | None = None
 
     @cached_property
     def mean(self) -> FloatArray:
@@ -151,7 +165,13 @@ class PilotRun:
         TuningReport
         """
         return TuningReport(
-            self.mean, self.cov, self.acceptance, self.rhat, self.n_steps, max_weight_ratio
+            self.mean,
+            self.cov,
+            self.acceptance,
+            self.rhat,
+            self.n_steps,
+            max_weight_ratio,
+            self.initial_width,
         )
 
 
@@ -197,7 +217,8 @@ def adaptive_metropolis(
     Returns
     -------
     PilotRun
-        The second halves of the chains.
+        The second halves of the chains, and the width of the initial distribution
+        against them.
 
     Notes
     -----
@@ -295,7 +316,14 @@ def adaptive_metropolis(
             f"tuning chain {int(np.argmin(accepted))} accepted no proposal in its second "
             "half: start inside the support of the target, or give the kernel's parameters"
         )
-    return PilotRun(samples, kept_log_p, accepted / (n_steps - first_kept), n_steps)
+    # The initial distribution's spread against the pilot's, for the warning about a
+    # start far wider than the target (DECISIONS #258).
+    spread = samples.reshape(-1, d).var(axis=0, ddof=1)
+    both = (variance > 0) & (spread > 0)
+    width = (
+        float(np.exp(0.5 * np.mean(np.log(variance[both] / spread[both])))) if both.any() else None
+    )
+    return PilotRun(samples, kept_log_p, accepted / (n_steps - first_kept), n_steps, width)
 
 
 # Spec sections 5.4 and 5.5.

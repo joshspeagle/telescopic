@@ -72,7 +72,11 @@ def save(result: Result, path: str | os.PathLike[str] | IO[bytes]) -> None:
         "counts": {name: getattr(replicates, name) for name in (*COUNTS, "seconds")},
         "tuning": None
         if tuning is None
-        else {"n_steps": tuning.n_steps, "max_weight_ratio": tuning.max_weight_ratio},
+        else {
+            "n_steps": tuning.n_steps,
+            "max_weight_ratio": tuning.max_weight_ratio,
+            "initial_width": tuning.initial_width,
+        },
     }
     # NumPy numbers and arrays in the metadata become Python ones, which JSON writes;
     # Python integers keep a seed's entropy of any size exactly.

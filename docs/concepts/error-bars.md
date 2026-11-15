@@ -66,6 +66,9 @@ that the chains have converged. Three things take the place of $\hat R$:
   that telescopic computes. Above $\sqrt 2$ in some coordinate, a warning says that the chains may sit
   in different modes or may not have converged
   ([Disagreeing tuning chains](../reference/warnings.md#disagreeing-tuning-chains-tuning)).
+  Their spread against that of the initial distribution's draws gives another warning,
+  when the start is more than 30 times wider than the target
+  ([A start far wider than the target](../reference/warnings.md#a-start-far-wider-than-the-target-wide)).
 - **The chains themselves**, for readers who want $\hat R$ and effective sample sizes
   anyway: {meth}`~telescopic.Result.chains` returns the averaged states of each kept
   replicate, one chain per replicate, in the shape that ArviZ takes. They describe the

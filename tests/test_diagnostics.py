@@ -11,6 +11,7 @@ from telescopic.diagnostics import (
     tv_bound,
     variance_share,
     w1_bound,
+    wide_start,
 )
 from telescopic.engine import run
 from telescopic.initial import Normal
@@ -197,6 +198,17 @@ def test_the_tuning_warning_names_coordinates_whose_r_hat_is_nan(rhat, disagree)
     assert (conditional in message) == disagree
     nan = [i for i, value in enumerate(rhat) if np.isnan(value)]
     assert f"never moved in coordinates {nan} (R-hat NaN)" in message
+
+
+@pytest.mark.parametrize(("width", "kinds"), [(None, []), (30.0, []), (30.1, ["wide"])])
+def test_a_start_wider_than_thirty_times_the_target_warns(width, kinds):
+    report = TuningReport(np.zeros(2), np.eye(2), np.full(4, 0.23), np.ones(2), 100, None, width)
+    result = synthetic([2, 3], [0.0, 1.0], k=5, tuning=report)
+    assert [issue.kind for issue in issues(result)] == kinds
+    if kinds:
+        message = wide_start(report)
+        assert message.startswith("the initial distribution is about 30 times wider")
+        assert "give k by hand, or take k from a confirmation round" in message
 
 
 def test_the_tuning_warning_names_a_coordinate_whose_steps_round_away():
