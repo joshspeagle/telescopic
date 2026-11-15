@@ -7,9 +7,12 @@ import os
 from typing import IO, Any
 
 import numpy as np
+import numpy.typing as npt
 from numpy.random import SeedSequence
 
+from telescopic._types import IntArray
 from telescopic.engine import COUNTS, Replicates, Settings
+from telescopic.estimators import averaging_times, correction_coefficients
 from telescopic.results import Result
 from telescopic.tuning import TuningReport
 
@@ -71,10 +74,13 @@ def load(path: str | os.PathLike[str] | IO[bytes], cls: type[Result]) -> Result:
                 f"the file has schema {metadata['schema']}, newer than this telescopic's "
                 f"{SCHEMA}: upgrade telescopic to load it"
             )
+        arrays = {name: data[f"replicates.{name}"] for name in REPLICATE_ARRAYS}
+        settings = Settings(**metadata["settings"])
         replicates = Replicates(
             seed=SeedSequence(**metadata["seed"]),
-            settings=Settings(**metadata["settings"]),
-            **{name: data[f"replicates.{name}"] for name in REPLICATE_ARRAYS},
+            settings=settings,
+            **arrays,
+            time=record_times(settings, arrays["index"], arrays["meeting_time"], arrays["owner"]),
             **metadata["counts"],
         )
         tuning = metadata["tuning"]
@@ -90,3 +96,38 @@ def load(path: str | os.PathLike[str] | IO[bytes], cls: type[Result]) -> Result:
             tuning=tuning,
             pilot=data.get("pilot"),
         )
+
+
+def record_times(
+    settings: Settings, index: IntArray, meeting_time: npt.NDArray[np.float64], owner: IntArray
+) -> npt.NDArray[np.int32]:
+    # The times of the atoms of a file that lacks them, which the engine's record order
+    # fixes (spec R-EST-6): for each replicate that met, in index order, t for each t in S
+    # and t twice for each t in [L, tau) with c_t > 0, by t and the averaged atom first.
+    # O(N), with no sort: each atom's position within its replicate is computed.
+    k, m, lag, thin = settings.k, settings.m, settings.lag, settings.thin
+    met = np.isfinite(meeting_time)
+    tau = meeting_time[met].astype(np.int64)
+    averaged = averaging_times(k, m, thin)
+    span = np.arange(lag, max(lag, int(tau.max(initial=lag))))
+    corrected = span[correction_coefficients(span, k, m, lag, thin) > 0]
+    n = np.searchsorted(corrected, tau)  # each replicate's times with corrections
+    sizes = len(averaged) + 2 * n
+    if not np.array_equal(np.repeat(index[met], sizes), owner):
+        raise ValueError(
+            f"the file's atoms do not follow the record order of their settings: {len(owner)} "
+            f"atoms where the meeting times give {sizes.sum()}"
+        )
+    first = np.cumsum(sizes) - sizes
+    time = np.empty(len(owner), dtype=np.int32)
+    # The averaged atom at S_j follows j averaged atoms and two for each earlier correction.
+    before = np.minimum(np.searchsorted(corrected, averaged)[None, :], n[:, None])
+    time[(first[:, None] + np.arange(len(averaged)) + 2 * before).ravel()] = np.tile(
+        averaged, len(tau)
+    )
+    # The pair of correction j follows 2 j correction atoms and the averaged ones up to it.
+    replicate = np.repeat(np.arange(len(tau)), n)
+    j = np.arange(n.sum()) - np.repeat(np.cumsum(n) - n, n)
+    position = first[replicate] + 2 * j + np.searchsorted(averaged, corrected[j], side="right")
+    time[position] = time[position + 1] = corrected[j]
+    return time

@@ -633,11 +633,11 @@ def test_a_run_that_would_store_gigabytes_warns():
 
 def test_the_memory_warning_compares_the_peak_with_the_threshold():
     # A pilot pair meeting at 1001 stands for 1000 distances of 24 bytes and 2001 atoms
-    # of 32 bytes at k = 0: 0.44 GB stored for 5,000 replicates, of which the atoms are
-    # 0.32, and a peak of three times that, up to twice as much in two dimensions.
+    # of 36 bytes at k = 0: 0.48 GB stored for 5,000 replicates, of which the atoms are
+    # 0.36, and a peak of three times that, up to twice as much in two dimensions.
     sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=10)
     sampler.pilot = np.full(100, 1001.0)
-    with pytest.warns(InputWarning, match="store about 0.4 GB .* take about 1.3 to 2.6 GB"):
+    with pytest.warns(InputWarning, match="store about 0.5 GB .* take about 1.4 to 2.9 GB"):
         sampler._check_memory(Settings(0, 0, 1), 5_000)
 
 

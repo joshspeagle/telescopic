@@ -3,6 +3,7 @@ import pytest
 from scipy import stats
 
 from references import Failing, assert_same_replicates, dense, gaussian_log_prob
+from telescopic._io import record_times
 from telescopic._random import MAIN, replicate_generator
 from telescopic.engine import Settings, Status, merge, run, stored_bytes
 from telescopic.estimators import averaging_times, correction_coefficients
@@ -358,7 +359,7 @@ def test_the_storage_estimate_equals_the_bytes_a_run_stores(lag):
     # correction atoms and the distances both count.
     replicates = simulate(n=40, k=2, m=6, lag=lag)
     assert len(np.unique(replicates.meeting_time)) > 3
-    columns = ("atoms", "weights", "owner", "distance_owner", "distance_time", "distance")
+    columns = ("atoms", "weights", "owner", "time", "distance_owner", "distance_time", "distance")
     stored = sum(getattr(replicates, name).nbytes for name in columns)
     coupled = replicates.meeting_time - lag
     assert stored_bytes(replicates.settings, 2, coupled) == stored
@@ -417,3 +418,62 @@ def test_records_after_an_error_hold_no_atoms_distances_zero_density_or_paths_of
     for name in ("owner", "distance_owner", "zero_density"):
         assert np.isin(getattr(finished, name), finished.index).all(), name
     assert set(finished.paths) == set(finished.index.tolist())
+
+
+SETTINGS_CASES = [
+    {"k": 0, "m": 0, "lag": 1},
+    {"k": 2, "m": 10, "lag": 1},
+    {"k": 3, "m": 12, "lag": 4},
+    {"k": 5, "m": 20, "lag": 3, "thin": 2},
+    {"k": 0, "m": 7, "lag": 7, "thin": 3},
+    {"k": 4, "m": 6, "lag": 2, "max_iter": 9},
+]
+
+
+@pytest.mark.parametrize("options", SETTINGS_CASES)
+def test_each_atom_records_the_time_it_was_recorded(options):
+    # By t, and at each t the averaged atom X_t first, then X_t and Y_{t-L} of the
+    # correction, read off the recorded paths.
+    replicates = simulate(keep_paths=True, **options)
+    k, m, lag, thin = options["k"], options["m"], options["lag"], options.get("thin", 1)
+    averaged = set(averaging_times(k, m, thin).tolist())
+    for index, tau in zip(replicates.index, replicates.meeting_time, strict=True):
+        if np.isinf(tau):
+            continue
+        x, y = replicates.paths[index]
+        rows = []
+        for t in range(int(max(tau, m)) + 1):
+            if t in averaged:
+                rows.append((t, x[t], 1 / len(averaged)))
+            c = correction_coefficients(t, k, m, lag, thin) if lag <= t < tau else 0.0
+            if c > 0:
+                rows += [(t, x[t], c), (t, y[t - lag], -c)]
+        mine = replicates.owner == index
+        np.testing.assert_array_equal(replicates.time[mine], [row[0] for row in rows])
+        np.testing.assert_array_equal(replicates.atoms[mine], [row[1] for row in rows])
+        np.testing.assert_allclose(replicates.weights[mine], [row[2] for row in rows], rtol=1e-15)
+    assert replicates.time.dtype == np.int32
+
+
+@pytest.mark.parametrize("options", SETTINGS_CASES)
+def test_schema_1_files_load_with_the_times_a_new_run_records(options):
+    replicates = simulate(n=30, **options)
+    times = record_times(
+        replicates.settings, replicates.index, replicates.meeting_time, replicates.owner
+    )
+    np.testing.assert_array_equal(times, replicates.time)
+    with pytest.raises(ValueError, match="do not follow the record order"):
+        record_times(
+            replicates.settings, replicates.index, replicates.meeting_time, replicates.owner[1:]
+        )
+
+
+def test_max_iter_beyond_int32_raises_only_where_times_are_stored(monkeypatch):
+    with pytest.raises(ValueError, match=r"max_iter must be at most 2\*\*31 - 1"):
+        simulate(max_iter=2**31)
+    simulate(k=0, m=0, store=False, max_iter=2**31)
+    # Without a cap, a replicate that reaches the largest time raises, keeping the others.
+    monkeypatch.setattr("telescopic.engine.MAX_TIME", 4)
+    with pytest.raises(OverflowError, match=r"replicate \d+ reached t = 5") as caught:
+        simulate(k=0, m=2)
+    assert np.all(caught.value.telescopic_replicates.meeting_time <= 5)

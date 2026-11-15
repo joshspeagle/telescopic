@@ -36,6 +36,9 @@ __all__ = ["Replicates", "Settings", "Status", "check_settings", "merge", "run",
 # Replicates advanced together by default (DECISIONS #52).
 LANES = 256
 
+# The largest time that the int32 times of the atoms hold (DECISIONS #234).
+MAX_TIME = 2**31 - 1
+
 # The target's counters, which a run's replicates hold under the same names.
 COUNTS = ("n_log_prob", "n_grad", "n_grad_zeroed")
 
@@ -85,7 +88,11 @@ class Replicates:
     atoms, weights, owner : ndarrays, shapes (N, d), (N,), (N,)
         The signed measures of the replicates that met: the atoms, their
         weights (each replicate's sum to 1), and the index of the replicate each atom
-        belongs to. Sorted by owner.
+        belongs to. Sorted by owner, and within a replicate in record order: by time, and
+        at each time the averaged atom first.
+    time : ndarray of int32, shape (N,)
+        The time :math:`t` of the pair :math:`(X_t, Y_{t-L})` at which each atom was
+        recorded; -1 for replicates made without it.
     distance_owner, distance_time, distance : ndarrays, shape (M,)
         :math:`\lVert X_t - Y_{t-L}\rVert` for each pair, at each time :math:`L \le t < \tau`
         (to the cap for a censored pair).
@@ -121,11 +128,17 @@ class Replicates:
     zero_density: IntArray
     requested: IntArray
     abandoned: IntArray = field(default_factory=lambda: np.zeros(0, dtype=np.int64))
+    time: npt.NDArray[np.int32] = field(default_factory=lambda: np.zeros(0, dtype=np.int32))
     n_log_prob: int = 0
     n_grad: int = 0
     n_grad_zeroed: int = 0
     seconds: float = 0.0
     paths: dict[int, tuple[FloatArray, FloatArray]] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        # Replicates made without times, as by hand, get -1 for each atom.
+        if not len(self.time) and len(self.atoms):
+            self.time = np.full(len(self.atoms), -1, dtype=np.int32)
 
     @property
     def stopped(self) -> FloatArray:
@@ -420,8 +433,9 @@ def check_settings(settings: Settings) -> Settings:
     r"""Check the settings of a run and return them with Python integers.
 
     They need integers :math:`0 \le k \le m`, :math:`L \ge 1` and ``thin`` :math:`\ge 1`,
-    and an integer ``max_iter`` above :math:`\max(L, m)` or ``None``. NumPy integers
-    become ``int``.
+    and an integer ``max_iter`` above :math:`\max(L, m)` or ``None``, at most
+    :math:`2^{31} - 1` when the run stores the times of its atoms. NumPy integers become
+    ``int``.
 
     Parameters
     ----------
@@ -446,6 +460,11 @@ def check_settings(settings: Settings) -> Settings:
         max_iter = integer("max_iter", max_iter, "an integer or None")
     if max_iter is not None and max_iter <= max(lag, m):
         raise ValueError(f"max_iter must exceed max(lag, m) = {max(lag, m)}, not {max_iter}")
+    if max_iter is not None and max_iter > MAX_TIME and settings.store:
+        raise ValueError(
+            f"max_iter must be at most 2**31 - 1 = {MAX_TIME} where times are stored, not "
+            f"{max_iter}"
+        )
     return Settings(k, m, lag, thin, max_iter, settings.store)
 
 
@@ -484,7 +503,7 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
             )
     groups = {
         "index": ("index", "meeting_time"),
-        "owner": ("owner", "atoms", "weights"),
+        "owner": ("owner", "atoms", "weights", "time"),
         "distance_owner": ("distance_owner", "distance_time", "distance"),
         "zero_density": ("zero_density",),
     }
@@ -531,8 +550,9 @@ def stored_bytes(settings: Settings, ndim: int, coupled: npt.ArrayLike) -> float
 
     A replicate that met after :math:`c = \tau - L` coupled steps stores the
     :math:`|S|` atoms of the time average and two atoms for each of the
-    :math:`\max(0, c - k)` terms of the bias correction, each of :math:`8d + 16` bytes (its
-    coordinates in ``atoms``, its weight and its replicate in ``owner``), and :math:`c`
+    :math:`\max(0, c - k)` terms of the bias correction, each of :math:`8d + 20` bytes (its
+    coordinates in ``atoms``, its weight, its replicate in ``owner`` and its ``time``), and
+    :math:`c`
     distances of 24 bytes (``distance_owner``, ``distance_time`` and ``distance``). This
     is exact when ``thin`` is 1 and :math:`m - k + 1 \ge L`, and an upper bound otherwise,
     where some terms of the correction have no atoms. With ``store=False`` nothing is
@@ -561,7 +581,7 @@ def stored_bytes(settings: Settings, ndim: int, coupled: npt.ArrayLike) -> float
     if not store:
         return 0.0
     atoms = len(c) * len(range(k, m + 1, thin)) + 2 * np.maximum(0, c - k).sum()
-    return float(atoms * (8 * ndim + 16) + 24 * c.sum())
+    return float(atoms * (8 * ndim + 20) + 24 * c.sum())
 
 
 class _Batch:
@@ -587,7 +607,7 @@ class _Batch:
         integers, reals = np.zeros(0, dtype=np.int64), np.zeros(0)
         self.finished = _Chunks(integers, integers)
         # The columns that stored_bytes counts: a change here changes it.
-        self.atoms = _Chunks(integers, np.zeros((0, ndim)), reals)
+        self.atoms = _Chunks(integers, np.zeros((0, ndim)), reals, np.zeros(0, dtype=np.int32))
         self.distances = _Chunks(integers, integers, reals)
         # The replicates started at zero density, and whether each lane's did.
         self.zero_density: list[int] = []
@@ -683,7 +703,7 @@ class _Batch:
         # run with many atoms.
         index, tau = self.finished.join()
         abandoned = np.sort(self.replicate[self.active])
-        owner, atoms, weights = self.atoms.join(keep=index[tau >= 0])
+        owner, atoms, weights, times = self.atoms.join(keep=index[tau >= 0])
         distance_owner, distance_time, distance = self.distances.join(
             keep=index if len(abandoned) else None
         )
@@ -703,6 +723,7 @@ class _Batch:
             zero_density=np.sort(zero_density[np.isin(zero_density, index)]),
             requested=requested,
             abandoned=abandoned,
+            time=times,
             **{name: getattr(self.target, name) - n for name, n in self.counts.items()},
             seconds=time.perf_counter() - start,
             paths={
@@ -721,7 +742,10 @@ class _Batch:
         averaged = stepped[(t >= k) & (t <= m) & ((t - k) % thin == 0)]
         if len(averaged):
             self.atoms.add(
-                self.replicate[averaged], self.x.x[averaged], np.full(len(averaged), self.weight)
+                self.replicate[averaged],
+                self.x.x[averaged],
+                np.full(len(averaged), self.weight),
+                self._times(averaged),
             )
         if not len(unmet):
             return
@@ -729,15 +753,31 @@ class _Batch:
         positive = coefficient > 0
         if positive.any():
             corrected = unmet[positive]
+            times = self._times(corrected)
             for chain, sign in ((self.x, 1.0), (self.y, -1.0)):
                 self.atoms.add(
-                    self.replicate[corrected], chain.x[corrected], sign * coefficient[positive]
+                    self.replicate[corrected],
+                    chain.x[corrected],
+                    sign * coefficient[positive],
+                    times,
                 )
         self.distances.add(
             self.replicate[unmet],
             self.t[unmet],
             np.linalg.norm(self.x.x[unmet] - self.y.x[unmet], axis=1),
         )
+
+    def _times(self, lanes: IntArray) -> npt.NDArray[np.int32]:
+        # The lanes' times as the atoms store them; a time beyond int32, reachable without
+        # a cap, raises naming its replicate (spec R-EST-6).
+        t = self.t[lanes]
+        late = t > MAX_TIME
+        if late.any():
+            raise OverflowError(
+                f"replicate {self.replicate[lanes[late][0]]} reached t = {t[late][0]}, beyond "
+                f"the 2**31 - 1 that the times of its atoms hold; set max_iter"
+            )
+        return t.astype(np.int32)
 
 
 class _Chunks:

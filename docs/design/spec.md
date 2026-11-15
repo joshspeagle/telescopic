@@ -153,7 +153,7 @@ which reduces to $v_t/(m-k+1)$ when $s = 1$. The run still ends at $\max(\tau, m
 
 $$\hat\pi = \sum_{l \in S} |S|^{-1}\,\delta_{X_l} + \sum_{t \ge \min S + L}^{\tau - 1} c_t\,\big(\delta_{X_t} - \delta_{Y_{t-L}}\big),$$
 
-whose weights sum to 1. Some weights are negative, so estimates can fall outside the range of $h$. $\hat\pi(h) = H_S$ for every $h$, so any test function can be applied after the run. Atoms with $c_t = 0$ are not stored, so the number of atoms is at most $|S| + 2\max(0, \tau - \min S - L)$.
+whose weights sum to 1. Some weights are negative, so estimates can fall outside the range of $h$. $\hat\pi(h) = H_S$ for every $h$, so any test function can be applied after the run. Atoms with $c_t = 0$ are not stored, so the number of atoms is at most $|S| + 2\max(0, \tau - \min S - L)$. Each atom records the time $t$ at which it was recorded. Within a replicate, atoms are in record order: by $t$, and at each $t$ the averaged atom first (issue #79, DECISIONS #234).
 
 **Cost (R-EST-7).** One replicate uses $C = L + 2(\tau - L) + \max(0, m - \tau)$ kernel applications, counting a coupled step before the meeting as two. The engine also records the log-density and gradient evaluations and the wall time, because kernels differ in evaluations per application.
 
@@ -465,7 +465,7 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 ### 6.3 Pairs that do not meet (R-EXEC-4)
 
 - **No cap by default:** in the main run, `max_iter=None` runs every pair until it meets, as the theory requires.
-- **The cap:** `max_iter` caps $t$ and must exceed $\max(L, m)$. A pair still unmet when $t$ reaches it is **censored**:
+- **The cap:** `max_iter` caps $t$ and must exceed $\max(L, m)$; where the times of R-EST-6 are stored it must be at most $2^{31} - 1$, and without a cap a stored pair that reaches that time raises `OverflowError` naming its replicate, which stops the run as an error does (§6.5; DECISIONS #234). A pair still unmet when $t$ reaches it is **censored**:
   - it is listed in the result, with meeting time `inf`;
   - it is excluded from the estimates, from $R$ and from the signed measure;
   - it is reported by a `ConvergenceWarning` stating that the estimates are biased.
@@ -507,7 +507,7 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 
 ### 6.6 Memory (R-EXEC-7)
 
-- **Atoms:** storage needs $R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})\,(8d + 16)$ bytes for positions, weights and replicate indices, plus 24 bytes per stored distance, $\tau - L$ of them per replicate; `engine.stored_bytes` computes it, next to the engine's columns, exactly for `thin` $= 1$ and $m - k + 1 \ge L$, and as an upper bound otherwise, where some terms of the correction have no atoms. The engine stores each iteration's rows as small arrays and merges every 256 of them into one block, so at $d = 10$ a row holds 94 to 103 bytes against 92 of payload at 1 to 256 lanes (M3 review).
+- **Atoms:** storage needs $R\,(|S| + 2\,\overline{\max(0, \tau - k - L)})\,(8d + 20)$ bytes for positions, weights, replicate indices and the int32 times of R-EST-6, plus 24 bytes per stored distance, $\tau - L$ of them per replicate; `engine.stored_bytes` computes it, next to the engine's columns, exactly for `thin` $= 1$ and $m - k + 1 \ge L$, and as an upper bound otherwise, where some terms of the correction have no atoms. The engine stores each iteration's rows as small arrays and merges every 256 of them into one block, so at $d = 10$ a row held 94 to 103 bytes against 92 of payload at 1 to 256 lanes before the times were stored (M3 review).
 - **Join:** at the end of a run, sorting the atoms by replicate holds about three times their size for a moment (3.1 times at $d = 10$).
 - **Estimate first:** the sampler estimates the stored size before each run, with the pilot's $\tau - 1$ standing in for the run's $\tau - L$, and warns when three times it, the peak of the run and its first estimates, exceeds 1 GB, stating both figures, with twice the peak as its upper end for $d \le 2$, and suggesting `thin`. Measured with `RandomWalk(I)` at $k = 200$, $m = 2000$, $R = 200$, the run peaks at 2.0 to 2.7 times the stored size and `cov()` with `summary()` at 2.0 to 2.5 times from $d = 2$ to 50, and at 3.3 times at $d = 1$, where the result's own bytes per atom weigh most. Three holds for a random walk's rejection rate at `thin` $= 1$ from $d = 2$ on, not beyond it: `Result.quantile` sorts the atoms that are not consecutive repeats, so with `thin` above 1 or a kernel that rarely rejects the estimates peak at up to about five times the stored size in one or two dimensions, and at about two at $d = 10$ (`notes/experiments/i73_memory_peak.out`, DECISIONS #131, #183). These peaks are of NumPy's allocations as `tracemalloc` traces them, not of resident memory: issue #73 measured the resident memory of the same run at $d = 50$ at 505 MB against 164 MB stored after `cov()`, 3.1 times, a measurement of the issue's own with no script in the repository.
 - **Pools:** a worker holds the replicates of one chunk, at most 1,024 (§6.4), until it sends them back; the parent holds every chunk's replicates and then their merge, so its memory grows with $R$ as in a run in-process (DECISIONS #179).

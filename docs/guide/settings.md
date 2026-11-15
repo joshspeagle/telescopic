@@ -238,8 +238,8 @@ time.
 A result stores each replicate's signed measure
 ([Theory](../theory.md#signed-measures)): one atom per averaged state,
 $\lfloor (m - k)/s \rfloor + 1$ of them for `thin` $= s$, and two per term of the bias
-correction, each atom of $8d + 16$ bytes (its coordinates, its weight and its
-replicate), and the $\tau - L$ distances of the 1-Wasserstein bound, 24 bytes each
+correction, each atom of $8d + 20$ bytes (its coordinates, its weight, its replicate
+and the time it was recorded), and the $\tau - L$ distances of the 1-Wasserstein bound, 24 bytes each
 ({func}`telescopic.engine.stored_bytes`). A run takes two to three times that at its
 peak, since sorting the atoms at the end of a run makes a copy, and its first estimates
 2.0 to 2.5 times, for a random walk's rejection rate at `thin` $= 1$ from $d = 2$ on.
