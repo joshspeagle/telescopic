@@ -732,10 +732,16 @@ class Result:
     def load(cls, path: str | os.PathLike[str] | IO[bytes]) -> Result:
         """Load a result saved by :meth:`save`, with descriptions of its kernel and initial distribution.
 
+        A directory is read as the checkpoint of
+        :meth:`CoupledSampler.run <telescopic.CoupledSampler.run>`: the result of every
+        replicate its files hold, with the plan's tuning report and pilot, interrupted
+        while an index that a run there requested has not finished.
+
         Parameters
         ----------
         path : str, path-like or binary file
-            ``.npz`` is appended to a name that lacks it.
+            A file, to whose name ``.npz`` is appended when it lacks it, or a checkpoint
+            directory.
 
         Returns
         -------

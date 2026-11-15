@@ -68,7 +68,8 @@ The second run ran 100 more replicates on the same workers, with the settings of
 first, and returned the result of all the replicates so far. To split a run across
 machines, run separate ranges of replicate indices with one seed and the same settings,
 `sampler.run(n, start=i)` for the indices `i` to `i + n - 1`, and join the results
-([Merging runs](save-load-merge.md#merging-runs)).
+([Merging runs](save-load-merge.md#merging-runs)); a checkpoint directory does both for
+the tasks of a cluster job ([Run on a cluster](save-load-merge.md#run-on-a-cluster)).
 
 ## Tuning
 

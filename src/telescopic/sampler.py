@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import functools
+import os
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import ExitStack
+from dataclasses import replace
+from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
 
-from telescopic import diagnostics, engine
+from telescopic import _io, diagnostics, engine
 from telescopic._gradient_check import check_gradient
 from telescopic._parallel import Interrupt, check_pool, check_workers, execute, opened
 from telescopic._progress import Progress, tuning
@@ -225,7 +228,9 @@ class CoupledSampler:
 
     @property
     def settings(self) -> engine.Settings | None:
-        """The settings of the runs, fixed by the first; ``None`` before it.
+        """The settings of the runs, fixed by the first run, :meth:`plan` or :meth:`resume`.
+
+        ``None`` until then.
 
         Returns
         -------
@@ -256,61 +261,81 @@ class CoupledSampler:
         """
         if not isinstance(result, Result):
             raise TypeError(f"result must be a telescopic.Result, not {type(result).__name__}")
+        self._adopt(
+            _io.Record(
+                result._replicates,
+                result.names,
+                result.kernel,
+                None,
+                result.tuning,
+                result.pilot,
+                result._k_rule,
+            ),
+            result.ndim,
+            "the result",
+        )
+
+    def _adopt(self, record: _io.Record, ndim: int, source: str) -> None:
+        # Adopts a result's or a plan's seed, settings, replicates, tuning, pilot and names,
+        # as resume describes; source names it in errors and the warning.
         for used, done in (
             ("run replicates", self._replicates is not None),
+            ("fixed its settings", self._settings is not None),
             ("run pilot pairs", self.pilot is not None),
             ("tuned its kernel", self.tuning is not None),
         ):
             if done:
                 raise ValueError(f"resume needs a new sampler: this one has already {used}")
-        if result.ndim != self.ndim:
+        if ndim != self.ndim:
             raise ValueError(
-                f"the result has dimension {result.ndim}, but the initial distribution "
+                f"{source} has dimension {ndim}, but the initial distribution "
                 f"draws points of dimension {self.ndim}"
             )
         # Kernels are compared by their descriptions, which a loaded result holds and which
         # start with the class's name; a description without one (an object's default
         # repr) is not compared.
-        ran = None if result.kernel is None else str(result.kernel)
+        ran = None if record.kernel is None else str(record.kernel)
         if ran is not None and "(" in ran:
             ran, mine = ran.split("(", 1)[0], str(self.kernel).split("(", 1)[0]
             if ran != mine:
                 raise ValueError(
-                    f"the result was run with {ran}, but the sampler's kernel is {mine}"
+                    f"{source} was run with {ran}, but the sampler's kernel is {mine}"
                 )
-        if self._rng_given and engine._seed_key(self.seed) != engine._seed_key(result.seed):
+        replicates = record.replicates
+        if self._rng_given and engine._seed_key(self.seed) != engine._seed_key(replicates.seed):
             raise ValueError(
-                "rng was given, but the result has another seed; omit rng to resume it"
+                f"rng was given, but {source} has another seed; omit rng to resume it"
             )
-        if self.names is not None and self.names != result.names:
-            raise ValueError(f"names {self.names} differ from the result's {result.names}")
-        if not self.kernel.is_tuned and result.tuning is None:
+        if self.names is not None and self.names != record.names:
+            raise ValueError(f"names {self.names} differ from {source}'s {record.names}")
+        if not self.kernel.is_tuned and record.tuning is None:
             raise ValueError(
-                "the result holds no tuning report, so the sampler's kernel must have every "
-                "parameter set; pass the kernel the result was run with"
+                f"{source} holds no tuning report, so the sampler's kernel must have every "
+                f"parameter set; pass the kernel {source} was run with"
             )
-        seed, kernel, report = root_seed(result.seed), self.kernel, result.tuning
+        seed, kernel, report = root_seed(replicates.seed), self.kernel, record.tuning
         if not kernel.is_tuned:
-            # From the tuning namespace of the result's seed, as the run tuned it (spec
+            # From the tuning namespace of the run's seed, as the run tuned it (spec
             # section 6.1). No tolerance: rounding can move a pilot's accept decision.
             with tuning(self.progress):
                 kernel, report = kernel.tune(self.target, self.initial, seed)
         # Everything is adopted at once, before any warning, so that a tuning that raises,
         # or a warning made an error, leaves the sampler either as it was or resumed.
         self.seed, self.kernel, self.tuning = seed, kernel, report
-        self.names, self.pilot = result.names, result.pilot
-        self._k_rule = result._k_rule
-        self._settings, self._replicates = result._replicates.settings, result._replicates
+        self.names, self.pilot = record.names, record.pilot
+        self._k_rule = record.k_rule
+        self._settings = replicates.settings
+        self._replicates = replicates if len(replicates.index) else None
         differs = False
-        if report is not result.tuning:  # tuned again
-            new, kept = cast(TuningReport, report), cast(TuningReport, result.tuning)
+        if report is not record.tuning:  # tuned again
+            new, kept = cast(TuningReport, report), cast(TuningReport, record.tuning)
             _warn_tuning(new)
             differs = not (
                 np.array_equal(new.mean, kept.mean) and np.array_equal(new.cov, kept.cov)
             )
-        if differs or (result.kernel is not None and str(kernel) != str(result.kernel)):
+        if differs or (record.kernel is not None and str(kernel) != str(record.kernel)):
             warn(
-                "the sampler's kernel differs from the result's: the target, the initial "
+                f"the sampler's kernel differs from {source}'s: the target, the initial "
                 "distribution or the kernel differ from the run's, or the kernel was tuned "
                 "again on another machine, library version or number of BLAS threads; the "
                 "resumed run keeps the sampler's kernel",
@@ -389,6 +414,50 @@ class CoupledSampler:
         self._pilot_zero_density += len(replicates.zero_density)
         return times
 
+    # Spec sections 6.7 and 8.1.
+    def plan(
+        self,
+        *,
+        k: int | str = "auto",
+        m: int | str = "auto",
+        lag: int | str = "auto",
+        thin: int | None = None,
+        max_iter: int | None = None,
+        keep: int | None = None,
+        checkpoint: str | os.PathLike[str] | None = None,
+        progress: bool | None = None,
+    ) -> engine.Settings:
+        """Fix the settings of the runs without running replicates, and write them as a plan.
+
+        As the first :meth:`run` would, it tunes the kernel and, for an automatic ``k``,
+        completes the pilot to 100 pairs; the runs then keep these settings. With
+        ``checkpoint``, it writes the plan, the seed, the settings, the tuning report and
+        the pilot, to that directory, from which the samplers of the tasks of a cluster
+        job, built with the same target, initial distribution and kernel, adopt it
+        (:meth:`run`). A sampler whose settings are fixed returns them, and writes them.
+
+        Parameters
+        ----------
+        k, m, lag, thin, max_iter, keep
+            As for :meth:`run`.
+        checkpoint : str or path-like, optional
+            A directory, made if missing. A new sampler adopts the plan it holds, as
+            :meth:`run` does; a plan of another seed or other settings raises.
+        progress : bool, optional
+            Show the progress of the tuning and the pilot; ``None`` takes the sampler's
+            setting.
+
+        Returns
+        -------
+        telescopic.engine.Settings
+        """
+        given = self._check(k, m, lag, thin, max_iter, keep)
+        directory = _directory(checkpoint)
+        show = self.progress if progress is None else flag("progress", progress)
+        with opened(self.pool) as pool:
+            self._settings = self._fix(given, directory, pool, show)
+        return self._settings
+
     # Spec R-TUNE-2 and D-21, sections 3.3, 6.5 and 7.4, R-EST-5.
     def run(
         self,
@@ -401,6 +470,7 @@ class CoupledSampler:
         max_iter: int | None = None,
         keep: int | None = None,
         start: int | None = None,
+        checkpoint: str | os.PathLike[str] | None = None,
         progress: bool | None = None,
     ) -> Result:
         """Run ``n_replicates`` more replicates and return the result of all of them so far.
@@ -445,6 +515,16 @@ class CoupledSampler:
             of which this sampler may have requested before, as one task of a run split
             into ranges of indices. ``None`` runs first the requested replicates that
             have not run, then indices above the highest requested so far.
+        checkpoint : str or path-like, optional
+            A directory, made if missing, to which the run writes its finished
+            replicates as they finish: every 256 in this process, each chunk on a pool.
+            A new sampler adopts the plan the directory holds, as :meth:`resume` adopts a
+            result, without a pilot; otherwise the sampler's plan is written there, and a
+            plan of another seed or other settings raises. Replicates of this call's
+            indices that the directory holds are read from it, not run again, so the
+            same call completes a run that a killed process left unfinished;
+            :meth:`Result.load <telescopic.Result.load>` of the directory returns the
+            result of every replicate it holds.
         progress : bool, optional
             Show the progress of the run and of the tuning and the pilot it runs;
             ``None`` takes the sampler's setting.
@@ -471,6 +551,7 @@ class CoupledSampler:
         """
         n_replicates = integer("n_replicates", n_replicates, minimum=1)
         given = self._check(k, m, lag, thin, max_iter, keep)
+        directory = _directory(checkpoint)
         if start is not None:
             start = integer("start", start, "None or an integer >= 0", minimum=0)
             self._check_start(start, n_replicates)
@@ -480,15 +561,27 @@ class CoupledSampler:
             # Worker processes start before tuning, which runs here meanwhile, and serve
             # the pilot and the run (DECISIONS #23).
             with opened(self.pool) as pool:
-                settings = self.settings or self._configure(given, pool, show)
+                settings = self._fix(given, directory, pool, show)
                 done = 0 if self._replicates is None else len(self._replicates.index)
                 self._check_memory(settings, done + n_replicates)
                 indices = self._next_indices(n_replicates, start)
+                stored, sink = None, None
+                if directory is not None:
+                    stored, sink = self._checkpoint(directory, settings, indices)
+                running = indices if stored is None else np.setdiff1d(indices, stored.index)
                 # From the start of the replicates until the result returns, the first
                 # Ctrl-C lets the run finish (spec section 6.5): after the replicates,
                 # while the workers stop and the result is built, it would lose them.
                 catching.enter_context(interrupt.catching())
-                part, error, others = self._run(MAIN, indices, settings, pool, show, interrupt)
+                part, error, others = engine._Outcome(None, None)
+                if len(running):
+                    part, error, others = self._run(
+                        MAIN, running, settings, pool, show, interrupt, sink
+                    )
+            if stored is not None:
+                # The checkpoint's replicates of this call join those it ran.
+                joined = engine.merge([stored] if part is None else [stored, part])
+                part = replace(joined, requested=np.sort(indices))
             # The finished replicates are kept before anything can raise, so that an error,
             # or a warning made one, leaves them in the sampler (spec section 6.5).
             if part is not None and len(part.index):
@@ -526,6 +619,60 @@ class CoupledSampler:
         )
         result._k_rule = self._k_rule
         return result
+
+    def _fix(
+        self, given: dict[str, int], directory: Path | None, pool: Any, progress: bool
+    ) -> engine.Settings:
+        # The settings of a run: the sampler's, or a checkpoint's plan, which a new sampler
+        # adopts, or the first run's, which a checkpoint then holds as its plan (spec
+        # section 6.7). A plan fixes the sampler's settings.
+        plan = None if directory is None else directory / _io.PLAN
+        new = self._settings is None and self.pilot is None and self.tuning is None
+        if plan is not None and plan.is_file() and new:
+            record = _io.read(plan)
+            self._adopt(record, record.replicates.atoms.shape[1], f"the plan of {directory}")
+            self._compare(given)
+        settings = self.settings or self._configure(given, pool, progress)
+        if plan is None:
+            return settings
+        if plan.is_file():
+            planned = _io.read(plan).replicates
+            if planned.settings != settings or engine._seed_key(planned.seed) != engine._seed_key(
+                self.seed
+            ):
+                raise ValueError(
+                    f"checkpoint {directory} holds the plan of another run: its seed or its "
+                    f"settings, {planned.settings}, differ from this sampler's, {settings}"
+                )
+        else:
+            directory = cast(Path, directory)
+            directory.mkdir(parents=True, exist_ok=True)
+            nothing = _io.empty(self.seed, settings, self.ndim, np.zeros(0, dtype=np.int64))
+            _io.write_atomic(
+                plan, self._record(nothing)._replace(tuning=self.tuning, pilot=self.pilot)
+            )
+        self._settings = settings
+        return settings
+
+    def _checkpoint(
+        self, directory: Path, settings: engine.Settings, indices: IntArray
+    ) -> tuple[engine.Replicates | None, Callable[[engine.Replicates], None]]:
+        # The checkpoint's replicates of these indices, None without any, and the sink
+        # that writes the run's records there, once the call's request is written.
+        parts = _io.stored(directory, indices)
+        request = _io.empty(self.seed, settings, self.ndim, np.sort(indices))
+        _io.write_record(directory, self._record(request))
+
+        def sink(part: engine.Replicates) -> None:
+            _io.write_record(directory, self._record(part))
+
+        return (engine.merge(parts) if parts else None), sink
+
+    def _record(self, replicates: engine.Replicates) -> _io.Record:
+        # A record of the sampler's replicates, without its tuning and pilot.
+        return _io.Record(
+            replicates, self.names, str(self.kernel), str(self.initial), None, None, self._k_rule
+        )
 
     def _stopped(self, part: engine.Replicates, n: int, others: int) -> str:
         # The note on an error that stopped a run of n replicates, of which part finished,
@@ -591,6 +738,7 @@ class CoupledSampler:
         pool: Any,
         progress: bool,
         interrupt: Interrupt | None = None,
+        sink: Callable[[engine.Replicates], None] | None = None,
     ) -> engine._Outcome:
         # The engine on the given replicates, here or on the opened pool, and the error
         # that stopped it, if any. A main run stores its measures and stops on Ctrl-C,
@@ -619,7 +767,7 @@ class CoupledSampler:
             return interrupt is not None and interrupt.stopping
 
         try:
-            replicates, error, others = execute(job, indices, pool, monitor, self.n_workers)
+            replicates, error, others = execute(job, indices, pool, monitor, self.n_workers, sink)
         finally:
             if bar is not None:
                 bar.close()
@@ -654,16 +802,20 @@ class CoupledSampler:
         if keep is not None:
             given["keep"] = integer("keep", keep, "None or an integer >= 0", minimum=0)
         if self.settings is not None:
-            for name, value in given.items():
-                kept = getattr(self.settings, name)
-                if value != kept:
-                    raise ValueError(
-                        f"{name} was {kept} in the earlier runs; a sampler keeps its "
-                        f"settings, so start a new one for {name}={value}"
-                    )
+            self._compare(given)
         else:
             _settings({"k": 0} | given)
         return given
+
+    def _compare(self, given: dict[str, int]) -> None:
+        # The settings given must be the sampler's.
+        for name, value in given.items():
+            kept = getattr(self.settings, name)
+            if value != kept:
+                raise ValueError(
+                    f"{name} was {kept} in the earlier runs; a sampler keeps its "
+                    f"settings, so start a new one for {name}={value}"
+                )
 
     def _configure(self, given: dict[str, int], pool: Any, progress: bool) -> engine.Settings:
         # The first run's settings, which tune the kernel and, for an automatic k, complete
@@ -1029,3 +1181,17 @@ def _settings(given: dict[str, int]) -> engine.Settings:
             keep=given.get("keep"),
         )
     )
+
+
+def _directory(checkpoint: Any) -> Path | None:
+    # The checkpoint directory, which may not exist yet.
+    if checkpoint is None:
+        return None
+    if not isinstance(checkpoint, str | os.PathLike):
+        raise TypeError(
+            f"checkpoint must be None or a path to a directory, not {type(checkpoint).__name__}"
+        )
+    path = Path(checkpoint)
+    if path.exists() and not path.is_dir():
+        raise ValueError(f"checkpoint must be a directory, but {path} is a file")
+    return path

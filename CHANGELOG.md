@@ -528,6 +528,14 @@ All notable changes to this project are documented here. The format follows
   pass.
 - `CoupledSampler.run(n, start=i)` runs the replicates of indices `i` to `i + n - 1`, so
   that separate samplers with one seed and the same settings run the ranges of one run.
+- Checkpoints: `CoupledSampler.run(..., checkpoint=directory)` writes the sampler's plan
+  (seed, settings, tuning report and pilot) and then its replicates as they finish, every
+  256 in this process and each chunk on a pool, each file renamed into place once whole.
+  A new sampler adopts the directory's plan, reads the replicates of its call stored
+  there and runs the others, so the same call completes a run whose process was killed.
+  `CoupledSampler.plan(...)` fixes the settings without running replicates and writes
+  them as a plan, for the tasks of a cluster job, and `Result.load(directory)` merges
+  every replicate a checkpoint holds.
 
 ### Changed
 

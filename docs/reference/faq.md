@@ -50,7 +50,9 @@ loaded result with its seed, settings, pilot and tuning, first running the repli
 that an interrupted run never started
 ([Continuing a run](../guide/save-load-merge.md#continuing-a-run)), and
 {meth}`~telescopic.Result.merge` combines runs made apart
-([Merging runs](../guide/save-load-merge.md#merging-runs)). Extending a run until its
+([Merging runs](../guide/save-load-merge.md#merging-runs)). A run with `checkpoint`
+writes its replicates to a directory as they finish, and the same call completes it after
+its process was killed ([Checkpoints](../guide/save-load-merge.md#checkpoints)). Extending a run until its
 error bar is small enough leaves the estimates consistent, not exactly unbiased
 ([Theory](../theory.md#guarantees-and-their-limits)).
 

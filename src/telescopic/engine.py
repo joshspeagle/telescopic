@@ -36,7 +36,7 @@ __all__ = ["Replicates", "Settings", "Status", "check_settings", "merge", "run",
 # Replicates advanced together by default (DECISIONS #52).
 LANES = 256
 
-# The finished replicates whose record a run hands to its sink at a time (DECISIONS #268).
+# The finished replicates whose record a run hands to its sink at a time (DECISIONS #266).
 FLUSH = LANES
 
 # The largest time that the int32 times of the atoms hold (DECISIONS #234).

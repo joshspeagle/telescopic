@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import warnings
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from importlib import resources
 from pathlib import Path
@@ -1171,3 +1172,137 @@ def test_a_sampler_whose_record_failed_says_the_replicates_were_lost(monkeypatch
     notes = [line for line in lost.__notes__ if line.startswith("telescopic:")]
     assert len(notes) == 1
     assert "so they were lost" in notes[0]
+
+
+# Checkpoints (spec section 6.7). The runs are of a log-density evaluated point by point,
+# so that a replicate is bitwise the same in any batch.
+CHECKPOINTED = {"k": 10, "m": 30}
+N_CHECKPOINTED = 2 * engine.FLUSH + 100  # records are written while lanes run
+
+
+@pytest.fixture(scope="module")
+def uninterrupted():
+    sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=6)
+    return sampler.run(N_CHECKPOINTED, **CHECKPOINTED)
+
+
+def test_a_checkpointed_run_equals_the_run_without_one_and_loads_from_its_directory(
+    uninterrupted, tmp_path
+):
+    sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=6)
+    result = sampler.run(N_CHECKPOINTED, **CHECKPOINTED, checkpoint=tmp_path)
+    assert_same_replicates(result._replicates, uninterrupted._replicates)
+    assert_same_replicates(Result.load(tmp_path)._replicates, uninterrupted._replicates)
+    assert len(list(tmp_path.glob("part-*.npz"))) == 3
+    assert (tmp_path / "plan.npz").is_file()
+    assert not list(tmp_path.glob(".*"))  # no temporary file is left
+
+
+def test_a_killed_run_completes_from_its_checkpoint_bitwise(uninterrupted, tmp_path):
+    # SystemExit, a BaseException, ends the run as a killed process ends: nothing is
+    # returned, and only the records already written remain.
+    killed = CoupledSampler(Failing(15_000, SystemExit(1)), INIT, kernel=KERNEL, rng=6)
+    with pytest.raises(SystemExit):
+        killed.run(N_CHECKPOINTED, **CHECKPOINTED, checkpoint=tmp_path)
+    kept = Result.load(tmp_path)
+    assert kept.interrupted
+    assert 0 < len(kept.index) < N_CHECKPOINTED
+    # The same call on a new sampler adopts the plan, reads the stored replicates and runs
+    # the others only.
+    counted = Counted(log_prob)
+    sampler = CoupledSampler(counted, INIT, vectorize=True, kernel=KERNEL)
+    completed = sampler.run(N_CHECKPOINTED, checkpoint=tmp_path)
+    assert_same_outputs(completed._replicates, uninterrupted._replicates)
+    assert_same_outputs(Result.load(tmp_path)._replicates, uninterrupted._replicates)
+    assert counted.points < uninterrupted.n_log_prob
+
+
+def test_tasks_of_a_cluster_job_adopt_the_plan_and_load_as_one_run(tmp_path):
+    whole = CoupledSampler(log_prob, INIT, rng=7).run(30)
+    planner = CoupledSampler(log_prob, INIT, rng=7)
+    settings = planner.plan(checkpoint=tmp_path)
+    assert settings == whole._replicates.settings
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", InputWarning)  # each task tunes as the plan did
+        for start in (20, 0, 10):
+            task = CoupledSampler(log_prob, INIT)
+            part = task.run(10, start=start, checkpoint=tmp_path)
+            np.testing.assert_array_equal(part.index, np.arange(start, start + 10))
+            assert part.k == whole.k
+    loaded = Result.load(tmp_path)
+    assert_same_outputs(loaded._replicates, whole._replicates)
+    np.testing.assert_array_equal(loaded.pilot, whole.pilot)
+    np.testing.assert_array_equal(loaded.tuning.cov, whole.tuning.cov)
+    assert loaded.kernel == str(whole.kernel)
+
+
+def test_a_checkpoint_flags_a_task_that_finished_no_replicate(tmp_path):
+    CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=6).run(5, k=10, checkpoint=tmp_path)
+    task = CoupledSampler(Failing(1, SystemExit(1)), INIT, kernel=KERNEL)
+    with pytest.raises(SystemExit):
+        task.run(5, start=5, checkpoint=tmp_path)
+    loaded = Result.load(tmp_path)
+    assert loaded.interrupted
+    np.testing.assert_array_equal(loaded._replicates.requested, np.arange(10))
+
+
+def test_a_checkpointed_run_on_a_pool_writes_each_chunk(uninterrupted, tmp_path):
+    with ThreadPoolExecutor(2) as threads:
+        sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, pool=threads, n_workers=2, rng=6)
+        sampler.run(N_CHECKPOINTED, **CHECKPOINTED, checkpoint=tmp_path)
+    assert len(list(tmp_path.glob("part-*.npz"))) == 3
+    assert_same_replicates(Result.load(tmp_path)._replicates, uninterrupted._replicates)
+
+
+def test_a_plan_fixes_the_settings_and_a_second_returns_them(tmp_path):
+    sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3)
+    settings = sampler.plan(k=40, thin=2)
+    assert sampler.settings == settings
+    assert sampler.plan(checkpoint=tmp_path) == settings
+    result = sampler.run(5)
+    assert result.thin == 2
+    with pytest.raises(ValueError, match="k was 40"):
+        sampler.plan(k=41)
+    planned = CoupledSampler(log_prob, INIT, kernel=KERNEL)
+    planned.plan(k=40)
+    with pytest.raises(ValueError, match="already fixed its settings"):
+        planned.resume(result)
+
+
+@pytest.mark.parametrize(("rng", "k"), [(4, 40), (3, 20)], ids=["seed", "settings"])
+def test_a_used_sampler_refuses_the_plan_of_another_run(tmp_path, rng, k):
+    CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3).plan(k=40, checkpoint=tmp_path)
+    sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=rng)
+    sampler.plan(k=k)
+    with pytest.raises(ValueError, match="holds the plan of another run"):
+        sampler.run(5, checkpoint=tmp_path)
+
+
+def test_a_new_sampler_refuses_settings_or_an_rng_that_differ_from_the_plan(tmp_path):
+    CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3).plan(k=40, checkpoint=tmp_path)
+    with pytest.raises(ValueError, match="k was 40"):
+        CoupledSampler(log_prob, INIT, kernel=KERNEL).run(5, k=20, checkpoint=tmp_path)
+    with pytest.raises(ValueError, match="rng was given, but the plan of"):
+        CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=4).run(5, checkpoint=tmp_path)
+
+
+def test_a_call_whose_indices_cut_a_stored_part_raises(tmp_path):
+    CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3).run(10, k=40, checkpoint=tmp_path)
+    task = CoupledSampler(log_prob, INIT, kernel=KERNEL)
+    with pytest.raises(ValueError, match="both inside and outside the indices of this call"):
+        task.run(5, start=5, checkpoint=tmp_path)
+
+
+def test_invalid_checkpoints_raise(tmp_path):
+    sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3)
+    with pytest.raises(TypeError, match="checkpoint must be None or a path"):
+        sampler.run(5, k=40, checkpoint=3)
+    plain_file = tmp_path / "file"
+    plain_file.write_text("")
+    with pytest.raises(ValueError, match="checkpoint must be a directory"):
+        sampler.run(5, k=40, checkpoint=plain_file)
+    with pytest.raises(ValueError, match=r"holds no plan\.npz"):
+        Result.load(tmp_path)
+    sampler.plan(k=40, checkpoint=tmp_path / "run")
+    with pytest.raises(ValueError, match="holds no finished replicate yet"):
+        Result.load(tmp_path / "run")
