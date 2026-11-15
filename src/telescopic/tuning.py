@@ -90,22 +90,16 @@ class PilotRun:
     acceptance : ndarray, shape (4,)
         Over all the steps of the second halves.
     n_steps : int
-    initial_width : float, optional
-        How many times wider than the target the initial distribution is: the geometric
-        mean, over the coordinates in which both spread, of the ratio of the standard
-        deviation :math:`s_{0,i}` of the 100 draws of the initial distribution that start
-        the chains to the standard deviation :math:`s_i` of the second halves,
-
-        .. math:: w = \exp\Big(\frac{1}{d'}\sum_i \log\frac{s_{0,i}}{s_i}\Big);
-
-        ``None`` when no coordinate spreads in both.
+    initial_var : ndarray, shape (d,), optional
+        The variances of the 100 draws from the initial distribution that set the chains'
+        first covariance; ``None`` for a run built without them.
     """
 
     samples: FloatArray
     log_prob: FloatArray
     acceptance: FloatArray
     n_steps: int
-    initial_width: float | None = None
+    initial_var: FloatArray | None = None
 
     @cached_property
     def mean(self) -> FloatArray:
@@ -119,6 +113,36 @@ class PilotRun:
         return mean
 
     @cached_property
+    def _pooled_cov(self) -> FloatArray:
+        pooled = self.samples.reshape(-1, self.samples.shape[2])
+        cov: FloatArray = np.atleast_2d(np.cov(pooled, rowvar=False))
+        return cov
+
+    @cached_property
+    def initial_width(self) -> float | None:
+        r"""How many times wider than the target the initial distribution is.
+
+        The geometric mean, over the coordinates in which both spread, of the ratio of
+        the standard deviation :math:`s_{0,i}` of the 100 draws from the initial
+        distribution that set the chains' first covariance to the standard deviation
+        :math:`s_i` of the second halves,
+
+        .. math:: w = \exp\Big(\frac{1}{d'}\sum_i \log\frac{s_{0,i}}{s_i}\Big).
+
+        Returns
+        -------
+        float or None
+            ``None`` when no coordinate spreads in both, or without ``initial_var``.
+        """
+        if self.initial_var is None:
+            return None
+        spread = np.diag(self._pooled_cov)
+        both = (self.initial_var > 0) & (spread > 0)
+        if not both.any():
+            return None
+        return float(np.exp(0.5 * np.mean(np.log(self.initial_var[both] / spread[both]))))
+
+    @cached_property
     def cov(self) -> FloatArray:
         """The pooled covariance plus 1e-10 times each variance on its diagonal.
 
@@ -128,8 +152,7 @@ class PilotRun:
         -------
         ndarray, shape (d, d)
         """
-        pooled = self.samples.reshape(-1, self.samples.shape[2])
-        cov = np.atleast_2d(np.cov(pooled, rowvar=False))
+        cov = self._pooled_cov
         # Each coordinate's own variance scales its ridge, so that tuning does not depend
         # on the coordinates' scales.
         variances = np.diag(cov)
@@ -217,8 +240,8 @@ def adaptive_metropolis(
     Returns
     -------
     PilotRun
-        The second halves of the chains, and the width of the initial distribution
-        against them.
+        The second halves of the chains, and the variances of the draws from the
+        initial distribution.
 
     Notes
     -----
@@ -316,14 +339,9 @@ def adaptive_metropolis(
             f"tuning chain {int(np.argmin(accepted))} accepted no proposal in its second "
             "half: start inside the support of the target, or give the kernel's parameters"
         )
-    # The initial distribution's spread against the pilot's, for the warning about a
-    # start far wider than the target (DECISIONS #258).
-    spread = samples.reshape(-1, d).var(axis=0, ddof=1)
-    both = (variance > 0) & (spread > 0)
-    width = (
-        float(np.exp(0.5 * np.mean(np.log(variance[both] / spread[both])))) if both.any() else None
-    )
-    return PilotRun(samples, kept_log_p, accepted / (n_steps - first_kept), n_steps, width)
+    # The draws' variances give the initial width, for the warning about a start far
+    # wider than the target (DECISIONS #259).
+    return PilotRun(samples, kept_log_p, accepted / (n_steps - first_kept), n_steps, variance)
 
 
 # Spec sections 5.4 and 5.5.

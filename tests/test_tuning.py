@@ -258,6 +258,9 @@ def test_the_initial_width_is_the_geometric_mean_of_the_ratios_of_standard_devia
     ratios = draws.std(axis=0, ddof=1) / pilot.samples.reshape(-1, 5).std(axis=0, ddof=1)
     assert pilot.initial_width == pytest.approx(np.exp(np.log(ratios).mean()), rel=1e-12)
     assert pilot.report().initial_width == pilot.initial_width
+    # A pilot passed to tune carries its width into the report.
+    _, report = RandomWalk().tune(TARGET, START, 1, pilot=pilot)
+    assert report.initial_width == pilot.initial_width
 
 
 def test_the_initial_width_of_a_start_at_one_point_is_none():
@@ -282,7 +285,7 @@ def test_the_initial_width_of_a_start_at_one_point_is_none():
 )
 def test_no_example_shows_a_wide_start_from_its_default_start(example):
     # Over 200 tuning seeds each, these starts reached an initial width of 14.1 (pumps),
-    # against the threshold of 30, and fired in none of 1,800 (DECISIONS #258).
+    # against the threshold of 30, and fired in none of 1,800 (DECISIONS #259).
     target = Target(example.log_prob, vectorize=True)
     _, report = RandomWalk().tune(target, example.initial, 0)
     assert wide_start(report) is None
@@ -291,7 +294,7 @@ def test_no_example_shows_a_wide_start_from_its_default_start(example):
 @pytest.mark.parametrize("d", [1, 10])
 def test_a_start_a_hundred_times_wider_than_the_target_warns_when_tuned(d):
     # The 100-fold wide starts of issue #98, N(mean, 100^2 cov), gave initial widths of
-    # 81 to 126 over 200 seeds of each of these Gaussians (DECISIONS #258).
+    # 81 to 126 over 200 seeds of each of these Gaussians (DECISIONS #259).
     example = examples.gaussian(d)
     start = Normal(example.mean, 100**2 * example.cov)
     sampler = CoupledSampler(example.log_prob, start, vectorize=True, rng=0)
