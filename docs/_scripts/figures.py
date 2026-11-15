@@ -25,7 +25,9 @@
 * ``result.svg`` (V13): the attributes of a :class:`telescopic.Result`, checked against a
   small run's, and the methods that read its signed measures and meeting times;
 * ``chunks.svg`` (V14): the chunks into which a pool cuts a run's replicate indices, from
-  a run on a pool that records them, and each index's own random stream.
+  a run on a pool that records them, and each index's own random stream;
+* ``hmc-meeting.svg`` (V15): coupled HMC trajectories, which share their momentum, and a
+  meeting step, each checked against :class:`telescopic.kernels.HMC`'s coupled step.
 
 The figures are drawn on the light figure ground with the colors, faces, sizes and
 helpers of ``brand.py``: magenta for chain X, teal for chain Y, the ink of met chains once
@@ -1495,6 +1497,134 @@ def chunks() -> str:
     return svg(width, root_y + 20, label, "".join(body))
 
 
+def hmc_meeting() -> str:
+    """V15: coupled HMC on a standard normal target in two dimensions; three leapfrog
+    trajectories that share their momentum bring the chains closer, and a meeting step
+    of the reflection-maximal coupling makes them equal."""
+    name, step, leaps, scale, trajectories = "hmc-meeting", 0.2, 5, 0.5, 3
+    target = telescopic.Target(lambda x: -0.5 * float(x @ x), grad=lambda x: -x)
+    hmc = telescopic.kernels.HMC(
+        step, leaps, cov=np.eye(2), jitter=0, meeting_weight=0.05, meeting_scale=scale
+    )
+    choose_leapfrog, choose_meeting = 0.5, 0.99  # below and above 1 - meeting_weight
+    default = inspect.signature(telescopic.kernels.HMC).parameters["meeting_scale"].default
+    check(default == 1e-3, name, "the caption's default meeting_scale, 0.001")
+    state_x = hmc.init_state(target, np.array([[-2.2, 1.6]]))
+    state_y = hmc.init_state(target, np.array([[1.8, -0.6]]))
+    rng = np.random.default_rng(SEED)
+
+    def leapfrog(x: np.ndarray, momentum: np.ndarray) -> np.ndarray:
+        # The positions of one trajectory with an identity covariance, where the
+        # gradient is -x, as the HMC docstring writes the updates.
+        points = [x]
+        momentum = momentum - 0.5 * step * x
+        for leap in range(leaps):
+            x = x + step * momentum
+            points.append(x)
+            momentum = momentum - (step if leap < leaps - 1 else 0.5 * step) * x
+        return np.array(points)
+
+    paths_x, paths_y, gaps = [], [], [float(np.linalg.norm(state_x.x - state_y.x))]
+    for _ in range(trajectories):
+        momentum = rng.normal(size=2)
+        draws = testing.fixed_draws(normals=[momentum], uniforms=[[choose_leapfrog, 0.5]])
+        drawn = leapfrog(state_x.x[0], momentum), leapfrog(state_y.x[0], momentum)
+        state_x, state_y = hmc.coupled_step(target, state_x, state_y, draws)
+        check(
+            np.allclose(drawn[0][-1], state_x.x[0], rtol=0, atol=1e-12)
+            and np.allclose(drawn[1][-1], state_y.x[0], rtol=0, atol=1e-12),
+            name,
+            "the drawn trajectories end where the package's do, accepted",
+        )
+        paths_x.append(drawn[0])
+        paths_y.append(drawn[1])
+        gaps.append(float(np.linalg.norm(state_x.x - state_y.x)))
+    check(
+        all(a > b > 0 for a, b in itertools.pairwise(gaps)),
+        name,
+        "each trajectory brings the chains closer without making them equal",
+    )
+    # The meeting step, with the first draws, from seeds in order, that make the chains
+    # equal at a point inside both dashed circles of radius sigma.
+    for seed in range(4 * CANDIDATES):
+        r = np.random.default_rng(seed)
+        draws = testing.fixed_draws(
+            normals=[r.normal(size=2)], uniforms=[[choose_meeting, r.uniform(), r.uniform()]]
+        )
+        met_x, met_y = hmc.coupled_step(target, state_x, state_y, draws)
+        near = max(np.linalg.norm(met_x.x - state_x.x), np.linalg.norm(met_x.x - state_y.x))
+        if np.array_equal(met_x.x, met_y.x) and 0 < near < scale:
+            break
+    else:
+        raise SystemExit(f"{name}: no meeting step of {4 * CANDIDATES} seeds can be drawn")
+    meeting = met_x.x[0]
+    p_meet = 2 * stats.norm.cdf(-gaps[-1] / scale / 2)
+    width, height = 640.0, 462.0
+    unit, cx0, cy0 = 92.0, 300.0, 264.0
+
+    def at(p: np.ndarray) -> np.ndarray:
+        p = np.atleast_2d(p)
+        return np.column_stack([cx0 + p[:, 0] * unit, cy0 - p[:, 1] * unit])
+
+    body = [
+        f'<circle cx="{_f(cx0)}" cy="{_f(cy0)}" r="{_f(r * unit)}" fill="none" '
+        f'stroke="{LINE}" stroke-width="{FIGURE["outline"]}"/>'
+        for r in (1, 2)
+    ]
+    body.append(text(cx0 + 2 * unit * 0.72, cy0 - 2 * unit * 0.72 - 6, rich(("π", "")), "start", MUTED))
+    for paths, color in ((paths_x, CX), (paths_y, CY)):
+        for j, path in enumerate(paths):
+            points = at(path)
+            body.append(_stroke(points, color, FIGURE["chain"]))
+            body += [dot(float(px), float(py), color, r=2.5) for px, py in points[1:-1]]
+            body.append(dot(*map(float, points[-1]), color))
+            if j == 0:
+                body.append(dot(*map(float, points[0]), color))
+    for chain, path, color, dx in (("X", paths_x[0], CX, -10), ("Y", paths_y[0], CY, 10)):
+        (px, py), = at(path[0])
+        anchor = "end" if dx < 0 else "start"
+        body.append(text(float(px) + dx, float(py) - 10, rich((chain, "0")), anchor, color))
+    # The meeting step: each chain's proposal of scale sigma, as a dashed circle, and the
+    # point on which both land.
+    (mx, my), = at(meeting)
+    for state, color in ((state_x, CX), (state_y, CY)):
+        (px, py), = at(state.x[0])
+        body += [
+            f'<circle cx="{_f(px)}" cy="{_f(py)}" r="{_f(scale * unit)}" fill="none" '
+            f'stroke="{color}" stroke-width="{FIGURE["rule"]}" stroke-dasharray="4 4"/>',
+            segment(float(px), float(py), float(mx), float(my), MET, width=FIGURE["outline"]),
+        ]
+    body += [
+        dot(float(mx), float(my), MET, r=FIGURE["meeting"], ring=True),
+        text(
+            float(mx) - 12, float(my) + 28, rich(("X", ""), " = ", ("Y", "")), "end", MET
+        ),
+        text(20, 28, f"{trajectories} trajectories that share their momentum: closer, not equal"),
+        text(
+            20,
+            54,
+            rich("then a meeting step of scale ", ("σ", ""), f" = {scale:g}: equal"),
+            "start",
+            MUTED,
+        ),
+    ]
+    label = (
+        f"Two chains of HMC on a standard normal target in two dimensions, whose contours at "
+        f"1 and 2 are drawn in gray. Chain X, magenta, starts at "
+        f"({paths_x[0][0, 0]:.1f}, {paths_x[0][0, 1]:.1f}) and chain Y, teal, at "
+        f"({paths_y[0][0, 0]:.1f}, {paths_y[0][0, 1]:.1f}). Each takes {trajectories} "
+        f"leapfrog trajectories of {leaps} steps with the same momentum; the distance between "
+        f"them falls from "
+        + ", ".join(f"{g:.2f}" for g in gaps)
+        + f" and never reaches 0. Then a meeting step, a random-walk step of scale sigma = "
+        f"{scale:g} drawn as a dashed circle around each chain, coupled by the "
+        f"reflection-maximal coupling, moves both to one point, ({meeting[0]:.2f}, "
+        f"{meeting[1]:.2f}), inside both circles, drawn as a dark ring labeled X = Y; at the distance {gaps[-1]:.2f} it does so "
+        f"with probability {p_meet:.2f}."
+    )
+    return svg(width, height, label, "".join(body))
+
+
 # --------------------------------------------------------------------------- output
 
 
@@ -1511,6 +1641,7 @@ def outputs() -> dict[Path, str]:
         OUT / "pipeline.svg": pipeline(),
         OUT / "result.svg": holds(),
         OUT / "chunks.svg": chunks(),
+        OUT / "hmc-meeting.svg": hmc_meeting(),
     }
 
 
