@@ -88,12 +88,12 @@ print("quantiles 50%, 90%, 99%:", np.quantile(lag_one, [0.5, 0.9, 0.99]))
 
 {func}`telescopic.diagnostics.tv_bound` estimates the bound on the total variation
 distance $d_{TV}(\pi_t, \pi)$ between the law $\pi_t$ of $X_t$ and the target $\pi$ from
-these meeting times. A pair unmet at the cap enters as the cap plus 1, which makes the
-estimate a lower bound of the one without a cap; here none is unmet:
+these meeting times; its docstring says how a pair unmet at the cap enters, and here
+none is unmet:
 
 ```{code-cell} python
 t = np.arange(3000)
-tv_lag_one = diagnostics.tv_bound(np.where(np.isinf(lag_one), 10_001, lag_one), 1, t)
+tv_lag_one = diagnostics.tv_bound(lag_one, 1, t)
 print("TV bound at t = 0, 500, 1000:", tv_lag_one[[0, 500, 1000]])
 ```
 
@@ -145,6 +145,9 @@ which the upper edge of the band, two standard errors above the estimate, is bel
 ```{code-cell} python
 terms = np.maximum(0, np.ceil((pairs.meeting_time[:, None] - lag - t) / lag))
 tv_error = terms.std(axis=0, ddof=1) / np.sqrt(len(terms))
+# The same for the lag-1 bound.
+terms_one = np.maximum(0, lag_one[:, None] - 1 - t)
+tv_one_error = terms_one.std(axis=0, ddof=1) / np.sqrt(len(terms_one))
 # The same for the W1 bound, from each pair's own bound.
 w1_terms = np.array([
     diagnostics.w1_bound(
@@ -169,6 +172,8 @@ print(f"W1 bound there: {w1[burn_in]:.4f}")
 # The average of the terms is the bound wherever it is below 1.
 below = tv < 1
 assert np.allclose(terms.mean(axis=0)[below], tv[below])
+below_one = tv_lag_one < 1
+assert np.allclose(terms_one.mean(axis=0)[below_one], tv_lag_one[below_one])
 assert np.allclose(w1_terms.mean(axis=0), w1)
 assert 0 < burn_in < len(t) - 1
 glue("burn_in", burn_in, display=False)
@@ -219,20 +224,6 @@ standard errors of their difference, and from $t = 100$ to $400$, while the chai
 still on their way to the target, the TV bound is less than twice the measured
 difference.
 
-## Summary
-
-The kernel's pairs, the lag, the burn-in and the bounds there:
-
-```{code-cell} python
-print(f"kernel: {kernel}")
-print(f"lag-1 pairs: {len(lag_one)}, median meeting time {np.median(lag_one):.0f}")
-print(
-    f"pairs with lag {lag}: {len(pairs.meeting_time)}, "
-    f"median meeting time {np.median(pairs.meeting_time):.0f}"
-)
-print(f"burn-in: {burn_in}; TV bound {tv[burn_in]:.4f}, W1 bound {w1[burn_in]:.4f}")
-```
-
 ```{code-cell} python
 ---
 mystnb:
@@ -247,7 +238,7 @@ mystnb:
   figure:
     caption: >-
       Left: the estimated bounds on $d_{TV}(\pi_t, \pi)$ from pairs with lag 1 and with
-      the longer lag, with a band of two standard errors for the latter, and the
+      the longer lag, each with a band of two standard errors, and the
       measured $|P(X_{t,1} < 0) - \tfrac12|$ from 10,000 runs of the sampler, with two
       standard errors. Right: the bound on the 1-Wasserstein distance from the pairs
       with the longer lag and the measured $|E[X_{t,1}]|$, each with two standard errors. The
@@ -255,6 +246,13 @@ mystnb:
 ---
 fig, (left, right) = plt.subplots(1, 2, figsize=(8, 3.5), sharex=True)
 left.plot(t, tv_lag_one, label="TV bound, lag 1")
+left.fill_between(
+    t,
+    np.maximum(tv_lag_one - 2 * tv_one_error, 1e-4),
+    tv_lag_one + 2 * tv_one_error,
+    alpha=0.3,
+    color="C0",
+)
 left.plot(t, tv, label=f"TV bound, lag {lag}")
 band = {"alpha": 0.3, "color": "C1"}
 left.fill_between(t, np.maximum(tv - 2 * tv_error, 1e-4), tv + 2 * tv_error, **band)
@@ -272,8 +270,8 @@ for ax in (left, right):
 ```
 
 No warning was raised. {meth}`~telescopic.CoupledSampler.meeting_times` warns of a pair
-still unmet after $10^4$ iterations
-([Slow pairs](../reference/warnings.md#slow-pairs-slow)), and none was.
+that is slow to meet ([Slow pairs](../reference/warnings.md#slow-pairs-slow)), and none
+was.
 {func}`telescopic.engine.run` emits no warning: it records what its caller would warn
 about, so this page checked its pairs itself and found none unmet at the cap. An unmet
 pair would make each bound an underestimate.
