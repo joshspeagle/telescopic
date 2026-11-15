@@ -373,7 +373,14 @@ class CoupledSampler:
         self._tune(progress)
         start = 0 if self.pilot is None else len(self.pilot)
         indices = np.arange(start, start + n)
-        replicates = self._run(PILOT, indices, settings, pool, progress)
+        # A pilot keeps nothing of a run that an error stopped (spec section 6.5).
+        replicates, error, _ = self._run(PILOT, indices, settings, pool, progress)
+        if error is not None:
+            try:
+                raise error
+            finally:
+                del error  # the traceback keeps this frame
+        replicates = cast(engine.Replicates, replicates)
         times = replicates.meeting_time
         self.pilot = times if self.pilot is None else np.concatenate([self.pilot, times])
         self._pilot_zero_density += len(replicates.zero_density)
@@ -455,22 +462,69 @@ class CoupledSampler:
                 # Ctrl-C lets the run finish (spec section 6.5): after the replicates,
                 # while the workers stop and the result is built, it would lose them.
                 catching.enter_context(interrupt.catching())
-                part = self._run(MAIN, indices, settings, pool, show, interrupt)
-            self._replicates = (
-                part if self._replicates is None else engine.merge([self._replicates, part])
-            )
-            result = Result(
-                self._replicates,
-                names=self.names,
-                kernel=self.kernel,
-                initial=self.initial,
-                tuning=self.tuning,
-                pilot=self.pilot,
-            )
+                part, error, others = self._run(MAIN, indices, settings, pool, show, interrupt)
+            # The finished replicates are kept before anything can raise, so that an error,
+            # or a warning made one, leaves them in the sampler (spec section 6.5).
+            if part is not None and len(part.index):
+                self._replicates = (
+                    part if self._replicates is None else engine.merge([self._replicates, part])
+                )
+                if error is not None:
+                    note = self._stopped(part, len(indices), others)
+                    engine._attach(error, "telescopic_result", self._result(), note)
+            elif error is not None:
+                note = f"{engine._STOPPED} the run before any of its replicates finished"
+                engine._attach(error, "telescopic_result", None, note)
+            if error is not None:
+                try:
+                    raise error
+                finally:
+                    del error  # the traceback keeps this frame
+            result = self._result()
             for issue in diagnostics.issues(result):
                 if issue.kind not in _LIVE:
                     warn(issue.message, ConvergenceWarning)
         return result
+
+    def _result(self) -> Result:
+        return Result(
+            cast(engine.Replicates, self._replicates),
+            names=self.names,
+            kernel=self.kernel,
+            initial=self.initial,
+            tuning=self.tuning,
+            pilot=self.pilot,
+        )
+
+    def _stopped(self, part: engine.Replicates, n: int, others: int) -> str:
+        # The note on an error that stopped a run of n replicates, of which part finished,
+        # once the sampler keeps them.
+        replicates = cast(engine.Replicates, self._replicates)
+        missing = len(np.setdiff1d(replicates.requested, replicates.index))
+        abandoned = part.abandoned
+        lines = [
+            f"{engine._STOPPED} the run with {len(part.index):,} of its {n:,} replicates finished"
+        ]
+        if len(abandoned):
+            lines[0] += (
+                f"; the {len(abandoned):,} in progress (indices {abandoned[0]:,} to "
+                f"{abandoned[-1]:,}) were abandoned"
+            )
+        lines.append(
+            "The sampler keeps the finished replicates, and its next run starts with the "
+            f"{missing:,} missing ones; error.telescopic_result holds the result of all its "
+            "replicates so far, which CoupledSampler.resume continues in a new sampler. An "
+            "error that recurs at a replicate will recur there."
+        )
+        if len(abandoned):
+            lines.append(
+                "Leaving abandoned replicates out would bias the estimates, since the "
+                "replicates still running when an error comes tend to be those with long "
+                "meeting times."
+            )
+        if others:
+            lines.append(f"Errors stopped {others:,} other chunks of the run too.")
+        return f"{lines[0]}. {' '.join(lines[1:])}"
 
     def _next_indices(self, n: int) -> IntArray:
         # The requested replicates that an interrupted run never started come first, then
@@ -490,13 +544,13 @@ class CoupledSampler:
         pool: Any,
         progress: bool,
         interrupt: Interrupt | None = None,
-    ) -> engine.Replicates:
-        # The engine on the given replicates, here or on the opened pool. A main run stores
-        # its measures and stops on Ctrl-C, through interrupt (spec section 6.5); a pilot
-        # run does neither.
+    ) -> engine._Outcome:
+        # The engine on the given replicates, here or on the opened pool, and the error
+        # that stopped it, if any. A main run stores its measures and stops on Ctrl-C,
+        # through interrupt (spec section 6.5); a pilot run does neither.
         main = namespace == MAIN
         job = functools.partial(
-            engine.run,
+            engine._run,
             self.target,
             self.kernel,
             self.initial,
@@ -518,14 +572,13 @@ class CoupledSampler:
             return interrupt is not None and interrupt.stopping
 
         try:
-            replicates = execute(job, indices, pool, monitor, self.n_workers)
+            replicates, error, others = execute(job, indices, pool, monitor, self.n_workers)
         finally:
             if bar is not None:
                 bar.close()
-        outside.after(replicates)
-        slow.after(replicates)
-        zeroed.after(replicates)
-        return replicates
+        if replicates is not None:
+            error = error or _checked(replicates, outside, slow, zeroed)
+        return engine._Outcome(replicates, error, others)
 
     def _check(
         self, k: int | str, m: int | str, lag: int | str, thin: int | None, max_iter: int | None
@@ -744,6 +797,21 @@ def sample(
         rng=rng,
     )
     return sampler.run(n_replicates, k=k, m=m, lag=lag, thin=thin, max_iter=max_iter)
+
+
+def _checked(
+    replicates: engine.Replicates,
+    outside: _ZeroDensityStarts,
+    slow: _SlowPairs,
+    zeroed: _ZeroedGradients,
+) -> Exception | None:
+    # The checks after a run, and the exception one raised, as a warning made an error:
+    # it stops the run as any error does, with every replicate kept (spec section 6.5).
+    with engine._Caught() as caught:
+        outside.after(replicates)
+        slow.after(replicates)
+        zeroed.after(replicates)
+    return caught.error
 
 
 class _ZeroDensityStarts:

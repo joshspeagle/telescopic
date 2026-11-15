@@ -140,6 +140,10 @@ class Result:
     interrupted : bool
         Whether a requested replicate never ran, so that the estimates are consistent
         but not exactly unbiased until it does.
+    abandoned : ndarray of int
+        The replicates that an error stopped while they ran and that have not run since.
+        They tend to be those with long meeting times, so while there are any the
+        estimates leave out a selection of the replicates.
     """
 
     def __init__(
@@ -183,6 +187,7 @@ class Result:
         self.tuning, self.pilot = tuning, pilot
         # The engine runs only requested indices, so missing ones make index shorter.
         self.interrupted = len(replicates.index) < len(replicates.requested)
+        self.abandoned = np.setdiff1d(replicates.abandoned, replicates.index)
         # The cap for a censored pair makes the bounds of section 3.6 lower bounds of
         # their estimates. The engine compared its chains at the cap before censoring
         # it, so the TV bound counts it as meeting at cap + 1, the least it can.
@@ -586,6 +591,7 @@ class Result:
             "kernel": str(self.kernel),
             **self.diagnostics(),
             "interrupted": self.interrupted,
+            "abandoned": len(self.abandoned),
             "warnings": [issue.message for issue in diagnostics.issues(self)],
         }
         return Summary(self.names, table, footer)
@@ -913,7 +919,13 @@ class Summary:
                 f"{footer['variance_share']:.0%}, for {footer['variance_share_of']}"
             ),
         ]
-        if footer["interrupted"]:
+        if footer["abandoned"]:
+            lines.append(
+                f"an error abandoned {footer['abandoned']} replicates in progress: the "
+                "estimates leave out replicates selected for long meeting times; run the "
+                "missing replicates"
+            )
+        elif footer["interrupted"]:
             lines.append(
                 "interrupted: the estimates are consistent but not exactly unbiased; run "
                 "the remaining replicates to restore unbiasedness"

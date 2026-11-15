@@ -21,6 +21,8 @@ import pytest
 import telescopic
 from references import (
     Counted,
+    Failing,
+    assert_same_outputs,
     assert_same_replicates,
     gaussian_log_prob,
     never_called,
@@ -974,3 +976,55 @@ def test_a_run_with_log_prob_and_grad_takes_its_values_from_it_alone(kernel, che
         rng=0,
     )
     assert result.n_log_prob == result.n_grad > 0
+
+
+def failed_sampler(at=30_000, n=600):
+    # A sampler whose run of n replicates raised at evaluation `at`, and that error.
+    failing = Failing(at)
+    sampler = CoupledSampler(failing, INIT, kernel=KERNEL, rng=7)
+    with pytest.raises(ValueError, match=f"failed at evaluation {at}") as caught:
+        sampler.run(n, k=40, m=40)
+    assert caught.value is failing.error
+    return sampler, caught.value
+
+
+def test_sampler_keeps_finished_replicates_and_runs_the_missing_ones_next():
+    sampler, error = failed_sampler()
+    kept = error.telescopic_result
+    assert 0 < len(kept.index) < 600
+    assert_same_replicates(kept._replicates, sampler._replicates)
+    notes = [note for note in error.__notes__ if note.startswith("telescopic:")]
+    assert len(notes) == 1
+    assert f"next run starts with the {600 - len(kept.index)} missing ones" in notes[0]
+    completed = sampler.run(600 - len(kept.index))
+    whole = sample(gaussian_log_prob, INIT, 600, kernel=KERNEL, k=40, m=40, rng=7)
+    assert_same_outputs(completed._replicates, whole._replicates)
+
+
+def test_abandoned_replicates_are_flagged_and_cleared_when_run():
+    sampler, error = failed_sampler()
+    kept = error.telescopic_result
+    assert len(kept.abandoned)
+    assert kept.interrupted
+    summary = kept.summary()
+    assert summary.footer["abandoned"] == len(kept.abandoned)
+    assert f"an error abandoned {len(kept.abandoned)} replicates in progress" in repr(summary)
+    assert "interrupted" not in repr(summary)
+    completed = sampler.run(600 - len(kept.index))
+    assert not len(completed.abandoned)
+    assert not completed.interrupted
+    assert completed.summary().footer["abandoned"] == 0
+
+
+@pytest.mark.parametrize("stage", ["meeting_times", "run"])
+def test_a_pilot_error_keeps_no_replicates(stage):
+    # Evaluation 1,000 falls inside the 100 lag-1 pilot pairs of an automatic k.
+    failing = Failing(1_000)
+    sampler = CoupledSampler(failing, INIT, kernel=KERNEL, rng=7)
+    with pytest.raises(ValueError, match="failed at evaluation") as caught:
+        getattr(sampler, stage)(100)
+    assert caught.value is failing.error
+    assert not hasattr(caught.value, "telescopic_result")
+    assert not getattr(caught.value, "__notes__", [])
+    assert sampler.pilot is None
+    assert sampler.settings is None

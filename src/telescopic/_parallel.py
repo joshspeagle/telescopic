@@ -13,6 +13,7 @@ import signal
 import sys
 import threading
 import time
+import traceback
 from collections.abc import Callable, Iterator
 from concurrent.futures import BrokenExecutor, Executor, Future, ProcessPoolExecutor
 from contextlib import AbstractContextManager, contextmanager
@@ -42,7 +43,7 @@ MAX_PROCESSES = 61 if sys.platform == "win32" else sys.maxsize
 # them on Windows, where a blocked wait does not see it.
 POLL = 0.1
 
-Job = Callable[..., engine.Replicates]
+Job = Callable[..., engine._Outcome]
 Monitor = Callable[[engine.Status], bool]
 
 
@@ -148,15 +149,19 @@ def opened(pool: Any) -> Iterator[Any]:
 
 def execute(
     job: Job, indices: IntArray, pool: Any, monitor: Monitor, n_workers: int | None = None
-) -> engine.Replicates:
+) -> engine._Outcome:
     # The job on sorted indices, here or on an opened pool, whose workers n_workers counts
     # when given. Here the monitor sees every iteration; on a pool, the finished
     # replicates after each chunk and every POLL seconds. Once it returns true,
     # telescopic's workers start no new replicate, and a chunk that starts on them
     # afterwards runs nothing unless it is the first; a user's executor starts no chunk
-    # that it can still cancel (spec sections 6.4 and 6.5).
+    # that it can still cancel (spec sections 6.4 and 6.5). An error stops the run in the
+    # same way, and is returned with the replicates finished: the error raised in this
+    # process if one was, else that of the lowest-indexed chunk that failed, with the
+    # number of the other chunks' errors.
     if pool is None:
-        return job(indices, monitor=monitor)
+        outcome: engine._Outcome = job(indices, monitor=monitor)
+        return outcome
     start = time.perf_counter()
     workers = _workers(pool, n_workers)
     # Chunks of at most a full set of lanes, where four per worker allow (DECISIONS #52),
@@ -166,14 +171,21 @@ def execute(
     pieces = np.array_split(indices, max(count, math.ceil(n / MAX_CHUNK)))
     task = functools.partial(_task, _dumps(job), os.getpid())
     if isinstance(pool, Workers):
-        parts = _gather(pool.executor, task, pieces, monitor, pool.stop)
+        outcomes, error = _gather(pool.executor, task, pieces, monitor, pool.stop)
     elif hasattr(pool, "submit"):
-        parts = _gather(pool, task, pieces, monitor, None)
+        outcomes, error = _gather(pool, task, pieces, monitor, None)
     else:
-        parts = _waves(pool, task, pieces, workers, monitor)
+        outcomes, error = _waves(pool, task, pieces, workers, monitor)
+    outcomes.sort(key=lambda pair: pair[0])
+    failures = [outcome.error for _, outcome in outcomes if outcome.error is not None]
+    if error is None and failures:
+        error = failures.pop(0)
+    parts = [outcome.replicates for _, outcome in outcomes if outcome.replicates is not None]
+    if not parts:
+        return engine._Outcome(None, error, len(failures))
     # Unstarted chunks are requested too, and the time is the parent's, not the workers'.
-    merged = engine.merge(parts)
-    return replace(merged, requested=indices, seconds=time.perf_counter() - start)
+    merged = replace(engine.merge(parts), requested=indices, seconds=time.perf_counter() - start)
+    return engine._Outcome(merged, error, len(failures))
 
 
 def _workers(pool: Any, n_workers: int | None) -> int:
@@ -195,11 +207,11 @@ def _workers(pool: Any, n_workers: int | None) -> int:
 
 def _gather(
     executor: Executor,
-    task: Callable[..., engine.Replicates | None],
+    task: Callable[..., engine._Outcome | None],
     pieces: list[IntArray],
     monitor: Monitor,
     stop: Any,
-) -> list[engine.Replicates]:
+) -> tuple[list[tuple[int, engine._Outcome]], Exception | None]:
     # Every chunk is submitted at once, in index order. Once the monitor asks to stop,
     # the chunks not started are canceled, except the first, so that a run returns a
     # replicate, as the engine's first fill does. A process pool keeps up to
@@ -208,14 +220,19 @@ def _gather(
     # telescopic's workers, but on a user's pool, which has none, they run all their
     # replicates (DECISIONS #95). Ctrl-C also kills the idle workers of a user's process
     # pool that does not ignore it, and the pool then fails every chunk left, after any
-    # finished one. After a stop those chunks count as not run; with none finished, the
-    # pool's error stands, as there is no result to return.
-    done: queue.SimpleQueue[Future[engine.Replicates | None]] = queue.SimpleQueue()
+    # finished one; after a stop those chunks count as not run. An error stops the run
+    # alike, but cancels the first chunk too: a chunk's error, a broken pool otherwise,
+    # or an exception raised here, by the monitor, which is then no longer called. The
+    # running chunks finish, and every outcome returned is kept, with its chunk's
+    # position, and with the exception raised here, if any (spec section 6.5).
+    done: queue.SimpleQueue[Future[engine._Outcome | None]] = queue.SimpleQueue()
     futures = [executor.submit(task, piece, first=i == 0) for i, piece in enumerate(pieces)]
+    position = {future: i for i, future in enumerate(futures)}
     for future in futures:
         future.add_done_callback(done.put)
-    parts: list[engine.Replicates] = []
+    outcomes: list[tuple[int, engine._Outcome]] = []
     finished, remaining = 0, len(futures)
+    stopping, failed, error = False, False, None
     try:
         while remaining:
             try:
@@ -224,47 +241,90 @@ def _gather(
                 pass
             else:
                 remaining -= 1
-                try:
-                    part = None if future.cancelled() else future.result()
-                except BrokenExecutor:
-                    if not (parts and monitor(engine.Status(finished, -1, 0))):
-                        raise
-                    part = None
-                if part is not None:
-                    parts.append(part)
-                    finished += len(part.index)
-            if monitor(engine.Status(finished, -1, 0)):
+                outcome, raised = _result(future)
+                if raised is not None:
+                    broken = isinstance(raised, BrokenExecutor) and bool(outcomes) and not failed
+                    if broken:
+                        stopping, error = _ask(monitor, finished, stopping, error)
+                    if not (broken and stopping):
+                        outcome = engine._Outcome(None, raised)
+                if outcome is not None:
+                    outcomes.append((position[future], outcome))
+                    if outcome.replicates is not None:
+                        finished += len(outcome.replicates.index)
+                    failed = failed or outcome.error is not None
+            if not failed:
+                stopping, error = _ask(monitor, finished, stopping, error)
+            if stopping or failed or error is not None:
                 if stop is not None:
                     stop.set()
-                for waiting in futures[1:]:
+                for waiting in futures if failed or error is not None else futures[1:]:
                     waiting.cancel()
     finally:
         for waiting in futures:
             waiting.cancel()
         # A raised error's traceback keeps this frame, and its future keeps the error:
         # dropping the futures lets the workers go with the error, not at a later collection.
-        del futures, future, waiting
-    return parts
+        del futures, position, future, waiting
+    return outcomes, error
+
+
+def _result(
+    future: Future[engine._Outcome | None],
+) -> tuple[engine._Outcome | None, Exception | None]:
+    # A done future's outcome, None for a canceled future or a chunk that ran nothing, or
+    # the exception it raised: the pool's, since a chunk returns its errors.
+    if future.cancelled():
+        return None, None
+    with engine._Caught() as caught:
+        return future.result(), None
+    return None, caught.error
+
+
+def _ask(
+    monitor: Monitor, finished: int, stopping: bool, error: Exception | None
+) -> tuple[bool, Exception | None]:
+    # Whether the monitor asks to stop, and the exception it raised, which stops the run
+    # and ends the calls; none after one.
+    if error is not None:
+        return stopping, error
+    with engine._Caught() as caught:
+        return monitor(engine.Status(finished, -1, 0)), None
+    return stopping, caught.error
 
 
 def _waves(
     pool: Any,
-    task: Callable[..., engine.Replicates | None],
+    task: Callable[..., engine._Outcome | None],
     pieces: list[IntArray],
     workers: int,
     monitor: Monitor,
-) -> list[engine.Replicates]:
+) -> tuple[list[tuple[int, engine._Outcome]], Exception | None]:
     # A pool with only map runs waves of one chunk per worker; once the monitor asks to
-    # stop, no further wave starts.
-    parts: list[engine.Replicates] = []
+    # stop, or an error stops the run, no further wave starts. An error of map itself
+    # loses the other outcomes of its wave.
+    outcomes: list[tuple[int, engine._Outcome]] = []
     finished = 0
     for start in range(0, len(pieces), workers):
-        for part in pool.map(task, pieces[start : start + workers]):
-            parts.append(part)
-            finished += len(part.index)
-        if monitor(engine.Status(finished, -1, 0)):
+        with engine._Caught() as caught:
+            wave = list(pool.map(task, pieces[start : start + workers]))
+        if caught.error is not None:
+            outcomes.append((start, engine._Outcome(None, caught.error)))
             break
-    return parts
+        for offset, outcome in enumerate(wave):
+            if outcome is None:
+                continue  # a map pool has no stop event, so its chunks always run
+            outcomes.append((start + offset, outcome))
+            if outcome.replicates is not None:
+                finished += len(outcome.replicates.index)
+        if any(outcome is not None and outcome.error is not None for outcome in wave):
+            break
+        stopping, error = _ask(monitor, finished, False, None)
+        if error is not None:
+            return outcomes, error
+        if stopping:
+            break
+    return outcomes, None
 
 
 def _dumps(job: Job) -> bytes:
@@ -316,15 +376,37 @@ def _start_worker(stop: Any) -> None:
 
 def _task(
     payload: bytes, parent: int, indices: IntArray, first: bool = False
-) -> engine.Replicates | None:
-    # One chunk, in any process. In telescopic's workers, a chunk that starts after the
-    # stop runs nothing, except the first, and the others start no replicate after it.
+) -> engine._Outcome | None:
+    # One chunk's outcome, in any process; its error is returned, never raised. In
+    # telescopic's workers, a chunk that starts after the stop runs nothing, except the
+    # first, and the others start no replicate after it.
     stop = _stop
     if stop is not None and stop.is_set() and not first:
         return None
-    job = _load(payload)
-    with _as_worker(parent):
-        return job(indices, monitor=None if stop is None else lambda status: stop.is_set())
+    outcome = engine._Outcome(None, None)
+    with engine._Caught() as caught:
+        job = _load(payload)
+        with _as_worker(parent):
+            outcome = job(indices, monitor=None if stop is None else lambda status: stop.is_set())
+    if caught.error is not None:
+        outcome = engine._Outcome(None, caught.error)
+    if outcome.error is None or os.getpid() == parent:
+        return outcome
+    return outcome._replace(error=_portable(outcome.error))
+
+
+def _portable(error: Exception) -> Exception:
+    # In a worker process: the error as the parent can unpickle it, or a RuntimeError
+    # naming it, which a pool could otherwise turn into a broken pool, with a note that
+    # holds the worker's traceback, which pickling drops. In this process an error object
+    # can be shared between chunks, so it is left alone.
+    trace = "".join(traceback.format_exception(error)).rstrip()
+    with engine._Caught() as caught:
+        pickle.loads(pickle.dumps(error))
+    if caught.error is not None:
+        error = RuntimeError(f"{type(error).__qualname__}: {error}")
+    error.add_note(f"telescopic: the traceback in the worker process:\n{trace}")
+    return error
 
 
 @contextmanager

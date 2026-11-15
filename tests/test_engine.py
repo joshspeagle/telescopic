@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from scipy import stats
 
-from references import assert_same_replicates, dense, gaussian_log_prob
+from references import Failing, assert_same_replicates, dense, gaussian_log_prob
 from telescopic._random import MAIN, replicate_generator
 from telescopic.engine import Settings, Status, merge, run, stored_bytes
 from telescopic.estimators import averaging_times, correction_coefficients
@@ -15,10 +15,10 @@ TARGET = Target(gaussian_log_prob)
 FAR = Normal(mean=[3.0, -1.0], cov=[1.0, 1.0])
 
 
-def simulate(kernel=None, initial=FAR, n=20, indices=None, **options):
+def simulate(kernel=None, initial=FAR, n=20, indices=None, target=TARGET, **options):
     settings = {"k": 2, "m": 10, "lag": 1, "lanes": 8, "rng": 1} | options
     return run(
-        TARGET,
+        target,
         RandomWalk(np.eye(2), scale=1.0) if kernel is None else kernel,
         initial,
         range(n) if indices is None else indices,
@@ -372,3 +372,48 @@ def test_the_storage_estimate_refuses_steps_that_are_not_non_negative_integers(c
 
 def test_the_storage_estimate_is_zero_for_a_run_that_stores_nothing():
     assert stored_bytes(Settings(2, 6, 1, store=False), 2, [10]) == 0
+
+
+def bounded_log_prob(x):
+    # The standard normal outside x_0 > 3.5, where a third of FAR's starts fall.
+    return -np.inf if x[0] > 3.5 else gaussian_log_prob(x)
+
+
+def failed_run(at, log_prob=gaussian_log_prob, **options):
+    # The error of a run whose log-density raises at its evaluation number `at`.
+    failing = Failing(at, log_prob=log_prob)
+    with pytest.raises(ValueError, match=f"failed at evaluation {at}") as caught:
+        simulate(target=Target(failing), **options)
+    assert caught.value is failing.error
+    return caught.value
+
+
+def test_engine_attaches_the_replicates_finished_before_an_error():
+    error = failed_run(300)
+    finished = error.telescopic_replicates
+    assert 0 < len(finished.index) < 20
+    assert len(finished.abandoned)
+    assert not np.isin(finished.abandoned, finished.index).any()
+    np.testing.assert_array_equal(finished.requested, np.arange(20))
+    note = (
+        f"telescopic: this error stopped the run with {len(finished.index)} of its 20 "
+        f"replicates finished and {len(finished.abandoned)} in progress abandoned; "
+        "error.telescopic_replicates holds the finished ones"
+    )
+    assert [line for line in error.__notes__ if line.startswith("telescopic:")] == [note]
+    alone = simulate(indices=finished.index)
+    for name in ("index", "meeting_time", "atoms", "weights", "owner", "distance", "zero_density"):
+        np.testing.assert_array_equal(getattr(finished, name), getattr(alone, name), name)
+
+
+@pytest.mark.parametrize("at", [200, 300, 400])
+def test_records_after_an_error_hold_no_atoms_distances_zero_density_or_paths_of_unfinished_replicates(
+    at,
+):
+    # Some abandoned replicates started at zero density, and all have distances and paths.
+    whole = simulate(target=Target(bounded_log_prob), keep_paths=True)
+    finished = failed_run(at, bounded_log_prob, keep_paths=True).telescopic_replicates
+    assert np.isin(finished.abandoned, whole.zero_density).any()
+    for name in ("owner", "distance_owner", "zero_density"):
+        assert np.isin(getattr(finished, name), finished.index).all(), name
+    assert set(finished.paths) == set(finished.index.tolist())

@@ -6,7 +6,7 @@ import itertools
 import time
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, Self, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -93,7 +93,10 @@ class Replicates:
         The replicates whose :math:`X_0` or :math:`Y_0` has zero target density.
     requested : ndarray of int
         The indices the run was asked for, sorted: ``index`` lacks those of replicates
-        that an interrupted run never started.
+        that an interrupted run never started, or that an error stopped.
+    abandoned : ndarray of int
+        The replicates in progress when an error stopped the run, sorted; nothing of them
+        is recorded.
     n_log_prob, n_grad : int
         Evaluations of the log-density and its gradient.
     n_grad_zeroed : int
@@ -117,6 +120,7 @@ class Replicates:
     distance: FloatArray
     zero_density: IntArray
     requested: IntArray
+    abandoned: IntArray = field(default_factory=lambda: np.zeros(0, dtype=np.int64))
     n_log_prob: int = 0
     n_grad: int = 0
     n_grad_zeroed: int = 0
@@ -150,6 +154,15 @@ class Replicates:
         stopped = self.stopped
         cost: IntArray = (stopped + np.maximum(stopped, self.settings.m)).astype(np.int64)
         return cost - self.settings.lag
+
+
+class _Outcome(NamedTuple):
+    # What a run returns inside the package (spec section 6.5): the record of its finished
+    # replicates, None when none could be made, and the error that stopped it, None when
+    # none did; others counts the errors of a pool's other chunks.
+    replicates: Replicates | None
+    error: Exception | None
+    others: int = 0
 
 
 class Status(NamedTuple):
@@ -251,10 +264,89 @@ def run(
     -------
     Replicates
 
+    Raises
+    ------
+    Exception
+        An error raised while the replicates run, such as one of the log-density, is
+        raised again as the same object once the replicates finished before it are
+        recorded: its attribute ``telescopic_replicates`` holds them, a
+        :class:`Replicates` whose ``abandoned`` lists the replicates in progress, or
+        ``None`` when no record could be made, and one note says so. An exception object
+        raised in several runs carries the attribute and the note of the last of them.
+
     Notes
     -----
     Memory: :func:`stored_bytes` gives the size of the stored atoms and distances.
     """
+    outcome = _run(
+        target,
+        kernel,
+        initial,
+        indices,
+        k=k,
+        m=m,
+        lag=lag,
+        thin=thin,
+        max_iter=max_iter,
+        rng=rng,
+        lanes=lanes,
+        store=store,
+        keep_paths=keep_paths,
+        monitor=monitor,
+    )
+    replicates, error, _ = outcome
+    if error is None:
+        return cast(Replicates, replicates)
+    if replicates is None:
+        note = "no record of its finished replicates could be made"
+    else:
+        note = (
+            f"{len(replicates.index)} of its {len(replicates.requested)} replicates "
+            f"finished and {len(replicates.abandoned)} in progress abandoned; "
+            "error.telescopic_replicates holds the finished ones"
+        )
+    _attach(error, "telescopic_replicates", replicates, f"{_STOPPED} the run with {note}")
+    try:
+        raise error
+    finally:
+        # The traceback keeps this frame, whose names would otherwise keep the error.
+        del error, outcome
+
+
+# The start of the note that a run adds to the error that stopped it.
+_STOPPED = "telescopic: this error stopped"
+
+
+def _attach(error: Exception, name: str, value: Any, note: str) -> None:
+    # Sets a run's attribute and its one note on the error that stopped it; the note of
+    # an earlier run that raised the same object goes.
+    notes = getattr(error, "__notes__", None)
+    if notes:
+        notes[:] = [line for line in notes if not line.startswith(_STOPPED)]
+    setattr(error, name, value)
+    error.add_note(note)
+
+
+def _run(
+    target: Target,
+    kernel: Kernel,
+    initial: Any,
+    indices: npt.ArrayLike,
+    *,
+    k: int,
+    m: int,
+    lag: int,
+    thin: int = 1,
+    max_iter: int | None = None,
+    rng: Seed = None,
+    lanes: int = LANES,
+    store: bool = True,
+    keep_paths: bool = False,
+    monitor: Callable[[Status], bool] | None = None,
+) -> _Outcome:
+    # run, returning an outcome: an error that stops the replicates is returned with the
+    # record of those finished before it, never raised, while KeyboardInterrupt and the
+    # other BaseExceptions are. Invalid arguments raise before any replicate starts.
     instance("target", target, Target)
     instance("kernel", kernel, Kernel)
     settings = check_settings(Settings(k, m, lag, thin, max_iter, flag("store", store)))
@@ -275,19 +367,52 @@ def run(
     queue = iter(requested.tolist())
     first = next(queue)
     start = time.perf_counter()
-    head = _Start(first, initial, seed, None)
+    with _Caught() as caught:
+        head = _Start(first, initial, seed, None)
+    if caught.error is not None:
+        return _Outcome(None, caught.error)
     ndim = len(head.x0)
     starts = itertools.chain([head], (_Start(i, initial, seed, ndim) for i in queue))
     batch = _Batch(target, kernel, ndim, lanes, settings, keep_paths)
-    batch.fill(np.arange(lanes), starts)
-    stopping = False
-    while batch.active.any():
-        batch.advance()
-        free = batch.finish()
-        stopping = (monitor is not None and monitor(batch.status())) or stopping
-        if not stopping:
-            batch.fill(free, starts)
-    return batch.result(seed, np.sort(requested), start)
+    with _Caught() as caught:
+        batch.fill(np.arange(lanes), starts)
+        stopping = False
+        while batch.active.any():
+            batch.advance()
+            free = batch.finish()
+            stopping = (monitor is not None and monitor(batch.status())) or stopping
+            if not stopping:
+                batch.fill(free, starts)
+    error = caught.error
+    with _Caught() as recording:
+        return _Outcome(batch.result(seed, np.sort(requested), start), error)
+    if error is None:
+        return _Outcome(None, recording.error)
+    error.add_note(
+        "telescopic: no record of the replicates finished before this error could be made, "
+        "so they were lost"
+    )
+    return _Outcome(None, error)
+
+
+class _Caught:
+    # A block that stops an Exception raised in it and keeps it in error, while
+    # KeyboardInterrupt and the other BaseExceptions pass. The error's traceback keeps the
+    # frame of the block, so a frame that must not outlive the error, such as one that
+    # holds worker processes, catches in a function of its own.
+    def __init__(self) -> None:
+        self.error: Exception | None = None
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(
+        self, kind: type[BaseException] | None, error: BaseException | None, _: object
+    ) -> bool:
+        if isinstance(error, Exception):
+            self.error = error
+            return True
+        return False
 
 
 # Spec section 3.2.
@@ -328,7 +453,7 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
     """Join the outputs of disjoint sets of replicates of one run, sorted by replicate index.
 
     The parts must share the root seed, the settings and the dimension; the requested
-    indices are the union of theirs. For a target evaluated point by point the result is
+    and the abandoned indices are the unions of theirs. For a target evaluated point by point the result is
     bitwise that of one run of all the replicates; for a vectorized one it can differ
     from it as a run with other ``lanes`` does (:func:`run`).
 
@@ -379,6 +504,7 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
         settings=first.settings,
         **columns,
         requested=np.unique(np.concatenate([part.requested for part in parts])),
+        abandoned=np.unique(np.concatenate([part.abandoned for part in parts])),
         **{name: sum(getattr(part, name) for part in parts) for name in (*COUNTS, "seconds")},
         paths=paths,
     )
@@ -551,10 +677,18 @@ class _Batch:
         )
 
     def result(self, seed: SeedSequence, requested: IntArray, start: float) -> Replicates:
-        # The seconds since start include this join, a large part of a run with many atoms.
+        # The finished replicates' outputs. After an error, the lanes still active hold the
+        # abandoned replicates, whose rows, starts at zero density and paths are left out
+        # (spec section 6.5). The seconds since start include this join, a large part of a
+        # run with many atoms.
         index, tau = self.finished.join()
+        abandoned = np.sort(self.replicate[self.active])
         owner, atoms, weights = self.atoms.join(keep=index[tau >= 0])
-        distance_owner, distance_time, distance = self.distances.join()
+        distance_owner, distance_time, distance = self.distances.join(
+            keep=index if len(abandoned) else None
+        )
+        zero_density = np.array(self.zero_density, dtype=np.int64)
+        finished = set(index.tolist())
         return Replicates(
             seed=seed,
             settings=self.settings,
@@ -566,11 +700,14 @@ class _Batch:
             distance_owner=distance_owner,
             distance_time=distance_time,
             distance=distance,
-            zero_density=np.sort(np.array(self.zero_density, dtype=np.int64)),
+            zero_density=np.sort(zero_density[np.isin(zero_density, index)]),
             requested=requested,
+            abandoned=abandoned,
             **{name: getattr(self.target, name) - n for name, n in self.counts.items()},
             seconds=time.perf_counter() - start,
-            paths={i: (np.array(x), np.array(y)) for i, (x, y) in self.paths.items()},
+            paths={
+                i: (np.array(x), np.array(y)) for i, (x, y) in self.paths.items() if i in finished
+            },
         )
 
     def _record(self, stepped: IntArray, unmet: IntArray) -> None:
