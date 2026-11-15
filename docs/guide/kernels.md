@@ -298,8 +298,7 @@ example: [Gibbs](../tutorials/gibbs.md).
 The random walk, MALA and the independence kernel are one Metropolis-Hastings kernel,
 {class}`telescopic.kernels.MetropolisHastings`, with three proposals. Each proposal draws
 $x' \sim q(\cdot \mid x)$ and gives the log acceptance ratio
-$\log\pi(x') - \log\pi(x) + \log q(x \mid x') - \log q(x' \mid x)$, with the
-current and the proposed states, in which it may fill fields of its own, and a coupling
+$\log\pi(x') - \log\pi(x) + \log q(x \mid x') - \log q(x' \mid x)$, and a coupling
 object draws the proposals of both chains of a pair. `MetropolisHastings(proposal,
 coupling)` raises `ValueError` unless the coupling supports the proposal. The couplings
 of {mod}`telescopic.couplings` support these proposals, matched by their exact class, so

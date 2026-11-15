@@ -39,8 +39,8 @@ class Proposal(ABC):
     A subclass implements :meth:`sample` and :meth:`log_alpha`, and :meth:`evaluate` when
     its proposals' states need other fields than the current states'. A coupled step
     calls :meth:`log_alpha` once for each chain. A proposal with fields of its own in a
-    :class:`~telescopic.kernels.State`'s ``extra``, such as a cache, gives their initial
-    values in :meth:`init_extra` and returns them, updated, from :meth:`log_alpha`.
+    :class:`~telescopic.kernels.State`'s ``extra`` gives their initial values in
+    :meth:`init_extra`, and :meth:`evaluate` can fill them at the proposals.
     """
 
     @property
@@ -120,8 +120,8 @@ class Proposal(ABC):
     @abstractmethod
     def log_alpha(
         self, target: Target, current: State, proposed: State, forward: Any
-    ) -> tuple[FloatArray, State, State]:
-        r"""The log acceptance ratios :math:`\log\pi(x') - \log\pi(x) + \log q(x \mid x') - \log q(x' \mid x)`, with the states.
+    ) -> FloatArray:
+        r"""The log acceptance ratios :math:`\log\pi(x') - \log\pi(x) + \log q(x \mid x') - \log q(x' \mid x)`.
 
         Parameters
         ----------
@@ -134,13 +134,16 @@ class Proposal(ABC):
 
         Returns
         -------
-        log_alpha : ndarray, shape (n,)
+        ndarray, shape (n,)
             NaN, from ``-inf - -inf``, is a rejection.
-        current, proposed : State
-            The states given, or copies with the proposal's own fields filled, which the
-            step keeps: those of ``proposed`` where it accepts, those of ``current``
-            elsewhere.
         """
+
+    def _log_alpha_states(
+        self, target: Target, current: State, proposed: State, forward: Any
+    ) -> tuple[FloatArray, State, State]:
+        # log_alpha with the states that the step keeps, in which a shipped proposal may
+        # fill its fields: IndependenceProposal refreshes its cache there.
+        return self.log_alpha(target, current, proposed, forward), current, proposed
 
     def _coupled_log_alpha(
         self,
@@ -152,12 +155,12 @@ class Proposal(ABC):
         forward_x: Any,
         forward_y: Any,
     ) -> tuple[tuple[FloatArray, State, State], tuple[FloatArray, State, State]]:
-        # log_alpha of both chains of a coupled step. Internal to the shipped proposals:
-        # IndependenceProposal overrides it to share one call of its density between the
-        # chains.
+        # _log_alpha_states of both chains of a coupled step. Internal to the shipped
+        # proposals: IndependenceProposal overrides it to share one call of its density
+        # between the chains.
         return (
-            self.log_alpha(target, state_x, proposed_x, forward_x),
-            self.log_alpha(target, state_y, proposed_y, forward_y),
+            self._log_alpha_states(target, state_x, proposed_x, forward_x),
+            self._log_alpha_states(target, state_y, proposed_y, forward_y),
         )
 
 
@@ -232,8 +235,8 @@ class RandomWalkProposal(_GaussianProposal):
 
     def log_alpha(
         self, target: Target, current: State, proposed: State, forward: Any
-    ) -> tuple[FloatArray, State, State]:
-        return log_ratio(proposed.log_prob, current.log_prob), current, proposed
+    ) -> FloatArray:
+        return log_ratio(proposed.log_prob, current.log_prob)
 
     def reflect(
         self, target: Target, state_x: State, state_y: State, draws: Draws
@@ -279,10 +282,9 @@ class LangevinProposal(_GaussianProposal):
 
     def log_alpha(
         self, target: Target, current: State, proposed: State, forward: Any
-    ) -> tuple[FloatArray, State, State]:
+    ) -> FloatArray:
         residual, drift = forward
-        log_alpha = _log_alpha(current, proposed, residual, drift, self.factor, target.vectorize)
-        return log_alpha, current, proposed
+        return _log_alpha(current, proposed, residual, drift, self.factor, target.vectorize)
 
     def reflect(
         self, target: Target, state_x: State, state_y: State, draws: Draws
@@ -369,6 +371,11 @@ class IndependenceProposal(Proposal):
         return self.distribution.sample(draws), None
 
     def log_alpha(
+        self, target: Target, current: State, proposed: State, forward: Any
+    ) -> FloatArray:
+        return self._log_alpha_states(target, current, proposed, forward)[0]
+
+    def _log_alpha_states(
         self, target: Target, current: State, proposed: State, forward: Any
     ) -> tuple[FloatArray, State, State]:
         (new, proposed), (old, current) = self._log_weights(proposed, current)
@@ -495,7 +502,7 @@ class MetropolisHastings(Kernel):
         proposal, _ = self._ready()
         x, forward = proposal.sample(target, state, draws)
         proposed = proposal.evaluate(target, x, state)
-        log_alpha, current, proposed = proposal.log_alpha(target, state, proposed, forward)
+        log_alpha, current, proposed = proposal._log_alpha_states(target, state, proposed, forward)
         accepted = draws.log_uniform() < log_alpha
         return select(accepted, proposed, current), acceptance(log_alpha)
 

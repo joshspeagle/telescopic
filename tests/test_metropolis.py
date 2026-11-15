@@ -340,3 +340,15 @@ def test_independence_proposal_cannot_be_reassigned():
     kernel = Independence(MultivariateT(np.zeros(2), np.eye(2)))
     with pytest.raises(AttributeError):
         kernel.proposal = MultivariateT(np.ones(2), np.eye(2))
+
+
+def test_a_proposals_public_log_alpha_returns_the_ratios_alone():
+    # Its private hook carries the states, so that user code calling log_alpha keeps
+    # working.
+    target = bounded_target(2, False)
+    state_x, state_y = starts(20, 2, 13, False, target)
+    q = MultivariateT(np.zeros(2), np.eye(2))
+    for proposal in (RandomWalkProposal(np.eye(2), np.eye(2)), IndependenceProposal(q)):
+        ratio = proposal.log_alpha(target, state_x, state_y, None)
+        assert isinstance(ratio, np.ndarray)
+        assert ratio.shape == (20,)

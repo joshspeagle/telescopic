@@ -470,6 +470,5 @@ All notable changes to this project are documented here. The format follows
   at which it was computed, and uses it only where that point is the position bit for
   bit: a step and a coupled step evaluate the proposal's `log_density` at the proposals
   and at the states without a valid value, usually n rows where they were 2n and 3n, and
-  with `MultivariateT` every seeded output is unchanged. `Proposal.log_alpha` returns the
-  current and the proposed states with the ratio, and `Proposal.init_extra` gives a
+  with `MultivariateT` every seeded output is unchanged. `Proposal.init_extra` gives a
   proposal's own fields.
