@@ -28,7 +28,7 @@ from telescopic._types import (
 )
 from telescopic.estimators import correction_coefficients
 from telescopic.initial import as_initial, draw
-from telescopic.kernels.base import Kernel, State
+from telescopic.kernels.base import Kernel, State, check_markov_fields, meets
 from telescopic.target import Target
 
 __all__ = ["Replicates", "Settings", "Status", "check_settings", "merge", "run", "stored_bytes"]
@@ -659,6 +659,7 @@ class _Batch:
         keep_paths: bool,
     ) -> None:
         self.target, self.kernel, self.settings = target, kernel, settings
+        self.markov = kernel.markov_fields  # none for every shipped kernel
         self.keep_paths = keep_paths
         self.weight = 1.0 / len(range(settings.k, settings.m + 1, settings.thin))  # 1 / |S|
         self.streams = Streams(lanes)
@@ -705,6 +706,12 @@ class _Batch:
             return
         lanes = free[: len(starting)]
         states = self.kernel.init_state(self.target, np.vstack([(s.x0, s.y0) for s in starting]))
+        # The lanes hold the fields of init_state's states, allocated at the first fill.
+        for name, value in states.extra.items():
+            for lanes_state in (self.x, self.y):
+                if name not in lanes_state.extra:
+                    shape = (len(self.replicate), *value.shape[1:])
+                    lanes_state.extra[name] = np.zeros(shape, dtype=value.dtype)
         self.x.put(lanes, states.take(slice(0, None, 2)))
         self.y.put(lanes, states.take(slice(1, None, 2)))
         outside = np.isneginf(states.log_prob).reshape(-1, 2).any(axis=1)
@@ -731,17 +738,22 @@ class _Batch:
         coupled = (active & unmet & (self.t >= lag)).nonzero()[0]
         if len(solo):
             moved, _ = self.kernel.step(self.target, self.x.take(solo), self.streams.view(solo))
+            if self.markov:
+                check_markov_fields(self.kernel, moved)
             self.x.put(solo, moved)
         if len(coupled):
             new_x, new_y = self.kernel.coupled_step(
                 self.target, self.x.take(coupled), self.y.take(coupled), self.streams.view(coupled)
             )
+            if self.markov:
+                check_markov_fields(self.kernel, new_x)
+                check_markov_fields(self.kernel, new_y)
             self.x.put(coupled, new_x)
             self.y.put(coupled, new_y)
         self.t += 1  # idle lanes' clocks are never read
         compared = (active & unmet & (self.t >= lag)).nonzero()[0]
         if len(compared):
-            met = np.all(self.x.x[compared] == self.y.x[compared], axis=1)
+            met = meets(self.markov, self.x, self.y, compared)
             self.tau[compared[met]] = self.t[compared[met]]
             compared = compared[~met]
         stepped = active.nonzero()[0]

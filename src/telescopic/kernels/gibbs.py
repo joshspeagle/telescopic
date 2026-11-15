@@ -12,7 +12,7 @@ import numpy.typing as npt
 from telescopic._random import Draws
 from telescopic._types import BoolArray, FloatArray, read_only, real
 from telescopic.couplings import maximal
-from telescopic.kernels.base import Kernel, State, evaluate, evaluate_pair
+from telescopic.kernels.base import Kernel, State, carried, evaluate, evaluate_pair
 from telescopic.target import Target
 
 COUPLINGS = ("maximal", "crn", "two-scale")
@@ -150,7 +150,9 @@ class Gibbs(Kernel):
                 for row, generator in enumerate(generators)
             ]
             x[:, block] = _block(drawn, b, points, len(block))
-        return evaluate(target, x, state.grad is not None), np.ones(len(x))
+        moved = evaluate(target, x, state.grad is not None)
+        moved.extra = carried(state.extra)  # fields the kernel does not know
+        return moved, np.ones(len(x))
 
     def coupled_step(
         self, target: Target, state_x: State, state_y: State, draws: Draws
@@ -163,9 +165,11 @@ class Gibbs(Kernel):
             x[:, block] = _block(new_x, b, points_x, len(block))
             y[:, block] = _block(new_y, b, points_y, len(block))
         identical = np.all(x == y, axis=1)
-        return evaluate_pair(
+        moved_x, moved_y = evaluate_pair(
             partial(evaluate, target, need_grad=state_x.grad is not None), x, y, identical
         )
+        moved_x.extra, moved_y.extra = carried(state_x.extra), carried(state_y.extra)
+        return moved_x, moved_y
 
     def _couple(
         self, b: int, x: FloatArray, y: FloatArray, common: BoolArray, draws: Draws

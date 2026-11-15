@@ -184,3 +184,41 @@ def test_random_draws_need_a_positive_integer_number_of_rows(n_rows, error):
 def test_random_draws_take_the_seeds_that_a_run_takes(rng, error, message):
     with pytest.raises(error, match=message):
         random_draws(2, rng)
+
+
+class Cached(RandomWalk):
+    """A random walk that keeps log pi(x) + offset in a cache and accepts against it: with
+    an offset of 0 the cache is right, with another it does not match its point. The
+    returned log-densities are always fresh, so only the moves show the cache."""
+
+    def __init__(self, cov, offset):
+        super().__init__(cov, scale=1.0)
+        self.offset = offset
+
+    def init_extra(self, state):
+        return {"cached": state.log_prob + self.offset}
+
+    def _seen(self, state):
+        return State(state.x, state.extra.get("cached", state.log_prob))
+
+    def _returned(self, target, moved, like):
+        log_prob = target.log_prob(moved.x)
+        extra = {"cached": log_prob + self.offset} if "cached" in like.extra else {}
+        return State(moved.x, log_prob, None, extra)
+
+    def step(self, target, state, draws):
+        moved, probability = super().step(target, self._seen(state), draws)
+        return self._returned(target, moved, state), probability
+
+    def coupled_step(self, target, state_x, state_y, draws):
+        moved = super().coupled_step(target, self._seen(state_x), self._seen(state_y), draws)
+        return tuple(
+            self._returned(target, new, old)
+            for new, old in zip(moved, (state_x, state_y), strict=True)
+        )
+
+
+@pytest.mark.parametrize("offset", [0.0, 1.0])
+def test_check_coupling_reports_a_cache_whose_value_does_not_match_its_point(offset):
+    report = check_coupling(Cached(COV, offset), TARGET, [0.0, 0.0], [0.3, -0.2], n=2000, rng=2)
+    assert (report.stale > 0) == (offset != 0), report

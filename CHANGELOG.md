@@ -464,3 +464,20 @@ All notable changes to this project are documented here. The format follows
   given `cov` that does not whiten the target, left pilot pairs unmet, `k` is chosen. Every seeded output of
   `HMC` with the default changes, and the note on the error raised when `k` cannot be
   chosen now suggests the default jitter for HMC with `jitter=0`.
+- `State` has a fourth field, `extra`: arrays of one kernel, batch first, such as a
+  momentum or a cache. A kernel names its Markov fields in `Kernel.markov_fields` and
+  gives their initial values in `Kernel.init_extra`, which `init_state` attaches and
+  checks for every Markov field; a pair
+  meets when its positions and Markov fields are equal. Kernels, `State.take`,
+  `State.put` and `Mixture` carry unchanged the fields they do not know, a `Mixture`
+  names component `i`'s fields `"i/<name>"` and refuses components with Markov fields,
+  and `check_coupling` counts meetings on the Markov state and counts as stale the chains
+  whose caches change their next step. No shipped kernel has such fields, and every
+  seeded output is unchanged. Code that unpacks `dataclasses.astuple(state)` into three
+  names breaks.
+- `Independence` keeps log q at each chain's position in the chain's state, with the point
+  at which it was computed, and uses it only where that point is the position bit for
+  bit: a step and a coupled step evaluate the proposal's `log_density` at the proposals
+  and at the states without a valid value, usually n rows where they were 2n and 3n, and
+  with `MultivariateT` every seeded output is unchanged. `Proposal.init_extra` gives a
+  proposal's own fields.

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import itertools
+import os
 from abc import ABC, abstractmethod
 from functools import partial
 from typing import Any, Protocol, Self, cast
@@ -11,7 +13,14 @@ import numpy.typing as npt
 
 from telescopic._linalg import matvec
 from telescopic._random import Draws
-from telescopic._types import FloatArray, ProposalDistribution, instance, log_densities, real_array
+from telescopic._types import (
+    FloatArray,
+    IndexArray,
+    ProposalDistribution,
+    instance,
+    log_densities,
+    real_array,
+)
 from telescopic.couplings import CoupledProposals, Coupling, _reflection, reflection_maximal
 from telescopic.kernels.base import (
     Kernel,
@@ -31,7 +40,9 @@ class Proposal(ABC):
 
     A subclass implements :meth:`sample` and :meth:`log_alpha`, and :meth:`evaluate` when
     its proposals' states need other fields than the current states'. A coupled step
-    calls :meth:`log_alpha` once for each chain.
+    calls :meth:`log_alpha` once for each chain. A proposal with fields of its own in a
+    :class:`~telescopic.kernels.State`'s ``extra`` gives their initial values in
+    :meth:`init_extra`, and :meth:`evaluate` can fill them at the proposals.
     """
 
     @property
@@ -53,6 +64,22 @@ class Proposal(ABC):
         int or None
         """
         return None
+
+    def init_extra(self, state: State) -> dict[str, npt.NDArray[Any]]:
+        """The initial values of the proposal's own fields; none by default.
+
+        As for :meth:`telescopic.kernels.Kernel.init_extra`.
+
+        Parameters
+        ----------
+        state : State
+            The chains, ``n`` of them.
+
+        Returns
+        -------
+        dict of str to ndarray, each of shape (n, ...)
+        """
+        return {}
 
     @abstractmethod
     def sample(self, target: Target, state: State, draws: Draws) -> tuple[FloatArray, Any]:
@@ -115,6 +142,13 @@ class Proposal(ABC):
             NaN, from ``-inf - -inf``, is a rejection.
         """
 
+    def _log_alpha_states(
+        self, target: Target, current: State, proposed: State, forward: Any
+    ) -> tuple[FloatArray, State, State]:
+        # log_alpha with the states that the step keeps, in which a shipped proposal may
+        # fill its fields: IndependenceProposal refreshes its cache there.
+        return self.log_alpha(target, current, proposed, forward), current, proposed
+
     def _coupled_log_alpha(
         self,
         target: Target,
@@ -124,13 +158,13 @@ class Proposal(ABC):
         proposed_y: State,
         forward_x: Any,
         forward_y: Any,
-    ) -> tuple[FloatArray, FloatArray]:
-        # The log acceptance ratios of both chains of a coupled step. Internal to the
-        # shipped proposals: IndependenceProposal overrides it to share one call of its
-        # density between the chains.
+    ) -> tuple[tuple[FloatArray, State, State], tuple[FloatArray, State, State]]:
+        # _log_alpha_states of both chains of a coupled step. Internal to the shipped
+        # proposals: IndependenceProposal overrides it to share one call of its density
+        # between the chains.
         return (
-            self.log_alpha(target, state_x, proposed_x, forward_x),
-            self.log_alpha(target, state_y, proposed_y, forward_y),
+            self._log_alpha_states(target, state_x, proposed_x, forward_x),
+            self._log_alpha_states(target, state_y, proposed_y, forward_y),
         )
 
 
@@ -288,9 +322,18 @@ class IndependenceProposal(Proposal):
 
     The log acceptance ratio is
     :math:`[\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]`, with a weight of
-    ``-inf`` where :math:`\pi` is 0, and a proposal where :math:`q` is 0 rejected. A
-    coupled step evaluates :math:`\log q` in one call, at the proposal and at both
-    chains' states.
+    ``-inf`` where :math:`\pi` is 0, and a proposal where :math:`q` is 0 rejected.
+
+    The states carry a cache of :math:`\log q(x)`, the fields
+    ``independence.<key>.log_q``, shape (n,), and ``independence.<key>.point``, shape
+    (n, d), the point at which it was computed. The key names this proposal object, so
+    that a state stepped by another one, of another distribution, never reads its cache.
+    A value is used only where its point equals the position bit for bit, so that a chain
+    that another kernel moved, or a state without the fields, gets a fresh value. A step
+    and a coupled step evaluate :math:`\log q` in one call, at the proposals and at the
+    chains' states whose value is missing or stale. Where
+    ``log_density`` gives a row the same value in any batch, as
+    :class:`~telescopic.kernels.MultivariateT` does, the cache changes no number.
 
     Parameters
     ----------
@@ -308,6 +351,11 @@ class IndependenceProposal(Proposal):
                 f"MultivariateT does, not {type(distribution).__name__}"
             )
         self.distribution = distribution
+        # The cache's fields, named for this object: the process and a count of the
+        # proposals it built, so that two proposals never share a name, whatever their
+        # distributions; no number depends on the name.
+        key = f"independence.{os.getpid()}.{next(_PROPOSALS)}"
+        self._point_name, self._log_q_name = f"{key}.point", f"{key}.log_q"
 
     @property
     def ndim(self) -> int | None:
@@ -315,14 +363,36 @@ class IndependenceProposal(Proposal):
         mean = getattr(self.distribution, "mean", None)
         return None if mean is None or callable(mean) else int(np.size(mean))
 
+    def init_extra(self, state: State) -> dict[str, npt.NDArray[Any]]:
+        r"""The cache of :math:`\log q` at the chains' positions.
+
+        Parameters
+        ----------
+        state : State
+            The chains, ``n`` of them.
+
+        Returns
+        -------
+        dict of str to ndarray
+            ``independence.<key>.point``, a copy of the positions, and
+            ``independence.<key>.log_q``.
+        """
+        # The point is a copy: a view of x would follow a later write to the position.
+        return self._cache(state.x.copy(), self._log_q(state.x))
+
     def sample(self, target: Target, state: State, draws: Draws) -> tuple[FloatArray, Any]:
         return self.distribution.sample(draws), None
 
     def log_alpha(
         self, target: Target, current: State, proposed: State, forward: Any
     ) -> FloatArray:
-        new, old = _log_weights(self.distribution, proposed, current)
-        return log_ratio(new, old)
+        return self._log_alpha_states(target, current, proposed, forward)[0]
+
+    def _log_alpha_states(
+        self, target: Target, current: State, proposed: State, forward: Any
+    ) -> tuple[FloatArray, State, State]:
+        (new, proposed), (old, current) = self._log_weights(proposed, current)
+        return log_ratio(new, old), current, proposed
 
     def _coupled_log_alpha(
         self,
@@ -333,11 +403,86 @@ class IndependenceProposal(Proposal):
         proposed_y: State,
         forward_x: Any,
         forward_y: Any,
-    ) -> tuple[FloatArray, FloatArray]:
-        # One call of the distribution's density, on 3n rows: the proposal, which both
-        # chains share, and both chains' states.
-        new, old_x, old_y = _log_weights(self.distribution, proposed_x, state_x, state_y)
-        return log_ratio(new, old_x), log_ratio(new, old_y)
+    ) -> tuple[tuple[FloatArray, State, State], tuple[FloatArray, State, State]]:
+        # One call of the distribution's density: the proposal, which both chains share,
+        # and the rows of both chains' states whose cached value is missing or stale.
+        (new, proposed), (old_x, state_x), (old_y, state_y) = self._log_weights(
+            proposed_x, state_x, state_y
+        )
+        return (log_ratio(new, old_x), state_x, proposed), (
+            log_ratio(new, old_y),
+            state_y,
+            proposed,
+        )
+
+    def _log_q(self, x: FloatArray) -> FloatArray:
+        # A NaN log q would make every move to its point a rejection, and so bias the chain
+        # without an error.
+        return log_densities("proposal log_density", self.distribution.log_density(x), x)
+
+    def _log_weights(self, proposed: State, *states: State) -> list[tuple[FloatArray, State]]:
+        # log pi - log q at the proposals' positions, then at each state's, each with its
+        # state, from one call of log q on the proposals and the states' rows without a
+        # valid cache; the rows of a call do not depend on each other (spec R-KER-6). A
+        # state with the cache returns a copy with it filled, and the proposals' state
+        # gets one if the first state has it.
+        stale = [self._stale_rows(state) for state in states]
+        if all(rows is not None and not len(rows) for rows in stale):
+            x = proposed.x
+        else:
+            x = np.concatenate(
+                [proposed.x]
+                + [
+                    state.x if rows is None else state.x[rows]
+                    for state, rows in zip(states, stale, strict=True)
+                ]
+            )
+        log_q = self._log_q(x)
+        n = len(proposed)
+        # A proposal where log q = -inf has weight -inf, so it is rejected: sample drew a
+        # point that log_density gives no mass, such as a draw clipped onto the edge of an
+        # open support, and a weight of +inf would accept it and never leave it.
+        new = proposed.log_prob - np.where(log_q[:n] == -np.inf, np.inf, log_q[:n])
+        if stale[0] is not None:
+            proposed = self._cached(proposed, log_q[:n])
+        weights = [(new, proposed)]
+        start = n
+        for state, rows in zip(states, stale, strict=True):
+            if rows is None:
+                part, start = log_q[start : start + len(state)], start + len(state)
+            else:
+                part = state.extra[self._log_q_name]
+                if len(rows):
+                    part = part.copy()
+                    part[rows], start = log_q[start : start + len(rows)], start + len(rows)
+                    state = self._cached(state, part)
+            # Where log pi = -inf a state's weight is -inf even where log q = -inf too:
+            # -inf - -inf would be NaN, which rejects every proposal, so such a chain would
+            # never move.
+            weights.append(
+                (state.log_prob - np.where(state.log_prob == -np.inf, 0.0, part), state)
+            )
+        return weights
+
+    def _cache(self, x: FloatArray, log_q: FloatArray) -> dict[str, npt.NDArray[Any]]:
+        return {self._point_name: x, self._log_q_name: log_q}
+
+    def _cached(self, state: State, log_q: FloatArray) -> State:
+        # A copy of state whose cache holds log q at its positions, its other fields
+        # carried. Its point is its x, not a copy: only select reads these states, and
+        # its np.where gives the returned point an array of its own.
+        return state._with_extra(state.extra | self._cache(state.x, log_q))
+
+    def _stale_rows(self, state: State) -> IndexArray | None:
+        # The rows whose cached log q cannot be used, or None when the state has no cache.
+        # A value is used only where its point equals the position bit for bit, so 0.0
+        # and -0.0 are different points; any other kernel that moved the chain carried the
+        # old cache.
+        if self._point_name not in state.extra or self._log_q_name not in state.extra:
+            return None
+        differ = state.extra[self._point_name].view(np.uint64) != state.x.view(np.uint64)
+        rows: IndexArray = differ.any(axis=1).nonzero()[0] if differ.any() else _NO_ROWS
+        return rows
 
     def __repr__(self) -> str:
         return f"IndependenceProposal({self.distribution!r})"
@@ -386,13 +531,16 @@ class MetropolisHastings(Kernel):
     def ndim(self) -> int | None:
         return None if self._proposal is None else self._proposal.ndim
 
+    def init_extra(self, state: State) -> dict[str, npt.NDArray[Any]]:
+        return {} if self._proposal is None else self._proposal.init_extra(state)
+
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         proposal, _ = self._ready()
         x, forward = proposal.sample(target, state, draws)
         proposed = proposal.evaluate(target, x, state)
-        log_alpha = proposal.log_alpha(target, state, proposed, forward)
+        log_alpha, current, proposed = proposal._log_alpha_states(target, state, proposed, forward)
         accepted = draws.log_uniform() < log_alpha
-        return select(accepted, proposed, state), acceptance(log_alpha)
+        return select(accepted, proposed, current), acceptance(log_alpha)
 
     def coupled_step(
         self, target: Target, state_x: State, state_y: State, draws: Draws
@@ -408,8 +556,10 @@ class MetropolisHastings(Kernel):
                 partial(proposal.evaluate, target, like=state_x), pair.x, pair.y, pair.identical
             )
         log_u = draws.log_uniform()
-        alpha_x, alpha_y = proposal._coupled_log_alpha(
-            target, state_x, state_y, proposed_x, proposed_y, pair.forward_x, pair.forward_y
+        (alpha_x, state_x, proposed_x), (alpha_y, state_y, proposed_y) = (
+            proposal._coupled_log_alpha(
+                target, state_x, state_y, proposed_x, proposed_y, pair.forward_x, pair.forward_y
+            )
         )
         return select(log_u < alpha_x, proposed_x, state_x), select(
             log_u < alpha_y, proposed_y, state_y
@@ -452,23 +602,10 @@ def _log_alpha(
     return log_alpha
 
 
-def _log_weights(q: ProposalDistribution, proposal: State, *states: State) -> list[FloatArray]:
-    # log pi - log q at the proposal's positions, then at each state's, from one call of
-    # q.log_density, whose rows do not depend on each other (spec R-KER-6). A NaN log q
-    # would make every move to its point a rejection, and so bias the chain without an
-    # error.
-    x = np.concatenate([proposal.x, *(state.x for state in states)])
-    log_q = log_densities("proposal log_density", q.log_density(x), x).reshape(1 + len(states), -1)
-    # A proposal where log q = -inf has weight -inf, so it is rejected: sample drew a point
-    # that log_density gives no mass, such as a draw clipped onto the edge of an open
-    # support, and a weight of +inf would accept it and never leave it.
-    new = proposal.log_prob - np.where(log_q[0] == -np.inf, np.inf, log_q[0])
-    # Where log pi = -inf a state's weight is -inf even where log q = -inf too: -inf - -inf
-    # would be NaN, which rejects every proposal, so such a chain would never move.
-    return [new] + [
-        state.log_prob - np.where(state.log_prob == -np.inf, 0.0, part)
-        for state, part in zip(states, log_q[1:], strict=True)
-    ]
+# Counts the IndependenceProposal objects of the process, which name their caches.
+_PROPOSALS = itertools.count()
+
+_NO_ROWS: IndexArray = np.zeros(0, dtype=np.intp)
 
 
 class SharedCovarianceGaussian(Protocol):
