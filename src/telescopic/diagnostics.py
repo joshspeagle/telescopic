@@ -34,13 +34,16 @@ WIDE_START = 30.0
 
 
 # Spec section 3.6.
-def tv_bound(meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike) -> FloatArray:
+def tv_bound(
+    meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike
+) -> tuple[FloatArray, FloatArray]:
     r"""Estimated upper bound on the total variation distance to the target.
 
     .. math:: d_{TV}(\pi_t, \pi) \le \mathbb E\big[\max(0, \lceil (\tau - L - t)/L \rceil)\big]
 
     (Biswas, Jacob & Vanetti 2019, Theorem 2.5), estimated by the average over replicates
-    and reported as :math:`\min(1, \cdot)`.
+    of :math:`N_r(t) = \max(0, \lceil (\tau_r - L - t)/L \rceil)` and reported as
+    :math:`\min(1, \cdot)`, with the standard error of that average.
 
     Parameters
     ----------
@@ -55,12 +58,16 @@ def tv_bound(meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike) -> FloatA
 
     Returns
     -------
-    ndarray, shape of ``t``
+    bound, standard_error : ndarray, shape of ``t``
+        The standard error is the sample standard deviation of the :math:`N_r(t)` divided
+        by :math:`\sqrt R`, of the average before it is capped at 1; ``nan`` for
+        :math:`R = 1`.
 
     Notes
     -----
     Computed as :math:`\sum_{j \ge 1} \hat S(t + jL)` with the empirical survival
-    function :math:`\hat S(u) = R^{-1}\#\{\tau > u\}`, in :math:`O(R + \max\tau)`.
+    function :math:`\hat S(u) = R^{-1}\#\{\tau > u\}`, and the second moment as
+    :math:`\sum_{j \ge 1} (2j - 1)\hat S(t + jL)`, in :math:`O(R + \max\tau)`.
     """
     tau = real_array("meeting_times", meeting_times, "integers of shape (R,)")
     if tau.ndim != 1 or len(tau) == 0 or not integral(tau, 0):
@@ -68,32 +75,41 @@ def tv_bound(meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike) -> FloatA
             "meeting_times must be a non-empty one-dimensional array of non-negative "
             "integers: give a censored pair as its cap plus 1"
         )
-    survival = 1.0 - np.cumsum(np.bincount(tau.astype(np.int64))) / len(tau)
+    counts = np.bincount(tau.astype(np.int64))
+    survival = 1.0 - np.cumsum(counts) / len(tau)
     bound: FloatArray = np.minimum(1.0, _lagged_tail(survival, lag, t))
-    return bound
+    # sum_r N_r = sum_j #{tau > t + jL} = A(t), and sum_r N_r^2 = sum_j (2j - 1) #{...},
+    # which is A(t) + 2 sum_{i >= 1} A(t + iL); the counts are exact integers.
+    above = len(tau) - np.cumsum(counts, dtype=np.float64)
+    tails = _lagged_tail(above, lag, np.arange(len(above)))
+    sums = _lagged_tail(above, lag, t)
+    return bound, _standard_error(sums, sums + 2 * _lagged_tail(tails, lag, t), len(tau))
 
 
 # Spec section 3.6.
 def w1_bound(
+    distance_owner: npt.ArrayLike,
     distance_time: npt.ArrayLike,
     distance: npt.ArrayLike,
     n_replicates: int,
     lag: int,
     t: npt.ArrayLike,
-) -> FloatArray:
+) -> tuple[FloatArray, FloatArray]:
     r"""Estimated upper bound on the 1-Wasserstein distance to the target.
 
     .. math:: d_{W_1}(\pi_t, \pi) \le \mathbb E\Big[\sum_{j=1}^{\lceil(\tau - L - t)/L\rceil}
               \lVert X_{t+jL} - Y_{t+(j-1)L}\rVert\Big]
 
-    (Biswas, Jacob & Vanetti 2019), estimated by the average over replicates. It depends
-    on the parameterization of the target.
+    (Biswas, Jacob & Vanetti 2019), estimated by the average over replicates of each
+    replicate's sum, with the standard error of that average. It depends on the
+    parameterization of the target.
 
     Parameters
     ----------
-    distance_time, distance : array_like, shape (M,)
-        The times :math:`s` and distances :math:`\lVert X_s - Y_{s-L}\rVert` recorded for
-        :math:`L \le s < \tau`, pooled over replicates.
+    distance_owner, distance_time, distance : array_like, shape (M,)
+        The replicate, time :math:`s` and distance :math:`\lVert X_s - Y_{s-L}\rVert` of
+        each record, for :math:`L \le s < \tau`, pooled over replicates, as
+        :class:`telescopic.engine.Replicates` holds them.
     n_replicates : int
         The number of replicates :math:`R`, including those with no recorded distance.
     lag : int
@@ -103,23 +119,63 @@ def w1_bound(
 
     Returns
     -------
-    ndarray, shape of ``t``
+    bound, standard_error : ndarray, shape of ``t``
+        The standard error is the sample standard deviation of the replicates' sums
+        divided by :math:`\sqrt R`, those without a record counting as 0; ``nan`` for
+        :math:`R = 1`.
+
+    Notes
+    -----
+    Costs :math:`O(M \log M + \max s)`.
     """
     n_replicates = integer("n_replicates", n_replicates, minimum=1)
+    owners = real_array("distance_owner", distance_owner, "integers of shape (M,)", dtype=None)
     times = real_array("distance_time", distance_time, "integers of shape (M,)", dtype=None)
     distances = real_array("distance", distance, "real numbers of shape (M,)")
-    if times.ndim != 1 or times.shape != distances.shape:
+    if times.ndim != 1 or not owners.shape == times.shape == distances.shape:
         raise ValueError(
-            f"distance_time and distance must have one shape (M,), not {times.shape} and "
-            f"{distances.shape}"
+            "distance_owner, distance_time and distance must have one shape (M,), not "
+            f"{owners.shape}, {times.shape} and {distances.shape}"
         )
+    if not integral(owners, 0):
+        raise ValueError("distance_owner must be non-negative integers")
     if not integral(times, 0):
         raise ValueError("distance_time must be non-negative integers")
     if not np.all(np.isfinite(distances) & (distances >= 0)):
         raise ValueError("distance must be finite and non-negative")
-    total = np.bincount(times.astype(np.int64), weights=distances)
-    bound: FloatArray = _lagged_tail(total, lag, t) / n_replicates
-    return bound
+    times = times.astype(np.int64)
+    total = np.bincount(times, weights=distances)
+    sums = _lagged_tail(total, lag, t)
+    bound: FloatArray = sums / n_replicates
+    squares = _lagged_tail(_squares(owners, times, distances, lag), lag, t)
+    return bound, _standard_error(sums, squares, n_replicates)
+
+
+def _squares(owners: IntArray, times: IntArray, distances: FloatArray, lag: int) -> FloatArray:
+    # The sum over replicates of W_r(u)^2, W_r(u) = sum_{j >= 0} d_r(u + jL), at each time u,
+    # spread as values that _lagged_tail sums: a replicate's record at s with W_r(s) = S
+    # adds S^2 - (S - d)^2 = d (2S - d) at s, which telescopes along s, s + L, ...
+    order = np.lexsort((times, times % integer("lag", lag, minimum=1), owners))
+    owners, times, distances = owners[order], times[order], distances[order]
+    remainder = times % lag
+    first = np.ones(len(times), dtype=bool)
+    first[1:] = (owners[1:] != owners[:-1]) | (remainder[1:] != remainder[:-1])
+    starts = np.flatnonzero(first)
+    ends = np.append(starts[1:], len(times))[np.cumsum(first) - 1]
+    # Each record's suffix sum within its replicate and residue, S.
+    suffix = np.append(np.cumsum(distances[::-1])[::-1], 0.0)
+    within = suffix[:-1] - suffix[ends]
+    squares: FloatArray = np.bincount(times, weights=distances * (2 * within - distances))
+    return squares
+
+
+def _standard_error(sums: FloatArray, squares: FloatArray, n: int) -> FloatArray:
+    # The standard error of the mean of n terms from their sum and sum of squares.
+    if n < 2:
+        return np.full(np.shape(sums), np.nan)
+    variance = np.maximum(0.0, squares - sums * sums / n) / (n - 1)
+    error: FloatArray = np.sqrt(variance / n)
+    return error
 
 
 def _lagged_tail(values: FloatArray, lag: int, t: npt.ArrayLike) -> FloatArray:

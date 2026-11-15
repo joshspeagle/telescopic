@@ -210,25 +210,30 @@ mystnb:
   image:
     alt: >-
       Two lines on a logarithmic scale, one for lag 1 and one for lag k, each
-      falling from 1 as t grows, with a dashed vertical line at k.
+      falling from 1 as t grows inside a shaded band, with a dashed vertical line at
+      k.
   figure:
     caption: >-
       The estimated upper bound on the total variation distance between the law of
-      $X_t$ and the target, from the run with lag 1 and the run with lag $k$, with
-      $k$ dashed.
+      $X_t$ and the target, from the run with lag 1 and the run with lag $k$, each
+      with a band of two standard errors, with $k$ dashed.
 ---
 t = np.arange(2 * k)
 fig, ax = plt.subplots(figsize=(5, 3.5))
 for label, result in (("lag 1", results["lag_1"]), (f"lag {k}", recipe)):
-    bound = result.tv_bound(t)
-    ax.plot(t[bound > 0], bound[bound > 0], label=label)
+    bound, error = result.tv_bound(t)
+    shown = bound > 0
+    (line,) = ax.plot(t[shown], bound[shown], label=label)
+    lower = np.maximum(bound - 2 * error, 1e-4)
+    upper = np.minimum(bound + 2 * error, 1)
+    ax.fill_between(t[shown], lower[shown], upper[shown], color=line.get_color(), alpha=0.3)
 ax.axvline(k, color="gray", linestyle="--", label="$k$")
 ax.set(yscale="log", xlabel="$t$", ylabel=r"TV bound on $X_t$")
 ax.legend();
 ```
 
 ```{code-cell} python
-lag_one, lag_k = results["lag_1"].tv_bound([k])[0], recipe.tv_bound([k])[0]
+lag_one, lag_k = results["lag_1"].tv_bound([k])[0][0], recipe.tv_bound([k])[0][0]
 print(f"at t = k: lag 1, {lag_one:.3f}; lag {k}, {lag_k:.3f}")
 ```
 

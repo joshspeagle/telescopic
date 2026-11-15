@@ -85,7 +85,8 @@ def meeting_times(result: Result, axes: Sequence[Axes] | None = None) -> list[Ax
 def tv_bound(result: Result, ax: Axes | None = None) -> Axes:
     """The estimated bound on the total variation distance to the target against t.
 
-    The bound is on a log scale, with ``k`` marked.
+    The bound is on a log scale, with a band of two standard errors, capped at 1, and
+    ``k`` marked.
 
     Parameters
     ----------
@@ -100,16 +101,28 @@ def tv_bound(result: Result, ax: Axes | None = None) -> Axes:
     """
     ax = plt.subplots(figsize=(5, 3.5))[1] if ax is None else ax
     # At most 4,000 times draw the step function, however long the tail of meeting times.
-    bound = result.tv_bound()
+    bound, error = result.tv_bound()
     step = max(1, len(bound) // 2000)
-    t, bound = np.arange(len(bound))[::step], bound[::step]
+    t, bound, error = np.arange(len(bound))[::step], bound[::step], error[::step]
     positive = bound > 0
-    ax.plot(t[positive], bound[positive])
+    t, bound, error = t[positive], bound[positive], error[positive]
+    (line,) = ax.plot(t, bound)
     ax.axvline(result.k, color="gray", linestyle="--", label="$k$")
     ax.set(xlabel="$t$", ylabel=r"TV bound on $X_t$")
     # A log scale needs a positive value: none when every pair met at t = L.
-    if np.any(positive):
+    if len(t):
         ax.set(yscale="log")
+        # Where the lower edge is not positive, the band reaches the bottom of the axis.
+        bottom = ax.get_ylim()[0]
+        ax.fill_between(
+            t,
+            np.maximum(bottom, bound - 2 * error),
+            np.minimum(1, bound + 2 * error),
+            color=line.get_color(),
+            alpha=0.3,
+            linewidth=0,
+        )
+        ax.set_ylim(bottom=bottom)
     ax.legend(loc="upper right")
     return ax
 

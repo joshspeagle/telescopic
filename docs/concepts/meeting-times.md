@@ -53,9 +53,9 @@ the burn-in $k$ that the automatic settings chose, and the bound there.
 
 ## Reading the bound
 
-{meth}`~telescopic.Result.tv_bound` returns the bound at any $t$, and
-{meth}`~telescopic.Result.plot_tv_bound` draws it on a log scale with $k$ marked, as in
-the lower panel ([Distance to stationarity](../guide/meeting-times.md#distance-to-stationarity)).
+{meth}`~telescopic.Result.tv_bound` returns the bound and its standard error at any $t$,
+and {meth}`~telescopic.Result.plot_tv_bound` draws it on a log scale with a band of two
+standard errors and $k$ marked, as in the lower panel ([Distance to stationarity](../guide/meeting-times.md#distance-to-stationarity)).
 Four things to keep in mind when reading it:
 
 - **It is an upper bound.** The chain can be much closer to the target than the bound

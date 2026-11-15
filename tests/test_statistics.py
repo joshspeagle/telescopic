@@ -214,7 +214,7 @@ def test_tv_bounds_exceed_the_exact_distance(lag):
     tau = pairs(STANDARD_NORMAL, AR1(rho), Normal([3.0], [[0.25]]), 10_000, 21, lag).meeting_time
     exact = exact_tv_curve(rho)
     t = np.arange(len(exact))
-    bound = diagnostics.tv_bound(tau, lag, t)
+    bound = diagnostics.tv_bound(tau, lag, t)[0]
     # Biswas, Jacob & Vanetti (2019), Theorem 2.5, replicate by replicate.
     terms = np.maximum(0, np.ceil((tau[:, None] - lag - t) / lag))
     assert np.all(bound >= exact - 5 * stats.sem(terms))

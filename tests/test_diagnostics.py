@@ -27,7 +27,7 @@ def test_the_tv_bound_sums_the_survival_function_at_lagged_times():
     for lag in (1, 3):
         t = np.arange(0, 80)
         expected = [sum(np.mean(tau > s + j * lag) for j in range(1, 200)) for s in t]
-        np.testing.assert_allclose(tv_bound(tau, lag, t), np.minimum(1, expected), atol=1e-12)
+        np.testing.assert_allclose(tv_bound(tau, lag, t)[0], np.minimum(1, expected), atol=1e-12)
 
 
 @pytest.mark.parametrize("lag", [1, 3])
@@ -64,11 +64,68 @@ def test_the_tv_bound_from_the_exact_meeting_law_exceeds_the_exact_tv(lag):
 def test_the_w1_bound_sums_the_distances_at_lagged_times():
     rng = np.random.default_rng(2)
     time, distance, lag, n = rng.integers(3, 40, size=200), rng.random(200), 3, 25
+    owner = rng.integers(0, n, size=200)
     t = np.arange(45)
     expected = [distance[(time > s) & ((time - s) % lag == 0)].sum() / n for s in t]
-    np.testing.assert_allclose(w1_bound(time, distance, n, lag, t), expected, atol=1e-12)
+    np.testing.assert_allclose(w1_bound(owner, time, distance, n, lag, t)[0], expected, atol=1e-12)
     with pytest.raises(ValueError, match="n_replicates must be at least 1"):
-        w1_bound(time, distance, 0, lag, t)
+        w1_bound(owner, time, distance, 0, lag, t)
+
+
+def test_the_w1_bound_refuses_invalid_owners():
+    with pytest.raises(ValueError, match="one shape"):
+        w1_bound([0], [1, 2], [0.5, 0.5], 2, 1, [0])
+    with pytest.raises(ValueError, match="distance_owner must be non-negative integers"):
+        w1_bound([-1, 0], [1, 2], [0.5, 0.5], 2, 1, [0])
+
+
+def test_the_bounds_standard_errors_are_those_of_the_per_pair_terms():
+    # Pairs without records, records in any order and shared times all enter the sum.
+    rng = np.random.default_rng(10)
+    tau = rng.geometric(0.1, size=40) + 1
+    owner, time = np.repeat(np.arange(40), tau), np.concatenate([np.arange(n) for n in tau])
+    distance = rng.random(len(time))
+    order = rng.permutation(len(time))
+    t = np.arange(60)
+    for lag in (1, 4):
+        terms = np.maximum(0, np.ceil((tau[:, None] - lag - t) / lag))
+        error = terms.std(axis=0, ddof=1) / np.sqrt(len(tau))
+        np.testing.assert_allclose(tv_bound(tau, lag, t)[1], error, rtol=1e-12, atol=1e-15)
+        kept = time[order] >= lag
+        records = owner[order][kept], time[order][kept], distance[order][kept]
+        own = np.array(
+            [w1_bound(*(x[records[0] == r] for x in records), 1, lag, t)[0] for r in range(45)]
+        )
+        bound, error = w1_bound(*records, 45, lag, t)
+        np.testing.assert_allclose(bound, own.mean(axis=0), rtol=1e-12, atol=1e-15)
+        np.testing.assert_allclose(
+            error, own.std(axis=0, ddof=1) / np.sqrt(45), rtol=1e-9, atol=1e-15
+        )
+    assert np.isnan(tv_bound([3], 1, [0])[1]).all()
+
+
+def test_the_bounds_standard_errors_match_their_spread_over_independent_runs():
+    # 1,000 independent sets of 200 pairs, at times where no set's TV bound reaches 1. A
+    # squared standard error is unbiased for the variance of its bound, so the root of
+    # their mean is compared with the bounds' spread, whose relative error for near-normal
+    # bounds is about 1/sqrt(2 * 999) = 2.2%: 4 of them allow 9%.
+    rng = np.random.default_rng(11)
+    n_sets, n_pairs, lag, t = 1000, 200, 2, np.array([13, 16, 19])
+    tv, w1 = [], []
+    for _ in range(n_sets):
+        tau = rng.geometric(0.15, size=n_pairs) + lag
+        tv.append(tv_bound(tau, lag, t))
+        owner = np.repeat(np.arange(n_pairs), tau - lag)
+        time = np.concatenate([np.arange(lag, n) for n in tau])
+        distance = rng.exponential(np.exp(-0.1 * time))
+        w1.append(w1_bound(owner, time, distance, n_pairs, lag, t))
+    assert np.all(np.array(tv)[:, 0] < 1)
+    for bound, error in (np.array(tv).transpose(1, 0, 2), np.array(w1).transpose(1, 0, 2)):
+        np.testing.assert_allclose(
+            np.sqrt(np.mean(error**2, axis=0)),
+            bound.std(axis=0, ddof=1),
+            rtol=4 / np.sqrt(2 * (n_sets - 1)),
+        )
 
 
 @pytest.mark.parametrize("alpha", [1.5, 3.0])
@@ -356,7 +413,7 @@ def test_the_tv_bound_refuses_invalid_arguments(meeting_times, lag, t, message):
 
 def test_the_tv_bound_is_zero_long_after_every_meeting():
     # t = 1e20 overflowed the cast to int64 and raised IndexError.
-    np.testing.assert_array_equal(tv_bound([3, 4], 1, [10, 1e20]), [0.0, 0.0])
+    np.testing.assert_array_equal(tv_bound([3, 4], 1, [10, 1e20]), [[0.0, 0.0], [0.0, 0.0]])
 
 
 @pytest.mark.parametrize(
@@ -372,14 +429,14 @@ def test_the_tv_bound_is_zero_long_after_every_meeting():
 )
 def test_the_w1_bound_refuses_invalid_distances(times, distances, message):
     with pytest.raises(ValueError, match=message):
-        w1_bound(times, distances, 2, 1, [0])
+        w1_bound(np.zeros(np.shape(times), dtype=int), times, distances, 2, 1, [0])
 
 
 def test_the_tv_bound_at_k_of_the_diagnostics_is_the_bounds():
     rng = np.random.default_rng(9)
     result = synthetic(rng.geometric(0.2, size=200) + 3, rng.standard_normal(200), k=4, lag=3)
     assert result.diagnostics()["tv_bound_at_k"] == pytest.approx(
-        result.tv_bound([4])[0], rel=1e-12
+        result.tv_bound([4])[0][0], rel=1e-12
     )
 
 

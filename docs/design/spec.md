@@ -226,7 +226,7 @@ For any $L$ and $t \ge 0$ (Biswas, Jacob & Vanetti 2019, Thm. 2.5):
 
 $$d_{TV}(\pi_t, \pi) \le \mathbb E\big[\max(0, \lceil (\tau - L - t)/L \rceil)\big] = \sum_{j \ge 1} \mathbb P(\tau > t + jL).$$
 
-- **Estimate:** the bound is estimated by the replicate average, reported as $\min(1, \cdot)$. The result also reports its leading term at $k$, the fraction of pairs with $\tau - L > k$, with a one-sided 95% Clopper–Pearson upper bound, which stays informative when the fraction is 0.
+- **Estimate:** the bound is estimated by the replicate average, reported as $\min(1, \cdot)$, with the standard error of the average before the cap: the sample standard deviation of the replicates' terms over $\sqrt R$, `nan` for $R = 1$. `diagnostics.tv_bound` and `diagnostics.w1_bound`, and `Result.tv_bound` and `Result.w1_bound`, return the pair `(bound, standard_error)`, as `histogram` returns its masses with their standard errors; `diagnostics.w1_bound(distance_owner, distance_time, distance, n_replicates, lag, t)` takes each record's replicate, which the error needs (DECISIONS #261). The result also reports its leading term at $k$, the fraction of pairs with $\tau - L > k$, with a one-sided 95% Clopper–Pearson upper bound, which stays informative when the fraction is 0.
 - **Censored pairs** are known to meet after the cap: the engine compares the chains at the cap before it censors a pair, so $\tau \ge$ cap + 1, and the TV bound and its value at $k$ count a censored pair as meeting at cap + 1 (DECISIONS #99). With censoring the estimate is therefore a lower bound. It is reported with the number censored. The cost takes the time a pair stopped, the cap; the slow-pair check (§6.3) counts a censored pair as unmet at its cap, so a cap equal to the threshold flags it.
 - **Use for $k$:** with $L = k$ the bound at $t = k$ is close to $\mathbb P(\tau - L > k)$, which the main run estimates and reports. It exceeds the pilot's $1 - \beta$, because the main run's $\tau - L$ is longer than the pilot's $\tau - 1$: the coupled phase starts from a near-stationary $X_L$. With $\beta = 0.99$ in E01's setting it is 0.019 at $d = 10$ and 0.029 at $d = 30$ (design review D-R5).
 - **1-Wasserstein (should):**
@@ -567,7 +567,7 @@ Methods:
   - `estimate(h, level=0.95)` returns an `Estimate`. `h` maps `(n, d)` to `(n,)` or `(n, p)`; any other output shape raises `ValueError`;
   - `mean()`, `cov()`, `var()`, `std()` follow §3.4.
 - **Quantiles and histograms:** `quantile(q, h=None)`, `credible_interval(mass=0.68, h=None)` (the central credible interval holding that mass of $\pi$, an array of shape `(2, d)`; with `h`, as in `estimate`, the quantiles are those of `h` at the atoms, of shape `q.shape` or `q.shape + (p,)` from `quantile` and `(2,)` or `(2, p)` from `credible_interval`, DECISIONS #101; `level` is reserved for confidence levels, and the name keeps it apart from the confidence interval of an `Estimate`, DECISIONS #100) and `histogram(dims, bins=20, range=None)`, of one coordinate or a joint histogram of several, with standard errors (DECISIONS #30).
-- **Diagnostics:** `tv_bound(t=None)`, `w1_bound(t=None)` (should), and `diagnostics()` (a dict).
+- **Diagnostics:** `tv_bound(t=None)`, `w1_bound(t=None)` (should), each returning the bound and its standard error (§3.6), and `diagnostics()` (a dict).
 - **Reporting:** `summary()` returns a `Summary` table (DECISIONS #40). The repr is one line of stored fields, `Result(R=100, d=2, k=63, m=630, lag=63, censored=0, interrupted=False)`, and computes no diagnostics (DECISIONS #102). `check(strict=False)` emits the warnings of §7.4, or raises if strict.
 - **Plots:** `plot_meeting_times(axes=None)`, `plot_tv_bound(ax=None)`, `plot_marginals(dims=None, bins=20, axes=None)` and `plot_corner(dims=None, bins=20)` (signed 2-D histograms); the first three draw on given axes (DECISIONS #30).
 - **Persistence and merging:**
@@ -634,7 +634,7 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
 ### 7.5 Plotting (optional dependency)
 
 - **Meeting times:** a histogram of $\tau - L$, and a log-scale survival curve.
-- **TV bound:** the bound against $t$ on a log scale, with $k$ marked.
+- **TV bound:** the bound against $t$ on a log scale, with a band of two standard errors, and $k$ marked.
 - **Marginals:** signed histograms with ±2 standard-error boxes. Negative bins are allowed, and the docstring explains them.
 - **Corner plot:** signed 2-D histograms. Telescopic never passes signed weights to `corner` or ArviZ, whose weighted quantiles assume non-negative weights.
 - **Paths:** the coupled paths of a few replicates, for teaching, available when the engine runs with `keep_paths=True`. $X$ is drawn in the identity's magenta and $Y$ in its teal until they meet, and the pair in the ink of met chains from the meeting time on; the three colors are the constants `CHAIN_X`, `CHAIN_Y` and `MET` of `telescopic.plotting`, which the site's identity script writes. Pairs are told apart by position; a legend names the lines, and in one dimension the time axis has integer ticks (DECISIONS #135).

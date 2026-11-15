@@ -88,12 +88,12 @@ print("quantiles 50%, 90%, 99%:", np.quantile(lag_one, [0.5, 0.9, 0.99]))
 
 {func}`telescopic.diagnostics.tv_bound` estimates the bound on the total variation
 distance $d_{TV}(\pi_t, \pi)$ between the law $\pi_t$ of $X_t$ and the target $\pi$ from
-these meeting times; its docstring says how a pair unmet at the cap enters, and here
-none is unmet:
+these meeting times, with its standard error; its docstring says how a pair unmet at the
+cap enters, and here none is unmet:
 
 ```{code-cell} python
 t = np.arange(3000)
-tv_lag_one = diagnostics.tv_bound(lag_one, 1, t)
+tv_lag_one, tv_one_error = diagnostics.tv_bound(lag_one, 1, t)
 print("TV bound at t = 0, 500, 1000:", tv_lag_one[[0, 500, 1000]])
 ```
 
@@ -114,8 +114,10 @@ pairs = engine.run(
     target, kernel, start, np.arange(1000), k=0, m=0, lag=lag, max_iter=50_000, rng=2
 )
 print(f"lag {lag}; unmet: {np.isinf(pairs.meeting_time).sum()}")
-tv = diagnostics.tv_bound(pairs.meeting_time, lag, t)
-w1 = diagnostics.w1_bound(pairs.distance_time, pairs.distance, 1000, lag, t)
+tv, tv_error = diagnostics.tv_bound(pairs.meeting_time, lag, t)
+w1, w1_error = diagnostics.w1_bound(
+    pairs.distance_owner, pairs.distance_time, pairs.distance, 1000, lag, t
+)
 print("TV bound at t = 0, 500, 1000:", tv[[0, 500, 1000]])
 ```
 
@@ -145,46 +147,21 @@ engine records before each pair meets; it depends on the units of the coordinate
 
 ## Choosing the burn-in
 
-The bound is an average over 1,000 pairs and has a Monte Carlo error. Its estimate at
-$t$ averages $\max(0, \lceil(\tau - L - t)/L\rceil)$ over the pairs, so the standard
-error of that average gives a band, and each pair's own bound gives one for the
-1-Wasserstein bound. A cautious rule takes as burn-in the first $t$ at
-which the upper edge of the band, two standard errors above the estimate, is below
-0.01:
+The bound is an average over 1,000 pairs and has a Monte Carlo error, the standard error
+that each bound function returns with it, which gives a band. A cautious rule takes as
+burn-in the first $t$ at which the upper edge of the band, two standard errors above the
+estimate, is below 0.01:
 
 ```{code-cell} python
-terms = np.maximum(0, np.ceil((pairs.meeting_time[:, None] - lag - t) / lag))
-tv_error = terms.std(axis=0, ddof=1) / np.sqrt(len(terms))
-# The same for the lag-1 bound.
-terms_one = np.maximum(0, lag_one[:, None] - 1 - t)
-tv_one_error = terms_one.std(axis=0, ddof=1) / np.sqrt(len(terms_one))
-# The same for the W1 bound, from each pair's own bound.
-w1_terms = np.array([
-    diagnostics.w1_bound(
-        pairs.distance_time[pairs.distance_owner == r],
-        pairs.distance[pairs.distance_owner == r],
-        1,
-        lag,
-        t,
-    )
-    for r in pairs.index
-])
-w1_error = w1_terms.std(axis=0, ddof=1) / np.sqrt(len(w1_terms))
 burn_in = int(np.argmax(tv + 2 * tv_error < 0.01))
 print(f"burn-in: {burn_in}")
 print(f"TV bound there: {tv[burn_in]:.4f} ± {tv_error[burn_in]:.4f}")
-print(f"W1 bound there: {w1[burn_in]:.4f}")
+print(f"W1 bound there: {w1[burn_in]:.4f} ± {w1_error[burn_in]:.4f}")
 ```
 
 ```{code-cell} python
 :tags: [remove-cell]
 
-# The average of the terms is the bound wherever it is below 1.
-below = tv < 1
-assert np.allclose(terms.mean(axis=0)[below], tv[below])
-below_one = tv_lag_one < 1
-assert np.allclose(terms_one.mean(axis=0)[below_one], tv_lag_one[below_one])
-assert np.allclose(w1_terms.mean(axis=0), w1)
 assert 0 < burn_in < len(t) - 1
 glue("burn_in", burn_in, display=False)
 ```

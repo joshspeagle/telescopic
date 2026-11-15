@@ -494,13 +494,20 @@ def test_the_default_w1_times_reach_a_censored_pairs_last_distance():
     replicates = gaussian_run(range(40), **SETTINGS, max_iter=13)
     result = Result(replicates)
     assert result.n_censored
-    bound = result.w1_bound()
+    bound, error = result.w1_bound()
     assert len(bound) == replicates.distance_time.max() - result.lag + 1
     assert bound[-1] > 0
     # The bound averages over every replicate, censored ones included, as the TV bound.
     times = np.arange(len(bound))
-    expected = w1_bound(replicates.distance_time, replicates.distance, 40, result.lag, times)
-    np.testing.assert_array_equal(bound, expected)
+    expected = w1_bound(
+        replicates.distance_owner,
+        replicates.distance_time,
+        replicates.distance,
+        40,
+        result.lag,
+        times,
+    )
+    np.testing.assert_array_equal((bound, error), expected)
 
 
 def test_tv_bound_counts_a_censored_pair_as_meeting_after_its_cap():
@@ -513,13 +520,13 @@ def test_tv_bound_counts_a_censored_pair_as_meeting_after_its_cap():
     t = np.arange(30)
     terms = np.maximum(0, np.ceil((known[:, None] - 3 - t) / 3))
     expected = np.minimum(1, terms.mean(axis=0))
-    np.testing.assert_allclose(result.tv_bound(t), expected, rtol=1e-12)
-    np.testing.assert_allclose(result.tv_bound(), expected[: 26 - 3], rtol=1e-12)
+    np.testing.assert_allclose(result.tv_bound(t)[0], expected, rtol=1e-12)
+    np.testing.assert_allclose(result.tv_bound()[0], expected[: 26 - 3], rtol=1e-12)
     assert result.diagnostics()["tv_bound_at_k"] == pytest.approx(4 / 7, rel=1e-12)
 
 
 def test_the_default_bound_times_end_where_the_bound_vanishes():
-    bound = RESULT.tv_bound()
+    bound = RESULT.tv_bound()[0]
     assert len(bound) == int(RESULT.meeting_times.max()) - RESULT.lag
     assert bound[-1] > 0
 

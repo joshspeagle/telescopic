@@ -143,11 +143,12 @@ $\beta$, $\hat q_\beta$
 
 $d_{TV}(\pi_t, \pi)$
 : Its bound: {meth}`result.tv_bound(t) <telescopic.Result.tv_bound>`, or
-  {func}`telescopic.diagnostics.tv_bound` from meeting times; its value at $k$ is
-  `result.diagnostics()["tv_bound_at_k"]`.
+  {func}`telescopic.diagnostics.tv_bound` from meeting times, each with its standard
+  error; its value at $k$ is `result.diagnostics()["tv_bound_at_k"]`.
 
 $d_{W_1}(\pi_t, \pi)$
-: Its bound: {meth}`result.w1_bound(t) <telescopic.Result.w1_bound>`.
+: Its bound: {meth}`result.w1_bound(t) <telescopic.Result.w1_bound>`, with its
+  standard error.
 
 ## Kernel parameters
 

@@ -244,7 +244,9 @@ term is at most $\mathbb P(X_{t+jL} \ne Y_{t+(j-1)L}) = \mathbb P(\tau > t + jL)
 absolute value, by the coupling inequality.
 
 telescopic estimates the bound by the average over replicates and reports
-$\min(1, \cdot)$. With $L = k$, its value at $t = k$ is close to
+$\min(1, \cdot)$, with the standard error of the average, the sample standard deviation
+of the replicates' terms over $\sqrt R$; it estimates the 1-Wasserstein bound below in
+the same way. With $L = k$, its value at $t = k$ is close to
 $\mathbb P(\tau - L > k)$, the fraction of pairs that meet late. A pair still unmet at
 its cap is known to meet after it, since its chains were compared at the cap, and counts
 as meeting at the cap plus 1, so with censored pairs the estimate is a lower bound; so

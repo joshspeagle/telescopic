@@ -49,7 +49,11 @@ def test_the_tv_bound_plot_draws_the_bound_and_marks_k():
     ax = RESULT.plot_tv_bound()
     t, bound = ax.lines[0].get_data()
     assert t[0] == 0
-    np.testing.assert_array_equal(bound, RESULT.tv_bound(t))
+    np.testing.assert_array_equal(bound, RESULT.tv_bound(t)[0])
+    # The band of two standard errors, capped at 1 and cut at the bottom of the axis.
+    band = ax.collections[0].get_paths()[0].vertices[:, 1]
+    assert band.max() <= 1
+    assert band.min() >= ax.get_ylim()[0]
     assert ax.get_yscale() == "log"
     assert ax.lines[-1].get_xdata()[0] == RESULT.k
 
