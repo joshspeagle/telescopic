@@ -1,0 +1,24 @@
+commit b406202; Linux x86_64, Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical processors; 4 processes; OMP, OpenBLAS and MKL threads 1
+Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1, telescopic 0.1.0.dev0
+pilot gaussian: 20000 replicates, mean cost 41.00 kernel steps, 4 s; b=1: B=41, lane cost 51.2 over 11880 pilot lanes, R=40; b=3: B=123, lane cost 123.3 over 5415 pilot lanes, R=96; b=10: B=410, lane cost 410.0 over 1866 pilot lanes, R=320
+pilot mixture: 20000 replicates, mean cost 264.68 kernel steps, 11 s; b=1: B=265, lane cost 304.4 over 11159 pilot lanes, R=37; b=3: B=794, lane cost 799.5 over 5566 pilot lanes, R=97; b=10: B=2647, lane cost 2647.0 over 1880 pilot lanes, R=320
+pilot banana: 20000 replicates, mean cost 354.83 kernel steps, 99 s; b=1: B=355, lane cost 430.8 over 12004 pilot lanes, R=39; b=3: B=1064, lane cost 1066.2 over 5452 pilot lanes, R=96; b=10: B=3548, lane cost 3548.0 over 1873 pilot lanes, R=320
+banana fixed b=3 (R=96): 500 runs, 48000 replicates computed, 259 s
+banana budget b=3 (B=1064): 500 runs, 58540 replicates computed, 320 s
+banana budget b=1 (B=355): 500 runs, 26692 replicates computed, 153 s
+banana fixed b=1 (R=39): 500 runs, 19500 replicates computed, 116 s
+gaussian budget b=10 (B=410): 1000 runs, 343032 replicates computed, 68 s
+gaussian fixed b=10 (R=320): 1000 runs, 320000 replicates computed, 57 s
+mixture budget b=10 (B=2647): 1000 runs, 343512 replicates computed, 193 s
+mixture fixed b=10 (R=320): 1000 runs, 320000 replicates computed, 187 s
+gaussian budget b=3 (B=123): 1000 runs, 118446 replicates computed, 26 s
+gaussian fixed b=3 (R=96): 1000 runs, 96000 replicates computed, 22 s
+mixture fixed b=3 (R=97): 1000 runs, 97000 replicates computed, 71 s
+mixture budget b=3 (B=794): 1000 runs, 115714 replicates computed, 81 s
+gaussian budget b=1 (B=41): 1000 runs, 54039 replicates computed, 12 s
+gaussian fixed b=1 (R=40): 1000 runs, 40000 replicates computed, 9 s
+mixture fixed b=1 (R=37): 1000 runs, 37000 replicates computed, 25 s
+mixture budget b=1 (B=265): 1000 runs, 57647 replicates computed, 39 s
+banana fixed b=10 (R=320): 500 runs, 160000 replicates computed, 908 s
+banana budget b=10 (B=3548): 500 runs, 170137 replicates computed, 968 s
+cells: 0.98 processor hours; wall 1067 s
