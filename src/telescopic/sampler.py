@@ -194,6 +194,7 @@ class CoupledSampler:
         self.kernel = kernel
         self.kernel.check_target(self.target)
         self.seed = root_seed(rng)
+        self._rng_given = rng is not None  # resume refuses an rng that disagrees
         # One draw from a throwaway generator gives the dimension, so that the kernel's and
         # the names are checked now rather than after tuning.
         self.ndim = len(draw(self.initial, replicate_generator(self.seed, MAIN, 0)))
@@ -228,6 +229,79 @@ class CoupledSampler:
         telescopic.engine.Settings or None
         """
         return None if self._replicates is None else self._replicates.settings
+
+    # Spec section 8.1; seed and indices, section 6.1; interrupted results, section 6.5.
+    def resume(self, result: Result) -> None:
+        """Continue the run of a result: its replicates, seed, settings, tuning and pilot.
+
+        The next call of :meth:`run` first runs the requested replicates that ``result``
+        lacks, then new indices above the highest it requested, with its ``k``, ``m``,
+        ``lag``, ``thin`` and ``max_iter``, and returns the result of all of them.
+
+        The sampler must have been built with the target, the initial distribution and
+        the kernel of that run. Only the dimension and the kernel's class can be checked;
+        a different target or kernel goes unnoticed and mixes replicates of two runs. Pass
+        ``result.kernel`` when it is a kernel. A loaded result holds only the kernel's
+        description: pass the kernel as it was built, untuned, and ``resume`` tunes it
+        again from the result's seed and warns if the tuning differs from the result's.
+
+        Parameters
+        ----------
+        result : Result
+            The result to continue: returned by a run, loaded, or merged.
+        """
+        if not isinstance(result, Result):
+            raise TypeError(f"result must be a telescopic.Result, not {type(result).__name__}")
+        for used, done in (
+            ("run replicates", self._replicates is not None),
+            ("run pilot pairs", self.pilot is not None),
+            ("tuned its kernel", self.tuning is not None),
+        ):
+            if done:
+                raise ValueError(f"resume needs a new sampler: this one has already {used}")
+        if result.ndim != self.ndim:
+            raise ValueError(
+                f"the result has dimension {result.ndim}, but the initial distribution "
+                f"draws points of dimension {self.ndim}"
+            )
+        # A loaded result holds the kernel's description, which starts with its class.
+        ran = result.kernel
+        ran = ran.split("(", 1)[0] if isinstance(ran, str) else type(ran).__name__
+        if result.kernel is not None and ran != type(self.kernel).__name__:
+            raise ValueError(
+                f"the result was run with {ran}, but the sampler's kernel is "
+                f"{type(self.kernel).__name__}"
+            )
+        if self._rng_given and engine._seed_key(self.seed) != engine._seed_key(result.seed):
+            raise ValueError(
+                "rng was given, but the result has another seed; omit rng to resume it"
+            )
+        if self.names is not None and self.names != result.names:
+            raise ValueError(f"names {self.names} differ from the result's {result.names}")
+        if not self.kernel.is_tuned and result.tuning is None:
+            raise ValueError(
+                "the result's kernel needed no tuning, so the sampler's must have every "
+                "parameter set; pass the kernel the result was run with"
+            )
+        self.seed = root_seed(result.seed)
+        self.names, self.pilot = result.names, result.pilot
+        self._replicates = result._replicates
+        self.tuning = result.tuning
+        if not self.kernel.is_tuned:
+            # From the tuning namespace of the result's seed, as the run tuned it (spec
+            # section 6.1). No tolerance: rounding can move a pilot's accept decision.
+            report = cast(TuningReport, self._tune(self.progress))
+            kept = cast(TuningReport, result.tuning)
+            if not (
+                np.array_equal(report.mean, kept.mean) and np.array_equal(report.cov, kept.cov)
+            ):
+                warn(
+                    "the kernel tuned again from the result's seed differs from the result's "
+                    "tuning: the target, the initial distribution or the kernel differ from "
+                    "the run's, or the machine, a library version or the number of BLAS "
+                    "threads does; the resumed run keeps the new tuning",
+                    InputWarning,
+                )
 
     # Spec section 5.3.
     def tune(self) -> TuningReport | None:

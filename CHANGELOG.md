@@ -406,3 +406,10 @@ All notable changes to this project are documented here. The format follows
 - `Independence` computes its weights with fewer operations per step, and a Student-t
   `MultivariateT` its normalizing constant once: a one-lane run with a Student-t
   proposal at d = 20 took 1.12 times less time. Its outputs are unchanged.
+- `CoupledSampler.resume(result)` continues a returned, loaded or merged result on a new
+  sampler: it adopts the result's seed, replicates, settings, pilot and tuning, and the
+  next `run` completes the replicates an interrupted run never started, then continues
+  above the highest index requested. It checks the dimension, the kernel's class, an
+  `rng` given to the constructor and the names; the target and the kernel's parameters
+  are the caller's to match. An untuned kernel, as a loaded result needs, is tuned again
+  from the result's seed, with an `InputWarning` if its tuning differs from the result's.
