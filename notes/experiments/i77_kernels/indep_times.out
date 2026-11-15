@@ -1,0 +1,20 @@
+machine: setup: commit b7bdf47 of the package; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 logical cores; no thread variable set; Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1
+base = b7bdf47, new = f5f24aa; load average under 1
+base step 210.69 coupled 232.92
+new step 201.40 coupled 222.37
+base step 204.11 coupled 222.57
+new step 199.80 coupled 220.76
+base step 198.34 coupled 219.56
+new step 202.19 coupled 224.73
+base step 210.22 coupled 234.06
+new step 205.35 coupled 230.73
+base step 208.84 coupled 230.99
+new step 201.12 coupled 225.40
+base step 211.23 coupled 230.61
+new step 194.12 coupled 218.21
+base step 197.81 coupled 221.53
+new step 207.86 coupled 232.40
+base step 202.52 coupled 221.91
+new step 202.25 coupled 223.84
+step: median base 206.5, new 201.8, ratio 0.977 (per pair 0.956 0.979 1.019 0.977 0.963 0.919 1.051 0.999)
+coupled: median base 226.6, new 224.3, ratio 0.990 (per pair 0.955 0.992 1.024 0.986 0.976 0.946 1.049 1.009)
