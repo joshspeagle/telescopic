@@ -796,3 +796,12 @@ def test_a_monitor_error_on_a_pool_keeps_the_finished_chunks():
     assert error is raised
     assert 250 <= len(replicates.index) <= 500
     np.testing.assert_array_equal(replicates.requested, np.arange(1_000))
+
+
+def test_the_chunks_of_a_broken_pool_count_as_one_error():
+    # Broken fails each chunk but the first: 600 replicates in 3 chunks of 200 on its 2
+    # workers, two of which raise BrokenProcessPool.
+    replicates, error, others = execute(job(), np.arange(600), Broken(first=True), never)
+    assert isinstance(error, BrokenProcessPool)
+    assert others == 0
+    np.testing.assert_array_equal(replicates.index, np.arange(200))

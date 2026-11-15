@@ -180,12 +180,14 @@ def execute(
     failures = [outcome.error for _, outcome in outcomes if outcome.error is not None]
     if error is None and failures:
         error = failures.pop(0)
+    # A broken pool fails every chunk it had: those are one error, the one raised or not.
+    others = sum(not isinstance(failure, BrokenExecutor) for failure in failures)
     parts = [outcome.replicates for _, outcome in outcomes if outcome.replicates is not None]
     if not parts:
-        return engine._Outcome(None, error, len(failures))
+        return engine._Outcome(None, error, others)
     # Unstarted chunks are requested too, and the time is the parent's, not the workers'.
     merged = replace(engine.merge(parts), requested=indices, seconds=time.perf_counter() - start)
-    return engine._Outcome(merged, error, len(failures))
+    return engine._Outcome(merged, error, others)
 
 
 def _workers(pool: Any, n_workers: int | None) -> int:
