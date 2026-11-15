@@ -62,7 +62,8 @@ reference lists its generated pages.
    internal.
 7. **Identity.** A change to a color, a font, a size or the mark is made in
    `docs/_scripts/brand.py`, and a change to the package that moves the landing page's
-   coupled pair is saved with `docs/_scripts/hero_pair.py`; `CONTRIBUTING.md`
-   (Documentation) gives the commands, and both scripts' `--check` pass.
+   coupled pair is saved with `docs/_scripts/hero_pair.py`; a change to the package that
+   moves a generated figure is redrawn with `docs/_scripts/figures.py`; `CONTRIBUTING.md`
+   (Documentation) gives the commands, and the three scripts' `--check` pass.
 8. **Build.** `scripts/verify.sh --docs` passes: the build runs the tutorials, treats
    warnings as errors and checks every cross-reference.
