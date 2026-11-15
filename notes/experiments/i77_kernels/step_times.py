@@ -13,9 +13,13 @@ fixed states drawn from the target, and `coupled_step` from fixed pairs of indep
 draws; the returned states are discarded, so every call does the same work, and the
 draws come from `testing.random_draws`. For each configuration one uncounted round fixes
 the number of calls that takes at least 0.2 s, then 7 rounds of that many calls give the
-median time per call. Run as `OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
-python notes/experiments/i77_kernels/step_times.py`, with the package to time first on
-`PYTHONPATH`; the first line gives the setup.
+median CPU time per call. CPU time of the process (`time.process_time`), not wall time:
+the machine of the recorded runs was shared with other jobs that kept its load above 5
+on 4 logical cores, which made wall times vary by a factor of up to 3 between rounds.
+Run as `OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 python
+notes/experiments/i77_kernels/step_times.py`, with the package to time first on
+`PYTHONPATH`; the first line gives the setup. To compare two commits, run it on each in
+turn, alternating, several times, and compare the medians over the runs.
 """
 
 import gc
@@ -48,19 +52,19 @@ def kernels(d, cov):
 def per_call(call):
     number = 1
     while True:
-        start = time.perf_counter()
+        start = time.process_time()
         for _ in range(number):
             call()
-        if time.perf_counter() - start >= 0.2:
+        if time.process_time() - start >= 0.2:
             break
         number *= 2
     times = []
     for _ in range(ROUNDS):
         gc.collect()
-        start = time.perf_counter()
+        start = time.process_time()
         for _ in range(number):
             call()
-        times.append((time.perf_counter() - start) / number)
+        times.append((time.process_time() - start) / number)
     return float(np.median(times))
 
 
