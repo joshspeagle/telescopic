@@ -158,9 +158,12 @@ class _GaussianProposal(Proposal):
                 f"inverse must be the inverse of factor, but inverse @ factor differs from "
                 f"the identity by {residual:.3g}"
             )
-        # The arrays as given, in their memory order, on which einsum's order of summation
+        # Copies in the memory order given (order="K"), on which einsum's order of summation
         # and so the last bits of the products depend; real_array's copies are C-ordered.
-        self.factor, self.inverse = (np.asarray(array, dtype=np.float64) for array in given)
+        # A copy, so that a caller who changes their array does not change the kernel.
+        self.factor, self.inverse = (
+            np.array(array, dtype=np.float64, order="K") for array in given
+        )
 
     @property
     def ndim(self) -> int:

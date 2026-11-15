@@ -269,3 +269,13 @@ def test_metropolis_hastings_refuses_starts_of_another_dimension_than_its_propos
 def test_independence_proposal_refuses_a_distribution_without_sample_and_log_density():
     with pytest.raises(TypeError, match="must have sample"):
         IndependenceProposal(stats.multivariate_normal(np.zeros(2)))
+
+
+def test_a_gaussian_proposal_keeps_its_matrices_when_the_caller_changes_theirs():
+    factor = np.asfortranarray([[1.0, 0.0], [0.5, 1.0]])
+    inverse = np.linalg.inv(factor)
+    proposal = RandomWalkProposal(factor, inverse)
+    factor[0, 0] = inverse[1, 0] = 9.0
+    np.testing.assert_array_equal(proposal.factor, [[1.0, 0.0], [0.5, 1.0]])
+    np.testing.assert_array_equal(proposal.inverse @ proposal.factor, np.eye(2))
+    assert proposal.factor.flags.f_contiguous  # the order the caller gave, as einsum reads it
