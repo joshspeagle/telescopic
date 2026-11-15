@@ -66,43 +66,10 @@ log_prob = jax.jit(log_density)
 grad = jax.jit(jax.grad(log_density))
 ```
 
-They return JAX arrays. telescopic copies what a target function returns into a NumPy
-array and checks its shape and type, so no conversion is needed:
-{class}`telescopic.Target`, which evaluates a batch of points the way the kernels do,
-returns NumPy float64 arrays:
-
-```{code-cell} python
-target = telescopic.Target(log_prob, grad=grad, args=(X, y))
-points = np.zeros((3, 6))
-values, gradients = target.log_prob_and_grad(points)
-type(values).__name__, values.dtype, gradients.shape
-```
-
-Without 64-bit mode, JAX returns float32 values, which round the target. The sampler
-then warns, once per target. A function that casts its value to float32 shows the
-warning:
-
-```{code-cell} python
-:tags: [wrap-output]
-
-import warnings
-
-
-def log_prob_float32(beta, X, y):
-    return log_prob(beta, X, y).astype(jnp.float32)
-
-
-with warnings.catch_warnings(record=True) as caught:
-    warnings.simplefilter("always")
-    telescopic.Target(log_prob_float32, args=(X, y)).log_prob(points)
-print(caught[0].message)
-```
-
-```{code-cell} python
-:tags: [remove-cell]
-
-assert [w.category for w in caught] == [telescopic.InputWarning]
-```
+They return JAX arrays, which telescopic copies into NumPy float64 arrays as it checks
+their shape and type, so no conversion is needed. Without 64-bit mode, JAX returns
+float32 values, which round the target, and the sampler warns
+([The log-density](../guide/log-density.md#the-log-density)).
 
 The {term}`pairs <pair>` start from a Gaussian ten times wider than an optimizer's error bars
 ([Choose an initial distribution](../guide/initial-distribution.md#choosing-one)). The
@@ -115,11 +82,11 @@ fit = optimize.minimize(negative, np.zeros(6), args=(X, y), jac=True)
 init = telescopic.initial.Normal(mean=fit.x, cov=100 * fit.hess_inv)
 ```
 
-A run of 1000 {term}`replicates <replicate>` with MALA:
+A run of 300 {term}`replicates <replicate>` with MALA:
 
 ```{code-cell} python
 point = telescopic.sample(
-    log_prob, init, 1000, args=(X, y), grad=grad, kernel="mala", names=names, rng=2
+    log_prob, init, 300, args=(X, y), grad=grad, kernel="mala", names=names, rng=2
 )
 point.summary()
 ```
@@ -132,8 +99,8 @@ same data for every point. With `vectorize=True`, the kernels then call each fun
 once per step for all the chains they advance
 ([The log-density](../guide/log-density.md#the-log-density)). `jax.jit` compiles a
 function anew for each shape of its input, and the number of chains in a batch changes
-during a run, as pairs meet and new pairs start. A run of 100 replicates shows how many
-sizes the batches take:
+during a run, as pairs meet and new pairs start. A short run of 20 replicates shows how
+many sizes the batches take:
 
 ```{code-cell} python
 log_prob_batch = jax.jit(jax.vmap(log_density, in_axes=(0, None, None)))
@@ -148,7 +115,7 @@ def counted(beta, X, y):
 
 
 telescopic.sample(
-    counted, init, args=(X, y), grad=grad_batch, vectorize=True, kernel="mala", rng=2
+    counted, init, 20, args=(X, y), grad=grad_batch, vectorize=True, kernel="mala", rng=2
 )
 len(sizes), max(sizes)
 ```
@@ -159,7 +126,8 @@ len(sizes), max(sizes)
 glue("n_sizes", len(sizes), display=False)
 ```
 
-Each of these {glue:text}`n_sizes:d` sizes costs a compilation. Padding each batch to
+Each of these {glue:text}`n_sizes:d` sizes costs a compilation, and a longer run meets
+more of them. Padding each batch to
 the next power of 2, with copies of its first point, and keeping the rows of the actual
 points, leaves at most one compilation per power of 2:
 
@@ -177,7 +145,7 @@ def padded(function):
 batch = telescopic.sample(
     padded(log_prob_batch),
     init,
-    1000,
+    300,
     args=(X, y),
     grad=padded(grad_batch),
     vectorize=True,
@@ -258,13 +226,15 @@ dict(zip(names, z.round(2).tolist()))
 ```{code-cell} python
 :tags: [remove-cell]
 
-# The claim of the next paragraph.
+# The claims of the next paragraph.
 assert np.all(np.abs(z) < 3)
+glue("largest_z", float(np.max(np.abs(z))), display=False)
 ```
 
-The two runs have different seeds, so their errors are independent, and the
-differences of their estimates, in standard errors, are of the size expected of draws
-from $\mathcal N(0, 1)$.
+The two runs have different seeds, so their errors are independent, and each difference
+of their estimates, in standard errors, should look like a draw from
+$\mathcal N(0, 1)$. All six, printed above, are within 3 standard errors; the largest
+in absolute value is {glue:text}`largest_z:.2f`.
 
 ## What the warnings say
 
