@@ -106,8 +106,8 @@ class Result:
     moments, :meth:`mean`, :meth:`var`, :meth:`std` and :meth:`cov` (up to
     :math:`d = 100`), come from the moments of all :math:`R` replicates that met, as do
     the meeting times, costs and bounds on total variation. :meth:`estimate`, the
-    quantiles, the histograms, the plots of marginals, ``measure``, :meth:`chains` and
-    :meth:`cov` above :math:`d = 100` come from the ``n_kept`` replicates of index below
+    quantiles, the histograms, the plots of marginals, ``measure``, :meth:`chains`,
+    :meth:`to_datatree` and :meth:`cov` above :math:`d = 100` come from the ``n_kept`` replicates of index below
     ``keep`` that met, and :meth:`w1_bound` from the kept replicates, censored ones
     included. Each set gives unbiased or consistent estimates on its own; no joint error
     statement holds for estimates from both.
@@ -199,10 +199,11 @@ class Result:
         self._n_stored = int(stored.sum())
         kept = met & stored
         self.n_kept = int(kept.sum())
+        self._kept_index = replicates.index[kept]
         self.measure = SignedMeasure(
             replicates.atoms,
             replicates.weights,
-            np.searchsorted(replicates.index[kept], replicates.owner),
+            np.searchsorted(self._kept_index, replicates.owner),
             self.n_kept,
         )
         self.seed, self.kernel, self.initial = replicates.seed, kernel, initial
@@ -742,7 +743,7 @@ class Result:
         Replicate :math:`r`'s chain is :math:`X_t` for :math:`t \in S = \{k, k + s, \dots\}
         \cap [k, m]`, ``s`` = ``thin``, in time order: the atoms of the time average,
         without the bias correction. Shaped as ArviZ takes chains, ``(chain, draw,
-        dim)``, for R-hat and effective sample sizes across replicates.
+        dim)``; :meth:`to_datatree` passes them to ArviZ.
 
         Returns
         -------
@@ -760,6 +761,50 @@ class Result:
             self.n_kept, len(averaged), self.ndim
         )
         return states
+
+    def to_datatree(self) -> Any:
+        r"""The chains of :meth:`chains` as ArviZ data, without the bias correction (needs arviz).
+
+        The ``posterior`` group holds one variable per coordinate, named by ``names``, of
+        dimensions ``(chain, draw)``: a chain for each kept replicate that met, whose
+        coordinate is the replicate's index, and a draw for each time :math:`t \in S`, whose
+        coordinate is :math:`t`. There is no ``sample_stats`` group, since a result stores
+        no log-density values.
+
+        ArviZ's :math:`\hat R` and effective sample sizes of these chains describe the
+        uncorrected chains, not the estimates of this result (What replaces a judgment of
+        convergence, in :doc:`/concepts/error-bars`).
+
+        Returns
+        -------
+        xarray.DataTree
+            Each variable of ``posterior`` has shape ``(n_kept, len(S))``.
+        """
+        reserved = [name for name in self.names if name in ("chain", "draw") or "/" in name]
+        if reserved:
+            raise ValueError(
+                f"names {reserved} cannot name ArviZ variables: a name must not be "
+                "'chain' or 'draw' or contain '/'"
+            )
+        needs = (
+            "to_datatree needs ArviZ 1.0 or later, which needs Python 3.12 and NumPy 2: "
+            "pip install 'telescopic[arviz]'"
+        )
+        try:
+            # The typed package of ArviZ 1.0 that holds from_dict; arviz installs it.
+            import arviz_base
+        except ImportError as error:
+            raise ImportError(needs) from error
+        # arviz-base 0.x was a standalone package with another from_dict.
+        if int(arviz_base.__version__.split(".")[0]) < 1:
+            raise ImportError(needs)
+        chains = self.chains()
+        posterior = {name: chains[..., i] for i, name in enumerate(self.names)}
+        coords = {"chain": self._kept_index, "draw": averaging_times(self.k, self.m, self.thin)}
+        # The conventions checked include more chains than draws, the usual shape here.
+        return arviz_base.from_dict(
+            {"posterior": posterior}, coords=coords, check_conventions=False
+        )
 
     def plot_meeting_times(self, axes: Sequence[Any] | None = None) -> Any:
         """Plot the meeting times and their survival function (needs matplotlib).

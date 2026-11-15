@@ -37,6 +37,11 @@ the settings change the cost and the variance, never the bias.
 
 ## The automatic pipeline
 
+```{diagram} pipeline
+The steps of a run with the default settings, from top to bottom, with the arguments
+that skip a step, or the settings given that are kept, at the right.
+```
+
 With the defaults, before the replicates run:
 
 1. **The tuning pilot.** Kernel parameters left as `None` are tuned from 4 adaptive

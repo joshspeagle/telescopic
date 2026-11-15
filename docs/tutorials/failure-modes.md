@@ -99,6 +99,43 @@ The same kernel and settings from $\mathcal N(10, 10^2)$, the mixture's default 
 distribution (also theirs), which puts mass on both modes:
 
 ```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      The mixture's density, two gray humps at -4 and 4, with two dashed curves: the
+      narrow initial distribution N(10, 1), a peak at 10 beyond the mode at 4, and the
+      wide N(10, 10 squared), a low broad curve over both modes whose part below 0 is
+      shaded, with its mass, 0.159; at the right, the probability 0.267 that two of
+      its draws fall on opposite sides of 0.
+  figure:
+    caption: >-
+      The target $\tfrac12\mathcal N(-4, 1) + \tfrac12\mathcal N(4, 1)$, in gray,
+      and the two initial distributions, dashed: $\mathcal N(10, 1)$ starts every
+      chain beyond the mode at 4, and $\mathcal N(10, 10^2)$ puts mass $\Phi(-1)$,
+      shaded, below 0, on the side of the mode at $-4$. Two independent draws of
+      $\mathcal N(10, 10^2)$ fall on opposite sides of 0 with probability
+      $2\Phi(1)\Phi(-1)$, printed at the right.
+---
+grid = np.linspace(-15, 35, 1001)
+density = 0.5 * stats.norm.pdf(grid, -4, 1) + 0.5 * stats.norm.pdf(grid, 4, 1)
+narrow_start = stats.norm.pdf(grid, 10, 1)
+wide_start = stats.norm.pdf(grid, mixture.initial.mean[0], np.sqrt(mixture.initial.cov[0, 0]))
+fig, ax = plt.subplots(figsize=(6, 2.8))
+ax.fill_between(grid, density, color="0.85")
+ax.plot(grid, density, color="0.45", linewidth=1.2)
+ax.plot(grid, narrow_start, "--", color="C0")
+ax.plot(grid, wide_start, "--", color="C1")
+ax.fill_between(grid, wide_start, where=grid <= 0, color="C1", alpha=0.35)
+ax.annotate("$N(10, 1)$", (11, 0.33), color="C0")
+ax.annotate("$N(10, 10^2)$", (19, 0.05), color="C1")
+below = stats.norm.cdf(-1)
+ax.annotate(f"mass below 0: {below:.3f}", (-14.5, 0.27), color="C1")
+ax.annotate(f"two starts on opposite sides: {2 * below * (1 - below):.3f}", (14, 0.2))
+ax.set(xlabel="$x$", yticks=[], ylim=(0, 0.42));
+```
+
+```{code-cell} python
 wide = bimodal_run(mixture.initial)
 ```
 

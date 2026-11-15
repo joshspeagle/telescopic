@@ -121,6 +121,12 @@ All notable changes to this project are documented here. The format follows
   Neal's funnel, which compares the random walk, HMC and a change of coordinates; and
   Checking the burn-in of an existing sampler, which couples a Metropolis sampler of
   one's own and chooses a burn-in from the total variation bound.
+- Figures on existing pages: the automatic pipeline (Settings), what a `Result` holds,
+  a pool's chunks and their random streams (Parallel runs), coupled HMC trajectories and
+  a meeting step (Choose a kernel), what the lag and `k` trade (Choosing k, m and the
+  lag), the estimates of Unbiased on average, telescopic beside emcee, and the two-mode
+  target with its two initial distributions; Write a kernel adds a template of every
+  member a kernel needs and a figure of the marginal check.
 - The API reference is an index of one-line summaries grouped by section, with a page for
   each class, its attributes and methods, a page for `sample`, and a page for each module
   that the index lists, its functions and a table of its classes. The page of a class with
@@ -463,6 +469,10 @@ All notable changes to this project are documented here. The format follows
   `Result.chains()` returns the averaged states of each kept replicate as chains of equal
   length. `max_iter` must be at most 2**31 - 1 where times are stored, and a stored atom
   costs 8d + 20 bytes instead of 8d + 16.
+- `Result.to_datatree()` returns the chains of `Result.chains()` as ArviZ data, one
+  variable per parameter name with the replicate indices and times as coordinates, as an
+  `xarray.DataTree`; it needs ArviZ 1.0 or newer, which needs Python 3.12 and NumPy 2,
+  through the new extra `telescopic[arviz]`.
 - `keep` on `CoupledSampler.run`, `sample` and `engine.run` (and `engine.Settings.keep`)
   stores the signed measures and distances of the replicates of index below `keep` only,
   and the moments of every replicate (`Replicates.center` and `Replicates.moments`), from

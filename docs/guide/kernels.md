@@ -147,6 +147,19 @@ they are within about `meeting_scale` of each other in the coordinates that `cov
 whitens. This is the construction of Heng & Jacob (2019), whose meeting step is not
 whitened and uses the rejection maximal coupling.
 
+```{diagram} hmc-meeting
+Two chains of {class}`telescopic.kernels.HMC` on a standard normal target in two
+dimensions, with `cov` the identity, `jitter=0`, 5 leapfrog steps of 0.2 and
+`meeting_scale=0.5`, where the default is 0.001, so that the meeting step can be
+seen. $X$, in magenta, and $Y$, in teal, take three trajectories with the same
+momentum, each drawn with its leapfrog points: the chains come closer at each one but do
+not become equal. Then a meeting step, a random-walk step of scale $\sigma$ =
+`meeting_scale` around each chain, drawn as dashed circles and coupled by the
+reflection-maximal coupling, moves both chains to one point, in the ink of met chains.
+The end of each trajectory and the point of the meeting are those of the package's
+coupled step.
+```
+
 `tune` sets `cov` to the covariance of the pilot chains, then `step_size` by dual
 averaging of the jittered trajectories alone toward an acceptance rate of 0.8. `n_steps`
 defaults to $\lceil 1/\epsilon\rceil$, a trajectory of length about 1 in whitened

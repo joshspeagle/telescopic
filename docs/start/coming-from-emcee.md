@@ -12,6 +12,7 @@ kernelspec:
 | {term}`burn-in` steps, discarded | `k`, chosen from pilot {term}`meeting times <meeting time>`; the bias left at `k` is corrected, not ignored |
 | the autocorrelation time, which sets the error bars | meeting times, which set the cost; the error bars come from independent replicates |
 | `get_chain(flat=True)` | `result.measure`: {term}`atoms <atom>` whose weights can be negative; they are not samples, so plot them with their weights ([Signed measures](../guide/estimates.md#signed-measures), [Plot a result](../guide/plots.md)) |
+| `get_chain()`, and `arviz.from_emcee` | `result.chains()`, and `result.to_datatree()`: one ordinary chain per kept replicate after `k` ([What replaces a judgment of convergence](../concepts/error-bars.md#what-replaces-a-judgment-of-convergence)) |
 | `log_prob_fn(theta, *args)`, `vectorize=True`, `pool=` | the same: `log_prob(theta, *args)`, `vectorize=True`, `pool=`, except that `log_prob` returns the log-density alone, without blobs; derived quantities come from `result.estimate` after the run |
 | `run_mcmc(None, n_steps)` continues the chains; an `HDFBackend` keeps them in a file to continue later | `sampler.run(n)` adds replicates to the same sampler; a new sampler continues a returned or saved result with `sampler.resume(result)` ([Continuing a run](../guide/save-load-merge.md#continuing-a-run)) |
 
@@ -168,6 +169,78 @@ and the standard deviations by at most {glue:text}`largest_std_gap:.1%`. With th
 number of log-density evaluations, telescopic's error bars are
 {glue:text}`ratio_slope:.2f` and {glue:text}`ratio_intercept:.2f` times emcee's, for the
 slope and the intercept. This is one run of each, on one target.
+
+Drawn against the exact posterior, the two samplers' means with two error bars, in units
+of the posterior's standard deviation, and the joint posterior:
+
+```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      Left: for the slope and the intercept, a vertical line at the exact mean and
+      two dots with horizontal error bars, emcee's and telescopic's, both within
+      a tenth of a posterior standard deviation of the line. Right: the
+      exact 1- and 2-sigma ellipses of slope and intercept, a tilted ellipse, over
+      telescopic's two-dimensional histogram, shaded blue by each bin's mass, which
+      fills the ellipses, and emcee's samples as small dots that fill them too.
+  figure:
+    caption: >-
+      Left: emcee's and telescopic's means of the slope and the intercept with two
+      error bars, at equal numbers of log-density evaluations, as distances from the
+      exact mean in units of the exact posterior standard deviation. Right: the
+      exact 1- and 2-sigma ellipses of the posterior, telescopic's histogram of
+      slope and intercept from `result.histogram`, darker where a bin's mass is
+      larger, and a thousand of emcee's samples.
+---
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
+
+fig, (left, right) = plt.subplots(1, 2, figsize=(7, 3), width_ratios=(1, 1.2))
+for row, name in enumerate(["slope", "intercept"]):
+    for shift, (label, value, error, color) in enumerate(
+        (
+            ("emcee", emcee_mean, emcee_error, "C2"),
+            ("telescopic", mean.value, mean.standard_error, "C0"),
+        )
+    ):
+        z_value = (value[row] - exact_mean[row]) / exact_std[row]
+        z_error = 2 * error[row] / exact_std[row]
+        left.errorbar(
+            z_value, row + 0.15 * (2 * shift - 1), xerr=z_error, fmt="o", color=color,
+            capsize=3, label=label if row == 0 else None,
+        )
+left.axvline(0, color="gray", linewidth=0.8)
+left.set_yticks([0, 1], ["slope", "intercept"])
+left.set_ylim(1.5, -1.0)
+left.set(xlabel="(mean $-$ exact) / posterior std")
+left.legend(loc="upper center", ncols=2)
+
+span = np.column_stack([exact_mean - 3.5 * exact_std, exact_mean + 3.5 * exact_std])
+masses, _, (slope_edges, intercept_edges) = result.histogram([0, 1], bins=24, range=span)
+shade = LinearSegmentedColormap.from_list("shade", [fig.get_facecolor(), "C0"])
+right.pcolormesh(slope_edges, intercept_edges, masses.T, cmap=shade, vmin=0)
+cov = np.linalg.inv(precision)
+values, vectors = np.linalg.eigh(cov)
+angle = np.linspace(0, 2 * np.pi, 200)
+circle = np.stack([np.cos(angle), np.sin(angle)])
+for radius in (1, 2):
+    ellipse = exact_mean[:, None] + radius * vectors @ (np.sqrt(values)[:, None] * circle)
+    right.plot(*ellipse, color="0.25", linewidth=1.2)
+shown = samples[np.random.default_rng(0).choice(len(samples), 1000, replace=False)]
+right.plot(*shown.T, ".", color="C2", markersize=1.5, alpha=0.6)
+right.set(xlim=span[0], ylim=span[1], xlabel="slope", ylabel="intercept");
+```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The figure's shading starts at 0, so no bin may be negative; and the samples outnumber
+# those drawn.
+assert masses.min() >= 0
+assert np.all(np.abs(np.array([emcee_mean, mean.value]) - exact_mean) < 0.1 * exact_std)
+assert len(samples) > 1000
+```
 
 ## What the error bars mean
 
