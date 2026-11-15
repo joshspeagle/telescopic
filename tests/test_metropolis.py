@@ -230,6 +230,11 @@ class Counting:
         return self.q.log_density(x)
 
 
+def cache_names(kernel):
+    # The names of an Independence kernel's cache fields: the point, then log q.
+    return kernel._proposal._point_name, kernel._proposal._log_q_name
+
+
 def cleared(state):
     return State(state.x, state.log_prob, state.grad)
 
@@ -256,7 +261,7 @@ def test_independence_cache_matches_the_uncached_kernel_bitwise_in_a_mixture_wit
     )
     rng = np.random.default_rng(10)
     pair = [cached.init_state(target, rng.standard_normal((n, d))) for _ in "xy"]
-    assert set(pair[0].extra) == {"1/independence.point", "1/independence.log_q"}
+    assert set(pair[0].extra) == {f"1/{name}" for name in cache_names(cached.kernels[1])}
     expected = [cleared(state) for state in pair]
     proposals[0].rows = proposals[1].rows = 0
     for t in range(200):
@@ -285,9 +290,10 @@ def planted(kernel, target, n, d, wrong):
     if wrong == "signed zero":
         x[:, 0] = 0.0
     state = kernel.init_state(target, x)
-    point = state.extra["independence.point"]
+    point_name, log_q_name = cache_names(kernel)
+    point = state.extra[point_name]
     point[:, 0] = -0.0 if wrong == "signed zero" else point[:, 0] + 1.0
-    state.extra["independence.log_q"] = state.extra["independence.log_q"] + 5.0
+    state.extra[log_q_name] = state.extra[log_q_name] + 5.0
     return state
 
 
@@ -311,10 +317,11 @@ def test_independence_recomputes_a_cached_value_whose_point_is_not_the_position_
     assert_same_states(pair, expected_pair)
     # Every returned cache is right, at a point that is a copy of the position.
     for new in (moved, *pair):
-        point = new.extra["independence.point"]
+        point_name, log_q_name = cache_names(kernel)
+        point = new.extra[point_name]
         assert not np.shares_memory(point, new.x)
         np.testing.assert_array_equal(point.view(np.uint64), new.x.view(np.uint64))
-        np.testing.assert_array_equal(new.extra["independence.log_q"], q.log_density(new.x))
+        np.testing.assert_array_equal(new.extra[log_q_name], q.log_density(new.x))
 
 
 def test_two_independence_components_of_a_mixture_keep_separate_caches():
@@ -331,9 +338,28 @@ def test_two_independence_components_of_a_mixture_keep_separate_caches():
         assert_same_states(pair, expected)
         for state in pair:
             for i, q in enumerate(proposals):
-                point = state.extra[f"{i}/independence.point"]
-                log_q = state.extra[f"{i}/independence.log_q"]
+                point_name, log_q_name = cache_names(kernel.kernels[i])
+                point = state.extra[f"{i}/{point_name}"]
+                log_q = state.extra[f"{i}/{log_q_name}"]
                 np.testing.assert_array_equal(log_q, q.log_density(point))
+
+
+def test_independence_kernels_of_two_distributions_never_read_each_others_cache():
+    # A user's scan hands one state from Independence(q1) to Independence(q2) and back:
+    # a rejected proposal leaves the chain at its point, where a cache matched on the
+    # point alone would give q2 the value of q1.
+    d, n = 2, 200
+    target = Target(gaussian, vectorize=True)
+    proposals = [MultivariateT(np.zeros(d), np.eye(d)), MultivariateT(np.ones(d), 3 * np.eye(d))]
+    scan = [Independence(q) for q in proposals]
+    state = scan[0].init_state(target, np.random.default_rng(14).standard_normal((n, d)))
+    expected = cleared(state)
+    for t in range(40):
+        kernel = scan[t % 2]
+        state, probability = kernel.step(target, state, random_draws(n, t))
+        expected, expected_probability = kernel.step(target, cleared(expected), random_draws(n, t))
+        assert_same_states((state,), (expected,))
+        np.testing.assert_array_equal(probability, expected_probability)
 
 
 def test_independence_proposal_cannot_be_reassigned():

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import itertools
+import os
 from abc import ABC, abstractmethod
 from functools import partial
 from typing import Any, Protocol, Self, cast
@@ -320,11 +322,12 @@ class IndependenceProposal(Proposal):
     :math:`[\log\pi(x') - \log q(x')] - [\log\pi(x) - \log q(x)]`, with a weight of
     ``-inf`` where :math:`\pi` is 0, and a proposal where :math:`q` is 0 rejected.
 
-    The states carry a cache of :math:`\log q(x)`, the fields ``independence.log_q``,
-    shape (n,), and ``independence.point``, shape (n, d), the point at which it was
-    computed. A value is used only where its point equals the position bit for bit, so
-    that a chain that another kernel moved, or a state without the fields, gets a fresh
-    value. A step and a coupled step evaluate :math:`\log q` in one call, at the
+    The states carry a cache of :math:`\log q(x)`, the fields
+    ``independence.<key>.log_q``, shape (n,), and ``independence.<key>.point``, shape
+    (n, d), the point at which it was computed. The key names this proposal object, so
+    that a state stepped by another one, of another distribution, never reads its cache.
+    A value is used only where its point equals the position bit for bit, so that a chain
+    that another kernel moved, or a state without the fields, gets a fresh value. A step and a coupled step evaluate :math:`\log q` in one call, at the
     proposals and at the chains' states whose value is missing or stale. Where
     ``log_density`` gives a row the same value in any batch, as
     :class:`~telescopic.kernels.MultivariateT` does, the cache changes no number.
@@ -345,6 +348,11 @@ class IndependenceProposal(Proposal):
                 f"MultivariateT does, not {type(distribution).__name__}"
             )
         self.distribution = distribution
+        # The cache's fields, named for this object: the process and a count of the
+        # proposals it built, so that two proposals never share a name, whatever their
+        # distributions; no number depends on the name.
+        key = f"independence.{os.getpid()}.{next(_PROPOSALS)}"
+        self._point_name, self._log_q_name = f"{key}.point", f"{key}.log_q"
 
     @property
     def ndim(self) -> int | None:
@@ -363,9 +371,10 @@ class IndependenceProposal(Proposal):
         Returns
         -------
         dict of str to ndarray
-            ``independence.point``, a copy of the positions, and ``independence.log_q``.
+            ``independence.<key>.point``, a copy of the positions, and
+            ``independence.<key>.log_q``.
         """
-        return _cache(state.x, self._log_q(state.x))
+        return self._cache(state.x, self._log_q(state.x))
 
     def sample(self, target: Target, state: State, draws: Draws) -> tuple[FloatArray, Any]:
         return self.distribution.sample(draws), None
@@ -413,7 +422,7 @@ class IndependenceProposal(Proposal):
         # valid cache; the rows of a call do not depend on each other (spec R-KER-6). A
         # state with the cache returns a copy with it filled, and the proposals' state
         # gets one if the first state has it.
-        stale = [_stale_rows(state) for state in states]
+        stale = [self._stale_rows(state) for state in states]
         x = np.concatenate(
             [proposed.x]
             + [
@@ -428,18 +437,18 @@ class IndependenceProposal(Proposal):
         # open support, and a weight of +inf would accept it and never leave it.
         new = proposed.log_prob - np.where(log_q[:n] == -np.inf, np.inf, log_q[:n])
         if stale[0] is not None:
-            proposed = _cached(proposed, log_q[:n])
+            proposed = self._cached(proposed, log_q[:n])
         weights = [(new, proposed)]
         start = n
         for state, rows in zip(states, stale, strict=True):
             if rows is None:
                 part, start = log_q[start : start + len(state)], start + len(state)
             else:
-                part = state.extra[CACHE[1]]
+                part = state.extra[self._log_q_name]
                 if len(rows):
                     part = part.copy()
                     part[rows], start = log_q[start : start + len(rows)], start + len(rows)
-                    state = _cached(state, part)
+                    state = self._cached(state, part)
             # Where log pi = -inf a state's weight is -inf even where log q = -inf too:
             # -inf - -inf would be NaN, which rejects every proposal, so such a chain would
             # never move.
@@ -447,6 +456,29 @@ class IndependenceProposal(Proposal):
                 (state.log_prob - np.where(state.log_prob == -np.inf, 0.0, part), state)
             )
         return weights
+
+    def _cache(self, x: FloatArray, log_q: FloatArray) -> dict[str, npt.NDArray[Any]]:
+        # The point is a copy: a view of x would follow a later write to the chain's
+        # position.
+        return {self._point_name: x.copy(), self._log_q_name: log_q}
+
+    def _cached(self, state: State, log_q: FloatArray) -> State:
+        # A copy of state whose cache holds log q at its positions; its other fields
+        # carried.
+        extra = state.extra | self._cache(state.x, log_q)
+        return State(state.x, state.log_prob, state.grad, extra)
+
+    def _stale_rows(self, state: State) -> IndexArray | None:
+        # The rows whose cached log q cannot be used, or None when the state has no cache.
+        # A value is used only where its point equals the position bit for bit, so 0.0
+        # and -0.0 are different points; any other kernel that moved the chain carried the
+        # old cache.
+        if self._point_name not in state.extra or self._log_q_name not in state.extra:
+            return None
+        point = state.extra[self._point_name]
+        same = np.all(point.view(np.uint64) == state.x.view(np.uint64), axis=1)
+        rows: IndexArray = (~same).nonzero()[0]
+        return rows
 
     def __repr__(self) -> str:
         return f"IndependenceProposal({self.distribution!r})"
@@ -566,31 +598,8 @@ def _log_alpha(
     return log_alpha
 
 
-# The fields of IndependenceProposal's cache: the point at which log q was computed, and
-# its value there.
-CACHE = ("independence.point", "independence.log_q")
-
-
-def _cache(x: FloatArray, log_q: FloatArray) -> dict[str, npt.NDArray[Any]]:
-    # The point is a copy: a view of x would follow a later write to the chain's position.
-    return {CACHE[0]: x.copy(), CACHE[1]: log_q}
-
-
-def _cached(state: State, log_q: FloatArray) -> State:
-    # A copy of state whose cache holds log q at its positions; its other fields carried.
-    return State(state.x, state.log_prob, state.grad, state.extra | _cache(state.x, log_q))
-
-
-def _stale_rows(state: State) -> IndexArray | None:
-    # The rows whose cached log q cannot be used, or None when the state has no cache. A
-    # value is used only where its point equals the position bit for bit, so 0.0 and -0.0
-    # are different points; any other kernel that moved the chain carried the old cache.
-    if CACHE[0] not in state.extra or CACHE[1] not in state.extra:
-        return None
-    point = state.extra[CACHE[0]]
-    same = np.all(point.view(np.uint64) == state.x.view(np.uint64), axis=1)
-    rows: IndexArray = (~same).nonzero()[0]
-    return rows
+# Counts the IndependenceProposal objects of the process, which name their caches.
+_PROPOSALS = itertools.count()
 
 
 class SharedCovarianceGaussian(Protocol):
