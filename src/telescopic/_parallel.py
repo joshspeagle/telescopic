@@ -160,8 +160,7 @@ def execute(
     # process if one was, else that of the lowest-indexed chunk that failed, with the
     # number of the other chunks' errors.
     if pool is None:
-        outcome: engine._Outcome = job(indices, monitor=monitor)
-        return outcome
+        return job(indices, monitor=monitor)
     start = time.perf_counter()
     workers = _workers(pool, n_workers)
     # Chunks of at most a full set of lanes, where four per worker allow (DECISIONS #52),

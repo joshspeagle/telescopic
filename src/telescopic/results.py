@@ -419,9 +419,9 @@ class Result:
         """Histogram of one coordinate or several, with standard errors.
 
         The mass of each bin is the average over the kept replicates that met of its
-        signed mass, so a bin can be negative. The bins are half-open, :math:`[a, b)`, except the last, which is
-        closed, as in ``numpy.histogram``, so that an atom on the upper edge of ``range``
-        is counted. It is unbiased for a ``range`` fixed before the run; the default
+        signed mass, so a bin can be negative. The bins are half-open, :math:`[a, b)`,
+        except the last, which is closed, as in ``numpy.histogram``, so that an atom on
+        the upper edge of ``range`` is counted. It is unbiased for a ``range`` fixed before the run; the default
         range, from the atoms, biases every bin, the two outer ones by a term of order
         :math:`1/R`. Memory: a few floats per atom, and per bin.
 

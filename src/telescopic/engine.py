@@ -528,9 +528,9 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
     """Join the outputs of disjoint sets of replicates of one run, sorted by replicate index.
 
     The parts must share the root seed, the settings and the dimension; the requested
-    and the abandoned indices are the unions of theirs. For a target evaluated point by point the result is
-    bitwise that of one run of all the replicates; for a vectorized one it can differ
-    from it as a run with other ``lanes`` does (:func:`run`).
+    and the abandoned indices are the unions of theirs. For a target evaluated point by
+    point the result is bitwise that of one run of all the replicates; for a vectorized
+    one it can differ from it as a run with other ``lanes`` does (:func:`run`).
 
     Parameters
     ----------
@@ -949,7 +949,6 @@ def _pairs(ndim: int) -> tuple[IntArray, IntArray]:
 
 
 def _empty_state(lanes: int, ndim: int, with_grad: bool) -> State:
-
     return State(
         np.zeros((lanes, ndim)), np.zeros(lanes), np.zeros((lanes, ndim)) if with_grad else None
     )

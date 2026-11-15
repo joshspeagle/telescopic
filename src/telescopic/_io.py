@@ -134,7 +134,6 @@ def record_times(
     settings: Settings, index: IntArray, meeting_time: npt.NDArray[np.float64], owner: IntArray
 ) -> npt.NDArray[np.int32]:
     # The times of the atoms of a schema-1 file, which the engine's record order
-
     # fixes (spec R-EST-6): for each replicate that met, in index order, t for each t in S
     # and t twice for each t in [L, tau) with c_t > 0, by t and the averaged atom first.
     # O(N), with no sort: each atom's position within its replicate is computed.
