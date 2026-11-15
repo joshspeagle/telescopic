@@ -17,8 +17,8 @@ mean:
   direction;
 - rms_dist: sqrt(mean over draws of (x - mu)^T Sigma^-1 (x - mu) / d), which counts an
   offset as well as a spread;
-- rhat: the largest R-hat of the pilot, which the existing tuning warning reads (above
-  sqrt 2).
+- rhat: the largest finite R-hat of the pilot; the existing tuning warning fires above
+  sqrt 2 or on a NaN, and is counted as `diagnostics.tuning_disagreement` decides.
 
 Cases. Every example of `telescopic.examples` from its default start (gaussian at its
 default d = 10, rho = 0.9, and at d = 1, 2 and 50; banana; mixture; funnel at d = 10;
@@ -39,7 +39,7 @@ none. The output's rates carry 95% Clopper-Pearson intervals. "either" counts a 
 geo_coord exceeds the threshold or the existing tuning warning fires.
 
 Run: PYTHONPATH=src OMP_NUM_THREADS=1 python notes/experiments/i167_wide_start/candidates.py
-The output: telescopic at commit 4e91557, Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1,
+The output: telescopic at commit 2707eb9, Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1,
 OMP_NUM_THREADS=1, an Intel Xeon processor at 2.10 GHz with 4 logical cores, 4 worker
 processes.
 """
@@ -52,6 +52,7 @@ from scipy import optimize, stats
 
 from telescopic import examples
 from telescopic._random import TUNING, replicate_generator, root_seed
+from telescopic.diagnostics import tuning_disagreement
 from telescopic.initial import Normal, as_initial, draw
 from telescopic.target import Target
 from telescopic.tuning import N_CHAINS, STARTS_PER_CHAIN, adaptive_metropolis
@@ -118,6 +119,7 @@ def statistics(case):
         float(np.sqrt(np.linalg.eigvalsh((whitened + whitened.T) / 2).max())),
         float(np.sqrt((centered**2).sum(axis=0).mean() / len(mean))),
         float(np.nanmax(pilot.rhat)),
+        float(tuning_disagreement(pilot.report()) is not None),
     )
 
 
@@ -158,7 +160,7 @@ def held_out(pool, values):
     for case in near + far:
         n = 500 if case in near else 200
         v = np.array(pool.map(statistics, [(*case, seed) for seed in range(1000, 1000 + n)]))
-        both = {case: np.column_stack([v[:, 1] * (1 + 1e9 * (v[:, 4] > np.sqrt(2)))])}
+        both = {case: np.column_stack([v[:, 1] * (1 + 1e9 * v[:, 5])])}
         print(
             f"  {label(case)}, seeds 1000 to {999 + n}, largest {v[:, 1].max():.3g}: "
             f"{rate({case: v}, [case], 1, THRESHOLD)}; {rate(both, [case], 0, THRESHOLD)}"
@@ -196,11 +198,8 @@ if __name__ == "__main__":
                 + "; ".join(f"{g} {rate(values, grp, j, threshold)}" for g, grp in groups.items())
             )
     print()
-    print("geo_coord > threshold or rhat > sqrt 2, the existing tuning warning")
-    either = {
-        case: np.column_stack([v[:, 1] * (1 + 1e9 * (v[:, 4] > np.sqrt(2)))])
-        for case, v in values.items()
-    }
+    print("geo_coord > threshold or the existing tuning warning")
+    either = {case: np.column_stack([v[:, 1] * (1 + 1e9 * v[:, 5])]) for case, v in values.items()}
     for threshold in THRESHOLDS:
         print(
             f"either at {threshold}: "
