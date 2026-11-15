@@ -61,7 +61,10 @@ pickle, and {meth}`telescopic.Result.load` reads it back. Both append `.npz` to 
 that lacks it. The kernel and the initial distribution are saved as their descriptions,
 `str(kernel)` and `str(initial)`, which a loaded result holds in their place; the paths
 that the engine keeps for teaching are not saved. Loading a file whose schema is newer
-than the installed telescopic's raises `ValueError`.
+than the installed telescopic's raises `ValueError`. The file names the estimator family
+of the result, and a file of a family the installed telescopic does not know raises
+`ValueError` naming it. Files written before the times of the atoms were stored load with
+those times rebuilt exactly from their settings and meeting times.
 
 ```{code-cell} python
 import tempfile
@@ -116,3 +119,57 @@ With a log-density evaluated point by point, a resumed run's replicates are bitw
 those of one uninterrupted run. With a vectorized one, the resumed run is bitwise what
 the original sampler's next `run` would have returned, and agrees with one longer run
 within its error bars (Reproducibility, in [Run in parallel](parallel.md)).
+
+## Continuing after an error
+
+An error raised while the replicates run, such as one of the log-density, stops the run
+as a first Ctrl-C does: no replicate starts, and on a pool the running chunks finish.
+The error is then raised again, the same object, with the result of the replicates
+finished before it as its attribute `telescopic_result` and a note saying what was kept.
+A sampler keeps those replicates, and its next `run` starts with the missing ones. After
+{func}`telescopic.sample`, which keeps no sampler, `resume` continues the result. Here
+the log-density fails once, during the run:
+
+```{code-cell} python
+class Flaky:
+    # The example's log-density, which fails at its call number 3,000, once.
+    def __init__(self):
+        self.calls = 0
+
+    def __call__(self, x):
+        self.calls += 1
+        if self.calls == 3_000:
+            raise RuntimeError("the solver did not converge")
+        return gaussian.log_prob(x)
+
+
+try:
+    telescopic.sample(Flaky(), gaussian.initial, 1000, vectorize=True, rng=11)
+except RuntimeError as error:
+    kept = error.telescopic_result
+    print(error.__notes__[0])
+sampler = telescopic.CoupledSampler(
+    gaussian.log_prob, gaussian.initial, vectorize=True, kernel=kept.kernel
+)
+sampler.resume(kept)
+completed = sampler.run(1000 - len(kept.index))
+completed.n_replicates, len(completed.abandoned), completed.interrupted
+```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claims of the next paragraph.
+assert len(kept.abandoned) and kept.interrupted
+assert "an error abandoned" in repr(kept.summary())
+assert not len(completed.abandoned) and completed.n_replicates == 1000
+```
+
+The replicates in progress when the error came are listed in the result's `abandoned`,
+and nothing of them is kept. They are the ones with the longest meeting times, since
+the others had finished, so leaving them out biases the estimates more than an
+interruption does; the summary says so until they have run. An error that recurs at a
+replicate recurs there when it runs again. An error in tuning or in the meeting-time
+pilot is raised as it is, and keeps nothing. With a log-density evaluated point by
+point that gives the same value at a point on every call, the completed run's
+replicates are bitwise those of a run that did not fail.

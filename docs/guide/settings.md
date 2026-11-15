@@ -24,10 +24,15 @@ they meet ([Theory](../theory.md#the-time-averaged-estimator)).
   ([Memory and thinning](#memory-and-thinning)).
 - `max_iter` censors the pairs still unmet at that time, which biases the estimates
   ([Censored pairs](../reference/warnings.md#censored-pairs-censored)). It must exceed
-  `max(lag, m)`; `None`, the default, runs every pair until it meets.
+  `max(lag, m)` and be at most $2^{31} - 1$, the largest time the atoms record; `None`,
+  the default, runs every pair until it meets.
+- `keep` stores the signed measures of the replicates of index below it only, and the
+  moments of every replicate ([Keeping a subset](#keeping-a-subset)); `None`, the
+  default, stores every replicate's signed measure.
 
-Any $0 \le k \le m$, `lag` $\ge 1$ and `thin` $\ge 1$ give unbiased estimates: the
-settings change the cost and the variance, never the bias. {func}`telescopic.sample` and
+Any $0 \le k \le m$, `lag` $\ge 1$, `thin` $\ge 1$ and `keep` give unbiased estimates:
+the settings change the cost and the variance, never the bias.
+ {func}`telescopic.sample` and
 {meth}`telescopic.CoupledSampler.run` take each of them as an argument.
 
 ## The automatic pipeline
@@ -280,3 +285,42 @@ The same seed, kernel and settings give the same chains, so the two runs differ 
 the states they average. Thinning by 10 stores a tenth of the atoms, and the standard
 errors grow by the factors above, far less than the $\sqrt{10}$ of independent states,
 since neighboring states of a random walk are strongly correlated.
+
+## Keeping a subset
+
+`keep` $= K$ stores the signed measures, their times and the distances of the replicates
+of index below $K$ only, and for every replicate its moments: its first averaged state
+$X_k$ and the moments of $x - X_k$ under its signed measure, all the products up to
+$d = 100$ and the squares above, $8(p + d)$ bytes with $p = d(d + 3)/2$, or $2d$ above
+100 dimensions. The mean, the variances, the standard deviations and, up to 100
+dimensions, the covariance come from the moments of every replicate, and are those of a
+run that keeps every atom up to rounding; the quantiles, the histograms and
+{meth}`~telescopic.Result.estimate` come from the kept replicates
+([Two sets of replicates](estimates.md#two-sets-of-replicates)). The first run fixes
+`keep`, as it fixes `thin`. With the seed and kernel of the run above, keeping 20 of the
+100 replicates:
+
+```{code-cell} python
+reduced = telescopic.CoupledSampler(
+    log_prob, init, args=(x, y, yerr), kernel=sampler.kernel, rng=42
+).run(100, k=result.k, keep=20)
+print(reduced)
+print(len(reduced.measure.weights), "atoms against", len(result.measure.weights))
+reduced.mean().value - result.mean().value
+```
+
+```{code-cell} python
+:tags: [remove-cell]
+
+# The claims of the next paragraph.
+assert np.array_equal(reduced.meeting_times, result.meeting_times)
+assert reduced.n_kept == 20
+assert np.allclose(reduced.mean().value, result.mean().value, rtol=1e-12, atol=0)
+assert np.allclose(reduced.std(), result.std(), rtol=1e-12, atol=0)
+```
+
+The meeting times and the kept replicates' atoms are those of the run that keeps every
+atom, and the mean differs from it only by rounding. Keeping a subset saves memory when
+a replicate stores more than $(p + d)/(d + 2.5)$ atoms, 6 at $d = 10$, which every run
+with $m$ well above $k$ does; accumulating the moments costs $O(p)$ per atom.
+
