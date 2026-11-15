@@ -9,7 +9,12 @@
 * ``reflection.svg`` (V3, a static frame): two draws of
   :func:`telescopic.couplings.reflection_maximal`, one reflected and one identical;
 * ``telescoping.svg`` (V2): the expectations :math:`\\mathbb E[h(X_{k+jL})]`, from the same
-  grid as ``burn-in.svg``, and one replicate's differences :math:`\\Delta_{k+jL}`.
+  grid as ``burn-in.svg``, and one replicate's differences :math:`\\Delta_{k+jL}`;
+* ``signed-measure.svg`` (V5): one replicate's atoms and weights, and the signed
+  histogram of 1000 replicates run by :func:`telescopic.sample`;
+* ``tv-bound.svg`` (V6, a static frame): the survival function of the meeting times of
+  1000 pairs run by :class:`telescopic.CoupledSampler`, its values that add up to the
+  bound on the total variation distance at one time, and that bound against time.
 
 The figures are drawn on the light figure ground with the colors, faces, sizes and
 helpers of ``brand.py``: magenta for chain X, teal for chain Y, the ink of met chains once
@@ -28,6 +33,7 @@ import argparse
 import functools
 import itertools
 import sys
+import warnings
 from collections.abc import Callable
 from pathlib import Path
 
@@ -71,6 +77,19 @@ SEED = 0
 CANDIDATES = 32  # replicates searched for the first that the rule of a figure accepts
 LAG = 3
 LAST = 24
+REPLICATES = 1000  # the replicates of the figures drawn from a whole run
+
+
+def log_density(x: np.ndarray) -> float:
+    return -0.5 * x[0] ** 2
+
+
+def kernel() -> telescopic.kernels.RandomWalk:
+    return telescopic.kernels.RandomWalk(cov=[[1.0]])
+
+
+def initial() -> telescopic.initial.Normal:
+    return telescopic.initial.Normal(mean=[START_MEAN], cov=[1.0])
 
 
 # --------------------------------------------------------------------------- drawing
@@ -205,11 +224,16 @@ def laws() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
 def pairs() -> engine.Replicates:
     """Coupled pairs of the tutorial's setting with the lag LAG, run by the package with a
     target evaluated point by point, with their paths."""
-    target = telescopic.Target(lambda x: -0.5 * x[0] ** 2)
-    kernel = telescopic.kernels.RandomWalk(cov=[[1.0]])
-    init = telescopic.initial.Normal(mean=[START_MEAN], cov=[1.0])
     return engine.run(
-        target, kernel, init, range(CANDIDATES), k=0, m=LAST, lag=LAG, rng=SEED, keep_paths=True
+        telescopic.Target(log_density),
+        kernel(),
+        initial(),
+        range(CANDIDATES),
+        k=0,
+        m=LAST,
+        lag=LAG,
+        rng=SEED,
+        keep_paths=True,
     )
 
 
@@ -562,6 +586,350 @@ def telescoping() -> str:
     return svg(width, height, label, "".join(body))
 
 
+def quietly(make: Callable[[], telescopic.Result]) -> telescopic.Result:
+    """The result of a run of the tutorial's setting, without its warnings: the figures
+    choose settings that the warnings would advise against."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", telescopic.ConvergenceWarning)
+        return make()
+
+
+def weight_axis(
+    x: float, scale: Scale, zero: float, values: np.ndarray, data: tuple[float, float]
+) -> str:
+    """A vertical axis at x through zero that spans the data's range and the ticks, with a
+    tick and a label at each of values."""
+    rule = FIGURE["rule"]
+    ys = zero - scale(values)
+    ends = zero - scale(np.array([min(values.min(), data[0]), max(values.max(), data[1])]))
+    out = [segment(x, float(ends.min()), x, float(ends.max()), MUTED, width=rule)]
+    for value, y in zip(values, ys, strict=True):
+        out.append(segment(x - 5, float(y), x, float(y), MUTED, width=rule))
+        out.append(text(x - 9, float(y) + 6, f"{value:g}".replace("-", MINUS), "end", MUTED))
+    return "".join(out)
+
+
+def signed_measure() -> str:
+    """V5: one replicate's atoms as stems, positive weights up in X's color and negative
+    weights down in Y's; below, the signed histogram of all the replicates, with the
+    target's mass in each bin and its most negative bin highlighted."""
+    name, k, m, lag = "signed-measure", 2, 12, LAG
+    result = quietly(
+        lambda: telescopic.sample(
+            log_density, initial(), REPLICATES, kernel=kernel(), k=k, m=m, lag=lag, rng=SEED
+        )
+    )
+    measure, taus = result.measure, result.meeting_times
+    check(result.n_censored == 0, name, "every pair met")
+    lo, hi, gap = -3.5, 7.5, 0.15  # the drawn range, and the least gap between two stems
+
+    def stems(r: int) -> tuple[np.ndarray, np.ndarray]:
+        # The atoms at one point, which rejected proposals repeat, as one stem with their
+        # summed weight.
+        own = measure.replicate == r
+        points, where = np.unique(measure.atoms[own, 0], return_inverse=True)
+        return points, np.bincount(where, measure.weights[own])
+
+    def drawable(r: int) -> bool:
+        points, weights = stems(r)
+        return bool(
+            k + 2 * lag + 2 <= taus[r] <= k + 4 * lag
+            and np.sum(weights < 0) >= 3
+            and np.all(np.diff(points) > gap)
+            and points.min() > lo
+            and points.max() < hi
+        )
+
+    chosen = next((r for r in range(CANDIDATES) if drawable(r)), None)
+    if chosen is None:
+        raise SystemExit(f"{name}: none of the first {CANDIDATES} replicates can be drawn")
+    points, weights = stems(chosen)
+    tau = int(taus[chosen])
+    own = measure.weights[measure.replicate == chosen]
+    check(np.isclose(own.sum(), 1.0), name, "the replicate's weights sum to 1")
+    # Each stem has the sign of its atoms: an X atom's weight is positive and a Y atom's
+    # negative, and no point holds atoms of both chains.
+    signs = [np.sign(own[measure.atoms[measure.replicate == chosen, 0] == p]) for p in points]
+    check(all(len(set(s)) == 1 for s in signs), name, "each stem holds atoms of one sign")
+    bins = 22
+    masses, errors, edges = result.histogram(0, bins=bins, range=(lo, hi))
+    exact = np.diff(stats.norm.cdf(edges))
+    low = int(np.argmin(masses))
+    check(masses[low] < 0, name, "a bin of the histogram is negative")
+    check(
+        masses[low] + 2 * errors[low] > exact[low] > 0,
+        name,
+        "the negative bin's two standard errors reach the target's positive mass",
+    )
+    width, height = 640.0, 540.0
+    x = Scale(lo, hi, 84.0, 610.0)
+    axis_x = 64.0
+    rule = FIGURE["rule"]
+    # The replicate's stems about a zero line, on a scale of their own.
+    zero, reach = 156.0, 110.0
+    top = max(weights.max(), -weights.min())
+    w = Scale(0.0, top, 0.0, reach)
+    step = 0.5 if top > 1 else 0.25
+    ticks = (
+        np.arange(-np.floor(-weights.min() / step), np.floor(weights.max() / step) + 1) * step
+        + 0.0
+    )
+    body = [
+        text(20, 26, rich("one replicate, ", ("τ", ""), f" = {tau}: its weights sum to 1")),
+        segment(axis_x, zero, float(x(hi)), zero, MUTED, width=rule),
+        weight_axis(axis_x, w, zero, ticks, (weights.min(), weights.max())),
+    ]
+    for point, weight in zip(points, weights, strict=True):
+        px, end = float(x(point)), zero - float(w(weight))
+        color = CX if weight > 0 else CY
+        body += [segment(px, zero, px, end, color), dot(px, end, color)]
+    # Each chain's label beside its longest stem.
+    for chain, sign, color, relation in (("X", 1, CX, "&gt;"), ("Y", -1, CY, "&lt;")):
+        longest = int(np.argmax(sign * weights))
+        body.append(
+            text(
+                float(x(points[longest])) + 12,
+                zero - float(w(weights[longest])) + 6,
+                rich((chain, ""), f" atoms: weight {relation} 0"),
+                "start",
+                color,
+            )
+        )
+    # The histogram of all the replicates, each bar from zero with two standard errors,
+    # and the target's mass in each bin as a gray outline.
+    base, tall = 440.0, 150.0
+    hist = Scale(0.0, float((masses + 2 * errors).max()), 0.0, tall)
+    body.append(text(20, base - tall - 26, f"{REPLICATES:,} replicates: the mass of each bin"))
+    for i in range(bins):
+        a, b = float(x(edges[i])), float(x(edges[i + 1]))
+        size = float(hist(masses[i]))
+        fill = (
+            f'fill="{CATEGORICAL[2]}"'
+            if i == low
+            else f'fill="{BLUE}" fill-opacity="{FIGURE["band"]}"'
+        )
+        body.append(
+            f'<rect x="{_f(a + 1)}" y="{_f(base - max(size, 0))}" width="{_f(b - a - 2)}" '
+            f'height="{_f(abs(size))}" {fill}/>'
+        )
+        ends = base - hist(masses[i] + 2 * np.array([-errors[i], errors[i]]))
+        body.append(segment((a + b) / 2, float(ends[0]), (a + b) / 2, float(ends[1]), INK, rule))
+    outline = np.column_stack(
+        [x(np.repeat(edges, 2)), base - hist(np.r_[0, np.repeat(exact, 2), 0])]
+    )
+    body += [
+        _stroke(outline, MUTED, FIGURE["outline"]),
+        segment(axis_x, base, float(x(hi)), base, MUTED, width=rule),
+        # Under the bin, below the error lines of its neighbors.
+        text(
+            float(x((edges[low] + edges[low + 1]) / 2)),
+            base + 38,
+            f"{MINUS}{abs(masses[low]):.3f}",
+            "middle",
+            CATEGORICAL[2],
+        ),
+    ]
+    axis = base + 44
+    body += [
+        segment(float(x(v)), axis, float(x(v)), axis + 5, MUTED, width=rule)
+        for v in range(-2, 8, 2)
+    ]
+    body += [
+        text(float(x(v)), axis + 24, f"{v:g}".replace("-", MINUS), "middle", MUTED)
+        for v in range(-2, 8, 2)
+    ]
+    body.append(text(float(x(hi)), axis + 46, rich(("x", "")), "end", MUTED))
+    label = (
+        f"Top: one replicate's signed measure, for random-walk Metropolis on N(0, 1) started "
+        f"from N(5, 1) with k = {k}, L = {lag}, m = {m}, and meeting time tau = {tau}: its "
+        f"{len(own)} atoms at {len(points)} distinct points, drawn as one stem per point "
+        f"with the summed weight, on the horizontal axis of the panel below. Magenta stems "
+        f"rise at "
+        + ", ".join(f"{p:.2f} to {v:.2f}" for p, v in zip(points, weights, strict=True) if v > 0)
+        + "; teal stems fall at "
+        + ", ".join(f"{p:.2f} to {v:.2f}" for p, v in zip(points, weights, strict=True) if v < 0)
+        + f". The weights sum to 1. Bottom: the signed histogram of {REPLICATES:,} "
+        f"replicates in {bins} bins of width {edges[1] - edges[0]:g} from {lo:g} to {hi:g}, "
+        f"each bar with a line of two standard errors, over the gray outline of the target's "
+        f"mass in each bin. The bin from {edges[low]:g} to {edges[low + 1]:g} is highlighted: "
+        f"its mass is {masses[low]:.3f}, with a standard error of {errors[low]:.3f}, where "
+        f"the target's is {exact[low]:.4f}."
+    )
+    return svg(width, height, label, "".join(body))
+
+
+def tv_bound() -> str:
+    """V6, static: the survival function of the meeting times, with its values at
+    t + L, t + 2L, ... for one t stacked into the bound at t; below, the bound against t
+    on a log scale, with k marked."""
+    name, lag, at = "tv-bound", LAG, 6
+    result = quietly(
+        lambda: telescopic.CoupledSampler(log_density, initial(), kernel=kernel(), rng=SEED).run(
+            REPLICATES, lag=lag
+        )
+    )
+    k, taus = result.k, result.meeting_times
+    check(result.n_censored == 0, name, "every pair met")
+    check(len(result.pilot) == 100 and result.lag == lag, name, "k from 100 lag-1 pilot pairs")
+    end = int(taus.max())
+    times = np.arange(end + 1)
+    survival = (taus[None, :] > times[:, None]).mean(axis=1)
+    steps = at + lag * np.arange(1, (end - at) // lag + 1)
+    heights = survival[steps]
+    bound = result.tv_bound(times)
+    # The bound at t is the sum of the survival function at t + L, t + 2L, ..., below 1
+    # here, so the stacked bar is the package's estimate; and the average over replicates
+    # of max(0, ceil((tau - L - t) / L)), whose spread gives its standard error.
+    check(np.isclose(heights.sum(), bound[at]) and bound[at] < 1, name, "the bar is the bound")
+    each = np.maximum(0, np.ceil((taus[None, :] - lag - times[:, None]) / lag))
+    check(np.allclose(np.minimum(1, each.mean(axis=1)), bound), name, "the bound's average")
+    spread = each.std(axis=1, ddof=1) / np.sqrt(len(taus))
+    check(
+        bound[0] == 1 and np.all(np.diff(bound) <= 0) and bound[k] < bound[at],
+        name,
+        "the bound is 1 at first and falls, past t at k",
+    )
+    shown = int(np.max(np.nonzero(bound > 0)))
+    width, height, drawn = 640.0, 560.0, 30
+    t = Scale(0.0, drawn, 84.0, 470.0)
+    check(
+        shown <= drawn <= end and steps[heights > 0].max() <= drawn,
+        name,
+        f"the times fit the axis, and the survival function reaches its end, t = {drawn}",
+    )
+    ticks, marks = range(drawn + 1), {u: str(u) for u in range(0, drawn + 1, 6)}
+    last_one = int(np.max(np.nonzero(survival == 1)))
+    first_below = int(np.max(np.nonzero(bound == 1)))
+    rule = FIGURE["rule"]
+    axis_x = 64.0
+    # Top: the survival function, a step at each integer time, with two binomial standard
+    # errors as a band, on a linear scale so that the stacked heights add up.
+    zero, tall = 236.0, 170.0
+    s = Scale(0.0, 1.0, zero, zero - tall)
+    error = np.sqrt(survival * (1 - survival) / len(taus))
+    edge = np.repeat(np.arange(drawn + 1), 2)[1:-1]
+    upper = np.repeat(np.minimum(1, survival + 2 * error)[:drawn], 2)
+    lower = np.repeat(np.maximum(0, survival - 2 * error)[:drawn], 2)
+    band = np.vstack(
+        [np.column_stack([t(edge), s(upper)]), np.column_stack([t(edge), s(lower)])[::-1]]
+    )
+    body = [
+        text(
+            20,
+            26,
+            rich(
+                "survival of ",
+                ("τ", ""),
+                " for ",
+                ("L", ""),
+                f" = {lag}, and its values at ",
+                ("t", ""),
+                " + ",
+                ("L", ""),
+                ", ",
+                ("t", ""),
+                " + 2",
+                ("L", ""),
+                ", …",
+            ),
+        ),
+        f'<path d="{_path(band)} Z" fill="{BLUE}" fill-opacity="{FIGURE["area"]}"/>',
+        _stroke(
+            np.column_stack([t(edge), s(np.repeat(survival[:drawn], 2))]), BLUE, FIGURE["outline"]
+        ),
+        segment(axis_x, zero, float(t(drawn)), zero, MUTED, width=rule),
+        segment(axis_x, float(s(0)), axis_x, float(s(1)), MUTED, width=rule),
+    ]
+    for value in (0.0, 0.5, 1.0):
+        body += [
+            segment(axis_x - 5, float(s(value)), axis_x, float(s(value)), MUTED, width=rule),
+            text(axis_x - 9, float(s(value)) + 6, f"{value:g}", "end", MUTED),
+        ]
+    body += [
+        segment(float(t(at)), zero, float(t(at)), float(s(1)), MUTED, width=rule, dash="3 4"),
+        text(float(t(at)) + 6, float(s(1)) + 2, rich(("t", ""), f" = {at}")),
+    ]
+    for u, value in zip(steps, heights, strict=True):
+        if value > 0:
+            body += [
+                segment(float(t(u)), zero, float(t(u)), float(s(value)), BLUE),
+                dot(float(t(u)), float(s(value)), BLUE),
+            ]
+    # The stacked bar: the heights at t + L, t + 2L, ... from the bottom, alternately
+    # shaded, with a line of the figure ground between them.
+    bar_x, bar_width, below = 520.0, 32.0, 0.0
+    for j, value in enumerate(heights[heights > 0]):
+        y0, y1 = float(s(below)), float(s(below + value))
+        opacity = 1.0 if j % 2 == 0 else FIGURE["band"]
+        body.append(
+            f'<rect x="{_f(bar_x)}" y="{_f(y1)}" width="{_f(bar_width)}" '
+            f'height="{_f(y0 - y1)}" fill="{BLUE}" fill-opacity="{opacity}" '
+            f'stroke="{FIGURE_GROUND}" stroke-width="{rule}"/>'
+        )
+        below += value
+    body += [
+        text(bar_x + bar_width / 2, float(s(below)) - 34, "bound", "middle"),
+        text(bar_x + bar_width / 2, float(s(below)) - 10, f"{bound[at]:.2f}", "middle"),
+        time_axis(t, zero + 10, ticks, marks),
+    ]
+    # Bottom: the bound against t on a log scale, with two standard errors as a band cut
+    # at the axis, and k marked.
+    floor, base, span = 3.5, 506.0, 150.0
+    lg = Scale(-floor, 0.0, base, base - span)
+    upto = np.arange(shown + 1)
+    top_band = np.log10(np.minimum(1, bound[upto] + 2 * spread[upto]))
+    bottom_band = np.log10(np.maximum(10**-floor, bound[upto] - 2 * spread[upto]))
+    band = np.vstack(
+        [
+            np.column_stack([t(upto), lg(top_band)]),
+            np.column_stack([t(upto), lg(bottom_band)])[::-1],
+        ]
+    )
+    curve = np.column_stack([t(upto), lg(np.log10(bound[upto]))])
+    body += [
+        text(
+            20,
+            base - span - 30,
+            rich("the bound on the distance of ", ("π", "t"), " from ", ("π", "")),
+        ),
+        f'<path d="{_path(band)} Z" fill="{BLUE}" fill-opacity="{FIGURE["area"]}"/>',
+        _stroke(curve, BLUE, FIGURE["chain"]),
+        segment(axis_x, base, float(t(drawn)), base, MUTED, width=rule),
+        segment(axis_x, float(lg(-floor)), axis_x, float(lg(0)), MUTED, width=rule),
+    ]
+    for power in range(0, -4, -1):
+        y = float(lg(power))
+        body += [
+            segment(axis_x - 5, y, axis_x, y, MUTED, width=rule),
+            text(axis_x - 9, y + 6, f"{10.0**power:g}", "end", MUTED),
+        ]
+    kx = float(t(k))
+    body += [
+        segment(kx, base, kx, base - span, MUTED, width=FIGURE["outline"], dash="5 4"),
+        text(kx + 6, base - span + 14, rich(("k", ""), f" = {k}: {bound[k]:.3f}")),
+        dot(float(t(at)), float(lg(np.log10(bound[at]))), BLUE, r=FIGURE["meeting"], ring=True),
+        text(float(t(at)) + 10, float(lg(np.log10(bound[at]))) - 10, f"{bound[at]:.2f}"),
+        time_axis(t, base + 10, ticks, marks),
+        text(float(t(drawn)), base + 52, rich(("t", "")), "end", MUTED),
+    ]
+    label = (
+        f"Top: the fraction of {len(taus):,} pairs with lag L = {lag} whose meeting time tau "
+        f"exceeds t, for random-walk Metropolis on N(0, 1) started from N(5, 1), a step "
+        f"curve on a linear scale, 1 up to t = {last_one}, down to "
+        f"{survival[drawn - 1]:.3f} at t = {drawn - 1}, with "
+        f"a band of two standard errors. A dashed line marks t = {at}, and stems mark the "
+        f"curve at t + L, t + 2L, ...: "
+        + ", ".join(f"{v:.3f} at {u}" for u, v in zip(steps, heights, strict=True) if v > 0)
+        + f". At the right, a bar stacks these heights; its total, labeled bound, is "
+        f"{bound[at]:.3f}. Bottom: the estimated bound on the total variation distance "
+        f"against t, on a log scale from 1 to {10**-floor:.2g}, with a band of two standard "
+        f"errors: 1 up to t = {first_below}, {bound[at]:.3f} at t = {at}, "
+        f"{bound[k]:.3f} at the burn-in k = {k}, marked by a dashed line, and 0 after "
+        f"t = {shown}."
+    )
+    return svg(width, height, label, "".join(body))
+
+
 # --------------------------------------------------------------------------- output
 
 
@@ -571,6 +939,8 @@ def outputs() -> dict[Path, str]:
         OUT / "two-chains.svg": two_chains(),
         OUT / "reflection.svg": reflection(),
         OUT / "telescoping.svg": telescoping(),
+        OUT / "signed-measure.svg": signed_measure(),
+        OUT / "tv-bound.svg": tv_bound(),
     }
 
 

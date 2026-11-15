@@ -70,7 +70,10 @@ One pair's $H_k$ can lie far from $\pi(h)$, on either side. The guarantee is abo
 average over pairs, and the error bar comes from the spread of independent pairs
 ([Theory](../theory.md#guarantees-and-their-limits)). telescopic also averages $H_l$ over
 $l = k, \dots, m$ within each pair, which keeps the expectation and usually lowers the
-variance ([Theory](../theory.md#the-time-averaged-estimator)).
+variance ([Theory](../theory.md#the-time-averaged-estimator)). The weights that this
+average and its correction give to the states of the two chains make a set of weighted
+points, some with negative weights
+([Signed measures, not samples](signed-measures.md)).
 [How it works](../tutorials/how-it-works.md#one-replicates-estimate) takes one pair's
 estimate apart into the average after the burn-in and its correction, and
 [Unbiased on average](../tutorials/unbiased-on-average.md) shows the correction removing
