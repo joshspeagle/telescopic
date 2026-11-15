@@ -18,8 +18,8 @@
 * ``cost.svg`` (V12): one coupled pair's kernel applications, from the same run as
   ``two-chains.svg``, against the cost that the engine counts;
 * ``remedies.svg`` (V11): a chart from each condition that a run reports to the warning or
-  error it raises and the remedy that its message names, checked against the package's
-  source.
+  error it raises and the remedy that its message names, checked against the messages of
+  small runs made to raise them.
 
 The figures are drawn on the light figure ground with the colors, faces, sizes and
 helpers of ``brand.py``: magenta for chain X, teal for chain Y, the ink of met chains once
@@ -36,9 +36,7 @@ from __future__ import annotations
 
 import argparse
 import functools
-import inspect
 import itertools
-import re
 import sys
 import warnings
 from collections.abc import Callable
@@ -952,6 +950,7 @@ def cost() -> str:
     width, height = 640.0, 308.0
     t = Scale(0.0, m, 70.0, 610.0)
     lane_x, lane_y, cell = 64.0, 112.0, 26.0
+    y_lane = lane_y + cell + 8  # Y's lane, under X's
 
     def cells(first_step: int, last_step: int, y: float, color: str) -> list[str]:
         # The step from t - 1 to t fills the cell of t, with a gap between cells.
@@ -988,9 +987,9 @@ def cost() -> str:
             MUTED,
         ),
         text(lane_x - 14, lane_y + 19, rich(("X", "")), "end", CX),
-        text(lane_x - 14, lane_y + cell + 27, rich(("Y", "")), "end", CY),
+        text(lane_x - 14, y_lane + 19, rich(("Y", "")), "end", CY),
         *cells(1, tau, lane_y, CX),
-        *cells(lag + 1, tau, lane_y + cell + 8, CY),
+        *cells(lag + 1, tau, y_lane, CY),
         *cells(tau + 1, m, lane_y, MET),
     ]
     # A bracket under each part, with its number of steps and the applications of each.
@@ -1034,8 +1033,7 @@ def words(line: str) -> str:
 
 
 # V11's rows, by when each condition arises: where a reader sees it, the warning or error it
-# raises, the remedy in a few words, and phrases of the package's source that the figure
-# checks, from the field or kind and from the message that names the remedy.
+# raises, the remedy in a few words, and the phrases of the message that name the remedy.
 CHART = (
     (
         "before the replicates",
@@ -1043,10 +1041,9 @@ CHART = (
             (
                 ("pilot pairs unmet", "at their cap"),
                 "ValueError",
-                ("a checked step size, a", "wider start, or `k` given"),
+                ("a better kernel, a", "wider start, or `k` given"),
                 (
-                    "pilot pairs never met within their cap",
-                    "step_size checked on pilot pairs",
+                    "better-tuned kernel",
                     "wider initial distribution",
                     "give k, lag and m explicitly",
                 ),
@@ -1055,7 +1052,7 @@ CHART = (
                 ("`tuning.rhat`",),
                 "tuning",
                 ("a start that covers", "every mode"),
-                ("def rhat(", 'Issue("tuning"', "covers every mode, use one that does"),
+                ("covers every mode, use one that does",),
             ),
         ),
     ),
@@ -1066,7 +1063,7 @@ CHART = (
                 ("a pair unmet", "for long"),
                 "slow",
                 ("the kernel and", "the start"),
-                ('"slow"', "has not met after", "look at the kernel and the initial distribution"),
+                ("look at the kernel and the initial distribution",),
             ),
         ),
     ),
@@ -1077,47 +1074,88 @@ CHART = (
                 ("`censored`",),
                 "censored",
                 ("a larger `max_iter`,", "or none"),
-                ('"censored"', "a larger max_iter, or none"),
+                ("a larger max_iter, or none",),
             ),
-            (("`late_fraction`",), "late", ("a larger `k`",), ('"late_fraction"', "a larger k")),
+            (("`late_fraction`",), "late", ("a larger `k`",), ("a larger k",)),
             (
                 ("`variance_share`",),
                 "variance",
                 ("the start, and a mode", "the others missed"),
-                (
-                    '"variance_share"',
-                    "check the initial distribution",
-                    "a mode that the other replicates missed",
-                ),
+                ("check the initial distribution", "a mode that the other replicates missed"),
             ),
             (
                 ("`tail_index`",),
                 "tail",
                 ("the kernel, and the", "survival function"),
-                ('"tail_index"', "survival function of plot_meeting_times, and at the kernel"),
+                ("survival function of plot_meeting_times, and at the kernel",),
             ),
         ),
     ),
 )
 
 
+def messages() -> tuple[dict[str, str], dict[str, object]]:
+    """The message of each condition of V11 as the package words it, and the diagnostics of
+    a run: choose_k's error on pilot times of which two in 100 are censored; the warning of
+    a tuning report whose chains disagree; the slow-pair warning of a pilot pair whose
+    proposals are too small to meet; and the issues of three small runs, one censored at a
+    short cap, one with a start far out for about one replicate in 100, and one from starts
+    whose distances from the target have a Pareto tail of index 1.5."""
+    out = {}
+    try:
+        telescopic.tuning.choose_k(np.r_[np.full(98, 50.0), np.inf, np.inf])
+    except ValueError as error:
+        out["ValueError"] = str(error)
+    report = telescopic.tuning.TuningReport(
+        np.zeros(1), np.eye(1), np.full(4, 0.3), np.array([2.0]), 100
+    )
+    out["tuning"] = str(telescopic.diagnostics.tuning_disagreement(report))
+    stuck = telescopic.CoupledSampler(
+        log_density,
+        initial(),
+        kernel=telescopic.kernels.RandomWalk(cov=[[1.0]], scale=1e-8),
+        rng=SEED,
+    )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", telescopic.ConvergenceWarning)
+        stuck.meeting_times(1, max_iter=10_001)
+    out["slow"] = " ".join(str(w.message) for w in caught)
+    far = np.zeros((100, 1))
+    far[0] = 40.0
+    pareto = 5 + 5 * np.random.default_rng(SEED).pareto(1.5, size=(200, 1))
+    values = {}
+    for start, n, cap in ((initial(), REPLICATES, 13), (far, 100, None), (pareto, 500, None)):
+        result = quietly(
+            lambda start=start, n=n, cap=cap: telescopic.sample(
+                log_density, start, n, kernel=kernel(), k=2, m=12, lag=LAG, max_iter=cap, rng=SEED
+            )
+        )
+        out |= {issue.kind: issue.message for issue in telescopic.diagnostics.issues(result)}
+        values = result.diagnostics()
+    return out, values
+
+
 def remedies() -> str:
     """V11: from each condition a run reports, to the warning or error it raises, to the
-    remedy that the message names."""
+    remedy that its message names."""
     name = "remedies"
-    # The package's source with adjacent string literals joined, as Python joins them.
-    modules = (telescopic.diagnostics, telescopic.results, telescopic.sampler, telescopic.tuning)
-    source = re.sub(r'"\s*\n\s*f?"', "", "".join(inspect.getsource(m) for m in modules))
+    found, values = messages()
     for _, rows in CHART:
-        for _, raised, _, phrases in rows:
+        for seen, raised, _, phrases in rows:
+            check(raised in found, name, f"a run raises {raised}")
             for phrase in phrases:
-                check(phrase in source, name, f"the {raised} row's {phrase!r}")
-    width, row, pill = 640.0, 58.0, (226.0, 136.0, 34.0)
+                check(phrase in found[raised], name, f"the {raised} message names {phrase!r}")
+            fields = [s.strip("`") for s in seen if s.startswith("`") and "." not in s]
+            for field in fields:
+                check(field in values, name, f"{field} is a diagnostic of a result")
+    width, row, gap = 640.0, 58.0, 28.0
+    left, span, tall = 226.0, 136.0, 34.0  # the pill of the warning or error
+    remedy_x = left + span + gap + 14
     rule = FIGURE["rule"]
     body = [
         text(20, 28, "what you see", "start", MUTED),
-        text(pill[0] + pill[1] / 2, 28, "raises", "middle", MUTED),
-        text(404, 28, "remedy", "start", MUTED),
+        text(left + span / 2, 28, "raises", "middle", MUTED),
+        text(remedy_x, 28, "remedy", "start", MUTED),
     ]
     y = 44.0
     described = []
@@ -1129,10 +1167,9 @@ def remedies() -> str:
         y += 36
         for seen, raised, remedy, _ in rows:
             middle = y + row / 2
-            for lines, x in ((seen, 20.0), (remedy, 404.0)):
+            for lines, x in ((seen, 20.0), (remedy, remedy_x)):
                 first_line = middle + 6 - 11 * (len(lines) - 1)
                 body += [text(x, first_line + 22 * i, words(s)) for i, s in enumerate(lines)]
-            left, span, tall = pill
             body += [
                 (
                     f'<rect x="{_f(left)}" y="{_f(middle - tall / 2)}" width="{_f(span)}" '
@@ -1140,8 +1177,8 @@ def remedies() -> str:
                     f'stroke-width="{FIGURE["outline"]}"/>'
                 ),
                 text(left + span / 2, middle + 6, words(f"`{raised}`"), "middle", BLUE),
-                arrow(198, middle, left - 4, middle, BLUE),
-                arrow(left + span + 4, middle, 396, middle, BLUE),
+                arrow(left - gap, middle, left - 4, middle, BLUE),
+                arrow(left + span + 4, middle, remedy_x - 8, middle, BLUE),
             ]
             described.append(
                 f"{' '.join(seen).replace('`', '')} raises {raised}; remedy: "
