@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, cast
 
 import numpy as np
@@ -20,21 +20,29 @@ from telescopic.tuning import PilotRun, TuningReport, adaptive_metropolis, dual_
 
 @dataclass
 class State:
-    """Positions, log-densities and (optionally) gradients of ``n`` chains, batch first.
+    """Positions, log-densities, (optionally) gradients and a kernel's own fields of ``n`` chains, batch first.
 
     A kernel returns states with the fields of its input states, valid at the returned
     positions: a state that carries gradients gets them evaluated at every new position.
+    ``extra`` maps names to arrays of one kernel, such as a momentum or a cached value, with
+    the chains along their first axis. The kernel names in
+    :attr:`~telescopic.kernels.Kernel.markov_fields` those that are part of its Markov
+    state, and the others are caches that it checks before use. A kernel carries unchanged
+    the fields it does not know, and :meth:`take` and :meth:`put` do so for it. A state therefore carries its kernel's caches: before handing a state to
+    another kernel by hand, drop its ``extra``.
 
     Attributes
     ----------
     x : ndarray, shape (n, d)
     log_prob : ndarray, shape (n,)
     grad : ndarray, shape (n, d), or None
+    extra : dict of str to ndarray, each of shape (n, ...)
     """
 
     x: FloatArray
     log_prob: FloatArray
     grad: FloatArray | None = None
+    extra: dict[str, npt.NDArray[Any]] = field(default_factory=dict)
 
     def __len__(self) -> int:
         return len(self.log_prob)
@@ -50,15 +58,22 @@ class State:
         Returns
         -------
         State
-            The selected chains, with arrays of their own.
+            The selected chains, with arrays of their own, every field of ``extra``
+            included.
         """
         rows = np.arange(len(self))[rows]
         return State(
-            self.x[rows], self.log_prob[rows], None if self.grad is None else self.grad[rows]
+            self.x[rows],
+            self.log_prob[rows],
+            None if self.grad is None else self.grad[rows],
+            {name: value[rows] for name, value in self.extra.items()},
         )
 
     def put(self, rows: Any, other: State) -> None:
         """Overwrite the chains in ``rows`` with ``other``, in place.
+
+        A field of ``extra`` that ``other`` lacks keeps its values in ``rows``, and a field
+        that only ``other`` has is not added.
 
         Parameters
         ----------
@@ -77,6 +92,9 @@ class State:
                     "them; it must return the fields of its input states"
                 )
             self.grad[rows] = other.grad
+        for name, value in other.extra.items():
+            if name in self.extra:
+                self.extra[name][rows] = value
 
 
 # Spec section 5.1, R-KER-1 to R-KER-6.
@@ -85,7 +103,8 @@ class Kernel(ABC):
 
     Subclasses implement :meth:`step` and :meth:`coupled_step` on batches of chains.
     Each marginal of :meth:`coupled_step` must have exactly the law of :meth:`step`. The
-    engine declares a meeting when a pair's returned positions are equal under ``==``, so a
+    engine declares a meeting when a pair's returned Markov states are equal under ``==``:
+    the positions and the fields that :attr:`markov_fields` names. So a
     coupling that makes the two proposals identical must give the second chain a copy of
     the first chain's proposal, never a recomputation. For a target evaluated point by
     point, a row's arithmetic must not depend on the other rows of the batch; for a
@@ -112,6 +131,35 @@ class Kernel(ABC):
         bool
         """
         return True
+
+    @property
+    def markov_fields(self) -> tuple[str, ...]:
+        """The fields of a :class:`State`'s ``extra`` that are part of the kernel's Markov state.
+
+        A pair meets when its positions and these fields are equal; every other field of
+        the kernel is a cache. None for every kernel of the package.
+
+        Returns
+        -------
+        tuple of str
+        """
+        return ()
+
+    def init_extra(self, state: State) -> dict[str, npt.NDArray[Any]]:
+        """The initial values of the kernel's own fields at the chains of ``state``.
+
+        :meth:`init_state` attaches them; none by default.
+
+        Parameters
+        ----------
+        state : State
+            The chains, ``n`` of them, without fields of their own.
+
+        Returns
+        -------
+        dict of str to ndarray, each of shape (n, ...)
+        """
+        return {}
 
     @property
     def is_tuned(self) -> bool:
@@ -214,7 +262,7 @@ class Kernel(ABC):
 
     # Spec R-INPUT-1.
     def init_state(self, target: Target, x: FloatArray) -> State:
-        """Evaluate the target at the rows of ``x``, with gradients if the kernel needs them.
+        """Evaluate the target at the rows of ``x``, with gradients if the kernel needs them, and attach the kernel's fields.
 
         A gradient that is not finite where the log-density is raises ``ValueError``
         here, as chains cannot start there; elsewhere it is taken as 0.
@@ -229,10 +277,13 @@ class Kernel(ABC):
         Returns
         -------
         State
+            With the fields of :meth:`init_extra`.
         """
         self.check_ndim(x.shape[1])
         self.check_target(target)
-        return evaluate(target, x, self.needs_grad, start=True)
+        state = evaluate(target, x, self.needs_grad, start=True)
+        state.extra = self.init_extra(state)
+        return state
 
     @abstractmethod
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
@@ -442,7 +493,12 @@ def evaluate_pair(
     # A view, not a copy as take makes: evaluate and evaluate_proposal return arrays of
     # their own, so the first n rows of both belong to no other state, and the second
     # state's rows are copies.
-    first = State(both.x[:n], both.log_prob[:n], None if both.grad is None else both.grad[:n])
+    first = State(
+        both.x[:n],
+        both.log_prob[:n],
+        None if both.grad is None else both.grad[:n],
+        {name: value[:n] for name, value in both.extra.items()},
+    )
     return first, both.take(source)
 
 
@@ -484,6 +540,10 @@ def log_ratio(new: FloatArray, old: FloatArray) -> FloatArray:
 def select(accepted: BoolArray, proposal: State, current: State) -> State:
     """Row by row, ``proposal`` where ``accepted`` and ``current`` elsewhere.
 
+    The result has the fields of ``current``: a field of ``extra`` takes the proposal's
+    values in accepted rows if the proposal has it, and keeps the current values
+    otherwise.
+
     Parameters
     ----------
     accepted : ndarray of bool, shape (n,)
@@ -495,10 +555,16 @@ def select(accepted: BoolArray, proposal: State, current: State) -> State:
     -------
     State
     """
+    extra = dict(current.extra)
+    for name, value in proposal.extra.items():
+        if name in extra:
+            rows = accepted.reshape(-1, *[1] * (value.ndim - 1))
+            extra[name] = np.where(rows, value, extra[name])
     return State(
         np.where(accepted[:, None], proposal.x, current.x),
         np.where(accepted, proposal.log_prob, current.log_prob),
         None
         if current.grad is None
         else np.where(accepted[:, None], cast(FloatArray, proposal.grad), current.grad),
+        extra,
     )

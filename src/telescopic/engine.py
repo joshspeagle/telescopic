@@ -705,6 +705,12 @@ class _Batch:
             return
         lanes = free[: len(starting)]
         states = self.kernel.init_state(self.target, np.vstack([(s.x0, s.y0) for s in starting]))
+        # The lanes hold the fields of init_state's states, allocated at the first fill.
+        for name, value in states.extra.items():
+            for lanes_state in (self.x, self.y):
+                if name not in lanes_state.extra:
+                    shape = (len(self.replicate), *value.shape[1:])
+                    lanes_state.extra[name] = np.zeros(shape, dtype=value.dtype)
         self.x.put(lanes, states.take(slice(0, None, 2)))
         self.y.put(lanes, states.take(slice(1, None, 2)))
         outside = np.isneginf(states.log_prob).reshape(-1, 2).any(axis=1)
@@ -731,17 +737,24 @@ class _Batch:
         coupled = (active & unmet & (self.t >= lag)).nonzero()[0]
         if len(solo):
             moved, _ = self.kernel.step(self.target, self.x.take(solo), self.streams.view(solo))
+            self._check_fields(moved)
             self.x.put(solo, moved)
         if len(coupled):
             new_x, new_y = self.kernel.coupled_step(
                 self.target, self.x.take(coupled), self.y.take(coupled), self.streams.view(coupled)
             )
+            self._check_fields(new_x)
+            self._check_fields(new_y)
             self.x.put(coupled, new_x)
             self.y.put(coupled, new_y)
         self.t += 1  # idle lanes' clocks are never read
         compared = (active & unmet & (self.t >= lag)).nonzero()[0]
         if len(compared):
             met = np.all(self.x.x[compared] == self.y.x[compared], axis=1)
+            # The rest of the Markov state (spec R-EST-2); no shipped kernel has any.
+            for name in self.kernel.markov_fields:
+                a, b = self.x.extra[name][compared], self.y.extra[name][compared]
+                met &= np.all((a == b).reshape(len(compared), -1), axis=1)
             self.tau[compared[met]] = self.t[compared[met]]
             compared = compared[~met]
         stepped = active.nonzero()[0]
@@ -751,6 +764,16 @@ class _Batch:
             for lane in coupled.tolist():
                 self.paths[int(self.replicate[lane])][1].append(self.y.x[lane].copy())
         self._record(stepped, compared)
+
+    def _check_fields(self, state: State) -> None:
+        # put would keep the old values of a Markov field that a step dropped, and the
+        # meeting test would compare them.
+        missing = [name for name in self.kernel.markov_fields if name not in state.extra]
+        if missing:
+            raise ValueError(
+                f"{self.kernel!r} returned states without its Markov fields {missing}; a "
+                "kernel must return the fields of its input states"
+            )
 
     def finish(self) -> IntArray:
         # Frees the lanes of the pairs that met and reached m, and of censored pairs.

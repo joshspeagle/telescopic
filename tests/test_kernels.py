@@ -6,7 +6,7 @@ import pytest
 from scipy import integrate, special, stats
 
 from references import P_MIN, Normal, dense, gaussian_log_prob, metropolis, reflection
-from telescopic import couplings, initial, tuning
+from telescopic import couplings, engine, initial, tuning
 from telescopic._linalg import matvec
 from telescopic.kernels import (
     HMC,
@@ -1498,3 +1498,84 @@ def test_a_mixture_never_applies_a_trailing_component_of_weight_zero():
         TARGET, State(np.zeros((1, 1)), np.zeros(1)), fixed_draws(uniforms=[[largest]])
     )
     assert new.x[0, 0] == 9.0
+
+
+# Fields of one kernel in State.extra.
+
+
+class Tagged(RandomWalk):
+    """A random walk with a field of its own, its chain's start, which it reads at every
+    step, so that a path that does not hand it the field raises KeyError."""
+
+    def init_extra(self, state):
+        return {"origin": state.x.copy()}
+
+    def step(self, target, state, draws):
+        assert state.extra["origin"].shape == state.x.shape
+        return super().step(target, state, draws)
+
+    def coupled_step(self, target, state_x, state_y, draws):
+        assert state_x.extra["origin"].shape == state_y.extra["origin"].shape == state_x.x.shape
+        return super().coupled_step(target, state_x, state_y, draws)
+
+
+def tagged_mixture():
+    gibbs = Gibbs(shifted, [[0], [1]], eta=0.5)
+    return Mixture([Tagged(np.eye(2)), HMC(0.3, 4, cov=np.eye(2)), gibbs], [0.4, 0.3, 0.3])
+
+
+@pytest.mark.parametrize("n", [1, 16])
+def test_state_extra_fields_survive_take_select_mixture_and_the_engine(n):
+    kernel = tagged_mixture()
+    rng = np.random.default_rng(3)
+    start_x, start_y = (kernel.init_state(TARGET, rng.standard_normal((n, 2))) for _ in "xy")
+    origin_x, origin_y = start_x.x.copy(), start_y.x.copy()
+    state_x, state_y = start_x, start_y
+    for t in range(40):
+        # Permuted rows carry their fields with them.
+        order = rng.permutation(n)
+        state_x, state_y = state_x.take(order), state_y.take(order)
+        origin_x, origin_y = origin_x[order], origin_y[order]
+        state_x, state_y = kernel.coupled_step(TARGET, state_x, state_y, random_draws(n, t))
+        state_x = kernel.step(TARGET, state_x, random_draws(n, 100 + t))[0]
+        assert set(state_x.extra) == set(state_y.extra) == {"0/origin"}
+        np.testing.assert_array_equal(state_x.extra["0/origin"], origin_x)
+        np.testing.assert_array_equal(state_y.extra["0/origin"], origin_y)
+    assert not np.array_equal(state_x.x, start_x.x[order])  # the chains moved
+    starts = rng.standard_normal((50, 2))
+    replicates = engine.run(TARGET, kernel, starts, range(8), k=2, m=6, lag=1, lanes=n, rng=4)
+    assert len(replicates.index) == 8
+
+
+@pytest.mark.parametrize("name", NAMES)
+def test_a_kernel_carries_unchanged_the_fields_it_does_not_know(name):
+    kernel = kernels(np.eye(2))[name]
+    rng = np.random.default_rng(8)
+    n = 16  # rows on several components of a mixture
+    fields = [
+        {"other": rng.standard_normal((n, 3)), "count": rng.integers(0, 9, (n, 2, 2))}
+        for _ in "xy"
+    ]
+    given = [{key: value.copy() for key, value in extra.items()} for extra in fields]
+    start = [state(rng.standard_normal((n, 2)), kernel.needs_grad) for _ in "xy"]
+    for chain, extra in zip(start, fields, strict=True):
+        chain.extra = extra
+    moved, _ = kernel.step(TARGET, start[0], random_draws(n, 1))
+    pair = kernel.coupled_step(TARGET, *start, random_draws(n, 2))
+    assert not np.array_equal(moved.x, start[0].x)
+    for new, extra in zip((moved, *pair), (given[0], *given), strict=True):
+        assert set(new.extra) == set(extra)
+        for key, value in extra.items():
+            np.testing.assert_array_equal(new.extra[key], value)
+            assert new.extra[key].dtype == value.dtype
+
+
+class WithMomentum(RandomWalk):
+    @property
+    def markov_fields(self):
+        return ("momentum",)
+
+
+def test_mixture_refuses_a_component_with_markov_fields():
+    with pytest.raises(ValueError, match=r"kernels\[1\] has the Markov fields \('momentum',\)"):
+        Mixture([RandomWalk(np.eye(1)), WithMomentum(np.eye(1))], [0.5, 0.5])

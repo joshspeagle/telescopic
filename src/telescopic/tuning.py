@@ -355,6 +355,7 @@ def dual_averaging(
     kernel.check_ndim(starts.shape[1])
     kernel.check_target(target)
     state = evaluate(target, starts, kernel.needs_grad)
+    state.extra = kernel.init_extra(state)
     mu, h_bar, log_average = np.log(10 * step_size), 0.0, 0.0
     for t in tuning_steps(range(1, DUAL_AVERAGING_STEPS + 1), "tuning the step size"):
         state, acceptance = kernel_at(step_size).step(target, state, draws)

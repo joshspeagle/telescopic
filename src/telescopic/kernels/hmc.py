@@ -225,8 +225,9 @@ class _Leapfrog(GradientKernel):
         log_u = draws.log_uniform()
         moved = select(np.concatenate([log_u, log_u]) < log_alpha, end, both)
         grad = cast(FloatArray, moved.grad)
-        first = State(moved.x[:n], moved.log_prob[:n], grad[:n])
-        return first, State(moved.x[n:], moved.log_prob[n:], grad[n:])
+        # The trajectory knows no field of extra: each chain carries its own unchanged.
+        first = State(moved.x[:n], moved.log_prob[:n], grad[:n], dict(state_x.extra))
+        return first, State(moved.x[n:], moved.log_prob[n:], grad[n:], dict(state_y.extra))
 
     def _with_cov(self, cov: FloatArray) -> _Leapfrog:
         return _Leapfrog(self.step_size, self._n_steps, cov, self.jitter)

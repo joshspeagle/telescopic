@@ -54,6 +54,20 @@ class Proposal(ABC):
         """
         return None
 
+    def init_extra(self, state: State) -> dict[str, npt.NDArray[Any]]:
+        """The initial values of the proposal's own fields, as for :meth:`telescopic.kernels.Kernel.init_extra`; none by default.
+
+        Parameters
+        ----------
+        state : State
+            The chains, ``n`` of them.
+
+        Returns
+        -------
+        dict of str to ndarray, each of shape (n, ...)
+        """
+        return {}
+
     @abstractmethod
     def sample(self, target: Target, state: State, draws: Draws) -> tuple[FloatArray, Any]:
         r"""Draw a proposal :math:`x' \sim q(\cdot \mid x)` for each chain.
@@ -385,6 +399,9 @@ class MetropolisHastings(Kernel):
     @property
     def ndim(self) -> int | None:
         return None if self._proposal is None else self._proposal.ndim
+
+    def init_extra(self, state: State) -> dict[str, npt.NDArray[Any]]:
+        return {} if self._proposal is None else self._proposal.init_extra(state)
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         proposal, _ = self._ready()

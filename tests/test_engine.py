@@ -650,3 +650,44 @@ def test_the_note_says_whether_no_replicate_finished_or_their_record_was_lost(mo
         "before it could be made, so they were lost"
     )
     assert run_notes(lost) == [note]
+
+
+class Momentum(RandomWalk):
+    """Sends both chains to 0 and counts in a Markov field: 1 per step alone, and per
+    coupled step 1 for X and 2 for Y. After X's L steps alone, the positions agree from the
+    first coupled step on, and the counts after L coupled steps."""
+
+    @property
+    def markov_fields(self):
+        return ("momentum",)
+
+    def init_extra(self, state):
+        return {"momentum": np.zeros((len(state), 1))}
+
+    def step(self, target, state, draws):
+        x = np.zeros_like(state.x)
+        moved = State(x, target.log_prob(x), None, {"momentum": state.extra["momentum"] + 1})
+        return moved, np.ones(len(x))
+
+    def coupled_step(self, target, state_x, state_y, draws):
+        moved_y = self.step(target, state_y, draws)[0]
+        moved_y.extra["momentum"] = state_y.extra["momentum"] + 2
+        return self.step(target, state_x, draws)[0], moved_y
+
+
+def test_engine_declares_a_meeting_only_when_markov_fields_agree():
+    # With lag 2, X steps alone at t = 1 and 2; the positions agree from t = 3 on, and the
+    # counts at t = 4 (4 for X, 2 + 2 for Y).
+    replicates = simulate(Momentum(np.eye(2)), n=5, k=0, m=6, lag=2, max_iter=20)
+    np.testing.assert_array_equal(replicates.meeting_time, 4)
+
+
+class Forgetful(Momentum):
+    def coupled_step(self, target, state_x, state_y, draws):
+        moved_x, moved_y = super().coupled_step(target, state_x, state_y, draws)
+        return moved_x, State(moved_y.x, moved_y.log_prob)
+
+
+def test_engine_raises_when_a_step_drops_a_markov_field():
+    with pytest.raises(ValueError, match=r"without its Markov fields \['momentum'\]"):
+        simulate(Forgetful(np.eye(2)), n=2, max_iter=20)

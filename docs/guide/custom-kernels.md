@@ -58,16 +58,19 @@ Other members have defaults that a kernel can override:
   {func}`telescopic.tuning.adaptive_metropolis` runs the pilot chains, unless a mixture
   passes them as `pilot`; their `mean`, `cov` and `report()` are what the built-in
   kernels use.
+- `markov_fields` and `init_extra(state)`, for a kernel with fields of its own
+  ([Fields of one kernel](#fields-of-one-kernel)).
 - `__repr__` names the kernel in summaries.
 
 ## The rules
 
 1. **Marginals.** Each chain of `coupled_step` moves with exactly the law of `step`.
    Otherwise the estimates are biased.
-2. **Exact meetings.** The engine declares a meeting when the two positions of a pair
-   are equal, compared with `==`. Where the coupling makes the two new positions equal,
-   the second chain must get a copy of the first chain's position, log-density and
-   gradient, never a recomputation, which can differ in the last bits.
+2. **Exact meetings.** The engine declares a meeting when the two Markov states of a
+   pair are equal, compared with `==`: the positions, and the fields that
+   `markov_fields` names. Where the coupling makes the two new positions equal, the
+   second chain must get a copy of the first chain's position, log-density, gradient
+   and Markov fields, never a recomputation, which can differ in the last bits.
 3. **Rows are independent.** For a target evaluated point by point, a row's arithmetic
    must not depend on the other rows of the batch. Use elementwise operations, and
    `np.einsum` without `optimize` for linear algebra on rows; `@` and `solve` on a batch
@@ -80,7 +83,8 @@ Other members have defaults that a kernel can override:
    computes each chain's products in a call of its own, of the same shape: two equal
    rows of one call can get different bits, which would separate chains that met.
 4. **Determinism.** A step is a function of its inputs and its draws alone: every random
-   number comes from `draws`, and nothing is kept between calls.
+   number comes from `draws`, and nothing is kept in the kernel between calls. State
+   kept from one step to the next lives in the states' `extra`.
 
 A coupled step need not keep equal states equal: the engine never applies it to a pair
 that has met. To run on a pool of processes, the kernel must be picklable
@@ -92,14 +96,41 @@ that has met. To run on a pool of processes, the kernel must be picklable
 
 - draws each pair's starting points, runs the first chain alone for `lag` steps, then
   applies `coupled_step` to the pairs that have not met, many replicates at a time;
-- compares the positions of each pair after every coupled step, exactly, and records the
-  meeting time;
+- compares the Markov states of each pair after every coupled step, exactly, and
+  records the meeting time;
 - after the meeting applies `step` to the first chain alone, so the chains stay together
   whatever the coupling does, and a pair that has met costs one chain;
 - gives each replicate its own random streams, so that its numbers depend only on the
   seed, its index and its own requests;
 - stores the signed measures, counts the cost, and censors the pairs that reach
   `max_iter`.
+
+## Fields of one kernel
+
+A state's `extra` maps names to arrays of the kernel's own, with the chains along the
+first axis, such as a momentum that persists between steps or a cached value. The kernel
+gives their initial values in `init_extra(state)`, which `init_state` attaches, and names
+in `markov_fields` those that are part of its Markov state: a pair meets only when these
+are equal too, and the engine raises `ValueError` when a step returns states without
+them. Every other field is a cache, which the kernel checks before use and recomputes
+where it is missing or stale, since a state can reach it without its caches or after
+another kernel moved the chain.
+
+A kernel carries unchanged the fields it does not know: it acts as the identity on them.
+`State.take` copies every field, and `State.put` writes the fields that both states have
+and leaves the others. A kernel that builds its new states with `State(...)` drops the
+fields of its input; a run keeps their old values, so the caches of other kernels in a
+mixture stay correct only because each checks its own, and such a kernel is better
+written to pass `state.extra` on. A {class}`~telescopic.kernels.Mixture` names the field
+`name` of component `i` as `f"{i}/{name}"`, so two components never share a field, and
+gives each component its own fields under their own names. It refuses a component with
+Markov fields: a mixture leaves a joint law $\pi(x)\psi(v)$ invariant only when
+$\psi$ does not depend on $x$, which it cannot check. A state carries its kernel's
+caches, so before handing a state to another kernel by hand, drop its `extra`.
+
+No kernel of the package has Markov fields. {func}`telescopic.testing.check_coupling`
+counts meetings on the Markov state, and steps each returned state with and without its
+caches to catch a cache that does not match its chain.
 
 ## Coupling primitives
 
@@ -177,7 +208,8 @@ would then have to evaluate `target.log_prob_and_grad` at its new positions.
 
 {func}`telescopic.testing.check_coupling` checks a kernel's coupling as the engine uses
 it: one coupled step against steps of the kernel alone from the same points, the fraction
-of pairs that meet, stale cached log-densities and pairs that nearly meet. A kernel of
+of pairs that meet, stale cached log-densities and caches, and pairs that nearly
+meet. A kernel of
 your own should pass it before use. Its report's `passed()` says whether the coupled and
 the uncoupled steps agree, as the API reference details. It catches a
 coupling that reads another row's state the more surely the more the log-densities at
