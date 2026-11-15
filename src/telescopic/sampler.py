@@ -373,7 +373,14 @@ class CoupledSampler:
         self._tune(progress)
         start = 0 if self.pilot is None else len(self.pilot)
         indices = np.arange(start, start + n)
-        replicates = self._run(PILOT, indices, settings, pool, progress)
+        # A pilot keeps nothing of a run that an error stopped (spec section 6.5).
+        replicates, error, _ = self._run(PILOT, indices, settings, pool, progress)
+        if error is not None:
+            try:
+                raise error
+            finally:
+                del error  # the traceback keeps this frame
+        replicates = cast(engine.Replicates, replicates)
         times = replicates.meeting_time
         self.pilot = times if self.pilot is None else np.concatenate([self.pilot, times])
         self._pilot_zero_density += len(replicates.zero_density)
@@ -389,6 +396,7 @@ class CoupledSampler:
         lag: int | str = "auto",
         thin: int | None = None,
         max_iter: int | None = None,
+        keep: int | None = None,
         progress: bool | None = None,
     ) -> Result:
         """Run ``n_replicates`` more replicates and return the result of all of them so far.
@@ -400,6 +408,12 @@ class CoupledSampler:
         The first Ctrl-C during the replicates lets those in progress finish and returns a
         result flagged ``interrupted``; the next call runs the missing replicates first. A
         second Ctrl-C raises ``KeyboardInterrupt`` at once, without a result.
+
+        An error during the replicates, such as one of the log-density, is raised again
+        once the sampler keeps the replicates finished before it, with its attribute
+        ``telescopic_result`` set to the result of all of them so far (``None`` if none
+        finished) and a note; the next call runs the missing replicates first. An error
+        in tuning or in the pilot is raised as it is.
 
         Parameters
         ----------
@@ -415,6 +429,13 @@ class CoupledSampler:
         max_iter : int, optional
             Censor pairs still unmet at this time. ``None`` runs every pair until it
             meets on the first call, and keeps the first call's cap on later ones.
+        keep : int, optional
+            Store the signed measures and distances of the replicates of index below
+            ``keep`` only, and the moments of every replicate, from which the mean, the
+            variances and the covariance (up to 100 dimensions) come; the quantiles,
+            histograms and :meth:`~telescopic.Result.estimate` come from the kept
+            replicates. ``None`` stores every replicate's signed measure on the first
+            call, and keeps the first call's setting on later ones.
         progress : bool, optional
             Show the progress of the run and of the tuning and the pilot it runs;
             ``None`` takes the sampler's setting.
@@ -440,7 +461,7 @@ class CoupledSampler:
         (25, 50)
         """
         n_replicates = integer("n_replicates", n_replicates, minimum=1)
-        given = self._check(k, m, lag, thin, max_iter)
+        given = self._check(k, m, lag, thin, max_iter, keep)
         show = self.progress if progress is None else flag("progress", progress)
         interrupt = Interrupt()
         with ExitStack() as catching:
@@ -455,22 +476,71 @@ class CoupledSampler:
                 # Ctrl-C lets the run finish (spec section 6.5): after the replicates,
                 # while the workers stop and the result is built, it would lose them.
                 catching.enter_context(interrupt.catching())
-                part = self._run(MAIN, indices, settings, pool, show, interrupt)
-            self._replicates = (
-                part if self._replicates is None else engine.merge([self._replicates, part])
-            )
-            result = Result(
-                self._replicates,
-                names=self.names,
-                kernel=self.kernel,
-                initial=self.initial,
-                tuning=self.tuning,
-                pilot=self.pilot,
-            )
+                part, error, others = self._run(MAIN, indices, settings, pool, show, interrupt)
+            # The finished replicates are kept before anything can raise, so that an error,
+            # or a warning made one, leaves them in the sampler (spec section 6.5).
+            if part is not None and len(part.index):
+                self._replicates = (
+                    part if self._replicates is None else engine.merge([self._replicates, part])
+                )
+                if error is not None:
+                    note = self._stopped(part, len(indices), others)
+                    engine._attach(error, "telescopic_result", self._result(), note)
+            elif error is not None:
+                # The engine's note when it recorded nothing, else none had finished.
+                engine._attach(
+                    error, "telescopic_result", None, None if part is None else engine._NONE
+                )
+            if error is not None:
+                try:
+                    raise error
+                finally:
+                    del error  # the traceback keeps this frame
+            result = self._result()
             for issue in diagnostics.issues(result):
                 if issue.kind not in _LIVE:
                     warn(issue.message, ConvergenceWarning)
         return result
+
+    def _result(self) -> Result:
+        return Result(
+            cast(engine.Replicates, self._replicates),
+            names=self.names,
+            kernel=self.kernel,
+            initial=self.initial,
+            tuning=self.tuning,
+            pilot=self.pilot,
+        )
+
+    def _stopped(self, part: engine.Replicates, n: int, others: int) -> str:
+        # The note on an error that stopped a run of n replicates, of which part finished,
+        # once the sampler keeps them.
+        replicates = cast(engine.Replicates, self._replicates)
+        missing = len(np.setdiff1d(replicates.requested, replicates.index))
+        abandoned = part.abandoned
+        lines = [
+            f"{engine._STOPPED} the run with {len(part.index):,} of its {n:,} replicates finished"
+        ]
+        if len(abandoned):
+            lines[0] += (
+                f"; the {len(abandoned):,} in progress (indices {abandoned[0]:,} to "
+                f"{abandoned[-1]:,}) were abandoned"
+            )
+        lines.append(
+            "The sampler keeps the finished replicates, and its next run starts with the "
+            f"{missing:,} missing ones; error.telescopic_result holds the result of all its "
+            "replicates so far, which CoupledSampler.resume continues in a new sampler. An "
+            "error that recurs at a replicate will recur there."
+        )
+        if len(abandoned):
+            lines.append(
+                "Leaving abandoned replicates out would bias the estimates, since the "
+                "replicates still running when an error comes tend to be those with long "
+                "meeting times."
+            )
+        if others:
+            lines.append(f"Errors stopped {others:,} other chunks of the run too.")
+        return f"{lines[0]}. {' '.join(lines[1:])}"
 
     def _next_indices(self, n: int) -> IntArray:
         # The requested replicates that an interrupted run never started come first, then
@@ -490,13 +560,13 @@ class CoupledSampler:
         pool: Any,
         progress: bool,
         interrupt: Interrupt | None = None,
-    ) -> engine.Replicates:
-        # The engine on the given replicates, here or on the opened pool. A main run stores
-        # its measures and stops on Ctrl-C, through interrupt (spec section 6.5); a pilot
-        # run does neither.
+    ) -> engine._Outcome:
+        # The engine on the given replicates, here or on the opened pool, and the error
+        # that stopped it, if any. A main run stores its measures and stops on Ctrl-C,
+        # through interrupt (spec section 6.5); a pilot run does neither.
         main = namespace == MAIN
         job = functools.partial(
-            engine.run,
+            engine._run,
             self.target,
             self.kernel,
             self.initial,
@@ -518,21 +588,27 @@ class CoupledSampler:
             return interrupt is not None and interrupt.stopping
 
         try:
-            replicates = execute(job, indices, pool, monitor, self.n_workers)
+            replicates, error, others = execute(job, indices, pool, monitor, self.n_workers)
         finally:
             if bar is not None:
                 bar.close()
-        outside.after(replicates)
-        slow.after(replicates)
-        zeroed.after(replicates)
-        return replicates
+        if replicates is not None:
+            error = error or _checked(replicates, outside, slow, zeroed)
+        return engine._Outcome(replicates, error, others)
 
     def _check(
-        self, k: int | str, m: int | str, lag: int | str, thin: int | None, max_iter: int | None
+        self,
+        k: int | str,
+        m: int | str,
+        lag: int | str,
+        thin: int | None,
+        max_iter: int | None,
+        keep: int | None,
     ) -> dict[str, int]:
         # The settings given, those not "auto" or None, as integers, checked before any
         # tuning or worker starts: with an automatic k, at k = 0, whose bounds hold for
-        # every k. Later runs keep the first run's settings (D-21, DECISIONS #4 and #8).
+        # every k. Later runs keep the first run's settings, keep among them (D-21,
+        # DECISIONS #4, #8 and #242).
         given = {}
         for name, value, default in (
             ("k", k, "auto"),
@@ -544,6 +620,8 @@ class CoupledSampler:
             # The type first: == compares an array elementwise.
             if not (isinstance(value, type(default)) and value == default):
                 given[name] = integer(name, value, f"an integer or {default!r}")
+        if keep is not None:
+            given["keep"] = integer("keep", keep, "None or an integer >= 0", minimum=0)
         if self.settings is not None:
             for name, value in given.items():
                 kept = getattr(self.settings, name)
@@ -595,19 +673,33 @@ class CoupledSampler:
         # Spec R-EXEC-7: estimate the atoms and distances to store before running, and warn
         # when a run and its first estimates, which peak at about three times that, would
         # pass 1 GB. The pilot's meeting times stand in for those of the run, their tau - 1
-        # for its tau - L; without a pilot, the run's pairs count as meeting at once.
+        # for its tau - L; without a pilot, the run's pairs count as meeting at once. With
+        # keep, only the kept replicates store atoms, and the peak adds the moments of every
+        # replicate, 8 (p + d) bytes each, the lanes' sums in each engine (one per worker of
+        # an integer pool) and the block temporary, at most 1 MiB.
         coupled = np.zeros(1)
         if self.pilot is not None and np.isfinite(self.pilot).any():
             coupled = self.pilot[np.isfinite(self.pilot)] - 1
-        stored = n_replicates * engine.stored_bytes(settings, self.ndim, coupled) / len(coupled)
+        keep = n_replicates if settings.keep is None else min(settings.keep, n_replicates)
+        each = engine.stored_bytes(settings._replace(keep=None), self.ndim, coupled)
+        stored = keep * each / len(coupled)
         peak = PEAK_PER_STORED * stored
+        stored_what = "atoms and distances"
+        if settings.keep is not None:
+            engines = self.pool if isinstance(self.pool, int) else 1
+            moments = engine.stored_bytes(
+                settings._replace(keep=0), self.ndim, np.zeros(n_replicates)
+            )
+            stored += moments
+            peak += moments + engines * engine.LANES * engine._lane_bytes(self.ndim) + 2**20
+            stored_what = "atoms, distances and moments"
         if peak > 1e9:
             # In one or two dimensions the peak can reach twice the factor's figure.
             upto = f" to {2 * peak / 1e9:.1f}" if self.ndim <= 2 else ""
             warn(
-                f"the run will store about {stored / 1e9:.1f} GB of atoms and distances, "
-                f"and with its first estimates take about {peak / 1e9:.1f}{upto} GB; pass "
-                "thin= to store fewer atoms, or run fewer replicates",
+                f"the run will store about {stored / 1e9:.1f} GB of {stored_what}, and with "
+                f"its first estimates take about {peak / 1e9:.1f}{upto} GB; pass thin= or "
+                "keep= to store fewer atoms, or run fewer replicates",
                 InputWarning,
             )
 
@@ -629,6 +721,7 @@ def sample(
     lag: int | str = "auto",
     thin: int | None = None,
     max_iter: int | None = None,
+    keep: int | None = None,
     names: Sequence[str] | None = None,
     pool: Any = None,
     n_workers: int | None = None,
@@ -682,6 +775,10 @@ def sample(
         Average every ``thin``-th state from ``k``; ``None`` averages every state.
     max_iter : int, optional
         Censor pairs still unmet at this time; ``None`` runs every pair until it meets.
+    keep : int, optional
+        Store the signed measures of the replicates of index below ``keep`` only, and the
+        moments of every replicate; see :meth:`CoupledSampler.run`. ``None`` stores every
+        replicate's signed measure.
     names : sequence of str, optional
         Parameter names for summaries.
     pool : None, int, executor or pool
@@ -709,7 +806,9 @@ def sample(
         Its estimates are unbiased unless ``max_iter`` censors a pair, which biases them
         and warns, or a Ctrl-C interrupts the run, which leaves them consistent and flags
         the result ``interrupted``. It warns about the conditions listed under Warnings,
-        in :doc:`/reference/warnings`.
+        in :doc:`/reference/warnings`. An error during the replicates is raised with the
+        result of those finished before it as its attribute ``telescopic_result``, which
+        :meth:`CoupledSampler.resume` continues.
 
     Examples
     --------
@@ -743,7 +842,22 @@ def sample(
         check_grad=check_grad,
         rng=rng,
     )
-    return sampler.run(n_replicates, k=k, m=m, lag=lag, thin=thin, max_iter=max_iter)
+    return sampler.run(n_replicates, k=k, m=m, lag=lag, thin=thin, max_iter=max_iter, keep=keep)
+
+
+def _checked(
+    replicates: engine.Replicates,
+    outside: _ZeroDensityStarts,
+    slow: _SlowPairs,
+    zeroed: _ZeroedGradients,
+) -> Exception | None:
+    # The checks after a run, and the exception one raised, as a warning made an error:
+    # it stops the run as any error does, with every replicate kept (spec section 6.5).
+    with engine._Caught() as caught:
+        outside.after(replicates)
+        slow.after(replicates)
+        zeroed.after(replicates)
+    return caught.error
 
 
 class _ZeroDensityStarts:
@@ -865,5 +979,6 @@ def _settings(given: dict[str, int]) -> engine.Settings:
             lag=given.get("lag", max(1, k)),
             thin=given.get("thin", 1),
             max_iter=given.get("max_iter"),
+            keep=given.get("keep"),
         )
     )

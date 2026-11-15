@@ -143,7 +143,7 @@ def marginals(
     -------
     list of Axes
     """
-    result._require(2)
+    result._require_kept(2)
     bins = integer("bins", bins, minimum=1)
     columns = range(result.ndim) if dims is None else coordinates(dims, result.ndim)
     n = len(columns)
@@ -182,7 +182,7 @@ def corner(result: Result, dims: int | Sequence[int] | None = None, bins: int = 
     -------
     ndarray of Axes, shape (len(dims), len(dims))
     """
-    result._require(2)
+    result._require_kept(2)
     bins = integer("bins", bins, minimum=1)
     columns = range(result.ndim) if dims is None else coordinates(dims, result.ndim)
     n = len(columns)
@@ -190,7 +190,7 @@ def corner(result: Result, dims: int | Sequence[int] | None = None, bins: int = 
     # Each coordinate binned once, as Result.histogram bins it; a pair's masses are then one
     # bincount, without the per-replicate masses that its errors would need.
     cells = [result._bins(dim, bins) for dim in columns]
-    weights = result.measure.weights / result.n_replicates
+    weights = result.measure.weights / result.measure.n_replicates
     for row in range(n):
         marginals(result, columns[row], bins, [grid[row, row]])
         for column in range(n):

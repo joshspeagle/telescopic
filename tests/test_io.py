@@ -1,5 +1,6 @@
 import dataclasses
 import io
+import json
 import tempfile
 import warnings
 from functools import cached_property
@@ -119,3 +120,74 @@ def test_saved_files_hold_no_pickled_objects(result):
     with np.load(buffer, allow_pickle=False) as data:
         for name in data.files:
             data[name]  # raises for a pickled array
+
+
+def reduced_result():
+    # A run that keeps replicates 0 to 6, with censored pairs.
+    sampler = telescopic.CoupledSampler(
+        gaussian_log_prob, INIT, kernel=RandomWalk(np.eye(2)), rng=6
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", ConvergenceWarning)  # the censored pairs
+        result = sampler.run(20, k=2, m=10, lag=2, max_iter=12, keep=7)
+    assert result.n_censored
+    assert 0 < result.n_kept < result.n_replicates
+    return result
+
+
+def test_reduced_results_round_trip_bitwise_through_a_file():
+    result = reduced_result()
+    loaded = reloaded(result)
+    for name, value in stored(result).items():
+        if name not in ("kernel", "initial"):
+            assert_same(getattr(loaded, name), value, name)
+    assert loaded._replicates.moments.shape == (20, 5)
+    assert repr(loaded.summary()) == repr(result.summary())
+
+
+def schema_1_file(result):
+    # The file that schema 1 wrote for a result without keep: no family, no times, no
+    # moments and no abandoned replicates, every array under "replicates.".
+    buffer = io.BytesIO()
+    result.save(buffer)
+    buffer.seek(0)
+    with np.load(buffer) as data:
+        metadata = json.loads(str(data["metadata"]))
+        arrays = {name: data[name] for name in data.files if name != "metadata"}
+    del metadata["family"], metadata["settings"]["keep"]
+    metadata["schema"] = 1
+    for name in _io.COMMON_ARRAYS:
+        array = arrays.pop(f"replicates.{name}")
+        if name in _io.SCHEMA_1_ARRAYS:
+            arrays[f"replicates.{name}"] = array
+    for name in _io.COUPLED_ARRAYS:
+        arrays[f"replicates.{name}"] = arrays.pop(f"coupled.{name}")
+    old = io.BytesIO()
+    np.savez(old, metadata=np.array(json.dumps(metadata)), **arrays)
+    old.seek(0)
+    return old
+
+
+def test_schema_1_files_load_with_the_times_a_new_run_records(result):
+    loaded = Result.load(schema_1_file(result))
+    np.testing.assert_array_equal(loaded._replicates.time, result._replicates.time)
+    assert loaded.keep is None
+    assert loaded._replicates.moments.shape == (len(result.index), 0)
+    assert not len(loaded.abandoned)
+    assert repr(loaded.summary()) == repr(result.summary())
+
+
+def test_a_file_of_an_unknown_family_raises_naming_it(result):
+    buffer = io.BytesIO()
+    result.save(buffer)
+    buffer.seek(0)
+    with np.load(buffer) as data:
+        arrays = {name: data[name] for name in data.files}
+    metadata = json.loads(str(arrays["metadata"]))
+    metadata["family"] = "multilevel"
+    arrays["metadata"] = np.array(json.dumps(metadata))
+    renamed = io.BytesIO()
+    np.savez(renamed, **arrays)
+    renamed.seek(0)
+    with pytest.raises(ValueError, match="estimator family 'multilevel', which this telescopic"):
+        Result.load(renamed)

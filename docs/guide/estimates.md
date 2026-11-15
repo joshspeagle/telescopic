@@ -154,6 +154,21 @@ joint.shape, joint.sum()
 The masses are not densities: divide them by the widths of the bins, as
 `plot_marginals` does.
 
+## Two sets of replicates
+
+A run with `keep` ([Keeping a subset](settings.md#keeping-a-subset)) stores every
+replicate's moments but the signed measures of the replicates of index below `keep`
+only. {meth}`~telescopic.Result.mean`, {meth}`~telescopic.Result.var`,
+{meth}`~telescopic.Result.std` and, up to 100 dimensions, {meth}`~telescopic.Result.cov`
+come from all $R$ replicates that met. {meth}`~telescopic.Result.estimate`, the quantiles,
+the credible intervals, the histograms and their plots, `measure` and
+{meth}`~telescopic.Result.chains` come from the `n_kept` kept replicates that met, and so
+does `cov` above 100 dimensions, whose diagonal can then differ from `var`. Each set gives
+unbiased estimates, or consistent ones for quantiles, with error bars from its own
+replicates, and the summary names the replicates behind each column. The two sets are not
+independent: an estimate from one combined with one from the other has no error bar of
+its own.
+
 ## Signed measures
 
 `result.measure` is a {class}`telescopic.SignedMeasure`: the `atoms`, of shape `(N, d)`,

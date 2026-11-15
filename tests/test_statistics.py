@@ -331,3 +331,53 @@ def test_estimates_are_calibrated_over_the_prior(name):
         return differences.mean(axis=0) / stats.sem(differences)
 
     assert_z_scores(z_scores, 2000, seed=40)
+
+
+def shifted_log_prob(x):
+    # N(3, I), vectorized.
+    return -0.5 * np.sum(np.square(x - 3.0), axis=-1)
+
+
+def reduced_run(n, rng, keep):
+    # From N(0, I) in d = 5, three standard deviations from the target's mean in every
+    # coordinate, with a small k so that the bias correction matters.
+    target = Target(shifted_log_prob, vectorize=True)
+    initial = Normal(np.zeros(5), np.eye(5))
+    return run(
+        target, RandomWalk(np.eye(5)), initial, range(n), rng=rng, k=5, m=30, lag=7, keep=keep
+    )
+
+
+def test_reduced_runs_are_unbiased_for_moments_from_every_replicate():
+    # E[x] = 3 and E[x^2] = 10 from the moments of all 1,000 replicates, of which 50 keep
+    # their atoms: a_r = c_r + f_r and pi_r(x^2) = S_r + 2 c_r f_r + c_r^2.
+    truth = np.concatenate([np.full(5, 3.0), np.full(5, 10.0)])
+    i, j = np.triu_indices(5)
+
+    def z_scores(n, rng):
+        replicates = reduced_run(n, rng, keep=50)
+        center, moments = replicates.center, replicates.moments
+        f, squares = moments[:, :5], moments[:, 5:][:, i == j]
+        values = np.concatenate([center + f, squares + 2 * center * f + center**2], axis=1)
+        mean = Result(replicates).mean()
+        np.testing.assert_allclose(mean.replicates, values[:, :5], rtol=0, atol=0)
+        return (values.mean(axis=0) - truth) / stats.sem(values, axis=0)
+
+    assert_z_scores(z_scores, 1000, seed=79)
+
+
+def test_kept_subset_estimates_are_unbiased():
+    # E[x] and E[x^2] from the 1,000 kept replicates of 1,500, and the masses of the 6
+    # bins of x_0 on [0, 6], a range fixed in advance.
+    truth = np.concatenate([np.full(5, 3.0), np.full(5, 10.0)])
+    masses = np.diff(stats.norm.cdf(np.arange(7.0), loc=3.0))
+
+    def z_scores(n, rng):
+        result = Result(reduced_run(n, rng, keep=1000))
+        assert result.n_kept == 1000
+        estimate = result.estimate(moments)
+        bins, errors, _ = result.histogram(0, 6, range=(0.0, 6.0))
+        z = (estimate.value - truth) / estimate.standard_error
+        return np.concatenate([z, (bins - masses) / errors])
+
+    assert_z_scores(z_scores, 1500, seed=80)
