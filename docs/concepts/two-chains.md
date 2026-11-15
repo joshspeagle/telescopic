@@ -80,7 +80,7 @@ $Y_{t-L}$ compares the chain at two times $L$ steps apart, which is what
 [the telescoping correction](telescoping-correction.md) adds up. The lag also sets how
 much correction a pair needs: a pair that meets within $k + L$ steps contributes no
 correction, and its estimate is the ordinary average after the burn-in. telescopic's
-automatic settings take $L = k$, so that most pairs meet that early
+automatic settings take $L = \max(1, k)$, so that most pairs meet that early
 ([Settings](../guide/settings.md#the-settings)), and
 [Choosing k, m and the lag](../tutorials/choosing-settings.md) compares a lag of 1 with
 a lag of $k$ on one target.
