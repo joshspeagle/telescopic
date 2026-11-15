@@ -114,9 +114,11 @@ nitpicky = True
 
 # Sphinx fetches each inventory once. CI fetches them with retries into the directory
 # TELESCOPIC_DOCS_INVENTORIES, read first; the site is read when that file is missing.
+# A relative directory is taken from the working directory, not from docs/.
 _inventories = os.environ.get("TELESCOPIC_DOCS_INVENTORIES")
+_inventories = os.path.abspath(_inventories) if _inventories else None
 intersphinx_mapping = {
-    name: (url, (f"{_inventories}/{name}.inv", None) if _inventories else None)
+    name: (url, (os.path.join(_inventories, f"{name}.inv"), None) if _inventories else None)
     for name, url in {
         "python": "https://docs.python.org/3",
         "numpy": "https://numpy.org/doc/stable",

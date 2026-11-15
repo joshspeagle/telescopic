@@ -94,23 +94,21 @@ jobs:
       - run: python docs/_scripts/brand.py --check
       - run: python docs/_scripts/hero_pair.py --check
       - run: python docs/_scripts/figures.py --check
-      # Sphinx fetches each intersphinx inventory once, without retrying; a fetch that
-      # fails here leaves the build to try the inventory's site and name it if that fails.
-      # The names and sites are those of intersphinx_mapping in docs/conf.py.
+      # Sphinx fetches each intersphinx inventory once, without retrying. A fetch that
+      # fails here leaves no file, and the build tries the inventory's site, naming it
+      # if that fails too. The inventories are those of intersphinx_mapping in conf.py.
       - name: Fetch the intersphinx inventories, with retries
         run: |
           dir="$RUNNER_TEMP/inventories"
           mkdir -p "$dir"
           echo "TELESCOPIC_DOCS_INVENTORIES=$dir" >> "$GITHUB_ENV"
+          python -c 'import runpy
+          for name, (url, _) in runpy.run_path("docs/conf.py")["intersphinx_mapping"].items():
+              print(name, url)' |
           while read -r name url; do
-            curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors -o "$dir/$name.inv" "$url/objects.inv" \
-              || echo "::warning::could not fetch the $name inventory from $url"
-          done <<'EOF'
-          python https://docs.python.org/3
-          numpy https://numpy.org/doc/stable
-          scipy https://docs.scipy.org/doc/scipy
-          matplotlib https://matplotlib.org/stable
-          EOF
+            curl -fsSL --retry 5 --retry-delay 10 --retry-connrefused -o "$dir/$name.inv" "$url/objects.inv" \
+              || { rm -f "$dir/$name.inv"; echo "::warning::could not fetch the $name inventory from $url"; }
+          done
       # The doctrees go beside the site, not into it, so that they are not published.
       - name: Build, with warnings as errors, executing the tutorials
         run: sphinx-build -W --keep-going -d docs/_build/doctrees docs docs/_build/html
