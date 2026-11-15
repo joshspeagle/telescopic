@@ -26,7 +26,12 @@ from telescopic.target import Target
 
 
 class Proposal(ABC):
-    """A Metropolis-Hastings proposal for a batch of chains: its draw, its evaluation and its log acceptance ratio."""
+    """A Metropolis-Hastings proposal for a batch of chains: its draw, its evaluation and its log acceptance ratio.
+
+    A subclass implements :meth:`sample` and :meth:`log_alpha`, and :meth:`evaluate` when
+    its proposals' states need other fields than the current states'. A coupled step
+    calls :meth:`log_alpha` once for each chain.
+    """
 
     @property
     def needs_grad(self) -> bool:
@@ -81,7 +86,7 @@ class Proposal(ABC):
     @abstractmethod
     def log_alpha(
         self, target: Target, current: State, proposed: State, forward: Any
-    ) -> tuple[FloatArray, State, State]:
+    ) -> FloatArray:
         r"""The log acceptance ratios :math:`\log\pi(x') - \log\pi(x) + \log q(x \mid x') - \log q(x' \mid x)`.
 
         Parameters
@@ -95,10 +100,8 @@ class Proposal(ABC):
 
         Returns
         -------
-        log_alpha : ndarray, shape (n,)
+        ndarray, shape (n,)
             NaN, from ``-inf - -inf``, is a rejection.
-        current, proposed : State
-            Both states, with any fields that the ratio filled.
         """
 
     def _coupled_log_alpha(
@@ -110,10 +113,10 @@ class Proposal(ABC):
         proposed_y: State,
         forward_x: Any,
         forward_y: Any,
-        identical: BoolArray,
-    ) -> tuple[tuple[FloatArray, State, State], tuple[FloatArray, State, State]]:
-        # The log acceptance ratios of both chains of a coupled step; a proposal whose
-        # ratios share a computation overrides it.
+    ) -> tuple[FloatArray, FloatArray]:
+        # The log acceptance ratios of both chains of a coupled step. Internal to the
+        # shipped proposals: IndependenceProposal overrides it to share one call of its
+        # density between the chains.
         return (
             self.log_alpha(target, state_x, proposed_x, forward_x),
             self.log_alpha(target, state_y, proposed_y, forward_y),
@@ -144,8 +147,8 @@ class RandomWalkProposal(Proposal):
 
     def log_alpha(
         self, target: Target, current: State, proposed: State, forward: Any
-    ) -> tuple[FloatArray, State, State]:
-        return log_ratio(proposed.log_prob, current.log_prob), current, proposed
+    ) -> FloatArray:
+        return log_ratio(proposed.log_prob, current.log_prob)
 
     def whitened_difference(
         self, target: Target, state_x: State, state_y: State
@@ -216,10 +219,9 @@ class LangevinProposal(Proposal):
 
     def log_alpha(
         self, target: Target, current: State, proposed: State, forward: Any
-    ) -> tuple[FloatArray, State, State]:
+    ) -> FloatArray:
         residual, drift = forward
-        log_alpha = _log_alpha(current, proposed, residual, drift, self.factor, target.vectorize)
-        return log_alpha, current, proposed
+        return _log_alpha(current, proposed, residual, drift, self.factor, target.vectorize)
 
     def whitened_difference(
         self, target: Target, state_x: State, state_y: State
@@ -291,9 +293,9 @@ class IndependenceProposal(Proposal):
 
     def log_alpha(
         self, target: Target, current: State, proposed: State, forward: Any
-    ) -> tuple[FloatArray, State, State]:
+    ) -> FloatArray:
         new, old = _log_weights(self.distribution, proposed, current)
-        return log_ratio(new, old), current, proposed
+        return log_ratio(new, old)
 
     def _coupled_log_alpha(
         self,
@@ -304,15 +306,11 @@ class IndependenceProposal(Proposal):
         proposed_y: State,
         forward_x: Any,
         forward_y: Any,
-        identical: BoolArray,
-    ) -> tuple[tuple[FloatArray, State, State], tuple[FloatArray, State, State]]:
+    ) -> tuple[FloatArray, FloatArray]:
         # One call of the distribution's density, on 3n rows: the proposal, which both
         # chains share, and both chains' states.
         new, old_x, old_y = _log_weights(self.distribution, proposed_x, state_x, state_y)
-        return (
-            (log_ratio(new, old_x), state_x, proposed_x),
-            (log_ratio(new, old_y), state_y, proposed_y),
-        )
+        return log_ratio(new, old_x), log_ratio(new, old_y)
 
     def __repr__(self) -> str:
         return f"IndependenceProposal({self.distribution!r})"
@@ -351,9 +349,9 @@ class MetropolisHastings(Kernel):
         proposal, _ = self._ready()
         x, forward = proposal.sample(target, state, draws)
         proposed = proposal.evaluate(target, x, state)
-        log_alpha, current, proposed = proposal.log_alpha(target, state, proposed, forward)
+        log_alpha = proposal.log_alpha(target, state, proposed, forward)
         accepted = draws.log_uniform() < log_alpha
-        return select(accepted, proposed, current), acceptance(log_alpha)
+        return select(accepted, proposed, state), acceptance(log_alpha)
 
     def coupled_step(
         self, target: Target, state_x: State, state_y: State, draws: Draws
@@ -364,17 +362,8 @@ class MetropolisHastings(Kernel):
             partial(proposal.evaluate, target, like=state_x), pair.x, pair.y, pair.identical
         )
         log_u = draws.log_uniform()
-        (alpha_x, state_x, proposed_x), (alpha_y, state_y, proposed_y) = (
-            proposal._coupled_log_alpha(
-                target,
-                state_x,
-                state_y,
-                proposed_x,
-                proposed_y,
-                pair.forward_x,
-                pair.forward_y,
-                pair.identical,
-            )
+        alpha_x, alpha_y = proposal._coupled_log_alpha(
+            target, state_x, state_y, proposed_x, proposed_y, pair.forward_x, pair.forward_y
         )
         return select(log_u < alpha_x, proposed_x, state_x), select(
             log_u < alpha_y, proposed_y, state_y
