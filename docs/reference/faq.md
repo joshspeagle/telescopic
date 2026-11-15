@@ -4,7 +4,8 @@ Each answer is a paragraph that links to the page holding the fact.
 
 ## Results
 
-**Can I plot the atoms with corner or ArviZ?**
+### Can I plot the atoms with corner or ArviZ?
+
 Not as samples. The {term}`atoms <atom>` carry weights, some of them negative, so a
 plot without the weights counts them wrongly, and corner and ArviZ compute weighted
 quantiles that assume non-negative weights
@@ -14,7 +15,8 @@ draw the signed histograms instead ([Plot a result](../guide/plots.md)), and
 {meth}`~telescopic.Result.chains` returns the ordinary MCMC chains of the kept
 replicates, without the bias correction, for tools that need draws.
 
-**Why is my variance negative?**
+### Why is my variance negative?
+
 {meth}`~telescopic.Result.var` and {meth}`~telescopic.Result.cov` are {term}`unbiased`,
 and the negative weights of the {term}`signed measures <signed measure>` let an unbiased
 estimate fall below 0; a start far wider than the target can make it so.
@@ -22,26 +24,30 @@ estimate fall below 0; a start far wider than the target can make it so.
 is {term}`consistent` but not unbiased
 ([Covariances and variances](../guide/estimates.md#covariances-and-variances)).
 
-**Why is an estimated probability below 0 or above 1?**
+### Why is an estimated probability below 0 or above 1?
+
 For the same reason: an estimate is a weighted sum with some negative weights, so it can
 fall outside the range of the function averaged, though its average over
 {term}`replicates <replicate>` is unbiased
 ([What the atoms give](../concepts/signed-measures.md#what-the-atoms-give)).
 
-**Do quantiles and credible intervals have error bars?**
+### Do quantiles and credible intervals have error bars?
+
 No. They come from the atoms of all replicates pooled, and are consistent as the number
 of replicates grows, but not unbiased and without a standard error
 ([Quantiles and credible intervals](../guide/estimates.md#quantiles-and-credible-intervals)).
 
 ## Running
 
-**How many replicates do I need?**
+### How many replicates do I need?
+
 {func}`telescopic.sample` runs 100 by default and needs at least 2. The standard errors
 fall as $1/\sqrt R$; to reach a target error, size a second run from the standard error
 of a first one, and fix the number before looking at the results
 ([How many replicates](../guide/settings.md#how-many-replicates)).
 
-**Can I add replicates to a run, or continue one that stopped?**
+### Can I add replicates to a run, or continue one that stopped?
+
 Yes. {meth}`telescopic.CoupledSampler.resume` makes a new sampler continue a returned or
 loaded result with its seed, settings, pilot and tuning, first running the replicates
 that an interrupted run never started
@@ -51,7 +57,8 @@ that an interrupted run never started
 error bar is small enough leaves the estimates consistent, not exactly unbiased
 ([Theory](../theory.md#guarantees-and-their-limits)).
 
-**My run uses too much memory. What can I store less of?**
+### My run uses too much memory. What can I store less of?
+
 `thin` stores about one in `thin` of the averaged states, with the same chains and
 unbiased estimates ([Memory and thinning](../guide/settings.md#memory-and-thinning)).
 `keep` stores the signed measures of the replicates of index below it only, and the
@@ -59,14 +66,16 @@ moments of every replicate, so the means, the variances and, up to 100 dimension
 covariance still come from every replicate
 ([Keeping a subset](../guide/settings.md#keeping-a-subset)).
 
-**Can I start from the walkers of an emcee run?**
+### Can I start from the walkers of an emcee run?
+
 Yes: an array of points of shape `(n, d)`, such as the last state of an ensemble, is
 taken as the uniform distribution over those points
 ([Initial distributions](../guide/initial-distribution.md#initial-distributions)). The
 estimates stay unbiased, but the pairs then cover only the modes that the walkers found
 ([Choosing one](../guide/initial-distribution.md#choosing-one)).
 
-**Is it slower than emcee?**
+### Is it slower than emcee?
+
 Each replicate is a full MCMC run with its own {term}`burn-in`, and the automatic
 settings first run the {term}`tuning pilot` and the {term}`meeting-time pilot`.
 [Coming from emcee](../start/coming-from-emcee.md#side-by-side) compares the error bars
@@ -74,19 +83,22 @@ of the two at the same number of log-density evaluations on one target, and
 [A slow log-density](../guide/settings.md#a-slow-log-density) shows how to skip the
 pilots.
 
-**Does it work with JAX?**
+### Does it work with JAX?
+
 Yes, through a log-density, a gradient or `log_prob_and_grad` that JAX computes, such as
 `jax.value_and_grad`, with `jax_enable_x64` set, since telescopic computes in float64
 ([The value and the gradient in one call](../guide/log-density.md#the-value-and-the-gradient-in-one-call)).
 
-**Why does HMC vary its step from one trajectory to the next?**
+### Why does HMC vary its step from one trajectory to the next?
+
 HMC's `jitter`, 0.5 by default, draws each trajectory's step uniformly between
 $(1 - j)\epsilon$ and $(1 + j)\epsilon$, so that no step stays on a resonance of the
 leapfrog, where coupled trajectories with a fixed step do not bring the chains closer;
 `jitter=0` gives the fixed step ([HMC](../guide/kernels.md#hmc),
 [When the automatic step fails](../guide/step-size.md#when-the-automatic-step-fails)).
 
-**Is a run reproducible from its seed?**
+### Is a run reproducible from its seed?
+
 Each replicate draws from a stream of its own, derived from the root seed and its index.
 With a log-density evaluated point by point, the replicates are bitwise identical in any
 pool; with a vectorized one, only with the same pool, workers, BLAS build and threads
@@ -94,20 +106,24 @@ pool; with a vectorized one, only with the same pool, workers, BLAS build and th
 
 ## When something goes wrong
 
-**My run stops with a `ValueError` before any replicate, or its pairs never meet.**
-More than 1% of the pilot pairs did not meet, so `k` could not be chosen. With MALA or
-HMC, the automatic step size is the usual cause, and an explicit `step_size` the remedy
+### Why does my run stop with a `ValueError` before any replicate?
+
+When its message says that more than 1% of the pilot pairs never met, `k` could not be
+chosen. With MALA or HMC, the automatic step size is the usual cause, and an explicit
+`step_size` the remedy
 ([When the automatic step fails](../guide/step-size.md#when-the-automatic-step-fails));
 otherwise look at the kernel and the initial distribution
 ([Warnings and errors](warnings.md)).
 
-**My run warns. Are the estimates wrong?**
+### My run warns. Are the estimates wrong?
+
 Each warning names a condition under which the error bars may be unreliable, and its
 remedy ([Warnings and errors](warnings.md#warnings)). A run without warnings is not
 shown to be right: pairs that never leave one mode can meet quickly there
 ([A run that never left one mode](warnings.md#a-run-that-never-left-one-mode)).
 
-**Do I still need R-hat and the effective sample size?**
+### Do I still need R-hat and the effective sample size?
+
 Not for the error bars, which are the standard error of independent replicates, nor for
 the bias, which the burn-in no longer decides
 ([Error bars from replicates](../concepts/error-bars.md)).

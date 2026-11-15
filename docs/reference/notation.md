@@ -71,11 +71,11 @@ $\mathrm{BC}_{k:m}$
 
 $v_t$, $c_t$
 : The weight and the coefficient of $\Delta_t$:
-  {func}`telescopic.estimators.correction_coefficients` returns $c_t$, which is
+  {func}`~telescopic.estimators.correction_coefficients` returns $c_t$, which is
   $v_t/(m-k+1)$ when `thin` is 1.
 
 $s$, $S$
-: The argument `thin`, and `result.thin`; {func}`telescopic.estimators.averaging_times`
+: The argument `thin`, and `result.thin`; {func}`~telescopic.estimators.averaging_times`
   returns $S$.
 
 ## Signed measures
