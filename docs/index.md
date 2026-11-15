@@ -120,6 +120,9 @@ theory
 api
 reference/result-fields
 reference/warnings
+reference/glossary
+reference/notation
+reference/faq
 citing
 changelog
 ```
