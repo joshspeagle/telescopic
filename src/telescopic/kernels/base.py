@@ -283,6 +283,12 @@ class Kernel(ABC):
         self.check_target(target)
         state = evaluate(target, x, self.needs_grad, start=True)
         state.extra = self.init_extra(state)
+        missing = [name for name in self.markov_fields if name not in state.extra]
+        if missing:
+            raise ValueError(
+                f"{self!r} gives no initial value for its Markov fields {missing}: "
+                "init_extra must return every name in markov_fields"
+            )
         return state
 
     @abstractmethod
@@ -397,6 +403,51 @@ class GradientKernel(Kernel):
             )
             kernel = kernel.with_step_size(step_size)
         return kernel, pilot.report()
+
+
+# Spec R-EST-2 and R-KER-3.
+def meets(markov_fields: tuple[str, ...], state_x: State, state_y: State, rows: Any) -> BoolArray:
+    """Whether the pairs in ``rows`` have met: equal positions and Markov fields under ``==``.
+
+    Parameters
+    ----------
+    markov_fields : tuple of str
+        The kernel's :attr:`Kernel.markov_fields`.
+    state_x, state_y : State
+        The first and the second chains of the pairs, with these fields.
+    rows : array_like of int, or slice
+        The pairs to compare.
+
+    Returns
+    -------
+    ndarray of bool, shape (m,)
+        One value per pair compared.
+    """
+    met: BoolArray = np.all(state_x.x[rows] == state_y.x[rows], axis=1)
+    for name in markov_fields:
+        a, b = state_x.extra[name][rows], state_y.extra[name][rows]
+        met &= np.all((a == b).reshape(len(met), -1), axis=1)
+    return met
+
+
+def check_markov_fields(kernel: Kernel, state: State) -> None:
+    """Raise ``ValueError`` if a state that ``kernel`` returned lacks one of its Markov fields.
+
+    A run would keep the field's old values and compare them.
+
+    Parameters
+    ----------
+    kernel : Kernel
+        The kernel that returned the state.
+    state : State
+        The returned state.
+    """
+    missing = [name for name in kernel.markov_fields if name not in state.extra]
+    if missing:
+        raise ValueError(
+            f"{kernel!r} returned states without its Markov fields {missing}; a kernel must "
+            "return the fields of its input states"
+        )
 
 
 def evaluate(target: Target, x: FloatArray, need_grad: bool, *, start: bool = False) -> State:

@@ -17,6 +17,7 @@ from telescopic.initial import Empirical, Normal
 from telescopic.kernels import MALA, Gibbs, RandomWalk, State
 from telescopic.measure import SignedMeasure
 from telescopic.target import Target
+from telescopic.testing import check_coupling
 
 # Point by point, so that a replicate's results are bitwise independent of the batch.
 TARGET = Target(gaussian_log_prob)
@@ -691,3 +692,20 @@ class Forgetful(Momentum):
 def test_engine_raises_when_a_step_drops_a_markov_field():
     with pytest.raises(ValueError, match=r"without its Markov fields \['momentum'\]"):
         simulate(Forgetful(np.eye(2)), n=2, max_iter=20)
+
+
+def test_check_coupling_raises_when_a_step_drops_a_markov_field():
+    # It read the missing field and failed with a KeyError.
+    with pytest.raises(ValueError, match=r"without its Markov fields \['momentum'\]"):
+        check_coupling(Forgetful(np.eye(2)), TARGET, [0.0, 0.0], [1.0, 1.0], n=10, rng=0)
+
+
+class Unstarted(Momentum):
+    def init_extra(self, state):
+        return {}
+
+
+def test_a_kernel_whose_init_extra_lacks_a_markov_field_raises_at_the_start():
+    # The lanes would not hold the field, and a later step would fail with a KeyError.
+    with pytest.raises(ValueError, match=r"no initial value for its Markov fields \['momentum'\]"):
+        simulate(Unstarted(np.eye(2)), n=2, max_iter=20)

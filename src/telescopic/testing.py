@@ -11,7 +11,7 @@ from numpy.random import Generator, SeedSequence
 
 from telescopic._random import Draws, Streams, root_seed
 from telescopic._types import FloatArray, Seed, instance, integer, real, real_array
-from telescopic.kernels.base import Kernel, State, evaluate
+from telescopic.kernels.base import Kernel, State, check_markov_fields, evaluate, meets
 from telescopic.target import Target
 
 __all__ = ["CouplingReport", "check_coupling", "fixed_draws", "random_draws"]
@@ -122,6 +122,11 @@ def check_coupling(
     -------
     CouplingReport
 
+    Raises
+    ------
+    ValueError
+        When a returned state lacks one of the kernel's Markov fields.
+
     Notes
     -----
     Costs one coupled step and two steps of ``n`` chains, and an evaluation of the target
@@ -174,11 +179,10 @@ def check_coupling(
     gap = np.abs(new_x.x - new_y.x)
     ulp = np.spacing(np.maximum(np.abs(new_x.x), np.abs(new_y.x)))
     near = np.any(gap > 0, axis=1) & np.all(gap <= NEAR_MISS_ULPS * ulp, axis=1)
-    met = np.all(gap == 0, axis=1)
-    for name in kernel.markov_fields:
-        a, b = new_x.extra[name], new_y.extra[name]
-        met &= np.all((a == b).reshape(n, -1), axis=1)
     returned = (new_x, new_y, *alone)
+    for state in returned:
+        check_markov_fields(kernel, state)
+    met = meets(kernel.markov_fields, new_x, new_y, slice(None))
     stale = sum(_stale(target, state) for state in returned)
     stale += sum(_cache_errors(kernel, target, state, seeds[4]) for state in returned)
     return CouplingReport(

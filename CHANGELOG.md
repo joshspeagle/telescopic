@@ -458,7 +458,8 @@ All notable changes to this project are documented here. The format follows
   chosen now suggests the default jitter for HMC with `jitter=0`.
 - `State` has a fourth field, `extra`: arrays of one kernel, batch first, such as a
   momentum or a cache. A kernel names its Markov fields in `Kernel.markov_fields` and
-  gives their initial values in `Kernel.init_extra`, which `init_state` attaches; a pair
+  gives their initial values in `Kernel.init_extra`, which `init_state` attaches and
+  checks for every Markov field; a pair
   meets when its positions and Markov fields are equal. Kernels, `State.take`,
   `State.put` and `Mixture` carry unchanged the fields they do not know, a `Mixture`
   names component `i`'s fields `"i/<name>"` and refuses components with Markov fields,
