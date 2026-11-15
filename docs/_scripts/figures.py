@@ -23,7 +23,9 @@
 * ``pipeline.svg`` (V9): the steps of an automatic run and the arguments that skip them,
   checked against the package's constants and two small runs;
 * ``result.svg`` (V13): the attributes of a :class:`telescopic.Result`, checked against a
-  small run's, and the methods that read its signed measures and meeting times.
+  small run's, and the methods that read its signed measures and meeting times;
+* ``chunks.svg`` (V14): the chunks into which a pool cuts a run's replicate indices, from
+  a run on a pool that records them, and each index's own random stream.
 
 The figures are drawn on the light figure ground with the colors, faces, sizes and
 helpers of ``brand.py``: magenta for chain X, teal for chain Y, the ink of met chains once
@@ -1397,6 +1399,102 @@ def holds() -> str:
     return svg(width, y - gap + 14, label, "".join(body))
 
 
+def chunks() -> str:
+    """V14: the replicate indices of a run cut into chunks for a pool, and each index's
+    own random stream from the root seed."""
+    name, n, workers = "chunks", 2000, 4
+    sizes: list[int] = []
+
+    class Recorder:
+        # A pool with only map that runs its chunks here and records their sizes.
+        def map(self, task: Callable[[np.ndarray], object], pieces: list) -> list:
+            sizes.extend(len(piece) for piece in pieces)
+            return [task(piece) for piece in pieces]
+
+    def run(pool: object) -> telescopic.Result:
+        return quietly(
+            lambda: telescopic.sample(
+                log_density,
+                initial(),
+                n,
+                kernel=kernel(),
+                k=2,
+                m=12,
+                lag=LAG,
+                pool=pool,
+                n_workers=None if pool is None else workers,
+                rng=SEED,
+            )
+        )
+
+    pooled, here = run(Recorder()), run(None)
+    count = len(sizes)
+    check(sizes == [n // count] * count, name, f"{count} equal chunks of {n // count}")
+    check(
+        np.array_equal(pooled.measure.atoms, here.measure.atoms)
+        and np.array_equal(pooled.measure.weights, here.measure.weights)
+        and np.array_equal(pooled.meeting_times, here.meeting_times),
+        name,
+        "the pooled replicates are bitwise those run in this process",
+    )
+    size = n // count
+    width, left, right = 640.0, 20.0, 620.0
+    strip_y, strip_h = 64.0, 40.0
+    x = Scale(0.0, n, left, right)
+    rule = FIGURE["rule"]
+    body = [
+        text(
+            left,
+            28,
+            rich(("R", ""), f" = {n:,} replicates, {workers} workers: {count} chunks of {size}"),
+        )
+    ]
+    for c in range(count):
+        a, b = float(x(c * size)), float(x((c + 1) * size))
+        opacity = FIGURE["band"] if c % 2 == 0 else FIGURE["area"]
+        body.append(
+            f'<rect x="{_f(a)}" y="{_f(strip_y)}" width="{_f(b - a)}" height="{_f(strip_h)}" '
+            f'fill="{BLUE}" fill-opacity="{opacity}" stroke="{FIGURE_GROUND}" '
+            f'stroke-width="{FIGURE["outline"]}"/>'
+        )
+    for c in range(0, count + 1, 2):
+        at = float(x(c * size))
+        anchor = "start" if c == 0 else "end" if c == count else "middle"
+        body += [
+            segment(at, strip_y + strip_h, at, strip_y + strip_h + 6, MUTED, width=rule),
+            text(at, strip_y + strip_h + 26, f"{c * size:,}", anchor, MUTED),
+        ]
+    # The first chunk, outlined, opened below: its first indices, each with its own
+    # stream from the root seed.
+    shown, cell, gap = 6, 62.0, 14.0
+    row_y = 196.0
+    root_x, root_y = (left + right) / 2, row_y + 112
+    body += [
+        box(float(x(0)), strip_y, float(x(size)) - float(x(0)), strip_h, INK),
+        text(left, row_y - 18, f"chunk 1: indices 0 to {size - 1}, run together", "start", MUTED),
+    ]
+    for i in range(shown + 1):
+        cx = left + i * (cell + gap) + cell / 2
+        body += [
+            box(cx - cell / 2, row_y, cell, 36),
+            text(cx, row_y + 25, "…" if i == shown else str(i), "middle", BLUE),
+        ]
+        if i < shown:
+            body.append(arrow(root_x, root_y - 22, cx, row_y + 42, MUTED, width=rule))
+    body.append(
+        text(left, root_y + 4, "each from the root seed and its index: a stream of its own")
+    )
+    label = (
+        f"A strip of the replicate indices 0 to {n - 1} of a run of {n:,} replicates on "
+        f"{workers} workers, cut into {count} chunks of {size} consecutive indices, shaded "
+        f"alternately and labeled every second boundary; the first chunk is outlined. Below, "
+        f"the first chunk opened: its indices 0 to {shown - 1} and more, run together, each a "
+        f"box with an arrow from one point, labeled: each from the root seed and its index, "
+        f"a stream of its own."
+    )
+    return svg(width, root_y + 20, label, "".join(body))
+
+
 # --------------------------------------------------------------------------- output
 
 
@@ -1412,6 +1510,7 @@ def outputs() -> dict[Path, str]:
         OUT / "remedies.svg": remedies(),
         OUT / "pipeline.svg": pipeline(),
         OUT / "result.svg": holds(),
+        OUT / "chunks.svg": chunks(),
     }
 
 
