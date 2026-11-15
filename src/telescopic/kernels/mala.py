@@ -20,6 +20,7 @@ from telescopic.kernels.base import (
     evaluate_proposal,
     select,
 )
+from telescopic.kernels.metropolis import _drift, _log_alpha
 from telescopic.target import Target
 
 
@@ -151,31 +152,3 @@ class MALA(GradientKernel):
     def __repr__(self) -> str:
         cov = "None" if self.cov is None else f"<{len(self.cov)}x{len(self.cov)}>"
         return f"MALA(step_size={self.step_size}, cov={cov})"
-
-
-def _drift(state: State, chol: FloatArray, blas: bool) -> FloatArray:
-    # The whitened drift h = B^T grad log pi(x), with chol = B = epsilon C, so that the
-    # mean of q(. | x) is x + B h / 2.
-    drift: FloatArray = matvec(chol.T, cast(FloatArray, state.grad), blas=blas)
-    return drift
-
-
-def _log_alpha(
-    current: State,
-    proposal: State,
-    residual: FloatArray,
-    drift: FloatArray,
-    chol: FloatArray,
-    blas: bool,
-) -> FloatArray:
-    # log pi(x') - log pi(x) + log q(x | x') - log q(x' | x): x' = x + B(h / 2 + r) gives
-    # B^{-1}(x' - mu(x)) = r and B^{-1}(x - mu(x')) = -(r + (h + h') / 2); the Gaussian
-    # constants cancel. A rejected proposal (log pi = -inf) carries a zero gradient and may
-    # hold non-finite positions: no warnings, and a NaN ratio rejects as -inf does.
-    with np.errstate(over="ignore", invalid="ignore"):
-        back = residual + 0.5 * (drift + _drift(proposal, chol, blas))
-        log_q = 0.5 * (
-            np.einsum("ij,ij->i", residual, residual) - np.einsum("ij,ij->i", back, back)
-        )
-        log_alpha: FloatArray = proposal.log_prob - current.log_prob + log_q
-    return log_alpha

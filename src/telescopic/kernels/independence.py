@@ -11,8 +11,9 @@ from scipy.special import gammaln
 
 from telescopic._linalg import covariance, inverse_lower, matvec
 from telescopic._random import Draws
-from telescopic._types import FloatArray, Proposal, Seed, integer, log_densities, vector
+from telescopic._types import FloatArray, Proposal, Seed, integer, vector
 from telescopic.kernels.base import Kernel, State, acceptance, evaluate, log_ratio, select
+from telescopic.kernels.metropolis import _log_weights
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport
 
@@ -227,22 +228,3 @@ class Independence(Kernel):
 
     def __repr__(self) -> str:
         return f"Independence(proposal={self.proposal!r})"
-
-
-def _log_weights(q: Proposal, proposal: State, *states: State) -> list[FloatArray]:
-    # log pi - log q at the proposal's positions, then at each state's, from one call of
-    # q.log_density, whose rows do not depend on each other (spec R-KER-6). A NaN log q
-    # would make every move to its point a rejection, and so bias the chain without an
-    # error.
-    x = np.concatenate([proposal.x, *(state.x for state in states)])
-    log_q = log_densities("proposal log_density", q.log_density(x), x).reshape(1 + len(states), -1)
-    # A proposal where log q = -inf has weight -inf, so it is rejected: sample drew a point
-    # that log_density gives no mass, such as a draw clipped onto the edge of an open
-    # support, and a weight of +inf would accept it and never leave it.
-    new = proposal.log_prob - np.where(log_q[0] == -np.inf, np.inf, log_q[0])
-    # Where log pi = -inf a state's weight is -inf even where log q = -inf too: -inf - -inf
-    # would be NaN, which rejects every proposal, so such a chain would never move.
-    return [new] + [
-        state.log_prob - np.where(state.log_prob == -np.inf, 0.0, part)
-        for state, part in zip(states, log_q[1:], strict=True)
-    ]
