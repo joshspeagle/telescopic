@@ -53,7 +53,8 @@ reference lists its generated pages.
 3. **The specification.** A change that departs from `docs/design/spec.md` edits it in
    the same commit and records the decision in `notes/DECISIONS.md`.
 4. **Numbers.** A figure quoted in the documentation comes from a script in
-   `notes/experiments/` or `benchmarks/`, or from a tutorial's own executed cell. Change
+   `notes/experiments/` or `benchmarks/`, from `docs/_scripts/figures.py`, which draws the
+   generated figures and checks their text, or from a tutorial's own executed cell. Change
    the figure when its source changes.
 5. **CHANGELOG.** A change that a user can see has a line under *Unreleased*.
 6. **Register.** Pages use the notation of `docs/theory.md`, American English spelling,
