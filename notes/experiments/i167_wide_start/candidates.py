@@ -4,13 +4,15 @@ Josh ruled on #89 (question 8, about #98) that the default burn-in stays the 99%
 of the pilot meeting times, with a warning when the pilot shows a start far wider than
 the target. This script measures candidate statistics that the tuning pilot of
 `telescopic.tuning.adaptive_metropolis` already has at hand, so that the warning costs no
-evaluation of the target: the 100 draws from the initial distribution that start its
-chains and set its first covariance, and the pooled mean and covariance of its chains'
-second halves. With s0 the standard deviations of the 100 draws, s those of the pilot,
-Sigma0 and Sigma the two covariances, and mu the pilot's mean:
+evaluation of the target: the 100 draws from the initial distribution that set its
+chains' first covariance (one of each chain's 25 draws starts it), and the pooled mean
+and covariance of its chains' second halves. With s0 the standard deviations of the 100
+draws, s those of the pilot, Sigma0 and Sigma the two covariances, and mu the pilot's
+mean:
 
 - max_coord: max_i s0_i / s_i, the widest coordinate;
-- geo_coord: the geometric mean over coordinates of s0_i / s_i;
+- geo_coord: the geometric mean over coordinates of s0_i / s_i, the shipped statistic,
+  read from `PilotRun.initial_width`;
 - max_eig: the square root of the largest eigenvalue of Sigma^-1 Sigma0, the widest
   direction;
 - rms_dist: sqrt(mean over draws of (x - mu)^T Sigma^-1 (x - mu) / d), which counts an
@@ -24,19 +26,24 @@ pumps), and the README's line fit from its own start N(fit, 100 H^-1); then the 
 of #98 (the Gaussians in 1, 10 and 50 dimensions with rho = 0.9, the README line fit, the
 banana) from N(mean, w^2 cov) with the exact mean and covariance, for w = 1 (matched),
 10 and 100: #98's matched, 10-fold and 100-fold wide starts. Tuning seeds 0 to N - 1 per
-case; the 100 draws are those the pilot itself drew, reproduced from its generators.
+case; the 100 draws are those the pilot itself drew, reproduced from its generators for
+the statistics other than geo_coord.
+
+Held out. The threshold of 30 for geo_coord was chosen from the seeds 0 to 199 above.
+It is then checked, unchanged, on new seeds: 500 seeds from 1000 for each case whose
+largest geo_coord at seeds 0 to 199 exceeded 10, other than the 100-fold ones, and 200 seeds from 1000 for each
+100-fold case.
 
 The pilot is that of every kernel tuned automatically; a kernel given every parameter has
 none. The output's rates carry 95% Clopper-Pearson intervals. "either" counts a run where
 geo_coord exceeds the threshold or the existing tuning warning fires.
 
-Run: PYTHONPATH=src OMP_NUM_THREADS=1 python notes/experiments/i167_wide_start/candidates.py [N]
-The output, N = 200: telescopic at commit a640d96 with PilotRun.initial_width added (which
-changes no number here), Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1, OMP_NUM_THREADS=1, an
-Intel Xeon processor at 2.10 GHz with 4 logical cores, 4 worker processes.
+Run: PYTHONPATH=src OMP_NUM_THREADS=1 python notes/experiments/i167_wide_start/candidates.py
+The output: telescopic at commit 4e91557, Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1,
+OMP_NUM_THREADS=1, an Intel Xeon processor at 2.10 GHz with 4 logical cores, 4 worker
+processes.
 """
 
-import sys
 import time
 from multiprocessing import Pool
 
@@ -100,14 +107,14 @@ def statistics(case):
     initial = default_start(name) if width is None else Normal(mean, width**2 * cov)
     points = initial_draws(initial, seed)
     pilot = adaptive_metropolis(Target(log_prob, vectorize=True), initial, seed)
-    ratio = points.std(axis=0, ddof=1) / np.sqrt(np.diag(pilot.cov))
+    ratio = np.sqrt(pilot.initial_var / np.diag(pilot.cov))
     cov0 = np.atleast_2d(np.cov(points, rowvar=False))
     chol = np.linalg.cholesky(pilot.cov)
     whitened = np.linalg.solve(chol, np.linalg.solve(chol, cov0).T)
     centered = np.linalg.solve(chol, (points - pilot.mean).T)
     return (
         float(ratio.max()),
-        float(np.exp(np.log(ratio).mean())),
+        pilot.initial_width,
         float(np.sqrt(np.linalg.eigvalsh((whitened + whitened.T) / 2).max())),
         float(np.sqrt((centered**2).sum(axis=0).mean() / len(mean))),
         float(np.nanmax(pilot.rhat)),
@@ -128,6 +135,7 @@ DEFAULTS = [
 WIDE = ["gaussian:1", "gaussian", "gaussian:50", "line", "banana"]
 NAMES = ["max_coord", "geo_coord", "max_eig", "rms_dist", "rhat"]
 THRESHOLDS = (10, 15, 20, 30, 50)
+THRESHOLD = 30  # chosen from seeds 0 to 199, then held out
 
 
 def rate(values, group, j, threshold):
@@ -138,19 +146,38 @@ def rate(values, group, j, threshold):
     return f"{hits}/{total} [{lo:.4f}, {hi:.4f}]"
 
 
+def label(case):
+    return f"{case[0]} from " + ("its default start" if case[1] is None else f"w = {case[1]}")
+
+
+def held_out(pool, values):
+    near = [c for c, v in values.items() if v[:, 1].max() > 10 and c[1] != 100]
+    far = [c for c in values if c[1] == 100]
+    print()
+    print(f"Held out: geo_coord > {THRESHOLD} alone, and either, on new seeds")
+    for case in near + far:
+        n = 500 if case in near else 200
+        v = np.array(pool.map(statistics, [(*case, seed) for seed in range(1000, 1000 + n)]))
+        both = {case: np.column_stack([v[:, 1] * (1 + 1e9 * (v[:, 4] > np.sqrt(2)))])}
+        print(
+            f"  {label(case)}, seeds 1000 to {999 + n}, largest {v[:, 1].max():.3g}: "
+            f"{rate({case: v}, [case], 1, THRESHOLD)}; {rate(both, [case], 0, THRESHOLD)}"
+        )
+
+
 if __name__ == "__main__":
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 200
+    n = 200
     cases = [(name, None) for name in DEFAULTS]
     cases += [(name, w) for w in (1, 10, 100) for name in WIDE]
     start = time.time()
-    with Pool() as pool:
-        values = {
-            case: np.array(pool.map(statistics, [(*case, seed) for seed in range(n)]))
-            for case in cases
-        }
-    print(f"{n} tuning seeds per case; the minimum, median, 99% quantile and maximum")
+    pool = Pool()
+    values = {
+        case: np.array(pool.map(statistics, [(*case, seed) for seed in range(n)]))
+        for case in cases
+    }
+    print(f"Seeds 0 to {n - 1} per case; the minimum, median, 99% quantile and maximum")
     for case, v in values.items():
-        print(f"{case[0]} from " + ("its default start" if case[1] is None else f"w = {case[1]}"))
+        print(label(case))
         for j, stat in enumerate(NAMES):
             q = np.quantile(v[:, j], [0, 0.5, 0.99, 1])
             print(f"  {stat:9s} " + " ".join(f"{e:10.3g}" for e in q))
@@ -180,8 +207,12 @@ if __name__ == "__main__":
             + "; ".join(f"{g} {rate(either, grp, 0, threshold)}" for g, grp in groups.items())
         )
     print()
-    print("Per case at the threshold 30: geo_coord alone, and either")
+    print(f"Per case at the threshold {THRESHOLD}: geo_coord alone, and either")
     for case in cases:
-        label = f"{case[0]} from " + ("its default start" if case[1] is None else f"w = {case[1]}")
-        print(f"  {label}: {rate(values, [case], 1, 30)}; {rate(either, [case], 0, 30)}")
+        print(
+            f"  {label(case)}: {rate(values, [case], 1, THRESHOLD)}; "
+            f"{rate(either, [case], 0, THRESHOLD)}"
+        )
+    held_out(pool, values)
+    pool.close()
     print(f"\n{time.time() - start:.0f} s")

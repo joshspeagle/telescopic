@@ -1,4 +1,4 @@
-200 tuning seeds per case; the minimum, median, 99% quantile and maximum
+Seeds 0 to 199 per case; the minimum, median, 99% quantile and maximum
 gaussian from its default start
   max_coord       1.95       2.29       2.64       2.91
   geo_coord       1.79       2.04        2.3       2.39
@@ -199,4 +199,18 @@ Per case at the threshold 30: geo_coord alone, and either
   line from w = 100: 200/200 [0.9817, 1.0000]; 200/200 [0.9817, 1.0000]
   banana from w = 100: 87/200 [0.3652, 0.5067]; 199/200 [0.9725, 0.9999]
 
-699 s
+Held out: geo_coord > 30 alone, and either, on new seeds
+  pumps from its default start, seeds 1000 to 1499, largest 14.7: 0/500 [0.0000, 0.0074]; 398/500 [0.7580, 0.8305]
+  line from its default start, seeds 1000 to 1499, largest 12.5: 0/500 [0.0000, 0.0074]; 0/500 [0.0000, 0.0074]
+  gaussian:1 from w = 10, seeds 1000 to 1499, largest 12.9: 0/500 [0.0000, 0.0074]; 0/500 [0.0000, 0.0074]
+  gaussian from w = 10, seeds 1000 to 1499, largest 12.3: 0/500 [0.0000, 0.0074]; 0/500 [0.0000, 0.0074]
+  gaussian:50 from w = 10, seeds 1000 to 1499, largest 11.4: 0/500 [0.0000, 0.0074]; 0/500 [0.0000, 0.0074]
+  line from w = 10, seeds 1000 to 1499, largest 12.5: 0/500 [0.0000, 0.0074]; 0/500 [0.0000, 0.0074]
+  banana from w = 10, seeds 1000 to 1499, largest 38.3: 1/500 [0.0001, 0.0111]; 42/500 [0.0612, 0.1118]
+  gaussian:1 from w = 100, seeds 1000 to 1199, largest 121: 200/200 [0.9817, 1.0000]; 200/200 [0.9817, 1.0000]
+  gaussian from w = 100, seeds 1000 to 1199, largest 119: 200/200 [0.9817, 1.0000]; 200/200 [0.9817, 1.0000]
+  gaussian:50 from w = 100, seeds 1000 to 1199, largest 125: 200/200 [0.9817, 1.0000]; 200/200 [0.9817, 1.0000]
+  line from w = 100, seeds 1000 to 1199, largest 119: 200/200 [0.9817, 1.0000]; 200/200 [0.9817, 1.0000]
+  banana from w = 100, seeds 1000 to 1199, largest 157: 69/200 [0.2794, 0.4153]; 199/200 [0.9725, 0.9999]
+
+1792 s

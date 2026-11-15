@@ -192,8 +192,14 @@ log-densities, and the first two targets `sample()`'s default settings:
   887 of 1,000 at $w = 100$: in every run on the four targets other than the banana, and in
   87 of 200 on the banana, whose tuning chains often had not converged, so that their
   spread was itself wide. The `tuning` warning fired in 112 of the 113 runs that the
-  `wide` warning missed. These runs used telescopic at commit a640d96 with this warning
-  added and NumPy 2.5.3, on the machine below.
+  `wide` warning missed. The threshold of 30 was chosen from these runs and then
+  checked on new seeds: on 500 runs each of the cases whose width had passed 10, it fired
+  in none from the pump model's and the line fit's default starts and from the 10-fold
+  starts of the Gaussians and the line fit, and in 1 of 500 from the banana's 10-fold
+  start, whose width there reached 38.3; on 200 runs of each 100-fold start, in every
+  run off the banana and in 69 of 200 on it, where the `tuning` warning fired in all but
+  one of the others. These runs used telescopic at commit 4e91557 and NumPy 2.5.3, on the
+  machine below.
 - The bimodal mixture of Jacob, O'Leary & Atchadé (2020, §5.1),
   {func}`telescopic.examples.mixture`, from $\mathcal N(10, 1)$, with a random walk of
   proposal variance 1, `k = 50`, `m = 500`, `lag = 1` and $R = 1000$: the 95% intervals
