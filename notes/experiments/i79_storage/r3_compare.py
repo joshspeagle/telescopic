@@ -18,7 +18,7 @@ largest absolute and relative differences. Wall times are left out.
     PYTHONPATH=src python r3_compare.py --save head.npz
     python r3_compare.py --compare base.npz head.npz
 
-Result (r3_compare.out, base 9fb63e8 against 4ad7fdc, the last commit of part A). Of
+Result (r3_compare.out, base 9fb63e8 against 80a1e55, after the review of part A). Of
 352 keys, 344 are bitwise equal: every array of the replicates, every estimate, quantile,
 histogram, bound, summary column, pilot and tuning array. The 8 that differ are
 variance_share in 7 of the 8 runs, by up to 0.218 (relative 0.272), and with it the

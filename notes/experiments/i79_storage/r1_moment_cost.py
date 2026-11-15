@@ -18,14 +18,17 @@ Also computed, for the documentation: the sums of 256 lanes, 256 x engine._lane_
 bytes, and the stored rows per replicate above which keep saves memory,
 (p + d) / (d + 2.5), from 8 (p + d) bytes of moments against 8d + 20 per row.
 
-Result (r1_moment_cost.out, at commit 4ad7fdc). The moments cost 48 ns per atom at
-d = 2 (a run 1.04 times as long as without them), 687 ns at d = 10 (1.43 times) and
-33,958 ns at d = 100 (3.45 times), 6.6 ns for each of its 5,150 sums. A run that keeps
-no rows (keep=0) takes 1.04, 1.30 and 3.40 times as long, so the moments, not the rows,
-set the cost. An earlier run of the same script, before this docstring changed, gave 169,
-934 and 35,692 ns (1.15, 1.57 and 3.59 times): the figure at d = 2 is within the noise of
-a 0.13 s run. The lane buffer is 0.01, 0.15 and 10.75 MB, and keep saves memory once a
-replicate stores more than 1.6, 6.0 and 51.2 rows.
+Result (r1_moment_cost.out, at commit 80a1e55, which the output calls dirty since it
+writes its own output file; under load, a load average of 5.2 to 5.5 on 4 CPUs from other
+runs). The moments cost 136 ns per atom at d = 2 (a run 1.12 times as long as without
+them), 653 ns at d = 10 (1.38 times) and 23,370 ns at d = 100 (2.48 times). A run that
+keeps no rows (keep=0) takes 1.11, 1.40 and 2.21 times as long, so the moments, not the
+rows, set the cost. The lanes' sums take 0.02, 0.25 and 20.89 MB, and keep saves memory
+once a replicate stores more than 1.6, 6.0 and 51.2 rows.
+
+Before the square sums of DECISIONS #245, at commit 4ad7fdc, with a lower load, the same
+script gave 48, 687 and 33,958 ns per atom (1.04, 1.43 and 3.45 times), and an earlier run
+169, 934 and 35,692 ns: the figure at d = 2 is within the noise of a 0.13 s run.
 """
 
 import os
