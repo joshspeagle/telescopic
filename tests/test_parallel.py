@@ -717,13 +717,15 @@ def test_an_error_that_does_not_unpickle_keeps_the_finished_chunks():
 
 CACHED = ValueError("cached")
 by_thread = threading.local()
+both = threading.Barrier(2, timeout=60)
 
 
 def cached_log_prob(x):
-    # Raises CACHED at the evaluation number 12,000 of each thread: in its second chunk of
-    # 263 replicates.
+    # Raises CACHED at the evaluation number 12,000 of each thread, in its second chunk of
+    # 263 replicates, once the other thread has reached its own: both raise.
     by_thread.calls = getattr(by_thread, "calls", 0) + 1
     if by_thread.calls == 12_000:
+        both.wait()
         raise CACHED
     return gaussian_log_prob(x)
 
