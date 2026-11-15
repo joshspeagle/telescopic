@@ -181,7 +181,7 @@ class _Leapfrog(GradientKernel):
         step_size: float | None,
         n_steps: int | None,
         cov: npt.ArrayLike | None,
-        jitter: float,
+        jitter: float = 0.0,
     ) -> None:
         super().__init__(step_size, cov)
         if n_steps is not None:

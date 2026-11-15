@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import _frozen_kernels
 import numpy as np
 import pytest
@@ -965,6 +967,32 @@ def test_hmc_without_jitter_reproduces_the_fixed_step_kernel_bitwise(vectorize):
             np.testing.assert_array_equal(new.log_prob, old.log_prob)
             np.testing.assert_array_equal(new.grad, old.grad)
     np.testing.assert_array_equal(draws.normal(1), reference.normal(1))
+    np.testing.assert_array_equal(draws.uniform(), reference.uniform())
+
+
+def test_hmc_by_default_is_the_registered_jitter_arm_bitwise(monkeypatch):
+    # The default is the arm J5 of issue #91's pre-registered test, as the experiment's
+    # own kernel computes it: the same states, acceptance probabilities and draws.
+    monkeypatch.syspath_prepend(str(Path(__file__).parents[1] / "notes" / "experiments"))
+    from i137_common import JitterHMC
+
+    n, d = 200, 3
+    shipped = HMC(0.3, 4, cov=dense(d), meeting_weight=0.3, meeting_scale=0.5)
+    arm = JitterHMC(0.3, 4, cov=dense(d), meeting_weight=0.3, meeting_scale=0.5)
+    points = np.random.default_rng(43).standard_normal((2, n, d))
+    points[1, : n // 10] = points[0, : n // 10]
+    x, y = state(points[0], True), state(points[1], True)
+    old_x, old_y = x, y
+    draws, reference = random_draws(n, 44), random_draws(n, 44)
+    for _ in range(3):
+        moved, probability = shipped.step(TARGET, x, draws)
+        expected, expected_probability = arm.step(TARGET, x, reference)
+        np.testing.assert_array_equal(moved.x, expected.x)
+        np.testing.assert_array_equal(probability, expected_probability)
+        x, y = shipped.coupled_step(TARGET, x, y, draws)
+        old_x, old_y = arm.coupled_step(TARGET, old_x, old_y, reference)
+        np.testing.assert_array_equal(x.x, old_x.x)
+        np.testing.assert_array_equal(y.x, old_y.x)
     np.testing.assert_array_equal(draws.uniform(), reference.uniform())
 
 
