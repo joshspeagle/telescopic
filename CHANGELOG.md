@@ -524,6 +524,8 @@ All notable changes to this project are documented here. The format follows
   `CoupledSampler.meeting_times` returns, into a given axis, so that several runs share
   one; a censored pair (`inf`) counts up to `max_iter`, as in
   `plotting.meeting_times`, which now draws its curve with it.
+- `Result.merge` takes any number of results, `a.merge(b, c, d)`, and joins them in one
+  pass.
 
 ### Changed
 

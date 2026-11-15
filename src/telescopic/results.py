@@ -666,40 +666,48 @@ class Result:
         return Summary(self.names, table, footer)
 
     # Spec R-OUT-1.
-    def merge(self, other: Result) -> Result:
-        """Join with a run of the same seed and configuration and disjoint replicates.
+    def merge(self, *others: Result) -> Result:
+        """Join with runs of the same seed and configuration and disjoint replicates.
 
         :func:`telescopic.engine.merge` checks the seeds, the settings, the
-        dimensions and the replicates. That the runs share the target, the kernel and the
-        initial distribution is the caller's to ensure: their descriptions omit parameters.
-        The merged result takes this result's names, and its kernel, initial distribution,
-        tuning report and pilot meeting times, each from ``other`` where this result has
-        none. Its replicates are bitwise those of one run of all of them for a target
-        evaluated point by point, and can differ from them by rounding for a vectorized
-        one (:func:`telescopic.engine.run`).
+        dimensions and the replicates, and joins every result at once. That the runs share
+        the target, the kernel and the initial distribution is the caller's to ensure:
+        their descriptions omit parameters. The merged result takes this result's names,
+        and its kernel, initial distribution, tuning report and pilot meeting times, each
+        from the first of ``others`` that has one where this result has none. Its
+        replicates are bitwise those of one run of all of them for a target evaluated
+        point by point, and can differ from them by rounding for a vectorized one
+        (:func:`telescopic.engine.run`).
 
         Parameters
         ----------
-        other : Result
-            The result to join with this one.
+        *others : Result
+            The results to join with this one, at least one.
 
         Returns
         -------
         Result
             The union of the replicates and of the requested indices; interrupted if a
-            requested replicate ran in neither.
+            requested replicate ran in none.
         """
+        if not others:
+            raise TypeError("merge needs at least one other Result")
+        results = (self, *others)
+
+        def first(name: str) -> Any:
+            return next((value for r in results if (value := getattr(r, name)) is not None), None)
+
         merged = type(self)(
-            engine.merge([self._replicates, other._replicates]),
+            engine.merge([result._replicates for result in results]),
             names=self.names,
-            kernel=self.kernel if self.kernel is not None else other.kernel,
-            initial=self.initial if self.initial is not None else other.initial,
-            tuning=self.tuning if self.tuning is not None else other.tuning,
-            pilot=self.pilot if self.pilot is not None else other.pilot,
+            kernel=first("kernel"),
+            initial=first("initial"),
+            tuning=first("tuning"),
+            pilot=first("pilot"),
         )
-        # The larger of the rules' k that are known: the merged runs share k, and a wide
-        # start stays listed when either part's pilot would have chosen at least that k.
-        rules = [k for k in (self._k_rule, other._k_rule) if k is not None]
+        # The largest of the rules' k that are known: the merged runs share k, and a wide
+        # start stays listed when any part's pilot would have chosen at least that k.
+        rules = [result._k_rule for result in results if result._k_rule is not None]
         merged._k_rule = max(rules, default=None)
         return merged
 

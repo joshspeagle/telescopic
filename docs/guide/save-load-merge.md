@@ -49,10 +49,12 @@ merged = result.merge(telescopic.Result(more, names=result.names))
 merged.n_replicates
 ```
 
-The merged result is `interrupted` if a replicate requested in either run ran in neither.
-It keeps the names of the result whose `merge` was called, and its kernel, initial
-distribution, tuning report and pilot {term}`meeting times <meeting time>`, each taken from the other result
-where this one has none.
+`merge` takes any number of results, `a.merge(b, c, d)`, and joins them in one pass,
+which is faster than joining them two at a time. The merged result is `interrupted` if a
+replicate requested in any of the runs ran in none. It keeps the names of the result
+whose `merge` was called, and its kernel, initial distribution, tuning report and pilot
+{term}`meeting times <meeting time>`, each taken from the first of the others that has one where this result
+has none.
 
 ## Saving and loading
 
