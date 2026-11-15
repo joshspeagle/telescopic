@@ -243,22 +243,26 @@ in absolute value is {glue:text}`largest_z:.2f`.
 ## What the warnings say
 
 ```{code-cell} python
-from telescopic import diagnostics
-
-for label, run in (("point by point", point), ("batched", batch), ("random walk", reference)):
-    print(f"{label}: {diagnostics.issues(run)}")
-```
-
-```{code-cell} python
 :tags: [remove-cell]
 
-assert all(diagnostics.issues(run) == [] for run in (point, batch, reference))
+from IPython.display import Markdown
+
+from run_text import warning_links
+from telescopic import diagnostics
+
+lines = []
+for label, run in (("point by point", point), ("in padded batches", batch), ("random walk", reference)):
+    kinds = [issue.kind for issue in diagnostics.issues(run)]
+    lines.append(f"- {label}: {warning_links(kinds) if kinds else 'no warning'};")
+lines[-1] = lines[-1][:-1] + "."
+glue("warnings_text", Markdown("The three runs emit these warnings:\n\n" + "\n".join(lines)), display=False)
 ```
 
-None of the three runs warns. An empty list means only that none of the conditions of
-[Warnings and errors](../reference/warnings.md#warnings) holds, not that the run is right.
-MALA stays exact with any gradient, so the agreement with the random walk checks the
-runs, not the gradient: a wrong gradient would make the pairs slow to meet instead. The
-sampler compares `grad` with differences of `log_prob` as it is built
-([Checking the gradient](../guide/log-density.md#checking-the-gradient)), and that check
-emitted no warning here.
+{glue:md}`warnings_text`
+
+An empty list of warnings means only that none of the conditions of
+[Warnings and errors](../reference/warnings.md#warnings) holds, not that the run is
+right. MALA stays exact with any gradient, so the agreement with the random walk checks
+the runs, not the gradient: a wrong gradient would make the pairs slow to meet instead.
+The sampler compares `grad` with differences of `log_prob` as it is built, and warns
+when they disagree ([Checking the gradient](../guide/log-density.md#checking-the-gradient)).
