@@ -11,7 +11,9 @@ that example's log-density and gradient as a vectorized target, so that the kern
 products are BLAS calls, at d = 2 and 100 and with 1 and 256 lanes. `step` starts from
 fixed states drawn from the target, and `coupled_step` from fixed pairs of independent
 draws; the returned states are discarded, so every call does the same work, and the
-draws come from `testing.random_draws`. For each configuration one uncounted round fixes
+draws come from `testing.random_draws`. The states are those of the kernel's
+`init_state`, so that, since the second pull request of issue #77, `Independence` starts
+from states whose cache of log q is valid, as in a run where it alone moves the chains. For each configuration one uncounted round fixes
 the number of calls that takes at least 0.2 s, then 7 rounds of that many calls give the
 median CPU time per call. CPU time of the process (`time.process_time`), not wall time:
 the machine of the recorded runs was shared with other jobs that kept its load above 5
@@ -34,7 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from i85_setup import setup
 
 from telescopic import examples
-from telescopic.kernels import MALA, Independence, MultivariateT, RandomWalk, State
+from telescopic.kernels import MALA, Independence, MultivariateT, RandomWalk
 from telescopic.target import Target
 from telescopic.testing import random_draws
 
@@ -78,11 +80,10 @@ def main():
         rng = np.random.default_rng(1)
         for lanes in (1, 256):
             x, y = (rng.standard_normal((lanes, d)) @ chol.T for _ in range(2))
-            with_grad = [State(z, *target.log_prob_and_grad(z)) for z in (x, y)]
-            without = [State(z, target.log_prob(z)) for z in (x, y)]
             for name, kernel in kernels(d, example.cov).items():
-                # States carry gradients only for the kernel that needs them.
-                state_x, state_y = with_grad if kernel.needs_grad else without
+                # The states of init_state, as a run starts from: with gradients for the
+                # kernel that needs them, and, where the kernel has them, its own fields.
+                state_x, state_y = (kernel.init_state(target, z) for z in (x, y))
                 step = per_call(partial(kernel.step, target, state_x, random_draws(lanes, 2)))
                 coupled = per_call(
                     partial(kernel.coupled_step, target, state_x, state_y, random_draws(lanes, 3))

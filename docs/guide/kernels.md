@@ -165,8 +165,14 @@ mass, such as a draw clipped onto the edge of an open support.
 
 - The coupled step gives both chains the same proposal and the same uniform, so a pair
   meets when both accept. It is a maximal coupling of the kernel (O'Leary, Wang & Jacob
-  2021), {class}`telescopic.couplings.Shared`. It evaluates `log_density` once per
-  coupled step, at the proposals and at both chains' states.
+  2021), {class}`telescopic.couplings.Shared`.
+- The chains' states keep $\log q$ at their positions with the point at which it was
+  computed, and use it only where that point is the position bit for bit, so that a
+  chain moved by another kernel of a mixture gets a fresh value. A step and a coupled
+  step evaluate `log_density` once, at the proposals and at the states without a valid
+  value: usually $n$ rows, where without the cache they were $2n$ and $3n$. Where
+  `log_density` gives a point the same value in any batch, as `MultivariateT` does, no
+  number changes.
 - The attribute `proposal` returns the distribution given and cannot be reassigned;
   tuning builds a new kernel.
 - `proposal` is a {class}`telescopic.kernels.MultivariateT`, a Student-$t$ with location
@@ -292,7 +298,8 @@ example: [Gibbs](../tutorials/gibbs.md).
 The random walk, MALA and the independence kernel are one Metropolis-Hastings kernel,
 {class}`telescopic.kernels.MetropolisHastings`, with three proposals. Each proposal draws
 $x' \sim q(\cdot \mid x)$ and gives the log acceptance ratio
-$\log\pi(x') - \log\pi(x) + \log q(x \mid x') - \log q(x' \mid x)$, and a coupling
+$\log\pi(x') - \log\pi(x) + \log q(x \mid x') - \log q(x' \mid x)$, with the
+current and the proposed states, in which it may fill fields of its own, and a coupling
 object draws the proposals of both chains of a pair. `MetropolisHastings(proposal,
 coupling)` raises `ValueError` unless the coupling supports the proposal. The couplings
 of {mod}`telescopic.couplings` support these proposals, matched by their exact class, so

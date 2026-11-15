@@ -466,3 +466,10 @@ All notable changes to this project are documented here. The format follows
   whose caches change their next step. No shipped kernel has such fields, and every
   seeded output is unchanged. Code that unpacks `dataclasses.astuple(state)` into three
   names breaks.
+- `Independence` keeps log q at each chain's position in the chain's state, with the point
+  at which it was computed, and uses it only where that point is the position bit for
+  bit: a step and a coupled step evaluate the proposal's `log_density` at the proposals
+  and at the states without a valid value, usually n rows where they were 2n and 3n, and
+  with `MultivariateT` every seeded output is unchanged. `Proposal.log_alpha` returns the
+  current and the proposed states with the ratio, and `Proposal.init_extra` gives a
+  proposal's own fields.

@@ -143,7 +143,11 @@ class Independence(MetropolisHastings):
     Notes
     -----
     A step and a coupled step use what the proposal's ``sample`` uses (``d + df``
-    normals for :class:`MultivariateT`, ``d`` with ``df=None``) and 1 uniform.
+    normals for :class:`MultivariateT`, ``d`` with ``df=None``) and 1 uniform. Each
+    evaluates the proposal's ``log_density`` once, at the proposals and at the chains
+    whose cached value of :math:`\log q` is missing or was computed at another point
+    (:class:`~telescopic.kernels.IndependenceProposal`): ``n`` rows when the kernel
+    alone moves the chains.
 
     The proposal must be positive wherever the target is. The kernel never moves a chain
     to where :math:`q` is 0, so, used alone, a proposal that misses part of the target's
