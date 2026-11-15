@@ -7,6 +7,7 @@ can compare the new kernels with them bit for bit. They are removed once the cha
 merged.
 """
 
+import math
 from collections.abc import Callable
 from functools import partial
 from typing import cast
@@ -17,7 +18,6 @@ from telescopic._linalg import covariance, inverse_lower, matvec
 from telescopic._types import log_densities
 from telescopic.couplings import maximal
 from telescopic.kernels.base import Kernel, State, acceptance, log_ratio
-from telescopic.kernels.hmc import _Leapfrog
 from telescopic.tuning import OPTIMAL_SCALE
 
 
@@ -227,9 +227,20 @@ def _log_weights(q, proposal, *states):
     ]
 
 
-class Leapfrog(_Leapfrog):
+class Leapfrog(Kernel):
     def __init__(self, step_size, n_steps, cov):
-        super().__init__(step_size, n_steps, cov, 0.0)
+        self.step_size, self._n_steps = step_size, n_steps
+        self.cov, self._chol = covariance("cov", cov)
+
+    @property
+    def needs_grad(self):
+        return True
+
+    @property
+    def n_steps(self):
+        if self._n_steps is not None or self.step_size is None:
+            return self._n_steps
+        return math.ceil(1 / max(self.step_size, 1 / 1000))
 
     def step(self, target, state, draws):
         end, log_alpha = self._trajectory(target, state, draws.normal(state.x.shape[1]), 1)
