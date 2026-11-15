@@ -7,7 +7,8 @@ kernelspec:
 # Read meeting times and the distance to stationarity
 
 The meeting times of the pairs bound the distance of the chains from the target and set
-the cost of a run. The examples use the run of
+the cost of a run. [Meeting times and distance to stationarity](../concepts/meeting-times.md)
+explains the bound. The examples use the run of
 [Estimate anything from a result](estimates.md):
 
 ```{code-cell} python

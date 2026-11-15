@@ -54,6 +54,13 @@ full build:
 TELESCOPIC_DOCS_EXECUTE=cache sphinx-build docs docs/_build/html
 ```
 
+The build reads the inventories of Python, NumPy, SciPy and Matplotlib, which resolve
+references to their documentation, from their sites. When the environment variable
+`TELESCOPIC_DOCS_INVENTORIES` names a directory by its absolute path, it reads
+`<name>.inv` there first, as `python.inv`, and the site when that file is missing. CI
+fetches the four into one with retries before it builds, so that a site that does not
+answer once does not fail the build.
+
 The API reference, `docs/api.md`, is an index of autosummary tables, one per section. The
 build generates a page for each name the tables list into `docs/api/`, which is not
 committed: a class's page shows its attributes and methods, and a module's page its
@@ -78,6 +85,17 @@ python docs/_scripts/brand.py --check    # fails if a written file is stale
 The hero is one coupled pair run by telescopic; `hero_pair.py --check`, which CI also
 runs, fails when the package no longer produces the saved pair and says what moved. Save
 the new pair with `hero_pair.py`, then run `brand.py`, which draws the hero from it.
+
+The figures of the Concepts pages are drawn by `docs/_scripts/figures.py` in the
+identity's colors, from the package's own runs and from computations the script shows,
+into `docs/_static/figures/`; a page inlines one with the `{diagram}` directive, whose
+content is its caption. After a change to a figure, or to the package that moves one, run
+the script; CI runs it with `--check`, which names any figure that is stale:
+
+```bash
+python docs/_scripts/figures.py          # redraws the generated figures
+python docs/_scripts/figures.py --check  # fails if a committed figure is stale
+```
 
 The design records are read in the repository and are not built into the site:
 [`docs/design/`](https://github.com/joshspeagle/telescopic/tree/main/docs/design) holds

@@ -112,11 +112,20 @@ numpydoc_xref_aliases = {
 # Every cross-reference must resolve.
 nitpicky = True
 
+# Sphinx fetches each inventory once. CI fetches them with retries into the directory
+# TELESCOPIC_DOCS_INVENTORIES, read first; the site is read when that file is missing.
+# Sphinx runs this file in docs/, where a relative path would no longer be the one meant.
+_inventories = os.environ.get("TELESCOPIC_DOCS_INVENTORIES")
+if _inventories and not os.path.isabs(_inventories):
+    raise ValueError(f"TELESCOPIC_DOCS_INVENTORIES must be an absolute path, not {_inventories!r}")
 intersphinx_mapping = {
-    "python": ("https://docs.python.org/3", None),
-    "numpy": ("https://numpy.org/doc/stable", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy", None),
-    "matplotlib": ("https://matplotlib.org/stable", None),
+    name: (url, (os.path.join(_inventories, f"{name}.inv"), None) if _inventories else None)
+    for name, url in {
+        "python": "https://docs.python.org/3",
+        "numpy": "https://numpy.org/doc/stable",
+        "scipy": "https://docs.scipy.org/doc/scipy",
+        "matplotlib": "https://matplotlib.org/stable",
+    }.items()
 }
 
 # The design records are read in the repository, not on the site.

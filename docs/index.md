@@ -58,9 +58,23 @@ print(result.estimate(lambda t: t[:, 0] * t[:, 1]))
 :hidden:
 :caption: Start
 
+start/what-it-does
+start/is-it-right
 start/install
 start/quickstart
 start/coming-from-emcee
+```
+
+```{toctree}
+:hidden:
+:caption: Concepts
+
+concepts/burn-in-bias
+concepts/two-chains
+concepts/telescoping-correction
+concepts/signed-measures
+concepts/error-bars
+concepts/meeting-times
 ```
 
 ```{toctree}

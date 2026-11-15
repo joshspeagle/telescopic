@@ -252,6 +252,8 @@ div.cell_output table { font-size: 0.86rem; }
 .telescopic-summary ul { margin: 10px 0 0; padding-left: 1.2rem; font: var(--t-type-caption); }
 .telescopic-summary li { margin: 0.15rem 0; }
 figure img { background: var(--t-figure-ground); }
+/* The generated figures of _scripts/figures.py, which draw their own light ground. */
+figure.diagram svg { display: block; width: 100%; height: auto; border-radius: var(--small-radius); }
 
 /* ---------------------------------------------------------------- admonitions */
 div.admonition {
