@@ -1,8 +1,8 @@
 # Two chains that meet
 
-telescopic runs its chains in {term}`pairs <pair>` that are built to become exactly equal. This page
+telescopic runs its chains in pairs that are built to become exactly equal. This page
 explains what such a pair is, how two chains on a continuous space can land on the same
-point, why they stay together once they have, and what the {term}`lag` between them is for. It
+point, why they stay together once they have, and what the lag between them is for. It
 uses the notation of [Theory](../theory.md#coupled-chains).
 
 ## A coupling
@@ -13,7 +13,7 @@ moves the two chains together: it draws the random numbers of their two moves jo
 so that the moves are related, while each chain on its own moves exactly as $P$ would
 move it. Someone who watched only $X$, or only $Y$, would see an ordinary Markov chain
 with kernel $P$, and at each time $t$ each chain has the law $\pi_t$ of an uncoupled chain
-started from $\pi_0$. The {term}`coupling` changes how the two chains move relative to each
+started from $\pi_0$. The coupling changes how the two chains move relative to each
 other, and nothing about either one alone; in particular it does not make either chain
 approach the target faster ([Theory](../theory.md#guarantees-and-their-limits)).
 
@@ -21,7 +21,7 @@ Each kernel of telescopic comes with its coupling
 ([Choose a kernel](../guide/kernels.md)). Random-walk Metropolis shows how a coupling
 can make two chains equal. Each chain proposes a point from a Gaussian centered on its
 current state and accepts it with the Metropolis probability. The coupling draws the two
-proposals from the **{term}`reflection-maximal coupling`** of the two Gaussians: it draws $X$'s
+proposals from the **reflection-maximal coupling** of the two Gaussians: it draws $X$'s
 proposal, and with probability equal to the ratio of $Y$'s proposal density to $X$'s at
 that point, capped at 1, it gives $Y$ the same point; otherwise it gives $Y$ the mirror
 image of $X$'s proposal across the line, plane or hyperplane halfway between the two
@@ -44,7 +44,7 @@ probability $2\Phi(-\delta/2)$, with $\delta$ the distance between the centers.
 
 The probability $2\Phi(-\delta/2)$ falls quickly as the two centers move apart,
 measured in units of the proposal's spread, so the proposals of chains several
-proposal widths apart rarely coincide. The {term}`meeting time` of a pair is random, and it
+proposal widths apart rarely coincide. The meeting time of a pair is random, and it
 varies from pair to pair.
 
 ## Equal, and then together

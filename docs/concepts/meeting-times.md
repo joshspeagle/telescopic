@@ -1,6 +1,6 @@
 # Meeting times and distance to stationarity
 
-Every {term}`pair` of a run has a {term}`meeting time`, and the meeting times of many pairs say how
+Every {term}`pair` of a run has a meeting time, and the meeting times of many pairs say how
 close the chain is to the target at each time. This page explains how to read their
 survival function and the bound on the distance to the target that it gives, and why the
 estimates do not rely on that bound. It uses the notation of

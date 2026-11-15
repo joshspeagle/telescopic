@@ -1,7 +1,7 @@
 # Signed measures, not samples
 
 A run of telescopic does not return samples of the target. Each {term}`replicate` returns a set
-of points, its {term}`atoms <atom>`, each with a weight, and some of the weights are negative. This
+of points, its atoms, each with a weight, and some of the weights are negative. This
 page explains where the negative weights come from, what can be computed from the
 atoms, and what cannot. It uses the notation of
 [Theory](../theory.md#signed-measures).

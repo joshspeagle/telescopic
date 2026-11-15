@@ -1,7 +1,7 @@
 # Why burn-in biases MCMC
 
 A Markov chain Monte Carlo run starts its chain somewhere, discards the first $k$ steps
-as {term}`burn-in`, and averages what follows. This page explains why that average is biased for
+as burn-in, and averages what follows. This page explains why that average is biased for
 every finite $k$, why its error bar does not include the bias, and why removing the bias
 takes two chains that can become exactly equal. It uses the notation of
 [Theory](../theory.md#coupled-chains).

@@ -3,7 +3,7 @@
 A {term}`pair` of chains that meet turns the bias of a {term}`burn-in` into a sum that one pair can
 compute. This page explains why the differences between the two chains add up to the
 bias at the burn-in $k$, why one pair has only finitely many nonzero differences, and why
-the result is {term}`unbiased` for any $k$. It uses the notation of
+the result is unbiased for any $k$. It uses the notation of
 [Theory](../theory.md#the-telescoping-sum), where the argument is derived.
 
 ## The bias as a sum of steps
