@@ -1228,7 +1228,7 @@ PIPELINE = (
     ),
     (
         "3. the settings",
-        ("`k`: 99% quantile of τ − 1", "`lag` = `k`, `m` = 10`k`"),
+        (f"`k`: 99% quantile of τ {MINUS} 1", "`lag` = `k`, `m` = 10`k`"),
         ("each of `k`, `lag`", "and `m` given is kept"),
     ),
     (
@@ -1353,9 +1353,7 @@ def holds() -> str:
     drawn = {a for head, lines, _ in HOLDS for a in "".join((head, *lines)).split("`")[1::2]}
     public = {a for a in vars(result) if not a.startswith("_")}
     check(drawn == public | {"atoms", "weights", "replicate"}, name, "every attribute drawn")
-    check(
-        {"atoms", "weights", "replicate"} <= set(vars(measure)), name, "the measure's arrays"
-    )
+    check({"atoms", "weights", "replicate"} <= set(vars(measure)), name, "the measure's arrays")
     check(
         measure.atoms.shape == (n_atoms, result.ndim)
         and measure.replicate.shape == (n_atoms,)
@@ -1571,7 +1569,9 @@ def hmc_meeting() -> str:
         f'stroke="{LINE}" stroke-width="{FIGURE["outline"]}"/>'
         for r in (1, 2)
     ]
-    body.append(text(cx0 + 2 * unit * 0.72, cy0 - 2 * unit * 0.72 - 6, rich(("π", "")), "start", MUTED))
+    body.append(
+        text(cx0 + 2 * unit * 0.72, cy0 - 2 * unit * 0.72 - 6, rich(("π", "")), "start", MUTED)
+    )
     for paths, color in ((paths_x, CX), (paths_y, CY)):
         for j, path in enumerate(paths):
             points = at(path)
@@ -1581,29 +1581,29 @@ def hmc_meeting() -> str:
             if j == 0:
                 body.append(dot(*map(float, points[0]), color))
     for chain, path, color, dx in (("X", paths_x[0], CX, -10), ("Y", paths_y[0], CY, 10)):
-        (px, py), = at(path[0])
+        ((px, py),) = at(path[0])
         anchor = "end" if dx < 0 else "start"
         body.append(text(float(px) + dx, float(py) - 10, rich((chain, "0")), anchor, color))
     # The meeting step: each chain's proposal of scale sigma, as a dashed circle, and the
     # point on which both land.
-    (mx, my), = at(meeting)
+    ((mx, my),) = at(meeting)
     for state, color in ((state_x, CX), (state_y, CY)):
-        (px, py), = at(state.x[0])
+        ((px, py),) = at(state.x[0])
         body += [
-            f'<circle cx="{_f(px)}" cy="{_f(py)}" r="{_f(scale * unit)}" fill="none" '
-            f'stroke="{color}" stroke-width="{FIGURE["rule"]}" stroke-dasharray="4 4"/>',
+            (
+                f'<circle cx="{_f(px)}" cy="{_f(py)}" r="{_f(scale * unit)}" fill="none" '
+                f'stroke="{color}" stroke-width="{FIGURE["rule"]}" stroke-dasharray="4 4"/>'
+            ),
             segment(float(px), float(py), float(mx), float(my), MET, width=FIGURE["outline"]),
         ]
     body += [
         dot(float(mx), float(my), MET, r=FIGURE["meeting"], ring=True),
-        text(
-            float(mx) - 12, float(my) + 28, rich(("X", ""), " = ", ("Y", "")), "end", MET
-        ),
+        text(float(mx) - 12, float(my) + 28, rich(("X", ""), " = ", ("Y", "")), "end", MET),
         text(20, 28, f"{trajectories} trajectories that share their momentum: closer, not equal"),
         text(
             20,
             54,
-            rich("then a meeting step of scale ", ("σ", ""), f" = {scale:g}: equal"),
+            rich("then a meeting step of scale ", ("\u03c3", ""), f" = {scale:g}: equal"),
             "start",
             MUTED,
         ),
