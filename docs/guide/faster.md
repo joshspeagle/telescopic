@@ -34,33 +34,22 @@ evaluations and the seconds of its replicates, `result.n_log_prob`, `result.n_gr
 
 ## Vectorize the log-density
 
-With `vectorize=True`, the log-density takes a batch of points of shape `(n, d)` and
-returns shape `(n,)`, so a step of many chains costs one call instead of one per point
-([The log-density](log-density.md#the-log-density)). The engine advances a batch of
-replicates together ([Chunks and workers](parallel.md#chunks-and-workers) gives its
-size), so the saving grows with the share of a step's time that the calls of the log-density take. A
-vectorized run is bitwise repeatable only under the same batching and BLAS threads,
-with estimates that agree within their error bars otherwise
-([Reproducibility](parallel.md#reproducibility)).
+With `vectorize=True`, one call of the log-density evaluates a batch of chains instead of
+one point, which saves the time of the calls
+([The log-density](log-density.md#the-log-density)); its effect on reproducibility is in
+[Reproducibility](parallel.md#reproducibility).
 
 ## Run on a pool
 
-Replicates are independent, so `pool` runs them on worker processes
-([Pools](parallel.md#pools)). Starting the workers takes time, so a pool pays off only for
-runs longer than the start. A pool runs chunks of consecutive replicates, each worker's
-chunk in lanes as above, and its workers run BLAS on one thread so that they do not
-compete for the cores ([Chunks and workers](parallel.md#chunks-and-workers)). Each chunk
-carries the target with its data, so keep the data that a log-density holds small
-([Pickling and the main guard](parallel.md#pickling-and-the-main-guard)).
+`pool` runs the replicates on worker processes, which pays off for runs longer than the
+start of the workers ([Pools](parallel.md#pools),
+[Chunks and workers](parallel.md#chunks-and-workers)).
 
 ## Skip the pilots
 
-Tuning runs in this process, before the replicates and whatever the pool, and the
-meeting-time pilot runs before the first run. A kernel whose parameters are all given
-skips tuning, and a given `k` skips the meeting-time pilot
-([A slow log-density](settings.md#a-slow-log-density)). Several jobs on one target can
-tune once and pass the tuned kernel and its `k` to each
-([Tuning](parallel.md#tuning)).
+A kernel whose parameters are all given skips tuning, and a given `k` skips the
+meeting-time pilot ([A slow log-density](settings.md#a-slow-log-density)), so several
+jobs on one target can tune once ([Tuning](parallel.md#tuning)).
 
 ## Choose the kernel by its inefficiency
 
@@ -74,11 +63,9 @@ target.
 
 ## Store less
 
-`thin` and `keep` store fewer {term}`atoms <atom>` and save memory, but do not shorten a
-run: a thinned run is as long ([Memory and thinning](settings.md#memory-and-thinning)), and
-`keep` adds the accumulation of every replicate's moments
-([Keeping a subset](settings.md#keeping-a-subset)). They help when memory, not time,
-limits a run.
+`thin` and `keep` save memory, not time
+([Memory and thinning](settings.md#memory-and-thinning),
+[Keeping a subset](settings.md#keeping-a-subset)).
 
 ## Measured times
 

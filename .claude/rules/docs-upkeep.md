@@ -27,7 +27,7 @@ the same pull request. The documentation states only what the code does now.
 | `_io.py` (saving and loading) | `guide/save-load-merge.md` | | `api.md` (Results) |
 | `diagnostics.py`, `warnings.py` | `guide/meeting-times.md`, `guide/troubleshooting.md` | `tutorials/failure-modes.md`, `tutorials/choosing-settings.md` | `concepts/error-bars.md`, `concepts/meeting-times.md`, `theory.md`, `reference/result-fields.md`, `reference/warnings.md`, `reference/glossary.md`, `reference/notation.md`, `reference/faq.md`, `api.md` (Diagnostics, plots and checks; Warnings) |
 | `plotting.py` | `guide/plots.md`, `guide/meeting-times.md` | `tutorials/how-it-works.md` | `concepts/meeting-times.md`, `api.md` (Diagnostics, plots and checks) |
-| `examples.py` | `guide/kernels.md`, `guide/step-size.md` | every tutorial that uses the target | `api.md` (Examples) |
+| `examples.py` | `guide/kernels.md`, `guide/step-size.md`, `guide/troubleshooting.md`, `guide/faster.md` | every tutorial that uses the target | `api.md` (Examples) |
 | `testing.py` | `guide/custom-kernels.md` | | `api.md` (Diagnostics, plots and checks) |
 | `_gradient_check.py` | `guide/log-density.md`, `guide/settings.md` | `tutorials/gradients.md` | `api.md` (Running; Diagnostics, plots and checks) |
 | `_types.py`, `_linalg.py` (private helpers) | the pages of the public functions whose arguments they check or whose errors they word | | |
