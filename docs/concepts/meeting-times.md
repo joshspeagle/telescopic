@@ -12,7 +12,8 @@ A pair's meeting time $\tau$ is the first time $t$ at which $X_t = Y_{t-L}$
 ([Two chains that meet](two-chains.md)). It is random, and it varies from pair to pair.
 Its **survival function** $P(\tau > t)$ is the probability that a pair has not yet met
 at time $t$, which a run estimates by the fraction of its pairs that have not. It is 1
-for every $t$ below the lag, since the chains are first compared at $t = L$, and it falls
+for every $t$ up to the lag: the chains are first compared at $t = L$, where $X_L$ and
+$Y_0$, an independent draw, differ. It falls
 toward 0 as $t$ grows. How fast it falls depends on the kernel and on how far from the
 target the initial distribution starts the chains.
 {meth}`~telescopic.Result.plot_meeting_times` draws it for $\tau - L$, which shifts the
@@ -60,7 +61,7 @@ Four things to keep in mind when reading it:
 - **It is an upper bound.** The chain can be much closer to the target than the bound
   says, and a bound of 1 says nothing, since no two laws differ by more.
 - **It is an estimate.** A run averages over its pairs, so the bound has a Monte Carlo
-  error, largest in the tail, where few pairs remain. A pair censored at `max_iter`
+  error, with a relative error that is largest in the tail, where few pairs remain. A pair censored at `max_iter`
   counts as meeting just after its cap, which makes the estimate a lower bound of the one
   without a cap.
 - **The lag changes the estimate, not the distance.** Every lag bounds the same

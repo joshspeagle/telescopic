@@ -21,7 +21,7 @@ $1 - \alpha$ is
 $$\bar H \pm t_{R-1,\,1-\alpha/2}\,\frac{\hat\sigma}{\sqrt R},$$
 
 where $t_{R-1,\,1-\alpha/2}$ is the quantile of Student's t with $R - 1$ degrees of
-freedom, and $\hat\sigma/\sqrt R$ is the standard error
+freedom, for an estimate from all $R$ replicates, and $\hat\sigma/\sqrt R$ is the standard error
 ([Expectations](../guide/estimates.md#expectations)). The interval is valid as $R$ grows
 when the estimates have a finite variance, and exact at every $R$ when they are normal
 ([Theory](../theory.md#guarantees-and-their-limits)).
@@ -44,9 +44,11 @@ tail, or one replicate that holds most of the variance, can make it unreliable, 
 run warns of both ([Warnings and errors](../reference/warnings.md#warnings)). Exact
 unbiasedness also needs a number of replicates fixed before any result is seen
 ([How many replicates](../guide/settings.md#how-many-replicates)). A run with `keep`
-estimates the means, variances and standard deviations from every replicate and the
-other estimates from the kept ones, each with an error bar from its own replicates
-([Two sets of replicates](../guide/estimates.md#two-sets-of-replicates)).
+estimates the means, the variances, the standard deviations and, up to 100 dimensions,
+the covariance from every replicate, and the other estimates from the kept ones
+([Two sets of replicates](../guide/estimates.md#two-sets-of-replicates)). An interval
+then takes its degrees of freedom from the replicates behind its estimate: those of
+{meth}`~telescopic.Result.estimate` are the number of kept replicates that met, less 1.
 
 ## What replaces a judgment of convergence
 
@@ -77,16 +79,38 @@ that $\hat R$ has ([Theory](../theory.md#guarantees-and-their-limits),
 
 ## Each diagnostic and its counterpart
 
-The last column names where each counterpart is found in a {class}`~telescopic.Result`
-`result` ([Result and summary fields](../reference/result-fields.md)).
+Each entry gives what the familiar diagnostic answers, its counterpart in telescopic, and
+where a result holds that counterpart
+([Result and summary fields](../reference/result-fields.md)).
 
-| Diagnostic | What it answers | In telescopic | In a result |
-|---|---|---|---|
-| Monte Carlo standard error | how far the estimate typically falls from its expected value | the standard error of the mean of independent replicates | `result.estimate(h).standard_error`; the summary's `standard_error` column |
-| Effective sample size | how many independent draws the correlated draws are worth | the number of independent estimates behind the error bar | `result.n_replicates`; `result.n_kept` for the estimates of the kept replicates |
-| Autocorrelation time | how many steps apart two draws are nearly independent, which sets the error bar, the burn-in and the thinning | not needed for the error bar; the inefficiency, the mean cost times the variance of one replicate's estimate, compares kernels and settings at equal cost ([Cost](../guide/settings.md#cost)) | `result.costs` and `result.estimate(h).replicates`; `relative_cost` in `result.diagnostics()` |
-| $\hat R$ | whether chains from different starts agree | not needed for unbiasedness; the $\hat R$ of the tuning chains checks the tuning | `result.tuning.rhat`; the `tuning` warning |
-| Trace plots and the burn-in | whether the chain has forgotten its start by the end of the burn-in | the meeting times, and the bound they give on the distance of $\pi_t$ from $\pi$ | `result.meeting_times`, `result.tv_bound`, `tv_bound_at_k` in `result.diagnostics()`, `plot_meeting_times`, `plot_tv_bound` |
+Monte Carlo standard error
+: How far the estimate typically falls from its expected value. In telescopic: the
+  standard error of the mean of independent replicates. In a result:
+  `result.estimate(h).standard_error`, and the summary's `standard_error` column.
+
+Effective sample size
+: How many independent draws the correlated draws are worth. In telescopic: the number
+  of independent estimates behind the error bar. In a result: `result.n_replicates`, and
+  `result.n_kept` for the estimates of the kept replicates.
+
+Autocorrelation time
+: How many steps apart two draws are nearly independent, which sets the error bar, the
+  burn-in and the thinning. In telescopic: not needed for the error bar; the
+  inefficiency, the mean cost times the variance of one replicate's estimate, compares
+  kernels and settings at equal cost ([Cost](../guide/settings.md#cost)). In a result:
+  `result.costs` and `result.estimate(h).replicates`, and `relative_cost` in
+  `result.diagnostics()`.
+
+$\hat R$
+: Whether chains from different starts agree. In telescopic: not needed for
+  unbiasedness; the $\hat R$ of the tuning chains checks the tuning. In a result:
+  `result.tuning.rhat`, and the `tuning` warning.
+
+Trace plots and the burn-in
+: Whether the chain has forgotten its start by the end of the burn-in. In telescopic:
+  the meeting times, and the bound they give on the distance of $\pi_t$ from $\pi$. In a
+  result: `result.meeting_times`, `result.tv_bound`, `tv_bound_at_k` in
+  `result.diagnostics()`, `plot_meeting_times` and `plot_tv_bound`.
 
 ## Reporting results
 

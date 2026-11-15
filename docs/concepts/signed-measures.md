@@ -34,18 +34,22 @@ difference cancel, so a replicate's weights sum to 1, the weight of the average 
 
 The negative weights sit on the states of $Y$, the chain that runs $L$ steps behind. A
 pair that meets within $k + L$ steps has no difference to add, and its weights are the
-$1/|S|$ of an ordinary average after a burn-in. A pair that meets later needs the
-correction, and its negative weights take away the mass that the chain still puts where
-it was $L$ steps earlier, which is the bias that a burn-in of $k$ steps leaves
-([Why burn-in biases MCMC](burn-in-bias.md)).
+$1/|S|$ of an ordinary average after a burn-in. A pair that meets later carries the
+correction, its atoms on $X$ with positive weights and its atoms on $Y$ with negative
+weights together. The correction as a whole has expected value equal to minus the bias
+that the average after a burn-in of $k$ steps leaves
+([Why burn-in biases MCMC](burn-in-bias.md)), so it removes that bias on average; no
+part of it does so alone.
 
 ```{diagram} signed-measure
 Top: the atoms of one replicate of random-walk Metropolis on a standard normal target,
-started from $\mathcal N(5, 1)$, with $k = 2$, $L = 3$ and $m = 12$, run by telescopic.
+started from $\mathcal N(5, 1)$, with $k = 2$, $L = 3$ and $m = 12$, run by telescopic,
+and chosen among the first replicates so that its stems are far enough apart to read.
 A random walk repeats its state when it rejects a proposal, so the atoms at one point
 are drawn as one stem with their summed weight. The states of $X$ have positive weights,
 drawn up in magenta, and the states of $Y$ in the bias correction have negative
-weights, drawn down in teal; the weights sum to 1. Bottom: the signed histogram of 1,000
+weights, drawn down in teal; the weights sum to 1. The two panels share the horizontal
+axis, at the bottom. Bottom: the signed histogram of 1,000
 such replicates, the average over replicates of each one's mass in each bin, with two
 standard errors on each bin and the target's mass in each bin as a gray outline. The
 highlighted bin is negative, although the target puts a small positive mass there, which
