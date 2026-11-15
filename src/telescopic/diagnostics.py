@@ -363,10 +363,11 @@ def issues(result: Result) -> list[Issue]:
     disagreement = tuning_disagreement(result.tuning)
     if disagreement:
         found.append(Issue("tuning", disagreement))
-    # Only for a k from the pilot's quantile: a k given is the warning's remedy.
-    wide = wide_start(result.tuning) if result._k_chosen else None
-    if wide:
-        found.append(Issue("wide", wide))
+    # Listed unless k exceeds the pilot rule's, since a larger k is the warning's remedy.
+    if result._k_rule is not None and result.k <= result._k_rule:
+        wide = wide_start(result.tuning)
+        if wide:
+            found.append(Issue("wide", wide))
     threshold = slow_pair_threshold(result.lag, result.m)
     if np.max(result._earliest_meeting) > threshold:
         found.append(
@@ -443,13 +444,11 @@ def wide_start(tuning: TuningReport | None) -> str | None:
     r"""The warning about an initial distribution far wider than the target, or ``None``.
 
     The tuning pilot shows a start far wider than the target when the report's
-    ``initial_width``, the geometric mean over coordinates of the ratio of the standard
-    deviations of the initial distribution's draws to those of the tuning chains,
+    ``initial_width``, defined in :attr:`telescopic.tuning.PilotRun.initial_width`,
     exceeds 30. From such a start, ``k`` from the 99% quantile of the pilot's meeting
     times can leave a few replicates still on their way to the target, and those can
-    dominate the variance of the estimates. The sampler and
-    :func:`~telescopic.diagnostics.issues` apply it only where that quantile chooses
-    ``k``.
+    dominate the variance of the estimates. When the warning is emitted and listed is
+    stated in :doc:`/reference/warnings`.
 
     Parameters
     ----------

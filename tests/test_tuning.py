@@ -246,7 +246,7 @@ def test_rhat_is_that_of_gelman_et_al():
     between = 50 * np.var(means, ddof=1)
     within = np.mean(np.var(samples[:, :, 0], axis=1, ddof=1))
     expected = np.sqrt((49 / 50 * within + between / 50) / within)
-    pilot = PilotRun(samples, np.zeros((4, 50)), np.ones(4), 100)
+    pilot = PilotRun(samples, np.zeros((4, 50)), np.ones(4), 100, np.ones(1))
     assert pilot.rhat[0] == pytest.approx(expected, rel=1e-12)
 
 
@@ -353,7 +353,7 @@ def test_a_tuned_kernel_returns_itself():
 
 
 # A pilot of four chains, each one state at the origin, for the dual-averaging tests.
-PILOT = PilotRun(np.zeros((4, 1, 5)), np.zeros((4, 1)), np.ones(4), 1)
+PILOT = PilotRun(np.zeros((4, 1, 5)), np.zeros((4, 1)), np.ones(4), 1, np.ones(5))
 
 
 class Exact(Kernel):
@@ -489,7 +489,7 @@ def test_tuning_does_not_raise_at_a_pilot_state_with_a_nan_gradient(kernel):
     target = Target(lambda x: -0.5 * x @ x, grad=lambda x: np.where(x > 1, np.nan, -x))
     samples = np.random.default_rng(0).standard_normal((4, 50, 1))
     samples[:, -1, 0] = [1.5, -0.5, 0.2, -1.0]
-    pilot = PilotRun(samples, -0.5 * samples[..., 0] ** 2, np.full(4, 0.3), 100)
+    pilot = PilotRun(samples, -0.5 * samples[..., 0] ** 2, np.full(4, 0.3), 100, np.ones(1))
     tuned, _ = kernel.tune(target, Normal([-1.0], [0.01]), 0, pilot=pilot)
     step_size = (tuned.kernels[0] if isinstance(tuned, HMC) else tuned).step_size
     assert 0 < step_size < np.inf

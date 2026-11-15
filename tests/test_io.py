@@ -185,7 +185,7 @@ def test_a_file_without_the_initial_width_loads_it_as_none(result):
     with np.load(buffer) as data:
         arrays = {name: data[name] for name in data.files}
     metadata = json.loads(str(arrays["metadata"]))
-    del metadata["k_chosen"]
+    del metadata["k_rule"]
     if metadata["tuning"] is not None:
         del metadata["tuning"]["initial_width"]
     arrays["metadata"] = np.array(json.dumps(metadata))
@@ -193,7 +193,7 @@ def test_a_file_without_the_initial_width_loads_it_as_none(result):
     np.savez(old, **arrays)
     old.seek(0)
     loaded = Result.load(old)
-    assert loaded._k_chosen is False
+    assert loaded._k_rule is None
     assert result.tuning is None or loaded.tuning.initial_width is None
 
 

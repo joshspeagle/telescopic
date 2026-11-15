@@ -90,16 +90,16 @@ class PilotRun:
     acceptance : ndarray, shape (4,)
         Over all the steps of the second halves.
     n_steps : int
-    initial_var : ndarray, shape (d,), optional
+    initial_var : ndarray, shape (d,)
         The variances of the 100 draws from the initial distribution that set the chains'
-        first covariance; ``None`` for a run built without them.
+        first covariance.
     """
 
     samples: FloatArray
     log_prob: FloatArray
     acceptance: FloatArray
     n_steps: int
-    initial_var: FloatArray | None = None
+    initial_var: FloatArray
 
     @cached_property
     def mean(self) -> FloatArray:
@@ -132,10 +132,8 @@ class PilotRun:
         Returns
         -------
         float or None
-            ``None`` when no coordinate spreads in both, or without ``initial_var``.
+            ``None`` when no coordinate spreads in both.
         """
-        if self.initial_var is None:
-            return None
         spread = np.diag(self._pooled_cov)
         both = (self.initial_var > 0) & (spread > 0)
         if not both.any():

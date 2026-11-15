@@ -70,7 +70,7 @@ def save(result: Result, path: str | os.PathLike[str] | IO[bytes]) -> None:
         "kernel": None if result.kernel is None else str(result.kernel),
         "initial": None if result.initial is None else str(result.initial),
         "counts": {name: getattr(replicates, name) for name in (*COUNTS, "seconds")},
-        "k_chosen": result._k_chosen,
+        "k_rule": result._k_rule,
         "tuning": None
         if tuning is None
         else {
@@ -133,7 +133,7 @@ def load(path: str | os.PathLike[str] | IO[bytes], cls: type[Result]) -> Result:
             tuning=tuning,
             pilot=data.get("pilot"),
         )
-        result._k_chosen = metadata.get("k_chosen", False)
+        result._k_rule = metadata.get("k_rule")
         return result
 
 

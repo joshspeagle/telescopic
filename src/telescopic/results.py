@@ -211,9 +211,10 @@ class Result:
         self.n_grad_zeroed = replicates.n_grad_zeroed
         self.wall_time = replicates.seconds
         self.tuning, self.pilot = tuning, pilot
-        # Whether the pilot's quantile chose k: the sampler sets it, and only then does the
-        # warning about a start far wider than the target apply (DECISIONS #259).
-        self._k_chosen = False
+        # The k of the pilot's rule when the run's settings were fixed, None without a
+        # pilot then: issues() lists a wide start only for a k at most this (DECISIONS
+        # #259). The sampler sets it.
+        self._k_rule: int | None = None
         # The engine runs only requested indices, so missing ones make index shorter.
         self.interrupted = len(replicates.index) < len(replicates.requested)
         self.abandoned = np.setdiff1d(replicates.abandoned, replicates.index)
@@ -683,8 +684,10 @@ class Result:
             tuning=self.tuning if self.tuning is not None else other.tuning,
             pilot=self.pilot if self.pilot is not None else other.pilot,
         )
-        # Merged runs share k, so one chosen by the pilot's quantile is the rule's.
-        merged._k_chosen = self._k_chosen or other._k_chosen
+        # The larger of the rules' k that are known: the merged runs share k, and a wide
+        # start stays listed when either part's pilot would have chosen at least that k.
+        rules = [k for k in (self._k_rule, other._k_rule) if k is not None]
+        merged._k_rule = max(rules, default=None)
         return merged
 
     # Spec R-OUT-1.
