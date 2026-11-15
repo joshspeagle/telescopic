@@ -42,8 +42,9 @@ class CoupledProposals(NamedTuple):
     Attributes
     ----------
     x, y : ndarray, shape (n, d)
-        The proposals of the first and the second chains; on identical rows ``y`` is a
-        copy of ``x``.
+        The proposals of the first and the second chains. On identical rows ``y``
+        equals ``x``: a copy of its rows, or ``x`` itself when every pair shares one
+        draw, as under :class:`Shared`; a coupled step then evaluates it once.
     identical : ndarray of bool, shape (n,)
         Rows where the two proposals are equal.
     forward_x, forward_y : object
@@ -62,8 +63,9 @@ class Coupling(ABC):
     """A coupling of the proposals of two chains under one proposal.
 
     Each chain's proposal must have exactly the law of the proposal's
-    :meth:`~telescopic.kernels.Proposal.sample` from its state, and two chains in equal states must receive
-    identical proposals, with ``y`` a copy of ``x``.
+    :meth:`~telescopic.kernels.Proposal.sample` from its state, and two chains in equal
+    states must receive identical proposals, with ``y`` equal to ``x``, a copy of its
+    rows or ``x`` itself, never a recomputation.
     """
 
     @abstractmethod
@@ -203,6 +205,7 @@ class Shared(Coupling):
         state_y: State,
         draws: Draws,
     ) -> CoupledProposals:
+        # One array for both chains, which the coupled step evaluates once.
         x, forward = proposal.sample(target, state_x, draws)
         return CoupledProposals(x, x, np.ones(len(x), dtype=bool), forward, forward)
 

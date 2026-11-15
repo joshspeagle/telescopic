@@ -288,7 +288,9 @@ class MetropolisHastings(Kernel):
     A step draws :math:`x' \sim q(\cdot \mid x)` and accepts it when
     :math:`\log u < \log\pi(x') - \log\pi(x) + \log q(x \mid x') - \log q(x' \mid x)`. A
     coupled step draws both chains' proposals from ``coupling``, evaluates identical
-    proposals once, and accepts each with the same uniform.
+    proposals once, and accepts each with the same uniform. When the coupling returns
+    one array for both chains, as :class:`~telescopic.couplings.Shared` does, the step
+    evaluates it once and gives both chains its state.
 
     Parameters
     ----------
@@ -323,9 +325,14 @@ class MetropolisHastings(Kernel):
     ) -> tuple[State, State]:
         proposal, coupling = self._ready()
         pair = coupling.couple(target, proposal, state_x, state_y, draws)
-        proposed_x, proposed_y = evaluate_pair(
-            partial(proposal.evaluate, target, like=state_x), pair.x, pair.y, pair.identical
-        )
+        if pair.y is pair.x:
+            # Every pair shares one draw, as under Shared: one state serves both chains,
+            # which select never writes to.
+            proposed_x = proposed_y = proposal.evaluate(target, pair.x, state_x)
+        else:
+            proposed_x, proposed_y = evaluate_pair(
+                partial(proposal.evaluate, target, like=state_x), pair.x, pair.y, pair.identical
+            )
         log_u = draws.log_uniform()
         alpha_x, alpha_y = proposal._coupled_log_alpha(
             target, state_x, state_y, proposed_x, proposed_y, pair.forward_x, pair.forward_y
