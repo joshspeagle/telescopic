@@ -194,6 +194,17 @@ Let $a_r = \hat\pi_r(h) \in \mathbb R^p$ for replicates $r = 1, \dots, R$. Write
 
   This is consistent as $R \to \infty$ but not unbiased (JOA20 Prop. 3.2). Credible intervals use these quantiles. v0.1 reports no uncertainty for them; a bootstrap over whole replicates, labelled heuristic, is deferred (DECISIONS #38).
 
+**Reduced storage (R-EST-9; issue #79, DECISIONS #236 to #241).** With `keep = K`, the replicates of index below $K$ store their signed measures, times and distances, and every replicate stores its moments.
+
+- **Kept subset:** $\mathcal K = \{i \in \text{requested} : i < K\}$ depends only on the requested indices and $K$, both fixed before any replicate runs.
+- **Claim K1:** two runs with the same seed, settings, lanes, pool and target, one with `keep=K` and one with `keep=None`, give bitwise equal meeting times, and bitwise equal atoms, weights, times and distances for every kept replicate, for a vectorized target too: `keep` changes neither the order of starts, nor the batches, nor any value a kernel reads, and the moment sums are elementwise and write only their own arrays. Each replicate's $H$ is unbiased and $\mathcal K$ is fixed in advance, so under the conditions of §3.3, `estimate(h)` and a histogram with a range fixed in advance are unbiased over the $n_\text{kept}$ kept replicates that met, with error bars from their independent streams and Student's t with $n_\text{kept} - 1$ degrees of freedom, and the quantiles are consistent as $n_\text{kept}$ grows (JOA20 Prop. 3.2).
+- **Moments:** each replicate stores its center $c_r = X_k$, its first averaged state, and with $f_r = \hat\pi_r(x - c_r)$ and $S_r = \hat\pi_r((x - c_r)(x - c_r)^\top)$, the vector $f_r$ and the entries of $S_r$ over `numpy.triu_indices(d)` up to $d = 100$, or its diagonal above. With $s_r$ the sum of the replicate's weights, $a_r = \hat\pi_r(x) = f_r + s_r c_r$ and $\hat\pi_r((x - b)(x - b)^\top) = S_r + f_r e^\top + e f_r^\top + s_r e e^\top$ with $e = c_r - b$; the code uses $s_r = 1$ (R-EST-6). `mean()` returns the estimate of the replicates $a_r = c_r + f_r$, and `cov()` and `var()` take the second moments about the mean estimate $\bar a$ by the second identity and pass their mean over $r$ to the covariance estimator above.
+- **Claim M1:** in real arithmetic, with weights that sum to 1, `mean()` and `cov()` from the moments are identical to the estimators above computed from the atoms, for any centers, so they inherit their unbiasedness over all $R$. $c_r = X_k$ lies within the chain's spread, so the center affects only rounding.
+- **Claim M2:** for a replicate with $n$ stored atoms, elementwise, $|\text{moments} - \hat\pi_r(h_{c_r})| \le 2\gamma_{n+1}\sum|\omega_i||h_{c_r}(x_i)|$ with $\gamma_n = n\varepsilon/(1 - n\varepsilon)$, and for the means $|a_r - \hat\pi_r(x)| \le |s_r - 1||c_r| + 2\gamma_{n+1}\sum|\omega_i||x_i| + \varepsilon|a_r|$; the term in $|s_r - 1|$ is there because $\mathrm{fl}(1/|S|)$ summed over the atoms is not exactly 1.
+- **Sources:** `mean()`, `var()`, `std()`, `cov()` up to $d = 100$ and the variance share of §7.4 come from all $R$; the meeting times, costs, `tv_bound`, the late fraction and the tail index from every replicate; `estimate(h)`, `quantile`, `credible_interval`, `histogram`, `plot_marginals`, `plot_corner`, `measure`, `chains()` and `cov()` above $d = 100$ from the kept replicates that met; `w1_bound` from the kept replicates, censored ones included. A method of the kept subset with too few kept replicates raises, asking for a larger `keep`.
+- **Variance share:** in both modes it takes the second moments about $\bar a$, so that the same replicates warn alike (DECISIONS #240).
+- **Joint error:** the two sets of replicates are not independent, so no joint error statement is made for estimates from both.
+
 ### 3.5 Tuning rules (R-TUNE)
 
 - **R-TUNE-1:** kernel parameters left unset (for example the proposal covariance) are tuned on independent pilot chains, then frozen. Pilot chains may adapt. Coupled runs never do.
@@ -528,7 +539,8 @@ Fields:
 - `n_log_prob`, `n_grad`, `n_grad_zeroed` (gradients taken as 0, §4.1) and `wall_time` for the run;
 - `measure` (a `SignedMeasure`);
 - `tuning` and `pilot` (reports);
-- `interrupted`: whether a requested replicate has not run (§6.5).
+- `interrupted`: whether a requested replicate has not run (§6.5);
+- `keep` (the run's setting, `None` when every replicate stored its atoms), `n_kept` (the kept replicates that met, `measure.n_replicates`; $R$ without `keep`) and `abandoned` (the replicates that an error abandoned and that have not run since, §6.5). The repr gains `kept=` after `R=` when `keep` is set. The source of each method with `keep` is listed in §3.4.
 
 Methods:
 - **Estimates:**
@@ -569,7 +581,9 @@ Its `per_replicate(h)` returns the `(R, ...)` values $\hat\pi_r(h)$.
 - the relative cost, mean cost / $(m - k + 1)$ (R-TUNE-4);
 - the fraction of pairs that met after $k + L$, censored ones included: the first term of the TV bound at $k$ (§3.6);
 - the largest share of warning 3 of §7.4, and the estimate that holds it (DECISIONS #40);
-- for an interrupted run, that its estimates are consistent but not exactly unbiased (§6.5);
+- with `keep`, after the first line: "mean, standard error and std from all R = 100000; quantiles from the R = 1000 kept replicates (indices below 1000)", ending "no kept replicate" in place of the second clause when none met, and the quantile columns then NaN; the footer's keys `keep` and `n_kept`;
+- for an interrupted run, that its estimates are consistent but not exactly unbiased (§6.5), replaced, while `abandoned` is not empty, by "an error abandoned N replicates in progress: the estimates leave out replicates selected for long meeting times; run the missing replicates", with the footer's key `abandoned`, their number;
+
 - (should; deferred beyond v0.1, DECISIONS #38) $\hat R$ across the replicates' X-chains;
 - warnings raised.
 

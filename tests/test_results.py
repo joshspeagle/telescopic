@@ -510,3 +510,84 @@ def test_the_default_bound_times_end_where_the_bound_vanishes():
     bound = RESULT.tv_bound()
     assert len(bound) == int(RESULT.meeting_times.max()) - RESULT.lag
     assert bound[-1] > 0
+
+
+POINTWISE = Target(gaussian_log_prob)
+
+
+def kept_and_alone(keep=13, n=40):
+    # A run of n replicates that keeps those below keep, and a run of those alone, both
+    # evaluated point by point so that a replicate is bitwise the same in either; the cap
+    # censors some kept pairs.
+    options = SETTINGS | {"max_iter": 14, "target": POINTWISE}
+    reduced = Result(gaussian_run(range(n), keep=keep, **options))
+    alone = Result(gaussian_run(range(keep), **options))
+    return reduced, alone
+
+
+def test_kept_subset_methods_equal_those_of_a_run_of_the_kept_indices():
+    reduced, alone = kept_and_alone()
+    assert reduced.n_censored
+    assert 0 < reduced.n_kept == alone.n_replicates < reduced.n_replicates
+    for name in ("atoms", "weights", "replicate"):
+        np.testing.assert_array_equal(getattr(reduced.measure, name), getattr(alone.measure, name))
+    mine, theirs = reduced.estimate(np.sin, level=0.9), alone.estimate(np.sin, level=0.9)
+    for name in ("value", "standard_error", "interval", "replicates"):
+        np.testing.assert_array_equal(getattr(mine, name), getattr(theirs, name), name)
+    np.testing.assert_array_equal(reduced.quantile([0.1, 0.5]), alone.quantile([0.1, 0.5]))
+    np.testing.assert_array_equal(reduced.credible_interval(), alone.credible_interval())
+    for dims in (0, [0, 1]):
+        for mine, theirs in zip(reduced.histogram(dims, 7), alone.histogram(dims, 7), strict=True):
+            np.testing.assert_array_equal(mine, theirs)
+    np.testing.assert_array_equal(reduced.w1_bound(), alone.w1_bound())
+
+
+def test_reduced_mean_and_cov_agree_with_full_ones_within_rounding():
+    # Claim M1: the moments give the estimators of the atoms, whatever the centers.
+    full = gaussian_result(max_iter=14)
+    reduced = gaussian_result(max_iter=14, keep=5)
+    mine, theirs = reduced.mean(), full.mean()
+    for name in ("value", "standard_error", "interval", "replicates"):
+        np.testing.assert_allclose(getattr(mine, name), getattr(theirs, name), rtol=1e-13)
+    scale = np.max(np.abs(full.cov()))
+    np.testing.assert_allclose(reduced.cov(), full.cov(), rtol=0, atol=1e-13 * scale)
+    np.testing.assert_allclose(reduced.var(), full.var(), rtol=0, atol=1e-13 * scale)
+    np.testing.assert_allclose(reduced.std(), full.std(), rtol=1e-12)
+
+
+def test_variance_share_agrees_with_and_without_keep():
+    # Both modes take the second moments about the mean estimate.
+    full = gaussian_result(n=60).diagnostics()
+    reduced = gaussian_result(n=60, keep=5).diagnostics()
+    assert abs(reduced["variance_share"] - full["variance_share"]) < 1e-12
+    for key in ("variance_share_of", "variance_share_replicate"):
+        assert reduced[key] == full[key]
+
+
+def test_summary_names_the_replicates_behind_each_column():
+    result = gaussian_result(n=60, keep=20, max_iter=14)
+    summary = result.summary()
+    assert summary.footer["keep"] == 20
+    assert summary.footer["n_kept"] == result.n_kept == result.measure.n_replicates
+    assert result.n_kept < result.n_replicates
+    line = (
+        f"mean, standard error and std from all R = {result.n_replicates}; quantiles from "
+        f"the R = {result.n_kept} kept replicates (indices below 20)"
+    )
+    assert line in " ".join(repr(summary).split())
+    assert summary.to_dict()["n_kept"] == result.n_kept
+    assert repr(result).startswith(f"Result(R={result.n_replicates}, kept={result.n_kept}, d=2")
+    assert "kept" not in repr(gaussian_result())
+
+
+def test_summary_with_no_kept_replicate_shows_nan_quantiles():
+    result = gaussian_result(keep=0)
+    summary = result.summary()
+    for column in ("q16", "q50", "q84"):
+        assert np.isnan(summary.table[column]).all()
+    assert np.isfinite(summary.table["mean"]).all()
+    assert f"all R = {result.n_replicates}; no kept replicate" in repr(summary)
+    with pytest.raises(ValueError, match="at least 2 kept replicates that met, not 0; run with"):
+        result.estimate(np.sin)
+    with pytest.raises(ValueError, match="at least 1 kept replicate, not 0"):
+        result.w1_bound()
