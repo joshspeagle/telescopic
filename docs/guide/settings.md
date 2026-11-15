@@ -37,6 +37,14 @@ the settings change the cost and the variance, never the bias.
 
 ## The automatic pipeline
 
+```{diagram} pipeline
+The steps of a run with the default settings, from top to bottom: the tuning pilot, the
+meeting-time pilot, the choice of `k`, `lag` and `m` from its meeting times, and the
+replicates. At the right of each step, the argument that skips it: a kernel given with
+every parameter skips the tuning pilot, and a given `k` the meeting-time pilot, while any
+of `k`, `lag` and `m` given is kept as it is. The numbers are the package's.
+```
+
 With the defaults, before the replicates run:
 
 1. **The tuning pilot.** Kernel parameters left as `None` are tuned from 4 adaptive

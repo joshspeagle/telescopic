@@ -19,7 +19,9 @@
   ``two-chains.svg``, against the cost that the engine counts;
 * ``remedies.svg`` (V11): a chart from each condition that a run reports to the warning or
   error it raises and the remedy that its message names, checked against the messages of
-  small runs made to raise them.
+  small runs made to raise them;
+* ``pipeline.svg`` (V9): the steps of an automatic run and the arguments that skip them,
+  checked against the package's constants and two small runs.
 
 The figures are drawn on the light figure ground with the colors, faces, sizes and
 helpers of ``brand.py``: magenta for chain X, teal for chain Y, the ink of met chains once
@@ -36,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import functools
+import inspect
 import itertools
 import sys
 import warnings
@@ -1197,6 +1200,105 @@ def remedies() -> str:
     return svg(width, y + 8, label, "".join(body))
 
 
+def box(x: float, y: float, width: float, height: float, color: str = BLUE) -> str:
+    """A rectangle with the corner radius of the site, outlined in color."""
+    return (
+        f'<rect x="{_f(x)}" y="{_f(y)}" width="{_f(width)}" height="{_f(height)}" rx="10" '
+        f'fill="none" stroke="{color}" stroke-width="{FIGURE["outline"]}"/>'
+    )
+
+
+# V9's steps: the name, two lines of what the step does, and the argument that skips it.
+PIPELINE = (
+    (
+        "1. tuning pilot",
+        ("4 adaptive chains of", "max(2000, 200d, 10d²) steps"),
+        ("a kernel with every", "parameter given"),
+    ),
+    (
+        "2. meeting-time pilot",
+        ("100 pairs with lag 1,", "censored at 100,000"),
+        ("`k` given",),
+    ),
+    (
+        "3. the settings",
+        ("`k`: 99% quantile of τ − 1", "`lag` = `k`, `m` = 10`k`"),
+        ("each of `k`, `lag`", "and `m` given is kept"),
+    ),
+    (
+        "4. the replicates",
+        ("`n_replicates` pairs,", "on `pool` when given"),
+        ("always run",),
+    ),
+)
+
+
+def pipeline() -> str:
+    """V9: the steps of an automatic run, top to bottom, each with the argument that
+    skips it."""
+    name = "pipeline"
+    rw = telescopic.kernels.RandomWalk
+    # The numbers of the boxes, as the package sets them.
+    check(telescopic.tuning.N_CHAINS == 4, name, "4 tuning chains")
+    source = Path(telescopic.tuning.__file__).read_text()
+    check("max(2000, 200 * d, 10 * d * d)" in source, name, "the tuning pilot's steps")
+    sampler_module = sys.modules["telescopic.sampler"]
+    check(sampler_module.PILOT_REPLICATES == 100, name, "100 pilot pairs")
+    check(sampler_module.PILOT_MAX_ITER == 100_000, name, "the pilot's cap of 100,000")
+    check(sampler_module.PILOT_SETTINGS.lag == 1, name, "the pilot's lag of 1")
+    default = inspect.signature(telescopic.tuning.choose_k).parameters["quantile"].default
+    check(default == 0.99, name, "the 99% quantile")
+    # An automatic run tunes, runs the pilot and sets lag = k and m = 10 k, with k the
+    # quantile of tau - 1; a kernel with every parameter and a given k skip both pilots.
+    auto = telescopic.CoupledSampler(log_density, initial(), kernel=rw(), rng=SEED)
+    quietly(lambda: auto.run(2))
+    k = auto.settings.k
+    times = np.sort(auto.pilot) - 1
+    check(
+        auto.tuning is not None
+        and auto.tuning.n_steps == 2000
+        and len(auto.pilot) == 100
+        and k == int(times[int(np.ceil(0.99 * len(times))) - 1])
+        and (auto.settings.lag, auto.settings.m) == (k, 10 * k),
+        name,
+        "an automatic run's tuning, pilot and settings",
+    )
+    given = telescopic.CoupledSampler(log_density, initial(), kernel=kernel(), rng=SEED)
+    quietly(lambda: given.run(2, k=3))
+    check(
+        given.tuning is None and given.pilot is None and given.settings[:3] == (3, 30, 3),
+        name,
+        "a given kernel and k skip both pilots",
+    )
+    width, row, tall = 640.0, 112.0, 76.0
+    left, span = 20.0, 330.0
+    skip_x = left + span + 28
+    body = [text(skip_x, 26, "skipped by", "start", MUTED)]
+    described = []
+    for i, (title, lines, skip) in enumerate(PIPELINE):
+        y = 40.0 + i * row
+        middle = y + tall / 2
+        body += [
+            box(left, y, span, tall),
+            text(left + 14, y + 24, title, "start", BLUE),
+            *(text(left + 14, y + 47 + 21 * j, words(s)) for j, s in enumerate(lines)),
+            *(
+                text(skip_x, middle + 6 - 11 * (len(skip) - 1) + 22 * j, words(s), "start", MUTED)
+                for j, s in enumerate(skip)
+            ),
+        ]
+        if i < len(PIPELINE) - 1:
+            body.append(arrow(left + 40, y + tall + 4, left + 40, y + row - 4, BLUE))
+        described.append(
+            f"{title}: {' '.join(lines)}; skipped by {' '.join(skip)}".replace("`", "")
+        )
+    label = (
+        "Four boxes from top to bottom, joined by arrows, the steps of an automatic run, each "
+        "with what skips it at the right. " + ". ".join(described) + "."
+    )
+    return svg(width, 40.0 + 3 * row + tall + 12, label, "".join(body))
+
+
 # --------------------------------------------------------------------------- output
 
 
@@ -1210,6 +1312,7 @@ def outputs() -> dict[Path, str]:
         OUT / "tv-bound.svg": tv_bound(),
         OUT / "cost.svg": cost(),
         OUT / "remedies.svg": remedies(),
+        OUT / "pipeline.svg": pipeline(),
     }
 
 
