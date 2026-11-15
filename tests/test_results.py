@@ -621,7 +621,7 @@ def test_chains_are_the_averaged_states_of_the_kept_replicates():
 
 
 def test_inference_data_holds_the_chains_by_name_replicate_and_time():
-    pytest.importorskip("arviz")
+    pytest.importorskip("arviz_base")
     result = Result(
         gaussian_run(range(30), k=3, m=15, lag=2, thin=4, max_iter=17, keep=20),
         names=["a", "b"],
@@ -638,8 +638,8 @@ def test_inference_data_holds_the_chains_by_name_replicate_and_time():
 
 @pytest.mark.parametrize("arviz", [None, SimpleNamespace(__version__="0.23.4")])
 def test_without_arviz_1_inference_data_names_the_extra_to_install(monkeypatch, arviz):
-    # None makes import arviz fail; the namespace stands for an ArviZ before 1.0.
-    monkeypatch.setitem(sys.modules, "arviz", arviz)
+    # None makes the import fail; the namespace stands for an ArviZ before 1.0.
+    monkeypatch.setitem(sys.modules, "arviz_base", arviz)
     with pytest.raises(ImportError, match=r"ArviZ 1\.0 or later.*telescopic\[arviz\]"):
         RESULT.to_inference_data()
 

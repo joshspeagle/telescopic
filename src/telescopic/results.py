@@ -771,9 +771,11 @@ class Result:
             The data structure of ArviZ 1.0 and later, which needs Python 3.12 or newer.
         """
         try:
-            import arviz
+            # The typed package of ArviZ 1.0 that holds from_dict; the arviz package
+            # installs it.
+            import arviz_base
 
-            too_old = int(arviz.__version__.split(".")[0]) < 1
+            too_old = int(arviz_base.__version__.split(".")[0]) < 1
         except ImportError:
             too_old = True
         if too_old:
@@ -791,7 +793,7 @@ class Result:
         with warnings.catch_warnings():
             # ArviZ warns of more chains than draws, the usual shape of many replicates.
             warnings.filterwarnings("ignore", "Found chain dimension", UserWarning)
-            return arviz.from_dict({"posterior": posterior}, coords=coords)
+            return arviz_base.from_dict({"posterior": posterior}, coords=coords)
 
     def plot_meeting_times(self, axes: Sequence[Any] | None = None) -> Any:
         """Plot the meeting times and their survival function (needs matplotlib).
