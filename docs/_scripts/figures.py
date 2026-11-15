@@ -42,7 +42,7 @@ CX, CY, MET, INK, MUTED, LINE = (LIGHT[n] for n in ("cx", "cy", "met", "ink", "m
 BLUE = CATEGORICAL[0]
 UPRIGHT = "ΔΦ"  # capital Greek letters are set upright, as in the theory's equations
 MINUS, PRIME = "\u2212", "\u2032"
-SIZE = 14  # px of the text in the 640-wide box; subscripts are SIZE * 0.75
+SIZE = 19  # px of text in the 640-wide box: about 10 px on a 390 px screen
 
 # The setting of the tutorial How it works: the target N(0, 1), random-walk Metropolis
 # with its default proposal N(x, OPTIMAL_SCALE^2) for cov=[[1.0]], and chains started from
@@ -68,7 +68,7 @@ def rich(*parts: str | tuple[str, str]) -> str:
             lowered = bool(sub)
             if sub:
                 out.append(
-                    f'<tspan dy="{_f(0.3 * SIZE)}" font-size="0.75em" font-style="italic">'
+                    f'<tspan dy="{_f(0.3 * SIZE)}" font-size="0.8em" font-style="italic">'
                     f"{sub}</tspan>"
                 )
         else:
@@ -258,7 +258,7 @@ def two_chains() -> str:
         raise SystemExit("the chosen pair did not meet at its meeting time")
     width, height = 640.0, 330.0
     end = m + 2
-    t = Scale(0.0, end, 56.0, 540.0)
+    t = Scale(0.0, end, 88.0, 540.0)
     values = np.concatenate([x_path[: end + 1], y_path])
     lo, hi = min(-3.0, values.min() - 0.5), values.max() + 0.5
     v = Scale(lo, hi, 262.0, 56.0)
@@ -301,9 +301,16 @@ def two_chains() -> str:
         line(chain_y, CY, dash="7 6"),
         line(chain_x, CX),
         dot(float(t(tau)), float(v(x_path[tau])), MET, r=5.5, ring=True),
-        text(float(chain_x[0, 0]) - 6, float(chain_x[0, 1]) + 5, rich(("X", "")), "end", CX),
-        text(float(chain_y[0, 0]) - 6, float(chain_y[0, 1]) + 5, rich(("Y", "")), "end", CY),
+        text(float(chain_x[0, 0]), float(chain_x[0, 1]) - 10, rich(("X", "")), "start", CX),
+        text(float(chain_y[0, 0]), float(chain_y[0, 1]) - 10, rich(("Y", "")), "start", CY),
     ]
+    # The state axis at the left, with a tick at every even value in the drawn range.
+    axis_x = 64.0
+    body.append(segment(axis_x, float(v(lo)), axis_x, float(v(hi)), MUTED, width=1))
+    for value in range(int(np.ceil(lo / 2)) * 2, int(hi) + 1, 2):
+        y = float(v(value))
+        body.append(segment(axis_x - 5, y, axis_x, y, MUTED, width=1))
+        body.append(text(axis_x - 9, y + 6, f"{value:g}".replace("-", MINUS), "end", MUTED))
     marks = {
         0: "0",
         k: rich(("k", "")),
@@ -491,7 +498,7 @@ def telescoping() -> str:
     body += [
         segment(float(t(tau)), base - 40, float(t(tau)), base + 64, MET, width=1.2, dash="4 4"),
         text(float(t(tau)) + 6, base - 28, rich(("τ", ""), f" = {tau}"), "start", MET),
-        text(float(t(tau)) + 6, base + 22, rich("zero from ", ("τ", ""), " on"), "start", MUTED),
+        text(float(t(tau)) + 6, base + 36, rich("zero from ", ("τ", ""), " on"), "start", MUTED),
         time_axis(t, base + 72, range(int(last) + 1), {int(s): str(int(s)) for s in at}),
         text(float(t(last)), base + 92, rich(("t", "")), "middle", MUTED),
     ]

@@ -456,7 +456,6 @@ figure.hero { position: relative; }
   .pager { grid-template-columns: 1fr; }
   .pager .nx { text-align: left; }
   .hero-label { font-size: 26px; } /* about 14 px on a phone */
-  figure.diagram svg { font-size: 18px; } /* about 10 px on a phone */
   table.genindextable, table.genindextable :is(tbody, tr, td) { display: block; }
   table.genindextable td { min-width: 100%; } /* outranks the cells' inline width of 33% */
 }
