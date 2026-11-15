@@ -374,7 +374,8 @@ class IndependenceProposal(Proposal):
             ``independence.<key>.point``, a copy of the positions, and
             ``independence.<key>.log_q``.
         """
-        return self._cache(state.x, self._log_q(state.x))
+        # The point is a copy: a view of x would follow a later write to the position.
+        return self._cache(state.x.copy(), self._log_q(state.x))
 
     def sample(self, target: Target, state: State, draws: Draws) -> tuple[FloatArray, Any]:
         return self.distribution.sample(draws), None
@@ -423,13 +424,16 @@ class IndependenceProposal(Proposal):
         # state with the cache returns a copy with it filled, and the proposals' state
         # gets one if the first state has it.
         stale = [self._stale_rows(state) for state in states]
-        x = np.concatenate(
-            [proposed.x]
-            + [
-                state.x if rows is None else state.x[rows]
-                for state, rows in zip(states, stale, strict=True)
-            ]
-        )
+        if all(rows is not None and not len(rows) for rows in stale):
+            x = proposed.x
+        else:
+            x = np.concatenate(
+                [proposed.x]
+                + [
+                    state.x if rows is None else state.x[rows]
+                    for state, rows in zip(states, stale, strict=True)
+                ]
+            )
         log_q = self._log_q(x)
         n = len(proposed)
         # A proposal where log q = -inf has weight -inf, so it is rejected: sample drew a
@@ -458,13 +462,12 @@ class IndependenceProposal(Proposal):
         return weights
 
     def _cache(self, x: FloatArray, log_q: FloatArray) -> dict[str, npt.NDArray[Any]]:
-        # The point is a copy: a view of x would follow a later write to the chain's
-        # position.
-        return {self._point_name: x.copy(), self._log_q_name: log_q}
+        return {self._point_name: x, self._log_q_name: log_q}
 
     def _cached(self, state: State, log_q: FloatArray) -> State:
-        # A copy of state whose cache holds log q at its positions; its other fields
-        # carried.
+        # A copy of state whose cache holds log q at its positions, its other fields
+        # carried. Its point is its x, not a copy: only select reads these states, and
+        # its np.where gives the returned point an array of its own.
         extra = state.extra | self._cache(state.x, log_q)
         return State(state.x, state.log_prob, state.grad, extra)
 
@@ -475,9 +478,8 @@ class IndependenceProposal(Proposal):
         # old cache.
         if self._point_name not in state.extra or self._log_q_name not in state.extra:
             return None
-        point = state.extra[self._point_name]
-        same = np.all(point.view(np.uint64) == state.x.view(np.uint64), axis=1)
-        rows: IndexArray = (~same).nonzero()[0]
+        differ = state.extra[self._point_name].view(np.uint64) != state.x.view(np.uint64)
+        rows: IndexArray = differ.any(axis=1).nonzero()[0] if differ.any() else _NO_ROWS
         return rows
 
     def __repr__(self) -> str:
@@ -600,6 +602,8 @@ def _log_alpha(
 
 # Counts the IndependenceProposal objects of the process, which name their caches.
 _PROPOSALS = itertools.count()
+
+_NO_ROWS: IndexArray = np.zeros(0, dtype=np.intp)
 
 
 class SharedCovarianceGaussian(Protocol):
