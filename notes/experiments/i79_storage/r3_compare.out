@@ -1,0 +1,10 @@
+DIFFERS  engine-censored/diagnostics.variance_share: max |diff| 0.218, relative 0.272
+DIFFERS  engine-lag1/diagnostics.variance_share: max |diff| 0.0125, relative 0.0176
+DIFFERS  engine-lag4-thin3/diagnostics.variance_share: max |diff| 0.038, relative 0.0696
+DIFFERS  engine-lag4-thin3/diagnostics.variance_share_of: array('the mean of x0', dtype='<U14') against array('the variance of x0', dtype='<U18')
+DIFFERS  engine-mala-vectorized/diagnostics.variance_share: max |diff| 0.037, relative 0.183
+DIFFERS  engine-one-lane/diagnostics.variance_share: max |diff| 0.0343, relative 0.0713
+DIFFERS  engine-one-lane/diagnostics.variance_share_replicate: max |diff| 11, relative 0.297
+DIFFERS  sample-thread-pool/diagnostics.variance_share: max |diff| 0.0317, relative 0.0543
+352 keys compared; 344 bitwise equal
+no number other than variance_share differs

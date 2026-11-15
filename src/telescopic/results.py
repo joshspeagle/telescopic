@@ -25,7 +25,12 @@ from telescopic._types import (
     values_of,
 )
 from telescopic.engine import Replicates
-from telescopic.estimators import unbiased_covariance, unbiased_variance, weighted_quantile
+from telescopic.estimators import (
+    averaging_times,
+    unbiased_covariance,
+    unbiased_variance,
+    weighted_quantile,
+)
 from telescopic.measure import SignedMeasure
 from telescopic.tuning import TuningReport
 from telescopic.warnings import ConvergenceWarning, warn
@@ -97,6 +102,16 @@ class Result:
     Censored pairs appear in ``meeting_times`` as ``inf`` and are excluded from the
     estimates, from ``n_replicates`` and from ``measure``.
 
+    A run with ``keep`` has two sets of replicates, each named where it is used. The
+    moments, :meth:`mean`, :meth:`var`, :meth:`std` and :meth:`cov` (up to
+    :math:`d = 100`), come from the moments of all :math:`R` replicates that met, as do
+    the meeting times, costs and bounds on total variation. :meth:`estimate`, the
+    quantiles, the histograms, the plots of marginals, ``measure``, :meth:`chains` and
+    :meth:`cov` above :math:`d = 100` come from the ``n_kept`` replicates of index below
+    ``keep`` that met, and :meth:`w1_bound` from the kept replicates, censored ones
+    included. Each set gives unbiased or consistent estimates on its own; no joint error
+    statement holds for estimates from both.
+
     Parameters
     ----------
     replicates : telescopic.engine.Replicates
@@ -117,6 +132,9 @@ class Result:
         The settings of the run.
     max_iter : int or None
         The cap of the run.
+    keep : int or None
+        The replicates of index below ``keep`` stored their signed measures; ``None`` when
+        every replicate did.
     seed : numpy.random.SeedSequence
         The root seed, whose ``entropy`` and ``spawn_key`` reproduce the run.
     index : ndarray of int, shape (R_total,)
@@ -125,8 +143,11 @@ class Result:
     costs : ndarray of int, shape (R_total,)
         Kernel applications per replicate.
     measure : SignedMeasure
+        The signed measures of the kept replicates that met.
     n_replicates : int
         :math:`R`, the replicates that met.
+    n_kept : int
+        The kept replicates that met, ``measure.n_replicates``: :math:`R` without ``keep``.
     n_censored : int
     ndim : int
     n_log_prob, n_grad : int
@@ -140,6 +161,10 @@ class Result:
     interrupted : bool
         Whether a requested replicate never ran, so that the estimates are consistent
         but not exactly unbiased until it does.
+    abandoned : ndarray of int
+        The replicates that an error stopped while they ran and that have not run since.
+        They tend to be those with long meeting times, so while there are any the
+        estimates leave out a selection of the replicates.
     """
 
     def __init__(
@@ -168,13 +193,18 @@ class Result:
         self.index = replicates.index
         self.meeting_times = replicates.meeting_time
         self.costs = replicates.cost
+        self.k, self.m, self.lag, self.thin, self.max_iter, _, self.keep = replicates.settings
+        # The kept replicates, censored ones included, which the W1 bound averages over.
+        stored = np.ones_like(met) if self.keep is None else replicates.index < self.keep
+        self._n_stored = int(stored.sum())
+        kept = met & stored
+        self.n_kept = int(kept.sum())
         self.measure = SignedMeasure(
             replicates.atoms,
             replicates.weights,
-            np.searchsorted(replicates.index[met], replicates.owner),
-            self.n_replicates,
+            np.searchsorted(replicates.index[kept], replicates.owner),
+            self.n_kept,
         )
-        self.k, self.m, self.lag, self.thin, self.max_iter, _ = replicates.settings
         self.seed, self.kernel, self.initial = replicates.seed, kernel, initial
         self._replicates = replicates
         self.n_log_prob, self.n_grad = replicates.n_log_prob, replicates.n_grad
@@ -183,6 +213,7 @@ class Result:
         self.tuning, self.pilot = tuning, pilot
         # The engine runs only requested indices, so missing ones make index shorter.
         self.interrupted = len(replicates.index) < len(replicates.requested)
+        self.abandoned = np.setdiff1d(replicates.abandoned, replicates.index)
         # The cap for a censored pair makes the bounds of section 3.6 lower bounds of
         # their estimates. The engine compared its chains at the cap before censoring
         # it, so the TV bound counts it as meeting at cap + 1, the least it can.
@@ -191,14 +222,18 @@ class Result:
 
     def __repr__(self) -> str:
         # Stored fields only: an echo in a notebook must not compute the diagnostics.
+        kept = "" if self.keep is None else f"kept={self.n_kept}, "
         return (
-            f"Result(R={self.n_replicates}, d={self.ndim}, k={self.k}, m={self.m}, "
+            f"Result(R={self.n_replicates}, {kept}d={self.ndim}, k={self.k}, m={self.m}, "
             f"lag={self.lag}, censored={self.n_censored}, interrupted={self.interrupted})"
         )
 
     # Spec section 3.3.
     def estimate(self, h: Callable[[FloatArray], npt.ArrayLike], level: float = 0.95) -> Estimate:
         r"""Estimate :math:`\pi(h)` with a confidence interval.
+
+        From the kept replicates that met, ``n_kept`` of them, with :math:`n_\mathrm{kept}
+        - 1` degrees of freedom.
 
         Parameters
         ----------
@@ -228,27 +263,25 @@ class Result:
         ((), (50,))
         """
         level = real("level", level, 0, 1)
-        self._require(2)
-        values = self.measure.per_replicate(h)
-        # Imported at first use, which keeps import telescopic, and so a pool worker's
-        # start, free of scipy.stats.
-        from scipy import stats
-
-        value, error = values.mean(axis=0), np.asarray(stats.sem(values, axis=0))
-        # Student's t, not the normal quantile, whose intervals undercover at small R.
-        t = stats.t.ppf((1 + level) / 2, self.n_replicates - 1)
-        interval = np.stack([value - t * error, value + t * error])
-        return Estimate(value, error, interval, level, values)
+        self._require_kept(2)
+        return _estimate(self.measure.per_replicate(h), level)
 
     def mean(self) -> Estimate:
-        """The estimate of the mean of each coordinate.
+        r"""The estimate of the mean of each coordinate.
+
+        From all :math:`R` replicates that met; with ``keep``, from their moments, whose
+        ``replicates`` are :math:`a_r = c_r + \hat\pi_r(x - c_r)`.
 
         Returns
         -------
         Estimate
             With ``value`` and ``standard_error`` of shape ``(d,)``.
         """
-        return self.estimate(lambda x: x)
+        if self.keep is None:
+            return self.estimate(lambda x: x)
+        self._require(2)
+        # A copy: the cached means feed cov, and a caller may write to the replicates.
+        return _estimate(self._first.copy(), 0.95)
 
     def cov(self) -> FloatArray:
         r"""Unbiased estimate of the covariance matrix of the target.
@@ -257,13 +290,28 @@ class Result:
                   - \bar a\bar a^\top + S_a/R
 
         with :math:`a_r = \hat\pi_r(x)`, their mean :math:`\bar a` and sample covariance
-        :math:`S_a` over the :math:`R` replicates that met.
+        :math:`S_a` over the :math:`R` replicates that met. With ``keep``, it comes from
+        the moments of all of them up to :math:`d = 100`, the second moments taken about
+        :math:`\bar a`, and above it from the ``n_kept`` kept replicates that met, whose
+        diagonal can then differ from :meth:`var`.
 
         Returns
         -------
         ndarray, shape (d, d)
         """
-        self._require(2)
+        if self.keep is not None and self.ndim <= engine.FULL_MOMENTS:
+            self._require(2)
+            # The mean over r of pi_r((x - b)(x - b)^T) = S_r + f_r e^T + e f_r^T + e e^T,
+            # with e = c_r - b and f_r = pi_r(x - c_r), about b = a-bar: the mean of the
+            # stored S_r, and matrix products over the replicates, in O(R d + d^2) memory.
+            f, shift = self._shifted
+            i, j = engine._pairs(self.ndim)
+            stored = self._replicates.moments[:, self.ndim :]
+            second = np.zeros((self.ndim, self.ndim))
+            second[i, j] = second[j, i] = stored.mean(axis=0, where=self._met[:, None])
+            second += (f.T @ shift + shift.T @ f + shift.T @ shift) / len(f)
+            return unbiased_covariance(f + shift, second)
+        self._require_kept(2)
         centered, first = self._centered()
         weights = self.measure.weights
         # Summed over blocks of rows, so that the weighted copy is one block, not the atoms.
@@ -272,7 +320,7 @@ class Result:
         for start in range(0, len(weights), rows):
             block = centered[start : start + rows]
             second += block.T @ (weights[start : start + rows, None] * block)
-        return unbiased_covariance(first, second / self.n_replicates)
+        return unbiased_covariance(first, second / self.measure.n_replicates)
 
     def var(self) -> FloatArray:
         r"""Unbiased estimates of the variances; they can be negative.
@@ -280,14 +328,15 @@ class Result:
         .. math:: \widehat{\mathrm{Var}}_\pi(x_j) = R^{-1}\sum_r \hat\pi_r(x_j^2)
                   - \bar a_j^2 + S_{a,jj}/R
 
-        This is the diagonal of :meth:`cov`, whose docstring defines the notation.
+        This is the diagonal of :meth:`cov`, whose docstring defines the notation, from
+        all :math:`R` replicates that met; with ``keep``, from their moments.
 
         Returns
         -------
         ndarray, shape (d,)
         """
         self._require(2)
-        first, second = self._moments
+        first, second = self._moments if self.keep is None else self._about_mean
         return unbiased_variance(first, second.mean(axis=0))
 
     def std(self) -> FloatArray:
@@ -308,7 +357,8 @@ class Result:
     ) -> FloatArray:
         """Quantiles of each coordinate, or of ``h``, under the pooled signed measure.
 
-        Spec section 3.4. Consistent as :math:`R` grows, not unbiased.
+        Spec section 3.4. From the kept replicates that met. Consistent as their number
+        grows, not unbiased.
 
         Parameters
         ----------
@@ -326,12 +376,12 @@ class Result:
         Cost: one sort of the atoms per column, after merging consecutive equal atoms, and
         with ``h``, one call of ``h`` on the merged atoms.
         """
-        self._require(1)
+        self._require_kept(1)
         # Rejections repeat atoms; merging consecutive equal rows first shortens every sort
         # and the calls of h.
         atoms = self.measure.atoms
         first = np.concatenate([[True], np.any(atoms[1:] != atoms[:-1], axis=1)]).nonzero()[0]
-        weights = np.add.reduceat(self.measure.weights, first) / self.n_replicates
+        weights = np.add.reduceat(self.measure.weights, first) / self.measure.n_replicates
         if h is None:
             # One column gathered at a time: a copy of the merged rows would hold most atoms.
             columns = [weighted_quantile(atoms[first, j], weights, q) for j in range(self.ndim)]
@@ -368,10 +418,10 @@ class Result:
     ) -> tuple[FloatArray, FloatArray, FloatArray | list[FloatArray]]:
         """Histogram of one coordinate or several, with standard errors.
 
-        The mass of each bin is the average over replicates of its signed mass, so a bin
-        can be negative. The bins are half-open, :math:`[a, b)`, except the last, which is
-        closed, as in ``numpy.histogram``, so that an atom on the upper edge of ``range``
-        is counted. It is unbiased for a ``range`` fixed before the run; the default
+        The mass of each bin is the average over the kept replicates that met of its
+        signed mass, so a bin can be negative. The bins are half-open, :math:`[a, b)`,
+        except the last, which is closed, as in ``numpy.histogram``, so that an atom on
+        the upper edge of ``range`` is counted. It is unbiased for a ``range`` fixed before the run; the default
         range, from the atoms, biases every bin, the two outer ones by a term of order
         :math:`1/R`. Memory: a few floats per atom, and per bin.
 
@@ -397,7 +447,7 @@ class Result:
         expected = (*np.shape(dims), 2)
         if range is not None and np.shape(range) != expected:
             raise ValueError(f"range must have shape {expected}, not {np.shape(range)}")
-        self._require(2)
+        self._require_kept(2)
         limits = [None] * len(columns) if range is None else map(tuple, np.reshape(range, (-1, 2)))
         cells, edges = [], []
         for column, limit in zip(columns, limits, strict=True):
@@ -408,7 +458,7 @@ class Result:
         which = np.stack(cells)
         inside = np.all((which >= 0) & (which < bins), axis=0)
         cell = np.where(inside, np.ravel_multi_index(which, shape, mode="clip"), -1)
-        n_cells, n = bins ** len(columns), self.n_replicates
+        n_cells, n = bins ** len(columns), self.measure.n_replicates
         masses = self.measure.mass(cell, n_cells)
         column, value = masses.indices, masses.data
         mean = np.bincount(column, value, n_cells) / n
@@ -447,7 +497,8 @@ class Result:
         The bound derived under Distance to stationarity, in :doc:`/theory`. It depends on
         the parameterization of the target. A censored
         pair's distances stop at its cap, so with censored pairs it is a lower bound of the
-        estimate without a cap.
+        estimate without a cap. With ``keep``, it averages over the kept replicates,
+        censored ones included.
 
         Parameters
         ----------
@@ -459,10 +510,12 @@ class Result:
         ndarray, shape of ``t``
         """
         replicates = self._replicates
+        if not self._n_stored:
+            raise ValueError("this needs at least 1 kept replicate, not 0; run with a larger keep")
         if t is None:
             t = self._times(int(np.max(replicates.distance_time, initial=0)) + 1)
         return diagnostics.w1_bound(
-            replicates.distance_time, replicates.distance, len(self.index), self.lag, t
+            replicates.distance_time, replicates.distance, self._n_stored, self.lag, t
         )
 
     # Spec section 3.6 and R-TUNE-4.
@@ -511,9 +564,9 @@ class Result:
         tv_at_k = min(1.0, float(np.maximum(0, excess).mean()))
         share, share_of, share_replicate = np.nan, None, None
         if self.n_replicates >= 2:
-            # The second moments about the atoms' mean, which the variances use: about 0,
-            # far from it, they would vary with the means and hide their own spread.
-            values = np.concatenate(self._moments, axis=1)
+            # The second moments about the mean estimate, in both modes: about 0, far from
+            # it, they would vary with the means and hide their own spread.
+            values = np.concatenate(self._about_mean, axis=1)
             shares = diagnostics.variance_share(values)
             worst = int(np.argmax(shares))
             moment = "mean" if worst < self.ndim else "variance"
@@ -567,7 +620,9 @@ class Result:
         (['x0', 'x1'], ['mean', 'standard_error', 'std', 'q16', 'q50', 'q84'])
         """
         mean = self.mean()
-        quantiles = self.quantile([0.16, 0.5, 0.84])
+        quantiles = (
+            self.quantile([0.16, 0.5, 0.84]) if self.n_kept else np.full((3, self.ndim), np.nan)
+        )
         table = {
             "mean": mean.value,
             "standard_error": mean.standard_error,
@@ -578,6 +633,8 @@ class Result:
         }
         footer: dict[str, Any] = {
             "n_replicates": self.n_replicates,
+            "keep": self.keep,
+            "n_kept": self.n_kept,
             "k": self.k,
             "m": self.m,
             "lag": self.lag,
@@ -586,6 +643,7 @@ class Result:
             "kernel": str(self.kernel),
             **self.diagnostics(),
             "interrupted": self.interrupted,
+            "abandoned": len(self.abandoned),
             "warnings": [issue.message for issue in diagnostics.issues(self)],
         }
         return Summary(self.names, table, footer)
@@ -656,6 +714,31 @@ class Result:
         from telescopic import _io
 
         return _io.load(path, cls)
+
+    def chains(self) -> FloatArray:
+        r"""The averaged states of the kept replicates that met, as chains of equal length.
+
+        Replicate :math:`r`'s chain is :math:`X_t` for :math:`t \in S = \{k, k + s, \dots\}
+        \cap [k, m]`, ``s`` = ``thin``, in time order: the atoms of the time average,
+        without the bias correction. Shaped as ArviZ takes chains, ``(chain, draw,
+        dim)``, for R-hat and effective sample sizes across replicates.
+
+        Returns
+        -------
+        ndarray, shape (n_kept, len(S), d)
+        """
+        time, owner = self._replicates.time, self._replicates.owner
+        if np.any(time < 0):
+            raise ValueError("these replicates were made without the times of their atoms")
+        averaged = averaging_times(self.k, self.m, self.thin)
+        # At a time of S, the averaged atom is its replicate's first row at that time.
+        first = np.ones(len(time), dtype=bool)
+        first[1:] = (time[1:] != time[:-1]) | (owner[1:] != owner[:-1])
+        rows = first & np.isin(time, averaged)
+        states: FloatArray = self.measure.atoms[rows].reshape(
+            self.n_kept, len(averaged), self.ndim
+        )
+        return states
 
     def plot_meeting_times(self, axes: Sequence[Any] | None = None) -> Any:
         """Plot the meeting times and their survival function (needs matplotlib).
@@ -779,16 +862,78 @@ class Result:
         centered = atoms - np.ones(len(atoms)) @ atoms / len(atoms)  # faster than mean(axis=0)
         return centered, self.measure.per_replicate(lambda _: centered)
 
+    @functools.cached_property
+    def _met(self) -> npt.NDArray[np.bool_]:
+        met: npt.NDArray[np.bool_] = np.isfinite(self.meeting_times)
+        return met
+
+    @functools.cached_property
+    def _first(self) -> FloatArray:
+        # With keep: a_r = c_r + pi_r(x - c_r), each replicate's mean, for those that met.
+        replicates = self._replicates
+        first: FloatArray = (
+            replicates.center[self._met] + replicates.moments[self._met, : self.ndim]
+        )
+        return first
+
+    @functools.cached_property
+    def _shifted(self) -> tuple[FloatArray, FloatArray]:
+        # With keep: f_r = pi_r(x - c_r) and e = c_r - a-bar, (R, d) each, for those that met.
+        replicates = self._replicates
+        center = replicates.center[self._met]
+        return replicates.moments[self._met, : self.ndim], center - self._first.mean(axis=0)
+
+    @functools.cached_property
+    def _about_mean(self) -> tuple[FloatArray, FloatArray]:
+        # Each replicate's first and second moments of each coordinate about the mean
+        # estimate a-bar, (R, d) each, from those about a center c: with e = c - a-bar,
+        # pi_r(x - a-bar) = pi_r(x - c) + e and pi_r((x - a-bar)^2) = pi_r((x - c)^2) +
+        # 2 e pi_r(x - c) + e^2. Without keep, c is the atoms' unweighted mean; with it,
+        # c_r, whose squares alone are read from the moments.
+        if self.keep is None:
+            first, second = self._moments
+            shift = -first.mean(axis=0)
+        else:
+            first, shift = self._shifted
+            i, j = engine._pairs(self.ndim)
+            columns = self.ndim + np.flatnonzero(i == j)
+            second = self._replicates.moments[np.ix_(self._met.nonzero()[0], columns)]
+        return first + shift, second + 2 * shift * first + shift**2
+
     def _require(self, n: int) -> None:
         if self.n_replicates < n:
             raise ValueError(
                 f"this needs at least {n} replicates that met, not {self.n_replicates}"
             )
 
+    def _require_kept(self, n: int) -> None:
+        # The methods of the kept subset; without keep, those of every replicate.
+        if self.keep is None:
+            self._require(n)
+        elif self.n_kept < n:
+            raise ValueError(
+                f"this needs at least {n} kept replicates that met, not {self.n_kept}; run "
+                "with a larger keep"
+            )
+
     def _times(self, end: int) -> npt.NDArray[np.int64]:
         # The times t from 0 at which a bound of section 3.6 can be positive when no time
         # from end on enters it: t + L < end.
         return np.arange(max(1, end - self.lag))
+
+
+def _estimate(values: FloatArray, level: float) -> Estimate:
+    # The estimate of the mean of the replicates' values, (R,) or (R, p), with Student's t
+    # interval at the confidence level.
+    # Imported at first use, which keeps import telescopic, and so a pool worker's start,
+    # free of scipy.stats.
+    from scipy import stats
+
+    value, error = values.mean(axis=0), np.asarray(stats.sem(values, axis=0))
+    # Student's t, not the normal quantile, whose intervals undercover at small R.
+    t = stats.t.ppf((1 + level) / 2, len(values) - 1)
+    interval = np.stack([value - t * error, value + t * error])
+    return Estimate(value, error, interval, level, values)
 
 
 @dataclass(eq=False)
@@ -889,6 +1034,18 @@ class Summary:
                 f"R = {footer['n_replicates']}, k = {footer['k']}, m = {footer['m']}, "
                 f"lag = {footer['lag']}, thin = {footer['thin']}"
             ),
+        ]
+        if footer["keep"] is not None:
+            kept = (
+                f"quantiles from the R = {footer['n_kept']} kept replicates (indices below "
+                f"{footer['keep']})"
+                if footer["n_kept"]
+                else "no kept replicate"
+            )
+            lines.append(
+                f"mean, standard error and std from all R = {footer['n_replicates']}; {kept}"
+            )
+        lines += [
             f"kernel: {kernel}",
             (
                 f"meeting times: median {times[0]}, 90% {times[1]}, 99% {times[2]}, max "
@@ -913,7 +1070,13 @@ class Summary:
                 f"{footer['variance_share']:.0%}, for {footer['variance_share_of']}"
             ),
         ]
-        if footer["interrupted"]:
+        if footer["abandoned"]:
+            lines.append(
+                f"an error abandoned {footer['abandoned']} replicates in progress: the "
+                "estimates leave out replicates selected for long meeting times; run the "
+                "missing replicates"
+            )
+        elif footer["interrupted"]:
             lines.append(
                 "interrupted: the estimates are consistent but not exactly unbiased; run "
                 "the remaining replicates to restore unbiasedness"

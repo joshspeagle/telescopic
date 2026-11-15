@@ -421,3 +421,29 @@ All notable changes to this project are documented here. The format follows
   `Independence` are built on them, and their seeded outputs are unchanged bit for bit.
   `RandomWalk(coupling=...)` also takes `Reflection()` or `Maximal()`;
   `RandomWalk.coupling` and `Independence.proposal` can no longer be reassigned.
+- An error during the replicates, such as one of the log-density, no longer loses the
+  replicates finished before it. The same exception is raised again with one note:
+  `engine.run` attaches the finished replicates as `telescopic_replicates`, and
+  `CoupledSampler.run` and `sample` keep them and attach the result of all the sampler's
+  replicates as `telescopic_result`, whose next `run`, or `resume`, starts with the
+  missing ones. The replicates in progress at the error are listed in
+  `Replicates.abandoned` and `Result.abandoned`, saved, and named in the summary until
+  they run. On a pool the error stops the run as a first Ctrl-C does; an error that does
+  not unpickle becomes a `RuntimeError` with the worker's traceback in a note, instead of
+  breaking a process pool.
+- Each atom records the time at which it was recorded, `Replicates.time` (int32), and
+  `Result.chains()` returns the averaged states of each kept replicate as chains of equal
+  length. `max_iter` must be at most 2**31 - 1 where times are stored, and a stored atom
+  costs 8d + 20 bytes instead of 8d + 16.
+- `keep` on `CoupledSampler.run`, `sample` and `engine.run` (and `engine.Settings.keep`)
+  stores the signed measures and distances of the replicates of index below `keep` only,
+  and the moments of every replicate (`Replicates.center` and `Replicates.moments`), from
+  which `mean`, `var`, `std` and `cov` (up to 100 dimensions) come; `estimate`, the
+  quantiles, the histograms and their plots come from the `n_kept` kept replicates
+  (`Result.keep`, `Result.n_kept`), and the summary and the repr name the replicates
+  behind each figure. The memory warning counts the moments.
+- The variance share of the diagnostics takes each replicate's second moments about the
+  mean estimate instead of the atoms' mean, which changes its values.
+- Results are saved in schema 2, which names the estimator family and keeps `keep`, the
+  times, the moments and the abandoned replicates; files of schema 1 load with their
+  times rebuilt.

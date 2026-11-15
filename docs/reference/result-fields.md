@@ -32,6 +32,8 @@ result = telescopic.sample(
 | `tuning`, `pilot` | the report of the tuning chains, and the meeting times of the lag-1 pilot pairs that chose `k`; `None` when not run |
 | `seed` | the root `numpy.random.SeedSequence`, which reproduces the run |
 | `interrupted` | whether a requested replicate never ran ([Parallel runs](../guide/parallel.md#interrupting-a-run)) |
+| `keep`, `n_kept` | the run's `keep`, `None` when every replicate stored its signed measure, and the number of kept replicates that met, which `measure`, the quantiles, the histograms, `estimate` and `chains()` read ([Keeping a subset](../guide/settings.md#keeping-a-subset)) |
+| `abandoned` | the replicates that an error stopped while they ran and that have not run since ([Continuing after an error](../guide/save-load-merge.md#continuing-after-an-error)) |
 
 ## The summary
 
@@ -60,6 +62,10 @@ The lines below it:
 - $R$, the settings `k`, `m`, `lag` and `thin` ([Settings](../guide/settings.md)), and the kernel,
   whose floating-point parameters show to 4 significant figures (`summary.footer` keeps
   every digit);
+- with `keep`, which replicates each column comes from: the mean, its standard error and
+  the standard deviation from all $R$, and the quantiles from the kept replicates, or
+  "no kept replicate" when none met, with the quantile columns then `nan`
+  ([Keeping a subset](../guide/settings.md#keeping-a-subset));
 - the median, the 90% and 99% quantiles and the maximum of the meeting times of every
   pair, where censored pairs sort above every pair that met, and a quantile that falls
   on one shows as `>` and the cap, such as `> 12` for `max_iter=12`; from 500
@@ -76,11 +82,14 @@ The lines below it:
   mean or variance, and that estimate
   ([`variance`](warnings.md#one-replicate-dominating-the-variance-variance));
 - for an interrupted run, that its estimates are consistent but not exactly unbiased
-  ([Interrupting a run](../guide/parallel.md#interrupting-a-run));
+  ([Interrupting a run](../guide/parallel.md#interrupting-a-run)); while an error has
+  abandoned replicates, that the estimates leave out replicates selected for long
+  meeting times, in its place
+  ([Continuing after an error](../guide/save-load-merge.md#continuing-after-an-error));
 - each warning that applies ([Warnings](warnings.md#warnings)).
 
 `summary.table` holds the columns as arrays, and `summary.footer` the rest as a
-dictionary. {meth}`telescopic.Summary.to_dict` converts both to Python numbers, and
+dictionary, with `keep`, `n_kept` and `abandoned`, the number of abandoned replicates. {meth}`telescopic.Summary.to_dict` converts both to Python numbers, and
 {meth}`telescopic.Summary.to_pandas` returns the table as a `pandas.DataFrame` indexed by
 parameter name (it needs the `pandas` extra):
 
@@ -126,8 +135,9 @@ assert abs(values["late_fraction"] - values["tv_bound_at_k"]) < 0.01
   `tv_bound_at_k`, the TV bound at $k$, and with `lag = k` the two are close.
 - `variance_share`, `variance_share_of` and `variance_share_replicate`: the largest share
   of one replicate in the variance of the estimate of a coordinate's mean or variance,
-  that estimate, such as `"the variance of x1"`, and the index of that replicate; `nan`,
-  `None` and `None` below 2 replicates
+  with each replicate's second moments taken about the mean estimate, that estimate,
+  such as `"the variance of x1"`, and the index of that replicate; `nan`, `None` and
+  `None` below 2 replicates
   ([`variance`](warnings.md#one-replicate-dominating-the-variance-variance)).
 - `mean_cost`, `seconds_per_replicate` and `relative_cost`: the cost of a replicate
   ([Settings](../guide/settings.md#cost)).

@@ -840,3 +840,47 @@ The first version is kept as `PREREGISTRATION.v1.md`. The review's labels:
   exceeds 0.9 (A's d = 10, n = 3; B's three cells; A''s 3; B'), with the model's ratio of
   2.8 to 3.0 stated; the implied verdict for J2 says so.
 
+
+## Note of 2026-11-15: the runner, the arms and the layout of the runs
+
+This note adds to the registration; it changes none of its text, and the outcome is scored
+against the text as posted at `4f478b9`.
+
+- **The commit.** The runner, the kernels of every arm, the cells, the seeds and the scorer
+  are those of commit `f4caf3e` (`run.py`, `arms.py`, `cells.py`, `seeds.json`,
+  `score.py`, `check_exactness.py`). No pilot pair, tuning or replicate of a seed of
+  section 5 ran before that commit. The runs start from the commit that adds this note,
+  whose code is that of `f4caf3e`; the runner refuses a checkout with uncommitted changes
+  and stores that mix commits.
+- **Section 3.** `check_exactness.out`, produced at `f4caf3e` with one thread: 68 checks,
+  every one passed on its first run, none repeated.
+- **Layout.** Josh ruled on #162 (2026-11-15) that the cells may run on four
+  single-threaded processes in parallel. Processor time is summed per record, as section
+  11 counts it, not as wall time. The runner's estimate from runs at unregistered seeds
+  (offset by 500000) is about 6.8 processor hours, with tier 1 near 6.0, against
+  section 11's 5.8 and 5.0; section 11's rules for an overrun apply unchanged.
+- **Readings of the text.** Where the text left the code a choice, the implementation
+  reads it as follows; an independent review against the text found each reading
+  conforming, after one correction (the third reading):
+  1. T's cells c = 0 to 8 follow the order of the T bullet of section 5.
+  2. On D2, P, G and J5 run at 5 seeds and CF at 10; on D3, G runs at all 10 seeds.
+  3. P's records computed for G's copies (section 5) count in P's set of that cell, and
+     once in T's proxy check.
+  4. delta is arccos 0.9 exactly.
+  5. M uses the median of the pilot's meeting times; q50, q90 and q99 the inverted-CDF
+     quantile; seconds are process CPU time, and a copy of G carries only G's tuning.
+  6. For CF.2 against P.2, M applies where the comparator left no pair unmet at the cap;
+     for the MALA arms, M applies on E3 and E4 as section 7's table states, and on E2 only
+     where MP left no pair unmet.
+  7. L's reference set holds the arms that hold K on the cell other than P.2 and CF.2,
+     which enter it only when CF.2 is scored; for the HMC arms L extends to the cells of
+     their M domain where P left a pair unmet; the MALA arms get no L.
+  8. V starts a generator at seed 9798 for each comparison and resamples the arm and P
+     independently over their common seeds.
+  9. A confirmation of Z uses as many fresh seeds as the arm has in the cell, from 9800,
+     P's first; a verdict that waits on a confirmation, or on a missing exactness check,
+     prints as provisional.
+  10. The logistic regression's mode is BFGS's fit refined by Newton's method, and the t
+      proposal of its reference is `scipy.stats.multivariate_t`.
+  11. A cell cut by the budget gets a record saying so; confirmation records count toward
+      the 6-hour sum, and run after the main pass.

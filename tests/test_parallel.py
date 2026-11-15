@@ -9,20 +9,21 @@ import warnings
 import weakref
 from concurrent.futures import Executor, Future, ProcessPoolExecutor, ThreadPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
+from dataclasses import replace
 
 import numpy as np
 import pytest
 import threadpoolctl
 
 import telescopic
-from references import assert_same_replicates, gaussian_log_prob
+from references import assert_same_outputs, assert_same_replicates, gaussian_log_prob
 from telescopic import _parallel, _progress, engine
 from telescopic._parallel import Interrupt, execute, opened
 from telescopic.initial import Normal
 from telescopic.kernels import MALA, RandomWalk, State
 from telescopic.results import Result
 from telescopic.target import Target
-from telescopic.warnings import ConvergenceWarning
+from telescopic.warnings import ConvergenceWarning, InputWarning
 
 INIT = Normal([2.0, -1.0], [4.0, 4.0])
 # The cap makes a bug that keeps pairs apart fail instead of hanging a worker.
@@ -32,13 +33,24 @@ SETTINGS = {"k": 3, "m": 30, "lag": 3, "max_iter": 10_000}
 def job(log_prob=gaussian_log_prob, args=()):
     # Point by point, so that a replicate's results are bitwise the same in any batch.
     return functools.partial(
-        engine.run,
+        engine._run,
         Target(log_prob, args=args),
         RandomWalk(np.eye(2)),
         INIT,
         rng=5,
         **SETTINGS,
     )
+
+
+def executed(*args, **kwargs):
+    # execute, raising the error that stopped the run.
+    replicates, error, _ = execute(*args, **kwargs)
+    if error is not None:
+        try:
+            raise error
+        finally:
+            del error  # the traceback keeps this frame
+    return replicates
 
 
 def never(status):
@@ -75,10 +87,10 @@ class Counting(ThreadPoolExecutor):
 
 def test_results_do_not_depend_on_the_pool():
     indices = np.arange(30)
-    alone = execute(job(), indices, None, never)
+    alone = executed(job(), indices, None, never)
     with ThreadPoolExecutor(3) as threads, opened(2) as workers:
         for pool in (workers, threads, Serial()):
-            assert_same_replicates(execute(job(), indices, pool, never), alone)
+            assert_same_replicates(executed(job(), indices, pool, never), alone)
 
 
 def test_the_sampler_runs_its_pilot_and_replicates_on_its_pool():
@@ -96,7 +108,7 @@ def test_the_sampler_runs_its_pilot_and_replicates_on_its_pool():
 def test_a_pool_gets_chunks_of_full_lanes_and_at_most_four_per_worker(n, workers, chunks):
     # 2,000 replicates fill 256 lanes 8 times; 1,000 on one worker are cut in four.
     with Counting(workers) as executor:
-        execute(job(), np.arange(n), executor, never)
+        executed(job(), np.arange(n), executor, never)
     assert len(executor.chunks) == chunks
     assert max(executor.chunks) - min(executor.chunks) <= 1
 
@@ -117,7 +129,7 @@ def test_pool_chunks_never_exceed_the_replicate_cap(n, workers, chunks):
     # makes a fifth chunk. Four chunks per worker of 100,000 replicates on 4 workers
     # would hold 6,250 each, so the cap makes 98 chunks of 1,020 or 1,021.
     with Sampling(workers) as executor:
-        execute(job(), np.arange(n), executor, never)
+        executed(job(), np.arange(n), executor, never)
     assert sum(executor.chunks) == n
     assert len(executor.chunks) == chunks
     assert max(executor.chunks) <= _parallel.MAX_CHUNK == 1_024
@@ -126,10 +138,10 @@ def test_pool_chunks_never_exceed_the_replicate_cap(n, workers, chunks):
 
 def test_results_do_not_depend_on_the_replicate_cap(monkeypatch):
     # 60 replicates on 2 workers make 2 chunks of 30; a cap of 8 makes 8 chunks of 7 or 8.
-    alone = execute(job(), np.arange(60), None, never)
+    alone = executed(job(), np.arange(60), None, never)
     monkeypatch.setattr(_parallel, "MAX_CHUNK", 8)
     with Counting(2) as executor:
-        capped = execute(job(), np.arange(60), executor, never)
+        capped = executed(job(), np.arange(60), executor, never)
     assert len(executor.chunks) == 8
     assert_same_replicates(capped, alone)
 
@@ -137,7 +149,7 @@ def test_results_do_not_depend_on_the_replicate_cap(monkeypatch):
 def test_a_map_pool_that_reports_its_size_gets_waves_of_that_size():
     # 2,000 replicates on 2 workers: 8 chunks, in waves of 2.
     pool = Sized()
-    execute(job(), np.arange(2_000), pool, never)
+    executed(job(), np.arange(2_000), pool, never)
     assert pool.waves == [2, 2, 2, 2]
 
 
@@ -178,13 +190,13 @@ def test_n_workers_sizes_the_waves_of_a_map_pool_that_hides_its_size(monkeypatch
     # waves of 2. Sized by the 1 CPU they would be 4 chunks in waves of 1.
     one_cpu(monkeypatch)
     pool = Serial()
-    execute(job(), np.arange(2_000), pool, never, n_workers=2)
+    executed(job(), np.arange(2_000), pool, never, n_workers=2)
     assert pool.waves == [2, 2, 2, 2]
 
 
 def test_n_workers_wins_over_the_size_a_pool_reports():
     with Counting(2) as executor:
-        execute(job(), np.arange(200), executor, never, n_workers=4)
+        executed(job(), np.arange(200), executor, never, n_workers=4)
     assert executor.chunks == [50] * 4
 
 
@@ -237,14 +249,14 @@ def test_tasks_in_other_processes_pin_blas_and_ignore_ctrl_c(monkeypatch):
         monkeypatch.setenv(name, "2")
     pinned = job(checked_log_prob, (1, True))
     with opened(1) as workers:
-        execute(pinned, np.arange(4), workers, never)
+        executed(pinned, np.arange(4), workers, never)
     with ProcessPoolExecutor(1, multiprocessing.get_context("spawn")) as executor:
-        execute(pinned, np.arange(4), executor, never)
+        executed(pinned, np.arange(4), executor, never)
 
 
 def test_tasks_in_this_process_leave_its_settings_alone():
     with threadpoolctl.threadpool_limits(2), ThreadPoolExecutor(2) as threads:
-        execute(job(checked_log_prob, (2, False)), np.arange(4), threads, never)
+        executed(job(checked_log_prob, (2, False)), np.arange(4), threads, never)
 
 
 def test_workers_are_made_while_ctrl_c_is_ignored(monkeypatch):
@@ -289,7 +301,7 @@ def nan_log_prob(x):
 
 def test_an_error_in_a_worker_reaches_the_caller():
     with pytest.raises(ValueError, match="log_prob returned nan"), opened(1) as workers:
-        execute(job(nan_log_prob), np.arange(8), workers, never)
+        executed(job(nan_log_prob), np.arange(8), workers, never)
 
 
 def test_workers_stopped_by_an_error_are_freed_once_the_caller_drops_it():
@@ -301,7 +313,7 @@ def test_workers_stopped_by_an_error_are_freed_once_the_caller_drops_it():
             pytest.raises(ValueError, match="log_prob returned nan") as caught,
             opened(1) as workers,
         ):
-            execute(job(nan_log_prob), np.arange(8), workers, never)
+            executed(job(nan_log_prob), np.arange(8), workers, never)
         freed = weakref.ref(workers)
         del caught, workers
         assert freed() is None
@@ -314,8 +326,8 @@ def test_a_monitors_stop_reaches_the_replicates_of_telescopics_workers():
     # run submits a chunk: the second run's result does not depend on when a stop arrives.
     # Its first chunk starts one set of lanes and refills none, and the others run nothing.
     with opened(1) as workers:
-        execute(job(), np.arange(8), workers, lambda status: True)
-        stopped = execute(job(), np.arange(2048), workers, never)
+        executed(job(), np.arange(8), workers, lambda status: True)
+        stopped = executed(job(), np.arange(2048), workers, never)
     np.testing.assert_array_equal(stopped.index, np.arange(engine.LANES))
     np.testing.assert_array_equal(stopped.requested, np.arange(2048))
 
@@ -329,7 +341,7 @@ def test_a_chunk_that_starts_after_the_stop_runs_nothing_unless_it_is_the_first(
     payload = _parallel._dumps(job())
     assert _parallel._task(payload, os.getpid(), np.arange(600)) is None
     first = _parallel._task(payload, os.getpid(), np.arange(600), first=True)
-    np.testing.assert_array_equal(first.index, np.arange(engine.LANES))
+    np.testing.assert_array_equal(first.replicates.index, np.arange(engine.LANES))
 
 
 @pytest.mark.parametrize("pool", ["threads", "map"])
@@ -365,7 +377,7 @@ def test_a_stop_on_a_pool_keeps_the_finished_chunks(pool, at_once, monkeypatch):
                 thread.submit(released.wait)  # the first chunk is still queued at the stop
         runner = thread if pool == "threads" else Serial()
         try:
-            stopped = execute(job(), indices, runner, monitor)
+            stopped = executed(job(), indices, runner, monitor)
         finally:
             released.set()  # a failing run fails instead of leaving the thread waiting
     assert 0 < len(stopped.index) < len(indices)
@@ -392,7 +404,7 @@ class Broken(Executor):
 
 def test_a_pool_broken_after_a_stop_returns_the_finished_chunks():
     # 200 replicates in 2 chunks: the first ran.
-    stopped = execute(job(), np.arange(200), Broken(first=True), lambda status: True)
+    stopped = executed(job(), np.arange(200), Broken(first=True), lambda status: True)
     np.testing.assert_array_equal(stopped.index, np.arange(100))
     np.testing.assert_array_equal(stopped.requested, np.arange(200))
 
@@ -402,7 +414,7 @@ def test_a_pool_broken_after_a_stop_returns_the_finished_chunks():
 )
 def test_a_broken_pool_raises_without_a_stop_or_a_finished_chunk(first, monitor):
     with pytest.raises(BrokenProcessPool):
-        execute(job(), np.arange(200), Broken(first), monitor)
+        executed(job(), np.arange(200), Broken(first), monitor)
 
 
 def test_ctrl_c_once_stops_new_replicates_and_twice_raises(capsys):
@@ -573,10 +585,10 @@ def test_progress_bars_count_the_replicates_as_they_finish(capsys):
 
 def test_pools_ship_functions_with_cloudpickle_and_say_what_to_do_without(monkeypatch):
     nameless = job(lambda x: gaussian_log_prob(x))
-    execute(nameless, np.arange(4), Serial(), never)
+    executed(nameless, np.arange(4), Serial(), never)
     monkeypatch.setitem(sys.modules, "cloudpickle", None)
     with pytest.raises(TypeError, match="install cloudpickle"):
-        execute(nameless, np.arange(4), Serial(), never)
+        executed(nameless, np.arange(4), Serial(), never)
 
 
 def locked_log_prob(x, lock):
@@ -590,7 +602,7 @@ def test_a_job_that_cannot_be_pickled_names_the_cause(cloudpickle, monkeypatch):
         monkeypatch.setitem(sys.modules, "cloudpickle", None)
     locked = job(locked_log_prob, (threading.Lock(),))
     with pytest.raises(TypeError, match=r"cannot pickle '_thread\.lock' object") as error:
-        execute(locked, np.arange(4), Serial(), never)
+        executed(locked, np.arange(4), Serial(), never)
     assert ("install cloudpickle" in str(error.value)) is not cloudpickle
 
 
@@ -668,3 +680,128 @@ def test_a_target_with_log_prob_and_grad_runs_on_a_pool():
         for pool in (None, Serial())
     ]
     assert_same_replicates(runs[1]._replicates, runs[0]._replicates)
+
+
+class TwoArguments(Exception):
+    # An error that pickles but does not unpickle: its constructor needs two arguments.
+    def __init__(self, code, detail):
+        super().__init__(f"{code}: {detail}")
+
+
+calls = 0
+
+
+def failing_log_prob(x):
+    # Raises TwoArguments at the process's evaluation number 40,000, after the first
+    # replicates of a chunk of 512 have finished.
+    global calls
+    calls += 1
+    if calls == 40_000:
+        raise TwoArguments(7, "the model failed")
+    return gaussian_log_prob(x)
+
+
+def test_an_error_that_does_not_unpickle_keeps_the_finished_chunks():
+    # A process pool unpickles a chunk's result in its own thread, and a failure there
+    # breaks the pool: every chunk, the finished ones too, was lost.
+    with opened(1) as workers:
+        replicates, error, _ = execute(job(failing_log_prob), np.arange(2_048), workers, never)
+    assert type(error) is RuntimeError
+    assert str(error) == "TwoArguments: 7: the model failed"
+    assert any("Traceback" in note and "failing_log_prob" in note for note in error.__notes__)
+    assert len(replicates.index)
+    np.testing.assert_array_equal(replicates.requested, np.arange(2_048))
+    alone = executed(job(), replicates.index, None, never)
+    assert_same_outputs(replace(replicates, requested=alone.requested), alone)
+
+
+CACHED = ValueError("cached")
+by_thread = threading.local()
+both = threading.Barrier(2, timeout=60)
+
+
+def cached_log_prob(x):
+    # Raises CACHED at the evaluation number 12,000 of each thread, in its second chunk of
+    # 263 replicates, once the other thread has reached its own: both raise.
+    by_thread.calls = getattr(by_thread, "calls", 0) + 1
+    if by_thread.calls == 12_000:
+        both.wait()
+        raise CACHED
+    return gaussian_log_prob(x)
+
+
+def test_a_cached_exception_raised_by_two_chunks_counts_each_chunk_once():
+    # The second chunks of two new threads raise the same object: it carries one note,
+    # and the replicates of the first chunks and of both failed ones, each counted once.
+    kernel = RandomWalk(np.eye(2))
+    with ThreadPoolExecutor(2) as pool:
+        sampler = telescopic.CoupledSampler(cached_log_prob, INIT, kernel=kernel, pool=pool, rng=5)
+        with pytest.raises(ValueError, match="cached") as caught:
+            sampler.run(2_100, **SETTINGS)
+    assert caught.value is CACHED
+    notes = [note for note in CACHED.__notes__ if note.startswith("telescopic:")]
+    assert len(notes) == 1
+    assert "Errors stopped 1 other chunks of the run too" in notes[0]
+    kept = CACHED.telescopic_result.index
+    assert np.isin(np.arange(526), kept).all()
+    assert len(kept) > 526
+
+
+class Outside:
+    # An initial distribution whose draws after the first `after` start where
+    # supported_log_prob is zero.
+    def __init__(self, after):
+        self.after, self.draws = after, 0
+
+    def __call__(self, rng):
+        self.draws += 1
+        point = rng.standard_normal(2)
+        return point + np.array([10.0, 0.0]) if self.draws > self.after else point
+
+
+def supported_log_prob(x):
+    return -np.inf if x[0] > 9.0 else gaussian_log_prob(x)
+
+
+@pytest.mark.parametrize(
+    ("pool", "after"), [(None, 600), (Sized(), 300)], ids=["live", "after the run"]
+)
+def test_a_warning_raised_as_an_error_keeps_the_finished_replicates(pool, after):
+    # The warning about zero-density starts, an error under this suite's filter: in this
+    # process from the monitor once replicates have finished, and on a pool, which copies
+    # the initial distribution into each chunk of 200, from the check after the run.
+    kernel = RandomWalk(np.eye(2))
+    sampler = telescopic.CoupledSampler(
+        supported_log_prob, Outside(after), kernel=kernel, pool=pool, rng=3
+    )
+    with pytest.raises(InputWarning, match="start where the target density is zero") as caught:
+        sampler.run(600, **SETTINGS)
+    kept = caught.value.telescopic_result
+    assert len(kept.index)
+    assert sampler.settings is not None
+    assert_same_replicates(sampler._replicates, kept._replicates)
+
+
+def test_a_monitor_error_on_a_pool_keeps_the_finished_chunks():
+    # One thread runs 4 chunks of 250 in turn: the monitor raises once one has finished.
+    raised = RuntimeError("the monitor failed")
+
+    def monitor(status):
+        if status.finished:
+            raise raised
+        return False
+
+    with ThreadPoolExecutor(1) as pool:
+        replicates, error, _ = execute(job(), np.arange(1_000), pool, monitor)
+    assert error is raised
+    assert 250 <= len(replicates.index) <= 500
+    np.testing.assert_array_equal(replicates.requested, np.arange(1_000))
+
+
+def test_the_chunks_of_a_broken_pool_count_as_one_error():
+    # Broken fails each chunk but the first: 600 replicates in 3 chunks of 200 on its 2
+    # workers, two of which raise BrokenProcessPool.
+    replicates, error, others = execute(job(), np.arange(600), Broken(first=True), never)
+    assert isinstance(error, BrokenProcessPool)
+    assert others == 0
+    np.testing.assert_array_equal(replicates.index, np.arange(200))
