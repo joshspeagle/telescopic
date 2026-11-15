@@ -82,6 +82,8 @@ class Mixture(Kernel):
         # index to the last component of positive weight.
         self._last = int(np.nonzero(self.weights)[0][-1])
         self._cumulative = np.cumsum(self.weights)
+        # The prefixes of the components' fields, f"{i}/{name}".
+        self._prefixes = [f"{i}/" for i in range(len(self.kernels))]
 
     @property
     def needs_grad(self) -> bool:
@@ -125,8 +127,8 @@ class Mixture(Kernel):
 
     def init_extra(self, state: State) -> dict[str, npt.NDArray[Any]]:
         return {
-            f"{index}/{name}": value
-            for index, kernel in enumerate(self.kernels)
+            prefix + name: value
+            for prefix, kernel in zip(self._prefixes, self.kernels, strict=True)
             for name, value in kernel.init_extra(state).items()
         }
 
@@ -135,17 +137,18 @@ class Mixture(Kernel):
         if (component == component[0]).all():
             # One component for every row, always so at one lane: no copies.
             index = int(component[0])
-            new, probability = self.kernels[index].step(target, _own(state, index), draws)
-            return _merged(new, state, index), probability
+            prefix = self._prefixes[index]
+            new, probability = self.kernels[index].step(target, _own(state, prefix), draws)
+            return _merged(new, state, prefix), probability
         state = state.take(slice(None))
         probability = np.zeros(len(state))
-        for index, kernel in enumerate(self.kernels):
+        for index, (prefix, kernel) in enumerate(zip(self._prefixes, self.kernels, strict=True)):
             rows = (component == index).nonzero()[0]
             if len(rows):
                 new, probability[rows] = kernel.step(
-                    target, _own(state, index).take(rows), draws.subset(rows)
+                    target, _own(state, prefix).take(rows), draws.subset(rows)
                 )
-                state.put(rows, _prefixed(new, index))
+                state.put(rows, _prefixed(new, prefix))
         return state, probability
 
     def coupled_step(
@@ -154,22 +157,23 @@ class Mixture(Kernel):
         component = self._choose(draws)
         if (component == component[0]).all():
             index = int(component[0])
+            prefix = self._prefixes[index]
             new_x, new_y = self.kernels[index].coupled_step(
-                target, _own(state_x, index), _own(state_y, index), draws
+                target, _own(state_x, prefix), _own(state_y, prefix), draws
             )
-            return _merged(new_x, state_x, index), _merged(new_y, state_y, index)
+            return _merged(new_x, state_x, prefix), _merged(new_y, state_y, prefix)
         state_x, state_y = state_x.take(slice(None)), state_y.take(slice(None))
-        for index, kernel in enumerate(self.kernels):
+        for index, (prefix, kernel) in enumerate(zip(self._prefixes, self.kernels, strict=True)):
             rows = (component == index).nonzero()[0]
             if len(rows):
                 new_x, new_y = kernel.coupled_step(
                     target,
-                    _own(state_x, index).take(rows),
-                    _own(state_y, index).take(rows),
+                    _own(state_x, prefix).take(rows),
+                    _own(state_y, prefix).take(rows),
                     draws.subset(rows),
                 )
-                state_x.put(rows, _prefixed(new_x, index))
-                state_y.put(rows, _prefixed(new_y, index))
+                state_x.put(rows, _prefixed(new_x, prefix))
+                state_y.put(rows, _prefixed(new_y, prefix))
         return state_x, state_y
 
     def _choose(self, draws: Draws) -> IndexArray:
@@ -190,37 +194,35 @@ def _check_markov(kernels: list[Kernel]) -> None:
             )
 
 
-# Component `index` names its fields without the prefix f"{index}/" that the mixture's
-# states give them. Each helper returns its input when no state has fields, as for every
-# shipped kernel but Independence.
-def _own(state: State, index: int) -> State:
-    # The state that component `index` sees: its own fields, without their prefix.
+# Component i names its fields without the prefix f"{i}/" that the mixture's states give
+# them. Each helper returns its input when no state has fields, as for every shipped
+# kernel but Independence.
+def _own(state: State, prefix: str) -> State:
+    # The state that the component of this prefix sees: its own fields, without it.
     if not state.extra:
         return state
-    prefix = f"{index}/"
-    extra = {
-        name[len(prefix) :]: value
-        for name, value in state.extra.items()
-        if name.startswith(prefix)
-    }
-    return State(state.x, state.log_prob, state.grad, extra)
+    return state._with_extra(
+        {
+            name[len(prefix) :]: value
+            for name, value in state.extra.items()
+            if name.startswith(prefix)
+        }
+    )
 
 
-def _prefixed(state: State, index: int) -> State:
+def _prefixed(state: State, prefix: str) -> State:
     if not state.extra:
         return state
-    extra = {f"{index}/{name}": value for name, value in state.extra.items()}
-    return State(state.x, state.log_prob, state.grad, extra)
+    return state._with_extra({prefix + name: value for name, value in state.extra.items()})
 
 
-def _merged(new: State, old: State, index: int) -> State:
+def _merged(new: State, old: State, prefix: str) -> State:
     # The component's output, with its fields prefixed again and every other field of the
     # mixture's input carried unchanged.
     if not (new.extra or old.extra):
         return new
-    prefix = f"{index}/"
     extra = carried(
         {name: value for name, value in old.extra.items() if not name.startswith(prefix)}
     )
     extra.update((prefix + name, value) for name, value in new.extra.items())
-    return State(new.x, new.log_prob, new.grad, extra)
+    return new._with_extra(extra)

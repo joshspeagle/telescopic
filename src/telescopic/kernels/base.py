@@ -69,6 +69,10 @@ class State:
             {name: value[rows] for name, value in self.extra.items()},
         )
 
+    def _with_extra(self, extra: dict[str, npt.NDArray[Any]]) -> State:
+        # This state's arrays with other fields of extra.
+        return State(self.x, self.log_prob, self.grad, extra)
+
     def put(self, rows: Any, other: State) -> None:
         """Overwrite the chains in ``rows`` with ``other``, in place.
 
@@ -630,7 +634,12 @@ def select(accepted: BoolArray, proposal: State, current: State) -> State:
         if proposed is None:
             extra[name] = value.copy()  # an array of its own, as np.where gives
         else:
-            extra[name] = np.where(accepted.reshape(-1, *[1] * (value.ndim - 1)), proposed, value)
+            rows = (
+                accepted[:, None]
+                if value.ndim == 2
+                else accepted.reshape(-1, *[1] * (value.ndim - 1))
+            )
+            extra[name] = np.where(rows, proposed, value)
     return State(
         np.where(accepted[:, None], proposal.x, current.x),
         np.where(accepted, proposal.log_prob, current.log_prob),

@@ -468,8 +468,7 @@ class IndependenceProposal(Proposal):
         # A copy of state whose cache holds log q at its positions, its other fields
         # carried. Its point is its x, not a copy: only select reads these states, and
         # its np.where gives the returned point an array of its own.
-        extra = state.extra | self._cache(state.x, log_q)
-        return State(state.x, state.log_prob, state.grad, extra)
+        return state._with_extra(state.extra | self._cache(state.x, log_q))
 
     def _stale_rows(self, state: State) -> IndexArray | None:
         # The rows whose cached log q cannot be used, or None when the state has no cache.
