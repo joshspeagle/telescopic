@@ -207,6 +207,7 @@ class CoupledSampler:
         self._pilot_zero_density = 0  # pilot pairs started where the density is zero
         # The pilot's k when the settings were fixed, if a pilot had run (DECISIONS #259).
         self._k_rule: int | None = None
+        self._settings: engine.Settings | None = None
         self._replicates: engine.Replicates | None = None
         # From its own stream, before any tuning, so that it changes no result.
         self.gradient_check: diagnostics.GradientCheck | None = None
@@ -230,7 +231,7 @@ class CoupledSampler:
         -------
         telescopic.engine.Settings or None
         """
-        return None if self._replicates is None else self._replicates.settings
+        return self._settings
 
     # Spec section 8.1; seed and indices, section 6.1; interrupted results, section 6.5.
     def resume(self, result: Result) -> None:
@@ -299,7 +300,7 @@ class CoupledSampler:
         self.seed, self.kernel, self.tuning = seed, kernel, report
         self.names, self.pilot = result.names, result.pilot
         self._k_rule = result._k_rule
-        self._replicates = result._replicates
+        self._settings, self._replicates = result._replicates.settings, result._replicates
         differs = False
         if report is not result.tuning:  # tuned again
             new, kept = cast(TuningReport, report), cast(TuningReport, result.tuning)
@@ -399,6 +400,7 @@ class CoupledSampler:
         thin: int | None = None,
         max_iter: int | None = None,
         keep: int | None = None,
+        start: int | None = None,
         progress: bool | None = None,
     ) -> Result:
         """Run ``n_replicates`` more replicates and return the result of all of them so far.
@@ -438,6 +440,11 @@ class CoupledSampler:
             histograms and :meth:`~telescopic.Result.estimate` come from the kept
             replicates. ``None`` stores every replicate's signed measure on the first
             call, and keeps the first call's setting on later ones.
+        start : int, optional
+            Run the replicates of indices ``start`` to ``start + n_replicates - 1``, none
+            of which this sampler may have requested before, as one task of a run split
+            into ranges of indices. ``None`` runs first the requested replicates that
+            have not run, then indices above the highest requested so far.
         progress : bool, optional
             Show the progress of the run and of the tuning and the pilot it runs;
             ``None`` takes the sampler's setting.
@@ -464,6 +471,9 @@ class CoupledSampler:
         """
         n_replicates = integer("n_replicates", n_replicates, minimum=1)
         given = self._check(k, m, lag, thin, max_iter, keep)
+        if start is not None:
+            start = integer("start", start, "None or an integer >= 0", minimum=0)
+            self._check_start(start, n_replicates)
         show = self.progress if progress is None else flag("progress", progress)
         interrupt = Interrupt()
         with ExitStack() as catching:
@@ -473,7 +483,7 @@ class CoupledSampler:
                 settings = self.settings or self._configure(given, pool, show)
                 done = 0 if self._replicates is None else len(self._replicates.index)
                 self._check_memory(settings, done + n_replicates)
-                indices = self._next_indices(n_replicates)
+                indices = self._next_indices(n_replicates, start)
                 # From the start of the replicates until the result returns, the first
                 # Ctrl-C lets the run finish (spec section 6.5): after the replicates,
                 # while the workers stop and the result is built, it would lose them.
@@ -485,6 +495,7 @@ class CoupledSampler:
                 self._replicates = (
                     part if self._replicates is None else engine.merge([self._replicates, part])
                 )
+                self._settings = settings
                 if error is not None:
                     note = self._stopped(part, len(indices), others)
                     engine._attach(error, "telescopic_result", self._result(), note)
@@ -546,9 +557,25 @@ class CoupledSampler:
             lines.append(f"Errors stopped {others:,} other chunks of the run too.")
         return f"{lines[0]}. {' '.join(lines[1:])}"
 
-    def _next_indices(self, n: int) -> IntArray:
-        # The requested replicates that an interrupted run never started come first, then
-        # new indices, so that a run completes an interrupted one (spec section 6.5).
+    def _check_start(self, start: int, n: int) -> None:
+        # The range from start must be new to the sampler (spec section 8.1).
+        if self._replicates is None:
+            return
+        requested = self._replicates.requested
+        overlap = requested[(requested >= start) & (requested < start + n)]
+        if len(overlap):
+            raise ValueError(
+                f"start={start} runs the indices {start} to {start + n - 1}, of which "
+                f"{len(overlap)} were requested before, the first {overlap[0]}; each replicate "
+                "runs once, so choose a range this sampler has not run"
+            )
+
+    def _next_indices(self, n: int, start: int | None = None) -> IntArray:
+        # The given range, or the requested replicates that an interrupted run never
+        # started first, then new indices, so that a run completes an interrupted one
+        # (spec section 6.5).
+        if start is not None:
+            return np.arange(start, start + n)
         if self._replicates is None:
             return np.arange(n)
         requested = self._replicates.requested

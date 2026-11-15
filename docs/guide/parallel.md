@@ -67,7 +67,8 @@ assert (both.k, both.m, both.lag) == (first.k, first.m, first.lag)
 The second run ran 100 more replicates on the same workers, with the settings of the
 first, and returned the result of all the replicates so far. To split a run across
 machines, run separate ranges of replicate indices with one seed and the same settings,
-and join the results ([Merging runs](save-load-merge.md#merging-runs)).
+`sampler.run(n, start=i)` for the indices `i` to `i + n - 1`, and join the results
+([Merging runs](save-load-merge.md#merging-runs)).
 
 ## Tuning
 

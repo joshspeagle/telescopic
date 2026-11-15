@@ -75,6 +75,34 @@ def test_a_sampler_keeps_its_settings():
         sampler.settings = sampler.settings._replace(lag=2)
 
 
+def test_ranges_run_from_start_by_separate_samplers_merge_to_one_run():
+    # Each task tunes from the same seed and is given k, as the tasks of a cluster job.
+    whole = CoupledSampler(log_prob, INIT, rng=5).run(30, k=20)
+    parts = [
+        CoupledSampler(log_prob, INIT, rng=5).run(n, k=20, start=start)
+        for start, n in ((20, 10), (0, 20))
+    ]
+    np.testing.assert_array_equal(parts[0].index, np.arange(20, 30))
+    assert_same_replicates(parts[1].merge(parts[0])._replicates, whole._replicates)
+
+
+def test_a_run_after_a_range_continues_above_it():
+    sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3)
+    sampler.run(5, k=40, start=10)
+    np.testing.assert_array_equal(sampler.run(5).index, np.r_[10:20])
+
+
+def test_start_refuses_a_range_the_sampler_requested_and_a_negative_index():
+    sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3)
+    sampler.run(5, k=40, start=10)
+    with pytest.raises(ValueError, match="start=12 runs the indices 12 to 21, of which 3 were"):
+        sampler.run(10, start=12)
+    with pytest.raises(ValueError, match="start must be at least 0"):
+        sampler.run(10, start=-1)
+    with pytest.raises(TypeError, match="start must be None or an integer"):
+        sampler.run(10, start=1.5)
+
+
 @pytest.fixture(scope="module")
 def first_run():
     # The first 10 replicates of a run with everything automatic, and 15 of the same run.

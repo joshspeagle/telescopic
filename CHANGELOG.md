@@ -526,6 +526,8 @@ All notable changes to this project are documented here. The format follows
   `plotting.meeting_times`, which now draws its curve with it.
 - `Result.merge` takes any number of results, `a.merge(b, c, d)`, and joins them in one
   pass.
+- `CoupledSampler.run(n, start=i)` runs the replicates of indices `i` to `i + n - 1`, so
+  that separate samplers with one seed and the same settings run the ranges of one run.
 
 ### Changed
 
