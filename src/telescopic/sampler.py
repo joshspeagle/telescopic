@@ -396,6 +396,7 @@ class CoupledSampler:
         lag: int | str = "auto",
         thin: int | None = None,
         max_iter: int | None = None,
+        keep: int | None = None,
         progress: bool | None = None,
     ) -> Result:
         """Run ``n_replicates`` more replicates and return the result of all of them so far.
@@ -407,6 +408,12 @@ class CoupledSampler:
         The first Ctrl-C during the replicates lets those in progress finish and returns a
         result flagged ``interrupted``; the next call runs the missing replicates first. A
         second Ctrl-C raises ``KeyboardInterrupt`` at once, without a result.
+
+        An error during the replicates, such as one of the log-density, is raised again
+        once the sampler keeps the replicates finished before it, with its attribute
+        ``telescopic_result`` set to the result of all of them so far (``None`` if none
+        finished) and a note; the next call runs the missing replicates first. An error
+        in tuning or in the pilot is raised as it is.
 
         Parameters
         ----------
@@ -422,6 +429,13 @@ class CoupledSampler:
         max_iter : int, optional
             Censor pairs still unmet at this time. ``None`` runs every pair until it
             meets on the first call, and keeps the first call's cap on later ones.
+        keep : int, optional
+            Store the signed measures and distances of the replicates of index below
+            ``keep`` only, and the moments of every replicate, from which the mean, the
+            variances and the covariance (up to 100 dimensions) come; the quantiles,
+            histograms and :meth:`~telescopic.Result.estimate` come from the kept
+            replicates. ``None`` stores every replicate's signed measure on the first
+            call, and keeps the first call's setting on later ones.
         progress : bool, optional
             Show the progress of the run and of the tuning and the pilot it runs;
             ``None`` takes the sampler's setting.
@@ -447,7 +461,7 @@ class CoupledSampler:
         (25, 50)
         """
         n_replicates = integer("n_replicates", n_replicates, minimum=1)
-        given = self._check(k, m, lag, thin, max_iter)
+        given = self._check(k, m, lag, thin, max_iter, keep)
         show = self.progress if progress is None else flag("progress", progress)
         interrupt = Interrupt()
         with ExitStack() as catching:
@@ -581,11 +595,18 @@ class CoupledSampler:
         return engine._Outcome(replicates, error, others)
 
     def _check(
-        self, k: int | str, m: int | str, lag: int | str, thin: int | None, max_iter: int | None
+        self,
+        k: int | str,
+        m: int | str,
+        lag: int | str,
+        thin: int | None,
+        max_iter: int | None,
+        keep: int | None,
     ) -> dict[str, int]:
         # The settings given, those not "auto" or None, as integers, checked before any
         # tuning or worker starts: with an automatic k, at k = 0, whose bounds hold for
-        # every k. Later runs keep the first run's settings (D-21, DECISIONS #4 and #8).
+        # every k. Later runs keep the first run's settings, keep among them (D-21,
+        # DECISIONS #4, #8 and #242).
         given = {}
         for name, value, default in (
             ("k", k, "auto"),
@@ -597,6 +618,8 @@ class CoupledSampler:
             # The type first: == compares an array elementwise.
             if not (isinstance(value, type(default)) and value == default):
                 given[name] = integer(name, value, f"an integer or {default!r}")
+        if keep is not None:
+            given["keep"] = integer("keep", keep, "None or an integer >= 0", minimum=0)
         if self.settings is not None:
             for name, value in given.items():
                 kept = getattr(self.settings, name)
@@ -648,19 +671,31 @@ class CoupledSampler:
         # Spec R-EXEC-7: estimate the atoms and distances to store before running, and warn
         # when a run and its first estimates, which peak at about three times that, would
         # pass 1 GB. The pilot's meeting times stand in for those of the run, their tau - 1
-        # for its tau - L; without a pilot, the run's pairs count as meeting at once.
+        # for its tau - L; without a pilot, the run's pairs count as meeting at once. With
+        # keep, only the kept replicates store atoms, and the peak adds the moments of every
+        # replicate, 8 (p + d) bytes each, a lane buffer of as many per lane in each engine
+        # (one per worker of an integer pool) and the block temporary, at most 1 MiB.
         coupled = np.zeros(1)
         if self.pilot is not None and np.isfinite(self.pilot).any():
             coupled = self.pilot[np.isfinite(self.pilot)] - 1
-        stored = n_replicates * engine.stored_bytes(settings, self.ndim, coupled) / len(coupled)
+        keep = n_replicates if settings.keep is None else min(settings.keep, n_replicates)
+        stored = keep * engine.stored_bytes(settings, self.ndim, coupled) / len(coupled)
         peak = PEAK_PER_STORED * stored
+        stored_what = "atoms and distances"
+        if settings.keep is not None:
+            row = 8 * (2 * self.ndim + len(engine._pairs(self.ndim)[0]))
+            engines = self.pool if isinstance(self.pool, int) else 1
+            moments = n_replicates * row
+            stored += moments
+            peak += moments + engines * engine.LANES * row + 2**20
+            stored_what = "atoms, distances and moments"
         if peak > 1e9:
             # In one or two dimensions the peak can reach twice the factor's figure.
             upto = f" to {2 * peak / 1e9:.1f}" if self.ndim <= 2 else ""
             warn(
-                f"the run will store about {stored / 1e9:.1f} GB of atoms and distances, "
-                f"and with its first estimates take about {peak / 1e9:.1f}{upto} GB; pass "
-                "thin= to store fewer atoms, or run fewer replicates",
+                f"the run will store about {stored / 1e9:.1f} GB of {stored_what}, and with "
+                f"its first estimates take about {peak / 1e9:.1f}{upto} GB; pass thin= or "
+                "keep= to store fewer atoms, or run fewer replicates",
                 InputWarning,
             )
 
@@ -682,6 +717,7 @@ def sample(
     lag: int | str = "auto",
     thin: int | None = None,
     max_iter: int | None = None,
+    keep: int | None = None,
     names: Sequence[str] | None = None,
     pool: Any = None,
     n_workers: int | None = None,
@@ -735,6 +771,10 @@ def sample(
         Average every ``thin``-th state from ``k``; ``None`` averages every state.
     max_iter : int, optional
         Censor pairs still unmet at this time; ``None`` runs every pair until it meets.
+    keep : int, optional
+        Store the signed measures of the replicates of index below ``keep`` only, and the
+        moments of every replicate; see :meth:`CoupledSampler.run`. ``None`` stores every
+        replicate's signed measure.
     names : sequence of str, optional
         Parameter names for summaries.
     pool : None, int, executor or pool
@@ -762,7 +802,9 @@ def sample(
         Its estimates are unbiased unless ``max_iter`` censors a pair, which biases them
         and warns, or a Ctrl-C interrupts the run, which leaves them consistent and flags
         the result ``interrupted``. It warns about the conditions listed under Warnings,
-        in :doc:`/reference/warnings`.
+        in :doc:`/reference/warnings`. An error during the replicates is raised with the
+        result of those finished before it as its attribute ``telescopic_result``, which
+        :meth:`CoupledSampler.resume` continues.
 
     Examples
     --------
@@ -796,7 +838,7 @@ def sample(
         check_grad=check_grad,
         rng=rng,
     )
-    return sampler.run(n_replicates, k=k, m=m, lag=lag, thin=thin, max_iter=max_iter)
+    return sampler.run(n_replicates, k=k, m=m, lag=lag, thin=thin, max_iter=max_iter, keep=keep)
 
 
 def _checked(
@@ -933,5 +975,6 @@ def _settings(given: dict[str, int]) -> engine.Settings:
             lag=given.get("lag", max(1, k)),
             thin=given.get("thin", 1),
             max_iter=given.get("max_iter"),
+            keep=given.get("keep"),
         )
     )

@@ -1028,3 +1028,27 @@ def test_a_pilot_error_keeps_no_replicates(stage):
     assert not getattr(caught.value, "__notes__", [])
     assert sampler.pilot is None
     assert sampler.settings is None
+
+
+def test_keep_is_fixed_by_the_first_run():
+    sampler = CoupledSampler(gaussian_log_prob, INIT, kernel=KERNEL, rng=3)
+    first = sampler.run(30, k=40, m=40, keep=10)
+    assert (first.keep, first.n_kept) == (10, 10)
+    second = sampler.run(30)
+    assert second.keep == 10
+    assert second.n_kept == 10
+    assert second.n_replicates == 60
+    with pytest.raises(ValueError, match=r"keep was 10 in the earlier runs; .* for keep=5"):
+        sampler.run(10, keep=5)
+    with pytest.raises(TypeError, match="keep must be None or an integer >= 0"):
+        CoupledSampler(gaussian_log_prob, INIT, kernel=KERNEL).run(10, k=40, keep=1.5)
+    reduced = sample(gaussian_log_prob, INIT, 30, kernel=KERNEL, k=40, m=40, keep=10, rng=3)
+    assert_same_replicates(reduced._replicates, first._replicates)
+
+
+def test_the_memory_warning_counts_the_moments_of_every_replicate():
+    # At d = 100, 8 (2 d + d (d + 1) / 2) = 42,000 bytes of moments per replicate: 4.2 GB
+    # for 100,000 replicates, though keep=0 stores no atom.
+    sampler = CoupledSampler(gaussian_log_prob, Normal(np.zeros(100), np.eye(100)), rng=10)
+    with pytest.warns(InputWarning, match=r"store about 4\.2 GB of atoms, distances and moments"):
+        sampler._check_memory(Settings(0, 0, 1, keep=0), 100_000)
