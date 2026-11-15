@@ -110,6 +110,10 @@ All notable changes to this project are documented here. The format follows
   use on the pages of the other sections but Theory; Notation, which maps each
   symbol of the theory page to its argument or attribute; and an FAQ whose answers link
   to the page that holds each fact.
+- Two how-to guides: Troubleshoot chains that do not meet, indexed by the error or warning
+  a run shows, with its cause, a check in code and the fix, and a chart from each warning
+  to its remedy; and Make a run faster, which gives each lever with its effect, a figure
+  of a replicate's cost, and a table of times measured by `benchmarks/run_faster.py`.
 - The API reference is an index of one-line summaries grouped by section, with a page for
   each class, its attributes and methods, a page for `sample`, and a page for each module
   that the index lists, its functions and a table of its classes. The page of a class with

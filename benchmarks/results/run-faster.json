@@ -1,0 +1,42 @@
+{
+  "commit": "db025af",
+  "machine": "Intel(R) Xeon(R) Processor @ 2.10GHz, 4 CPUs, Linux 6.18.44-fc-v470",
+  "available CPUs": 4,
+  "blas": [
+    {
+      "internal_api": "openblas",
+      "version": "0.3.31.dev",
+      "num_threads": 1
+    },
+    {
+      "internal_api": "openblas",
+      "version": "0.3.34.106.0",
+      "num_threads": 1
+    }
+  ],
+  "python": "3.13.18",
+  "numpy": "2.5.3",
+  "scipy": "1.18.1",
+  "telescopic": "0.1.0.dev0",
+  "case": "telescopic.sample on examples.gaussian(10), R = 1024, rng=1; RandomWalk(cov) with the target's cov and k = 200 unless automatic",
+  "seconds by pool and log-density": {
+    "in this process": {
+      "point by point": 10.59,
+      "vectorized": 3.0
+    },
+    "2 workers": {
+      "point by point": 8.28,
+      "vectorized": 3.04
+    },
+    "4 workers": {
+      "point by point": 4.85,
+      "vectorized": 2.43
+    }
+  },
+  "seconds with and without the pilots": {
+    "automatic": 3.34,
+    "of which the replicates": 2.97,
+    "kernel and k given": 3.11,
+    "automatic k": 222
+  }
+}
