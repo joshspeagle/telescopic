@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from hypothesis import given
+from hypothesis import example, given
 from hypothesis import strategies as st
 from numpy.random import PCG64DXSM, Generator, SeedSequence
 
@@ -79,6 +79,12 @@ requests = st.tuples(
 
 
 @given(steps=st.lists(st.one_of(requests, st.integers(0, N_LANES - 1)), max_size=30))
+# A view of a buffer kept across a widening: one lane, then several lanes at different
+# positions of which one widens it, sizes in turn, and uniforms after a widening.
+@example(steps=[([0], True, 2)] + [([0], True, 3)] * 6)
+@example(steps=[([0, 1, 2], True, 2)] + [([0], True, 3)] * 4 + [([2, 1, 0], True, 3)] * 3)
+@example(steps=[([0, 1], True, 2), ([1, 0], True, 5)] * 4)
+@example(steps=[([0, 1], False, 3), ([1], True, 30), ([1], False, 12), ([0, 1], False, 10)])
 @pytest.mark.parametrize("width", [0, 3, 1024])
 def test_each_row_reads_its_replicates_streams_in_order(width, steps):
     # Every row of every request must equal the next numbers of its replicate's two
