@@ -91,6 +91,13 @@ tutorials/failure-modes
 
 ```{toctree}
 :hidden:
+:caption: Gallery
+
+gallery/funnel
+```
+
+```{toctree}
+:hidden:
 :caption: How-to guides
 
 guide/log-density
