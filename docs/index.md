@@ -96,6 +96,8 @@ tutorials/failure-modes
 gallery/radial-velocity
 gallery/hierarchical-gibbs
 gallery/jax-gradients
+gallery/funnel
+gallery/burn-in
 ```
 
 ```{toctree}
