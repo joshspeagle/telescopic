@@ -216,17 +216,30 @@ for width in (3, 10):
 ```{code-cell} python
 :tags: [remove-cell]
 
-# The claims of the next paragraph.
-assert np.all(np.isfinite(pilot[3]))
-assert np.sum(np.isinf(pilot[10])) >= 2
-glue("unmet_10", int(np.sum(np.isinf(pilot[10]))), display=False)
+from IPython.display import Markdown
+
+
+def pilot_text(width):
+    unmet = int(np.sum(np.isinf(pilot[width])))
+    try:
+        telescopic.tuning.choose_k(pilot[width])
+        verdict = "and `k` can be chosen from them"
+    except ValueError:
+        verdict = "too many for `k` to be chosen"
+    return f"from the start {width} times wider, {unmet} of the 100 pairs had not met, {verdict}"
+
+
+glue(
+    "pilot_text",
+    Markdown(f"After 2,000 iterations, {pilot_text(10)}; {pilot_text(3)}."),
+    display=False,
+)
 ```
 
-From the start 10 times wider, {glue:text}`unmet_10:d` of the 100 pairs had not met
-after 2,000 iterations, more unmet pairs than the automatic choice of the
-{term}`burn-in` `k` allows
-([The automatic pipeline](../guide/settings.md#the-automatic-pipeline)); from the start 3
-times wider, every pair met. The run starts 3 times wider.
+{glue:md}`pilot_text` The automatic choice of the {term}`burn-in` `k` allows only a few
+unmet pairs ([The automatic pipeline](../guide/settings.md#the-automatic-pipeline)), and
+from a start wider than needed, the pairs that start far out take longest to meet. The
+run starts 3 times wider.
 
 ## The run
 
@@ -248,25 +261,25 @@ result = telescopic.sample(
 result.summary()
 ```
 
-The next cell sets the table's means beside the values that drew the data. A posterior mean need not
-equal the true value: it differs from it by about a posterior standard deviation, the
-`std` column of the table, which is what the data leave uncertain:
+The next cell sets the table's means beside the values that drew the data. A posterior
+mean need not equal the true value: it differs from it by about the error bars that the
+data leave, here those of the optimizer's fit:
 
 ```{code-cell} python
 mean = result.mean()
-std = result.std()
-print("        true  estimate  std. error  posterior std")
+fit_error = np.sqrt(np.diag(cov))
+print("        true  estimate  std. error  fit's error bar")
 for name, true, value, error, spread in zip(
-    names, truth, mean.value, mean.standard_error, std
+    names, truth, mean.value, mean.standard_error, fit_error
 ):
-    print(f"{name:5}  {true:6.2f}  {value:8.3f}  {error:10.4f}  {spread:13.3f}")
+    print(f"{name:5}  {true:6.2f}  {value:8.3f}  {error:10.4f}  {spread:15.3f}")
 ```
 
 ```{code-cell} python
 :tags: [remove-cell]
 
-# The claim of the previous paragraph.
-assert np.all(np.abs(mean.value - truth) < 3 * std)
+# The claim of the previous paragraph, with a margin.
+assert np.all(np.abs(mean.value - truth) < 3 * fit_error)
 ```
 
 ## The orbit and two marginals
@@ -331,52 +344,22 @@ for ax, true in zip(axes, truth[[0, 2]]):
 
 ## What the warnings say
 
-The summary ends with one warning, that one replicate holds most of the variance of an
-estimate. `result.diagnostics()` names the replicate and the estimate, and the meeting
-times show what sets that replicate apart:
-
-```{code-cell} python
-from telescopic import diagnostics
-
-checks = result.diagnostics()
-named = checks["variance_share_replicate"]
-print(f"share of replicate {named}: {checks['variance_share']:.2f}, in {checks['variance_share_of']}")
-print(f"its meeting time: {result.meeting_times[named]:.0f}, k + lag: {result.k + result.lag}")
-print(f"latest meeting time of the others: {np.max(np.delete(result.meeting_times, named)):.0f}")
-print(f"largest share of one replicate in a mean: {diagnostics.variance_share(mean.replicates).max():.2f}")
-print(f"pairs meeting after k + lag: {checks['late_fraction']:.3f}")
-print(f"tail index of the meeting times: {checks['tail_index']:.2f}")
-```
-
 ```{code-cell} python
 :tags: [remove-cell]
 
-# The claims of the next paragraphs.
-tau_named = result.meeting_times[named]
-mean_share = diagnostics.variance_share(mean.replicates).max()
-assert tau_named == result.meeting_times.max() and tau_named > result.k + result.lag
-assert 0.5 < checks["variance_share"] and checks["variance_share_of"] == "the variance of M0"
-assert 0.25 < mean_share < 0.5
-assert checks["censored"] == 0 and checks["late_fraction"] < 0.25 and checks["tail_index"] > 2
-glue("named", named, display=False)
-glue("share", float(checks["variance_share"]), display=False)
-glue("tau_named", float(tau_named), display=False)
-glue("k_lag", result.k + result.lag, display=False)
-glue("mean_share", float(mean_share), display=False)
+from run_text import warnings_text
+
+glue("warnings_text", Markdown(warnings_text(result)), display=False)
 ```
 
-Replicate {glue:text}`named:d` holds {glue:text}`share:.2f` of the sample variance of
-the estimate of the posterior variance of $M_0$. Its pair met last of the 500, at
-$\tau =$ {glue:text}`tau_named:.0f`, after $k + L =$ {glue:text}`k_lag:d`, so its
-estimate carries the longest bias correction of the run: it is a {term}`late pair`.
-The error bar of that variance rests on one replicate and is not reliable. The means do
-not cross the warning's threshold, but come near it: one replicate holds
-{glue:text}`mean_share:.2f` of the variance of the estimate of some mean. The other
-warnings do not fire: no pair was censored, and neither the fraction of
-late pairs nor the {term}`tail index` of the meeting times crosses
-its threshold.
-[One replicate dominating the variance](../reference/warnings.md#one-replicate-dominating-the-variance-variance)
-gives the threshold, the warning's meaning and its remedy: check the initial distribution, and look for a
-mode that the other replicates missed. For error bars that rest on many replicates,
-plan a second run with more of them, its number fixed before it runs
+{glue:md}`warnings_text`
+
+A share near 1 means that the error bar of that estimate rests on one replicate and is
+not reliable. A pair that meets far later than the others, as from a start far out or
+after an excursion to a region that the other pairs did not visit, gives such a share:
+an orbit's posterior can have a tail toward high eccentricity, where a narrow spike of
+the curve fits a few points.
+[Warnings and errors](../reference/warnings.md#warnings) gives each warning's threshold,
+meaning and remedy. For error bars that rest on many replicates, plan a second run with
+more of them, its number fixed before it runs
 ([How many replicates](../guide/settings.md#how-many-replicates)).
