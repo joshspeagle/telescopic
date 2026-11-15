@@ -10,7 +10,8 @@ section headings follow those of Theory.
 
 $\pi$
 : The target. `log_prob` computes $\log\pi$ up to a constant, and `grad` its gradient
-  $\nabla\log\pi$, both arguments of `sample` and `sampler`.
+  $\nabla\log\pi$, or `log_prob_and_grad` both in one call, all arguments of `sample`
+  and `sampler`.
 
 $\pi_0$
 : The initial distribution: the argument `init`, and `result.initial`.
@@ -19,8 +20,8 @@ $P$, $\bar P$
 : The kernel and its coupling: the argument `kernel`, `sampler.kernel` and
   `result.kernel`. A kernel applies $P$ in {meth}`~telescopic.kernels.Kernel.step` and
   $\bar P$ in {meth}`~telescopic.kernels.Kernel.coupled_step`; the argument `coupling`
-  of {class}`~telescopic.kernels.RandomWalk` and {class}`~telescopic.kernels.Gibbs`
-  chooses among their couplings.
+  of {class}`~telescopic.kernels.RandomWalk`, {class}`~telescopic.kernels.Gibbs` and
+  {class}`~telescopic.kernels.MetropolisHastings` chooses among their couplings.
 
 $\pi_t$
 : The law of $X_t$. No attribute holds it; `result.tv_bound(t)` bounds its distance to
@@ -107,8 +108,8 @@ $R$
   `result.n_replicates`, the number whose pairs met.
 
 $\alpha$
-: One minus the confidence level, the argument `level` of `result.estimate`, 0.95 by
-  default. `estimate.interval` holds the interval
+: One minus the confidence level: the argument `level` of `result.estimate` is
+  $1 - \alpha$, 0.95 by default. `estimate.interval` holds the interval
   $\bar H \pm t_{R-1,\,1-\alpha/2}\,\hat\sigma/\sqrt R$.
 
 $a_r$, $\bar a$, $\sqrt{\mathrm{diag}(S_a)/R}$

@@ -13,7 +13,7 @@ quantiles that assume non-negative weights
 {meth}`~telescopic.Result.plot_marginals` and {meth}`~telescopic.Result.plot_corner`
 draw the signed histograms instead ([Plot a result](../guide/plots.md)), and
 {meth}`~telescopic.Result.chains` returns the ordinary MCMC chains of the kept
-replicates, without the bias correction, for tools that need draws.
+{term}`replicates <replicate>`, without the bias correction, for tools that need draws.
 
 ### Why is my variance negative?
 
@@ -28,7 +28,7 @@ is {term}`consistent` but not unbiased
 
 For the same reason: an estimate is a weighted sum with some negative weights, so it can
 fall outside the range of the function averaged, though its average over
-{term}`replicates <replicate>` is unbiased
+replicates is unbiased
 ([What the atoms give](../concepts/signed-measures.md#what-the-atoms-give)).
 
 ### Do quantiles and credible intervals have error bars?
@@ -71,7 +71,8 @@ covariance still come from every replicate
 Yes: an array of points of shape `(n, d)`, such as the last state of an ensemble, is
 taken as the uniform distribution over those points
 ([Initial distributions](../guide/initial-distribution.md#initial-distributions)). The
-estimates stay unbiased, but the pairs then cover only the modes that the walkers found
+estimates stay unbiased, but the {term}`pairs <pair>` then cover only the modes that the
+walkers found
 ([Choosing one](../guide/initial-distribution.md#choosing-one)).
 
 ### Is it slower than emcee?
@@ -91,11 +92,11 @@ Yes, through a log-density, a gradient or `log_prob_and_grad` that JAX computes,
 
 ### Why does HMC vary its step from one trajectory to the next?
 
-HMC's `jitter`, 0.5 by default, draws each trajectory's step uniformly between
-$(1 - j)\epsilon$ and $(1 + j)\epsilon$, so that no step stays on a resonance of the
-leapfrog, where coupled trajectories with a fixed step do not bring the chains closer;
-`jitter=0` gives the fixed step ([HMC](../guide/kernels.md#hmc),
-[When the automatic step fails](../guide/step-size.md#when-the-automatic-step-fails)).
+So that no step stays on a resonance of the leapfrog, where coupled trajectories with a
+fixed step do not bring the chains closer. The argument `jitter` sets how much the step
+varies, and [HMC](../guide/kernels.md#hmc) gives the rule and the default;
+[When the automatic step fails](../guide/step-size.md#when-the-automatic-step-fails)
+describes the failure it prevents.
 
 ### Is a run reproducible from its seed?
 

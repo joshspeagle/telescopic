@@ -59,10 +59,11 @@ lag
   take $L = \max(1, k)$ ([The lag](../concepts/two-chains.md#the-lag)).
 
 late pair
-  A pair that meets after $k + L$, or is censored: only such pairs can carry a bias
-  correction.
-  `result.diagnostics()["late_fraction"]` is their fraction, and the `late` warning
-  fires above a quarter ([Late pairs](warnings.md#late-pairs-late)).
+  A pair that meets after $k + L$: only such pairs can carry a bias correction.
+  `result.diagnostics()["late_fraction"]` is the fraction of pairs that are late or
+  censored, since a {term}`censored pair` is left out of the estimates and carries no
+  correction, and the `late` warning fires above a quarter
+  ([Late pairs](warnings.md#late-pairs-late)).
 
 maximal coupling
   A coupling of two distributions under which the two draws are equal with the largest
@@ -122,7 +123,8 @@ run length
   ([The settings](../guide/settings.md#the-settings)).
 
 signed measure
-  A set of {term}`atoms <atom>` with weights that sum to 1, some of them negative. Each
+  A set of {term}`atoms <atom>` with weights that sum to 1, some of which can be
+  negative: a pair that meets within $k + L$ steps gives none. Each
   replicate returns one, $\hat\pi_r$, whose weighted sum of any $h$ at its atoms is the
   replicate's estimate of $\pi(h)$. The atoms are not draws from the target
   ([Signed measures, not samples](../concepts/signed-measures.md)).
@@ -136,8 +138,10 @@ tail index
 
 tuning pilot
   The four adaptive Metropolis chains that tune the kernel's parameters left as `None`
-  before any pair runs. Their $\hat R$ is checked by the `tuning` warning, and
-  `result.tuning` holds their report
+  before any pair runs. MALA and HMC then tune their `step_size` by dual averaging on
+  four more chains started from the pilot's last states
+  ([Choose a kernel](../guide/kernels.md#mala)). The $\hat R$ of the adaptive chains is
+  checked by the `tuning` warning, and `result.tuning` holds their report
   ([The automatic pipeline](../guide/settings.md#the-automatic-pipeline)).
 
 unbiased
