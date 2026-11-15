@@ -20,6 +20,12 @@ result = telescopic.sample(
 
 ## What a result holds
 
+```{diagram} result
+The attributes of a {class}`telescopic.Result` in four groups, with arrows to the
+methods that read its signed measures and its meeting times; `tv_bound` counts a
+censored pair as meeting at `max_iter` + 1.
+```
+
 | Attribute | Content |
 |---|---|
 | `n_replicates`, `n_censored` | $R$, the number of {term}`replicates <replicate>` whose {term}`pairs <pair>` met, and the number of pairs censored at `max_iter` ([Censored pairs](warnings.md#censored-pairs-censored)) |
