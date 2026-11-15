@@ -2,31 +2,28 @@
 
 from __future__ import annotations
 
-from functools import partial
 from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
 
-from telescopic._linalg import covariance, inverse_lower, matvec
-from telescopic._random import Draws
+from telescopic._linalg import covariance, inverse_lower
 from telescopic._types import FloatArray, Seed, real
-from telescopic.couplings import maximal, reflection_maximal
-from telescopic.kernels.base import (
-    Kernel,
-    State,
-    acceptance,
-    evaluate,
-    evaluate_pair,
-    log_ratio,
-    select,
+from telescopic.kernels.base import Kernel
+from telescopic.kernels.metropolis import (
+    Coupling,
+    Maximal,
+    MetropolisHastings,
+    Proposal,
+    RandomWalkProposal,
+    Reflection,
 )
 from telescopic.target import Target
 from telescopic.tuning import OPTIMAL_SCALE, PilotRun, TuningReport
 
 
 # Spec R-KER-RW; the tuning of cov is that of spec section 5.3.
-class RandomWalk(Kernel):
+class RandomWalk(MetropolisHastings):
     r"""Random-walk Metropolis-Hastings with a Gaussian proposal.
 
     The proposal is :math:`x' = x + \lambda C z` with :math:`CC^\top = \Sigma` (``cov``),
@@ -86,12 +83,13 @@ class RandomWalk(Kernel):
         self.scale = None if scale is None else real("scale", scale, 0, np.inf)
         self.coupling = coupling
         self.cov: FloatArray | None = None
-        self._factors: tuple[FloatArray, FloatArray] | None = None
+        self._proposal: Proposal | None = None
+        self._coupling: Coupling = Reflection() if coupling == "reflection" else Maximal()
         if cov is not None:
             self.cov, chol = covariance("cov", cov)
             scale = OPTIMAL_SCALE / np.sqrt(len(chol)) if self.scale is None else self.scale
             scaled = scale * chol
-            self._factors = scaled, inverse_lower(scaled)
+            self._proposal = RandomWalkProposal(scaled, inverse_lower(scaled))
 
     @property
     def is_tuned(self) -> bool:
@@ -107,59 +105,11 @@ class RandomWalk(Kernel):
         tuned = type(self)(pilot.cov, scale=self.scale, coupling=self.coupling)
         return tuned, pilot.report()
 
-    def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
-        chol, _ = self._ready()
-        x = state.x + matvec(chol, draws.normal(len(chol)), blas=target.vectorize)
-        proposal = evaluate(target, x, state.grad is not None)
-        log_alpha = log_ratio(proposal.log_prob, state.log_prob)
-        accepted = draws.log_uniform() < log_alpha
-        return select(accepted, proposal, state), acceptance(log_alpha)
-
-    def coupled_step(
-        self, target: Target, state_x: State, state_y: State, draws: Draws
-    ) -> tuple[State, State]:
-        chol, inverse = self._ready()
-        if self.coupling == "reflection":
-            x, y, identical = reflection_maximal(
-                state_x.x, state_y.x, chol, inverse, draws, blas=target.vectorize
-            )
-        else:
-            x, y, identical, _ = maximal(
-                [_Gaussian(mean, chol, inverse) for mean in state_x.x],
-                [_Gaussian(mean, chol, inverse) for mean in state_y.x],
-                draws,
-            )
-        proposal_x, proposal_y = evaluate_pair(
-            partial(evaluate, target, need_grad=state_x.grad is not None), x, y, identical
-        )
-        log_u = draws.log_uniform()
-        state_x = select(
-            log_u < log_ratio(proposal_x.log_prob, state_x.log_prob), proposal_x, state_x
-        )
-        state_y = select(
-            log_u < log_ratio(proposal_y.log_prob, state_y.log_prob), proposal_y, state_y
-        )
-        return state_x, state_y
-
-    def _ready(self) -> tuple[FloatArray, FloatArray]:
-        if self._factors is None:
+    def _ready(self) -> tuple[Proposal, Coupling]:
+        if self._proposal is None:
             raise ValueError("RandomWalk needs cov; give it, or tune the kernel on a pilot run")
-        return self._factors
+        return self._proposal, self._coupling
 
     def __repr__(self) -> str:
         cov = "None" if self.cov is None else f"<{len(self.cov)}x{len(self.cov)}>"
         return f"RandomWalk(cov={cov}, scale={self.scale}, coupling={self.coupling!r})"
-
-
-class _Gaussian:
-    # A Gaussian proposal for the rejection coupling; both members of a pair share chol,
-    # so the normalizing constants cancel and are left out.
-    def __init__(self, mean: FloatArray, chol: FloatArray, inverse: FloatArray) -> None:
-        self.mean, self.chol, self.inverse = mean, chol, inverse
-
-    def rvs(self, *, random_state: np.random.Generator) -> FloatArray:
-        return self.mean + self.chol @ random_state.standard_normal(len(self.mean))
-
-    def logpdf(self, x: FloatArray) -> float:
-        z = self.inverse @ (x - self.mean)
-        return float(-0.5 * z @ z)
