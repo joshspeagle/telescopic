@@ -194,17 +194,16 @@ class Result:
         self.meeting_times = replicates.meeting_time
         self.costs = replicates.cost
         self.k, self.m, self.lag, self.thin, self.max_iter, _, self.keep = replicates.settings
-        kept = met if self.keep is None else met & (replicates.index < self.keep)
+        # The kept replicates, censored ones included, which the W1 bound averages over.
+        stored = np.ones_like(met) if self.keep is None else replicates.index < self.keep
+        self._n_stored = int(stored.sum())
+        kept = met & stored
         self.n_kept = int(kept.sum())
         self.measure = SignedMeasure(
             replicates.atoms,
             replicates.weights,
             np.searchsorted(replicates.index[kept], replicates.owner),
             self.n_kept,
-        )
-        # The kept replicates, censored ones included, which the W1 bound averages over.
-        self._n_stored = (
-            len(met) if self.keep is None else int(np.sum(replicates.index < self.keep))
         )
         self.seed, self.kernel, self.initial = replicates.seed, kernel, initial
         self._replicates = replicates
@@ -301,17 +300,15 @@ class Result:
         """
         if self.keep is not None and self.ndim <= engine.FULL_MOMENTS:
             self._require(2)
-            first, center = self._first, self._replicates.center[self._met]
-            moments = self._replicates.moments[self._met]
-            # pi_r((x - b)(x - b)^T) = S_r + f_r e^T + e f_r^T + e e^T with e = c_r - b and
-            # f_r = pi_r(x - c_r), about b = a-bar; each replicate's weights sum to 1.
-            shift = center - first.mean(axis=0)
-            f = moments[:, : self.ndim]
+            # The mean over r of pi_r((x - b)(x - b)^T) = S_r + f_r e^T + e f_r^T + e e^T,
+            # with e = c_r - b and f_r = pi_r(x - c_r), about b = a-bar: the mean of the
+            # stored S_r, and matrix products over the replicates, in O(R d + d^2) memory.
+            f, shift = self._shifted
             i, j = engine._pairs(self.ndim)
-            pairs = moments[:, self.ndim :] + f[:, i] * shift[:, j] + shift[:, i] * f[:, j]
-            pairs += shift[:, i] * shift[:, j]
+            stored = self._replicates.moments[:, self.ndim :]
             second = np.zeros((self.ndim, self.ndim))
-            second[i, j] = second[j, i] = pairs.mean(axis=0)
+            second[i, j] = second[j, i] = stored.mean(axis=0, where=self._met[:, None])
+            second += (f.T @ shift + shift.T @ f + shift.T @ shift) / len(f)
             return unbiased_covariance(f + shift, second)
         self._require_kept(2)
         centered, first = self._centered()
@@ -873,26 +870,34 @@ class Result:
     def _first(self) -> FloatArray:
         # With keep: a_r = c_r + pi_r(x - c_r), each replicate's mean, for those that met.
         replicates = self._replicates
-        center = replicates.center[self._met]
-        first: FloatArray = center + replicates.moments[self._met, : self.ndim]
+        first: FloatArray = (
+            replicates.center[self._met] + replicates.moments[self._met, : self.ndim]
+        )
         return first
+
+    @functools.cached_property
+    def _shifted(self) -> tuple[FloatArray, FloatArray]:
+        # With keep: f_r = pi_r(x - c_r) and e = c_r - a-bar, (R, d) each, for those that met.
+        replicates = self._replicates
+        center = replicates.center[self._met]
+        return replicates.moments[self._met, : self.ndim], center - self._first.mean(axis=0)
 
     @functools.cached_property
     def _about_mean(self) -> tuple[FloatArray, FloatArray]:
         # Each replicate's first and second moments of each coordinate about the mean
-        # estimate a-bar, (R, d) each: pi_r(x - b) and pi_r((x - b)^2) for b = a-bar.
+        # estimate a-bar, (R, d) each, from those about a center c: with e = c - a-bar,
+        # pi_r(x - a-bar) = pi_r(x - c) + e and pi_r((x - a-bar)^2) = pi_r((x - c)^2) +
+        # 2 e pi_r(x - c) + e^2. Without keep, c is the atoms' unweighted mean; with it,
+        # c_r, whose squares alone are read from the moments.
         if self.keep is None:
-            # From the moments about the atoms' unweighted mean m, shifted by
-            # e = m - a-bar: pi_r((x - b)^2) = pi_r((x - m)^2) + 2 e pi_r(x - m) + e^2.
             first, second = self._moments
             shift = -first.mean(axis=0)
-            return first + shift, second + 2 * shift * first + shift**2
-        moments = self._replicates.moments[self._met]
-        f = moments[:, : self.ndim]
-        i, j = engine._pairs(self.ndim)
-        squares = moments[:, self.ndim :][:, i == j]
-        shift = self._replicates.center[self._met] - self._first.mean(axis=0)
-        return f + shift, squares + 2 * shift * f + shift**2
+        else:
+            first, shift = self._shifted
+            i, j = engine._pairs(self.ndim)
+            columns = self.ndim + np.flatnonzero(i == j)
+            second = self._replicates.moments[np.ix_(self._met.nonzero()[0], columns)]
+        return first + shift, second + 2 * shift * first + shift**2
 
     def _require(self, n: int) -> None:
         if self.n_replicates < n:
