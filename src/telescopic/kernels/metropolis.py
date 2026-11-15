@@ -66,7 +66,9 @@ class Proposal(ABC):
         return None
 
     def init_extra(self, state: State) -> dict[str, npt.NDArray[Any]]:
-        """The initial values of the proposal's own fields, as for :meth:`telescopic.kernels.Kernel.init_extra`; none by default.
+        """The initial values of the proposal's own fields; none by default.
+
+        As for :meth:`telescopic.kernels.Kernel.init_extra`.
 
         Parameters
         ----------
@@ -327,8 +329,9 @@ class IndependenceProposal(Proposal):
     (n, d), the point at which it was computed. The key names this proposal object, so
     that a state stepped by another one, of another distribution, never reads its cache.
     A value is used only where its point equals the position bit for bit, so that a chain
-    that another kernel moved, or a state without the fields, gets a fresh value. A step and a coupled step evaluate :math:`\log q` in one call, at the
-    proposals and at the chains' states whose value is missing or stale. Where
+    that another kernel moved, or a state without the fields, gets a fresh value. A step
+    and a coupled step evaluate :math:`\log q` in one call, at the proposals and at the
+    chains' states whose value is missing or stale. Where
     ``log_density`` gives a row the same value in any batch, as
     :class:`~telescopic.kernels.MultivariateT` does, the cache changes no number.
 

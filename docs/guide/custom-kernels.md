@@ -116,17 +116,19 @@ them. Every other field is a cache, which the kernel checks before use and recom
 where it is missing or stale, since a state can reach it without its caches or after
 another kernel moved the chain.
 
-A kernel carries unchanged the fields it does not know: it acts as the identity on them.
-`State.take` copies every field, and `State.put` writes the fields that both states have
-and leaves the others. A kernel that builds its new states with `State(...)` drops the
-fields of its input; a run keeps their old values, so the caches of other kernels in a
-mixture stay correct only because each checks its own, and such a kernel is better
-written to pass `state.extra` on. A {class}`~telescopic.kernels.Mixture` names the field
-`name` of component `i` as `f"{i}/{name}"`, so two components never share a field, and
-gives each component its own fields under their own names. It refuses a component with
-Markov fields: a mixture leaves a joint law $\pi(x)\psi(v)$ invariant only when
-$\psi$ does not depend on $x$, which it cannot check. A state carries its kernel's
-caches, so before handing a state to another kernel by hand, drop its `extra`.
+A kernel carries unchanged the fields it does not know: it acts as the identity on
+them, and returns copies of them, as the AR(1) example below does, so that a returned
+state shares no array with its input. `State.take` copies every field, and `State.put`
+writes the fields that both states have and leaves the others. A kernel that builds its
+new states without its input's fields drops them; a run keeps their old values, so the
+caches of other kernels in a mixture stay correct only because each checks its own.
+
+A {class}`~telescopic.kernels.Mixture` names the field `name` of component `i` as
+`f"{i}/{name}"`, so two components never share a field, and gives each component its own
+fields under their own names. It refuses a component with Markov fields: a mixture
+leaves a joint law $\pi(x)\psi(v)$ invariant only when $\psi$ does not depend on $x$,
+which it cannot check. A state carries its kernel's caches, so before handing a state to
+another kernel by hand, drop its `extra`.
 
 No kernel of the package has Markov fields. {func}`telescopic.testing.check_coupling`
 counts meetings on the Markov state, and steps each returned state with and without its
@@ -164,6 +166,8 @@ moves from the reflection-maximal coupling of $\mathcal N(\rho x, s^2)$ and
 $\mathcal N(\rho y, s^2)$:
 
 ```{code-cell} python
+import copy
+
 import numpy as np
 
 import telescopic
@@ -179,7 +183,9 @@ class AR1(Kernel):
 
     def step(self, target, state, draws):
         x = self.rho * state.x + self.scale * draws.normal(1)
-        return State(x, target.log_prob(x)), np.ones(len(x))
+        # Other kernels' fields, carried unchanged as copies.
+        moved = State(x, target.log_prob(x), extra=copy.deepcopy(state.extra))
+        return moved, np.ones(len(x))
 
     def coupled_step(self, target, state_x, state_y, draws):
         x, y, identical = couplings.reflection_maximal(
@@ -188,7 +194,10 @@ class AR1(Kernel):
         log_prob_x = target.log_prob(x)
         log_prob_y = log_prob_x.copy()  # copied where the moves coincide
         log_prob_y[~identical] = target.log_prob(y[~identical])
-        return State(x, log_prob_x), State(y, log_prob_y)
+        return (
+            State(x, log_prob_x, extra=copy.deepcopy(state_x.extra)),
+            State(y, log_prob_y, extra=copy.deepcopy(state_y.extra)),
+        )
 
     def __repr__(self):
         return f"AR1(rho={self.rho})"

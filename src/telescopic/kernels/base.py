@@ -20,16 +20,17 @@ from telescopic.tuning import PilotRun, TuningReport, adaptive_metropolis, dual_
 
 @dataclass
 class State:
-    """Positions, log-densities, (optionally) gradients and a kernel's own fields of ``n`` chains, batch first.
+    """The states of ``n`` chains, batch first: positions, log-densities, gradients, fields.
 
     A kernel returns states with the fields of its input states, valid at the returned
     positions: a state that carries gradients gets them evaluated at every new position.
-    ``extra`` maps names to arrays of one kernel, such as a momentum or a cached value, with
-    the chains along their first axis. The kernel names in
+    ``extra`` maps names to arrays of one kernel, such as a momentum or a cached value,
+    with the chains along their first axis. The kernel names in
     :attr:`~telescopic.kernels.Kernel.markov_fields` those that are part of its Markov
-    state, and the others are caches that it checks before use. A kernel carries unchanged
-    the fields it does not know, and :meth:`take` and :meth:`put` do so for it. A state therefore carries its kernel's caches: before handing a state to
-    another kernel by hand, drop its ``extra``.
+    state, and the others are caches that it checks before use. A kernel carries
+    unchanged the fields it does not know, and :meth:`take` and :meth:`put` do so for it.
+    A state therefore carries its kernel's caches: before handing a state to another
+    kernel by hand, drop its ``extra``.
 
     Attributes
     ----------
@@ -266,7 +267,10 @@ class Kernel(ABC):
 
     # Spec R-INPUT-1.
     def init_state(self, target: Target, x: FloatArray) -> State:
-        """Evaluate the target at the rows of ``x``, with gradients if the kernel needs them, and attach the kernel's fields.
+        """The states at the rows of ``x``: the target's values, and the kernel's fields.
+
+        Gradients are evaluated if the kernel needs them, and :meth:`init_extra` gives the
+        fields, which must include every Markov field.
 
         A gradient that is not finite where the log-density is raises ``ValueError``
         here, as chains cannot start there; elsewhere it is taken as 0.
