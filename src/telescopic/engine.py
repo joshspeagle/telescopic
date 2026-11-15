@@ -36,6 +36,9 @@ __all__ = ["Replicates", "Settings", "Status", "check_settings", "merge", "run",
 # Replicates advanced together by default (DECISIONS #52).
 LANES = 256
 
+# The finished replicates whose record a run hands to its sink at a time (DECISIONS #268).
+FLUSH = LANES
+
 # The largest time that the int32 times of the atoms hold (DECISIONS #234).
 MAX_TIME = 2**31 - 1
 
@@ -410,10 +413,15 @@ def _run(
     keep: int | None = None,
     keep_paths: bool = False,
     monitor: Callable[[Status], bool] | None = None,
+    sink: Callable[[Replicates], None] | None = None,
 ) -> _Outcome:
     # run, returning an outcome: an error that stops the replicates is returned with the
     # record of those finished before it, never raised, while KeyboardInterrupt and the
-    # other BaseExceptions are. Invalid arguments raise before any replicate starts.
+    # other BaseExceptions are. Invalid arguments raise before any replicate starts. A
+    # sink is handed the record of the replicates finished since its last call every
+    # FLUSH finished replicates, and the rest at the end, after an error too; their rows
+    # leave the batch, and the outcome holds their merge, bitwise the record a run without
+    # a sink makes. An error of the sink stops the run as any error does.
     instance("target", target, Target)
     instance("kernel", kernel, Kernel)
     settings = check_settings(Settings(k, m, lag, thin, max_iter, flag("store", store), keep))
@@ -441,7 +449,8 @@ def _run(
         return _Outcome(None, caught.error)
     ndim = len(head.x0)
     starts = itertools.chain([head], (_Start(i, initial, seed, ndim) for i in queue))
-    batch = _Batch(target, kernel, ndim, lanes, settings, keep_paths)
+    batch = _Batch(target, kernel, ndim, lanes, settings, keep_paths, start)
+    parts: list[Replicates] = []
     with _Caught() as caught:
         batch.fill(np.arange(lanes), starts)
         stopping = False
@@ -451,9 +460,19 @@ def _run(
             stopping = (monitor is not None and monitor(batch.status())) or stopping
             if not stopping:
                 batch.fill(free, starts)
+            if sink is not None and batch.unflushed >= FLUSH:
+                parts.append(batch.result(seed, None))
+                sink(parts[-1])
     error = caught.error
     with _Caught() as recording:
-        return _Outcome(batch.result(seed, np.sort(requested), start), error)
+        parts.append(batch.result(seed, np.sort(requested)))
+    if recording.error is None:
+        if sink is not None:
+            with _Caught() as sinking:
+                sink(parts[-1])
+            error = error or sinking.error
+        with _Caught() as recording:
+            return _Outcome(parts[0] if len(parts) == 1 else merge(parts), error)
     error = error or recording.error
     _note(cast(Exception, error), _LOST)
     return _Outcome(None, error)
@@ -657,8 +676,11 @@ class _Batch:
         lanes: int,
         settings: Settings,
         keep_paths: bool,
+        start: float,
     ) -> None:
         self.target, self.kernel, self.settings = target, kernel, settings
+        # When the last record was made, and the replicates finished since.
+        self.since, self.unflushed = start, 0
         self.markov = kernel.markov_fields  # none for every shipped kernel
         self.keep_paths = keep_paths
         self.weight = 1.0 / len(range(settings.k, settings.m + 1, settings.thin))  # 1 / |S|
@@ -782,6 +804,7 @@ class _Batch:
                 self.reduced.add(self.replicate[lanes], center, sums)
             self.replicate[lanes] = -1
             self.n_finished += len(lanes)
+            self.unflushed += len(lanes)
         return lanes
 
     def status(self) -> Status:
@@ -798,21 +821,26 @@ class _Batch:
             bool(self.outside[lane]),
         )
 
-    def result(self, seed: SeedSequence, requested: IntArray, start: float) -> Replicates:
-        # The finished replicates' outputs. After an error, the lanes still active hold the
-        # abandoned replicates, whose rows, starts at zero density and paths are left out
-        # (spec section 6.5). The seconds since start include this join, a large part of a
-        # run with many atoms.
+    def result(self, seed: SeedSequence, requested: IntArray | None) -> Replicates:
+        # The record of the replicates finished since the last one, whose rows leave the
+        # batch, requested among them. requested None makes a record during the run,
+        # which requests its own replicates; otherwise the run is over, and the lanes still
+        # active hold the replicates an error abandoned, whose rows, starts at zero density
+        # and paths are left out (spec section 6.5). The seconds since the last record
+        # include this join, a large part of a run with many atoms.
         index, tau = self.finished.join()
-        abandoned = np.sort(self.replicate[self.active])
-        owner, atoms, weights, times = self.atoms.join(keep=index[tau >= 0])
+        during = requested is None
+        abandoned = np.sort(self.replicate[self.active]) if not during else index[:0]
+        finished = index if during else None  # whose rows leave; the others stay
+        owner, atoms, weights, times = self.atoms.join(index[tau >= 0], finished)
         _, center, moments = self.reduced.join()
         distance_owner, distance_time, distance = self.distances.join(
-            keep=index if len(abandoned) else None
+            index if during or len(abandoned) else None, finished
         )
         zero_density = np.array(self.zero_density, dtype=np.int64)
-        finished = set(index.tolist())
-        return Replicates(
+        counts = {name: getattr(self.target, name) for name in COUNTS}
+        now = time.perf_counter()
+        replicates = Replicates(
             seed=seed,
             settings=self.settings,
             index=index,
@@ -824,17 +852,22 @@ class _Batch:
             distance_time=distance_time,
             distance=distance,
             zero_density=np.sort(zero_density[np.isin(zero_density, index)]),
-            requested=requested,
+            requested=index if requested is None else requested,
             abandoned=abandoned,
             time=times,
             center=center,
             moments=moments,
-            **{name: getattr(self.target, name) - n for name, n in self.counts.items()},
-            seconds=time.perf_counter() - start,
+            **{name: counts[name] - n for name, n in self.counts.items()},
+            seconds=now - self.since,
             paths={
-                i: (np.array(x), np.array(y)) for i, (x, y) in self.paths.items() if i in finished
+                i: (np.array(x), np.array(y))
+                for i, (x, y) in (
+                    (i, self.paths.pop(i)) for i in index.tolist() if i in self.paths
+                )
             },
         )
+        self.counts, self.since, self.unflushed = counts, now, 0
+        return replicates
 
     def _record(self, stepped: IntArray, unmet: IntArray) -> None:
         # The averaged atoms X_t, t in S, of the lanes that moved, and the bias-correction
@@ -922,6 +955,7 @@ class _Chunks:
     # Every 256 chunks merge into one block: at one lane a chunk holds one row, and its
     # arrays' overhead would cost several times the row.
     def __init__(self, *empty: npt.NDArray[Any]) -> None:
+        self.empty = empty
         self.blocks: list[tuple[npt.NDArray[Any], ...]] = [empty]
         self.chunks: list[tuple[npt.NDArray[Any], ...]] = []
 
@@ -931,10 +965,17 @@ class _Chunks:
             self.blocks.append(_concatenate(self.chunks))
             self.chunks = []
 
-    def join(self, keep: IntArray | None = None) -> list[npt.NDArray[Any]]:
-        # The rows whose owners are in keep (all by default), gathered once.
+    def join(
+        self, keep: IntArray | None = None, finished: IntArray | None = None
+    ) -> list[npt.NDArray[Any]]:
+        # The rows whose owners are in keep (all by default), gathered once. The rows whose
+        # owners are not in finished stay, as one block in their order; none without it.
         columns = _concatenate(self.blocks + self.chunks)
-        self.blocks, self.chunks = [], []  # so that the join holds two copies, not three
+        # Dropped now, so that the join holds two copies, not three.
+        self.blocks, self.chunks = [self.empty], []
+        if finished is not None:
+            staying = ~np.isin(columns[0], finished)
+            self.blocks = [tuple(column[staying] for column in columns)]
         order = np.argsort(columns[0], kind="stable")
         if keep is not None:
             order = order[np.isin(columns[0][order], keep)]
