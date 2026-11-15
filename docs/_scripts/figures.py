@@ -9,7 +9,9 @@
 * ``reflection.svg`` (V3, a static frame): two draws of
   :func:`telescopic.couplings.reflection_maximal`, one reflected and one identical;
 * ``telescoping.svg`` (V2): the expectations :math:`\\mathbb E[h(X_{k+jL})]`, from the same
-  grid as ``burn-in.svg``, and one replicate's differences :math:`\\Delta_{k+jL}`.
+  grid as ``burn-in.svg``, and one replicate's differences :math:`\\Delta_{k+jL}`;
+* ``signed-measure.svg`` (V5): one replicate's atoms and weights, and the signed
+  histogram of 1000 replicates run by :func:`telescopic.sample`.
 
 The figures are drawn on the light figure ground with the colors, faces, sizes and
 helpers of ``brand.py``: magenta for chain X, teal for chain Y, the ink of met chains once
@@ -28,6 +30,7 @@ import argparse
 import functools
 import itertools
 import sys
+import warnings
 from collections.abc import Callable
 from pathlib import Path
 
@@ -71,6 +74,19 @@ SEED = 0
 CANDIDATES = 32  # replicates searched for the first that the rule of a figure accepts
 LAG = 3
 LAST = 24
+REPLICATES = 1000  # the replicates of the figures drawn from a whole run
+
+
+def log_density(x: np.ndarray) -> float:
+    return -0.5 * x[0] ** 2
+
+
+def kernel() -> telescopic.kernels.RandomWalk:
+    return telescopic.kernels.RandomWalk(cov=[[1.0]])
+
+
+def initial() -> telescopic.initial.Normal:
+    return telescopic.initial.Normal(mean=[START_MEAN], cov=[1.0])
 
 
 # --------------------------------------------------------------------------- drawing
@@ -205,11 +221,16 @@ def laws() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
 def pairs() -> engine.Replicates:
     """Coupled pairs of the tutorial's setting with the lag LAG, run by the package with a
     target evaluated point by point, with their paths."""
-    target = telescopic.Target(lambda x: -0.5 * x[0] ** 2)
-    kernel = telescopic.kernels.RandomWalk(cov=[[1.0]])
-    init = telescopic.initial.Normal(mean=[START_MEAN], cov=[1.0])
     return engine.run(
-        target, kernel, init, range(CANDIDATES), k=0, m=LAST, lag=LAG, rng=SEED, keep_paths=True
+        telescopic.Target(log_density),
+        kernel(),
+        initial(),
+        range(CANDIDATES),
+        k=0,
+        m=LAST,
+        lag=LAG,
+        rng=SEED,
+        keep_paths=True,
     )
 
 
@@ -562,6 +583,171 @@ def telescoping() -> str:
     return svg(width, height, label, "".join(body))
 
 
+@functools.cache
+def run(k: int, m: int, lag: int) -> telescopic.Result:
+    """REPLICATES replicates of the tutorial's setting with the settings given, run by the
+    package with a target evaluated point by point, without its warnings."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", telescopic.ConvergenceWarning)
+        return telescopic.sample(
+            log_density, initial(), REPLICATES, kernel=kernel(), k=k, m=m, lag=lag, rng=SEED
+        )
+
+
+def weight_axis(x: float, scale: Scale, zero: float, values: np.ndarray) -> str:
+    """A vertical axis at x through zero, with a tick and a label at each of values."""
+    rule = FIGURE["rule"]
+    ys = zero - scale(values)
+    out = [segment(x, float(ys.min()), x, float(ys.max()), MUTED, width=rule)]
+    for value, y in zip(values, ys, strict=True):
+        out.append(segment(x - 5, float(y), x, float(y), MUTED, width=rule))
+        out.append(text(x - 9, float(y) + 6, f"{value:g}".replace("-", MINUS), "end", MUTED))
+    return "".join(out)
+
+
+def signed_measure() -> str:
+    """V5: one replicate's atoms as stems, positive weights up in X's color and negative
+    weights down in Y's; below, the signed histogram of all the replicates, with the
+    target's mass in each bin and its most negative bin highlighted."""
+    name, k, m, lag = "signed-measure", 2, 12, LAG
+    result = run(k, m, lag)
+    measure, taus = result.measure, result.meeting_times
+    check(result.n_censored == 0, name, "every pair met")
+    lo, hi, gap = -3.5, 7.5, 0.15  # the drawn range, and the least gap between two stems
+
+    def stems(r: int) -> tuple[np.ndarray, np.ndarray]:
+        # The atoms at one point, which rejected proposals repeat, as one stem with their
+        # summed weight.
+        own = measure.replicate == r
+        points, where = np.unique(measure.atoms[own, 0], return_inverse=True)
+        return points, np.bincount(where, measure.weights[own])
+
+    def drawable(r: int) -> bool:
+        points, weights = stems(r)
+        return bool(
+            k + 2 * lag + 2 <= taus[r] <= k + 4 * lag
+            and np.sum(weights < 0) >= 3
+            and np.all(np.diff(points) > gap)
+            and points.min() > lo
+            and points.max() < hi
+        )
+
+    chosen = next((r for r in range(CANDIDATES) if drawable(r)), None)
+    if chosen is None:
+        raise SystemExit(f"{name}: none of the first {CANDIDATES} replicates can be drawn")
+    points, weights = stems(chosen)
+    tau = int(taus[chosen])
+    own = measure.weights[measure.replicate == chosen]
+    check(np.isclose(own.sum(), 1.0), name, "the replicate's weights sum to 1")
+    # Each stem has the sign of its atoms: an X atom's weight is positive and a Y atom's
+    # negative, and no point holds atoms of both chains.
+    signs = [np.sign(own[measure.atoms[measure.replicate == chosen, 0] == p]) for p in points]
+    check(all(len(set(s)) == 1 for s in signs), name, "each stem holds atoms of one sign")
+    bins = 22
+    masses, errors, edges = result.histogram(0, bins=bins, range=(lo, hi))
+    exact = np.diff(stats.norm.cdf(edges))
+    low = int(np.argmin(masses))
+    check(masses[low] < 0, name, "a bin of the histogram is negative")
+    check(
+        masses[low] + 2 * errors[low] > exact[low] > 0,
+        name,
+        "the negative bin's two standard errors reach the target's positive mass",
+    )
+    width, height = 640.0, 540.0
+    x = Scale(lo, hi, 84.0, 610.0)
+    axis_x = 64.0
+    rule = FIGURE["rule"]
+    # The replicate's stems about a zero line, on a scale of their own.
+    zero, reach = 156.0, 110.0
+    top = max(weights.max(), -weights.min())
+    w = Scale(0.0, top, 0.0, reach)
+    step = 0.5 if top > 1 else 0.25
+    ticks = (
+        np.arange(-np.floor(-weights.min() / step), np.floor(weights.max() / step) + 1) * step
+        + 0.0
+    )
+    body = [
+        text(20, 26, rich("one replicate, ", ("τ", ""), f" = {tau}: its weights sum to 1")),
+        segment(axis_x, zero, float(x(hi)), zero, MUTED, width=rule),
+        weight_axis(axis_x, w, zero, ticks),
+    ]
+    for point, weight in zip(points, weights, strict=True):
+        px, end = float(x(point)), zero - float(w(weight))
+        color = CX if weight > 0 else CY
+        body += [segment(px, zero, px, end, color), dot(px, end, color)]
+    # Each chain's label beside its longest stem.
+    for chain, sign, color, relation in (("X", 1, CX, "&gt;"), ("Y", -1, CY, "&lt;")):
+        longest = int(np.argmax(sign * weights))
+        body.append(
+            text(
+                float(x(points[longest])) + 12,
+                zero - float(w(weights[longest])) + 6,
+                rich((chain, ""), f" atoms: weight {relation} 0"),
+                "start",
+                color,
+            )
+        )
+    # The histogram of all the replicates, each bar from zero with two standard errors,
+    # and the target's mass in each bin as a gray outline.
+    base, tall = 440.0, 150.0
+    hist = Scale(0.0, float((masses + 2 * errors).max()), 0.0, tall)
+    body.append(text(20, base - tall - 26, f"{REPLICATES:,} replicates: the mass of each bin"))
+    for i in range(bins):
+        a, b = float(x(edges[i])), float(x(edges[i + 1]))
+        size = float(hist(masses[i]))
+        fill = (
+            f'fill="{CATEGORICAL[2]}"'
+            if i == low
+            else f'fill="{BLUE}" fill-opacity="{FIGURE["band"]}"'
+        )
+        body.append(
+            f'<rect x="{_f(a + 1)}" y="{_f(base - max(size, 0))}" width="{_f(b - a - 2)}" '
+            f'height="{_f(abs(size))}" {fill}/>'
+        )
+        ends = base - hist(masses[i] + 2 * np.array([-errors[i], errors[i]]))
+        body.append(segment((a + b) / 2, float(ends[0]), (a + b) / 2, float(ends[1]), INK, rule))
+    outline = np.column_stack(
+        [x(np.repeat(edges, 2)), base - hist(np.r_[0, np.repeat(exact, 2), 0])]
+    )
+    body += [
+        _stroke(outline, MUTED, FIGURE["outline"]),
+        segment(axis_x, base, float(x(hi)), base, MUTED, width=rule),
+        text(
+            float(x(edges[low + 1])) + 6,
+            base + 24,
+            f"{MINUS}{abs(masses[low]):.3f}",
+            "start",
+            CATEGORICAL[2],
+        ),
+    ]
+    axis = base + 44
+    body += [
+        segment(float(x(v)), axis, float(x(v)), axis + 5, MUTED, width=rule)
+        for v in range(-2, 8, 2)
+    ]
+    body += [
+        text(float(x(v)), axis + 24, f"{v:g}".replace("-", MINUS), "middle", MUTED)
+        for v in range(-2, 8, 2)
+    ]
+    body.append(text(float(x(hi)), axis + 46, rich(("x", "")), "end", MUTED))
+    label = (
+        f"Top: one replicate's signed measure, for random-walk Metropolis on N(0, 1) started "
+        f"from N(5, 1) with k = {k}, L = {lag}, m = {m}, and meeting time tau = {tau}: its "
+        f"{len(own)} atoms at {len(points)} distinct points, drawn as one stem per point "
+        f"with the summed weight. Magenta stems rise at "
+        + ", ".join(f"{p:.2f} to {v:.2f}" for p, v in zip(points, weights, strict=True) if v > 0)
+        + "; teal stems fall at "
+        + ", ".join(f"{p:.2f} to {v:.2f}" for p, v in zip(points, weights, strict=True) if v < 0)
+        + f". The weights sum to 1. Bottom: the signed histogram of {REPLICATES:,} "
+        f"replicates in {bins} bins of width {edges[1] - edges[0]:g} from {lo:g} to {hi:g}, "
+        f"each bar with a line of two standard errors, over the gray outline of the target's "
+        f"mass in each bin. The bin from {edges[low]:g} to {edges[low + 1]:g} is highlighted: "
+        f"its mass is {masses[low]:.3f}, with a standard error of {errors[low]:.3f}, where "
+        f"the target's is {exact[low]:.4f}."
+    )
+    return svg(width, height, label, "".join(body))
+
+
 # --------------------------------------------------------------------------- output
 
 
@@ -571,6 +757,7 @@ def outputs() -> dict[Path, str]:
         OUT / "two-chains.svg": two_chains(),
         OUT / "reflection.svg": reflection(),
         OUT / "telescoping.svg": telescoping(),
+        OUT / "signed-measure.svg": signed_measure(),
     }
 
 
