@@ -69,6 +69,15 @@ def tv_bound(
     function :math:`\hat S(u) = R^{-1}\#\{\tau > u\}`, and the second moment as
     :math:`\sum_{j \ge 1} (2j - 1)\hat S(t + jL)`, in :math:`O(R + \max\tau)`.
     """
+    average, error = _tv_average(meeting_times, lag, t)
+    bound: FloatArray = np.minimum(1.0, average)
+    return bound, error
+
+
+def _tv_average(
+    meeting_times: npt.ArrayLike, lag: int, t: npt.ArrayLike
+) -> tuple[FloatArray, FloatArray]:
+    # tv_bound's average and standard error, before the cap at 1.
     tau = real_array("meeting_times", meeting_times, "integers of shape (R,)")
     if tau.ndim != 1 or len(tau) == 0 or not integral(tau, 0):
         raise ValueError(
@@ -76,14 +85,15 @@ def tv_bound(
             "integers: give a censored pair as its cap plus 1"
         )
     counts = np.bincount(tau.astype(np.int64))
+    # Not (len(tau) - cumulative counts) / len(tau), which rounds differently.
     survival = 1.0 - np.cumsum(counts) / len(tau)
-    bound: FloatArray = np.minimum(1.0, _lagged_tail(survival, lag, t))
+    average = _lagged_tail(survival, lag, t)
     # sum_r N_r = sum_j #{tau > t + jL} = A(t), and sum_r N_r^2 = sum_j (2j - 1) #{...},
     # which is A(t) + 2 sum_{i >= 1} A(t + iL); the counts are exact integers.
     above = len(tau) - np.cumsum(counts, dtype=np.float64)
     tails = _lagged_tail(above, lag, np.arange(len(above)))
     sums = _lagged_tail(above, lag, t)
-    return bound, _standard_error(sums, sums + 2 * _lagged_tail(tails, lag, t), len(tau))
+    return average, _standard_error(sums, sums + 2 * _lagged_tail(tails, lag, t), len(tau))
 
 
 # Spec section 3.6.
@@ -129,6 +139,7 @@ def w1_bound(
     Costs :math:`O(M \log M + \max s)`.
     """
     n_replicates = integer("n_replicates", n_replicates, minimum=1)
+    lag = integer("lag", lag, minimum=1)
     owners = real_array("distance_owner", distance_owner, "integers of shape (M,)", dtype=None)
     times = real_array("distance_time", distance_time, "integers of shape (M,)", dtype=None)
     distances = real_array("distance", distance, "real numbers of shape (M,)")
@@ -139,6 +150,11 @@ def w1_bound(
         )
     if not integral(owners, 0):
         raise ValueError("distance_owner must be non-negative integers")
+    n_owners = len(np.unique(owners))
+    if n_owners > n_replicates:
+        raise ValueError(
+            f"distance_owner holds {n_owners} replicates, more than n_replicates = {n_replicates}"
+        )
     if not integral(times, 0):
         raise ValueError("distance_time must be non-negative integers")
     if not np.all(np.isfinite(distances) & (distances >= 0)):
@@ -155,9 +171,14 @@ def _squares(owners: IntArray, times: IntArray, distances: FloatArray, lag: int)
     # The sum over replicates of W_r(u)^2, W_r(u) = sum_{j >= 0} d_r(u + jL), at each time u,
     # spread as values that _lagged_tail sums: a replicate's record at s with W_r(s) = S
     # adds S^2 - (S - d)^2 = d (2S - d) at s, which telescopes along s, s + L, ...
-    order = np.lexsort((times, times % integer("lag", lag, minimum=1), owners))
-    owners, times, distances = owners[order], times[order], distances[order]
     remainder = times % lag
+    order = np.lexsort((times, remainder, owners))
+    owners, times, distances, remainder = (
+        owners[order],
+        times[order],
+        distances[order],
+        remainder[order],
+    )
     first = np.ones(len(times), dtype=bool)
     first[1:] = (owners[1:] != owners[:-1]) | (remainder[1:] != remainder[:-1])
     starts = np.flatnonzero(first)
@@ -170,7 +191,9 @@ def _squares(owners: IntArray, times: IntArray, distances: FloatArray, lag: int)
 
 
 def _standard_error(sums: FloatArray, squares: FloatArray, n: int) -> FloatArray:
-    # The standard error of the mean of n terms from their sum and sum of squares.
+    # The standard error of the mean of n terms from their sum and sum of squares. The
+    # variance loses relative precision of about eps (1 + mean^2 / variance) to the
+    # difference; centering would need each replicate's term at each time.
     if n < 2:
         return np.full(np.shape(sums), np.nan)
     variance = np.maximum(0.0, squares - sums * sums / n) / (n - 1)

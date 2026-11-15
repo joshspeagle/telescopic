@@ -76,8 +76,8 @@ def result_arrays(name, result, out):
     out[f"{name}/histogram"] = np.concatenate([masses, errors, edges])
     masses, errors, _ = result.histogram([0, 1], 6, range=[[-3, 3], [-3, 3]])
     out[f"{name}/histogram2"] = np.concatenate([masses.ravel(), errors.ravel()])
-    out[f"{name}/tv_bound"] = result.tv_bound()
-    out[f"{name}/w1_bound"] = result.w1_bound()
+    out[f"{name}/tv_bound"] = result.tv_bound()[0]
+    out[f"{name}/w1_bound"] = result.w1_bound()[0]
     for key, value in result.diagnostics().items():
         if key == "seconds_per_replicate":
             continue  # wall time, which differs between any two runs

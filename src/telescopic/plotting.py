@@ -138,8 +138,10 @@ def survival(
 def tv_bound(result: Result, ax: Axes | None = None) -> Axes:
     """The estimated bound on the total variation distance to the target against t.
 
-    The bound is on a log scale, with a band of two standard errors, capped at 1, and
-    ``k`` marked.
+    The bound is on a log scale, with ``k`` marked and a band of two standard errors
+    about the average before its cap at 1, capped in turn: where the cap holds the
+    average well above 1 the band shrinks to the line at 1. Where its lower edge is not
+    positive, the band reaches the bottom of the axis.
 
     Parameters
     ----------
@@ -154,23 +156,22 @@ def tv_bound(result: Result, ax: Axes | None = None) -> Axes:
     """
     ax = plt.subplots(figsize=(5, 3.5))[1] if ax is None else ax
     # At most 4,000 times draw the step function, however long the tail of meeting times.
-    bound, error = result.tv_bound()
-    step = max(1, len(bound) // 2000)
-    t, bound, error = np.arange(len(bound))[::step], bound[::step], error[::step]
-    positive = bound > 0
-    t, bound, error = t[positive], bound[positive], error[positive]
-    (line,) = ax.plot(t, bound)
+    average, error = result._tv_average()
+    step = max(1, len(average) // 2000)
+    t, average, error = np.arange(len(average))[::step], average[::step], error[::step]
+    positive = average > 0
+    t, average, error = t[positive], average[positive], error[positive]
+    (line,) = ax.plot(t, np.minimum(1, average))
     ax.axvline(result.k, color="gray", linestyle="--", label="$k$")
     ax.set(xlabel="$t$", ylabel=r"TV bound on $X_t$")
     # A log scale needs a positive value: none when every pair met at t = L.
     if len(t):
         ax.set(yscale="log")
-        # Where the lower edge is not positive, the band reaches the bottom of the axis.
         bottom = ax.get_ylim()[0]
         ax.fill_between(
             t,
-            np.maximum(bottom, bound - 2 * error),
-            np.minimum(1, bound + 2 * error),
+            np.clip(average - 2 * error, bottom, 1),
+            np.minimum(1, average + 2 * error),
             color=line.get_color(),
             alpha=0.3,
             linewidth=0,

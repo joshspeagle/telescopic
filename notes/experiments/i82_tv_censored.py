@@ -46,7 +46,7 @@ for seed in range(20):
     at_k = min(1.0, counts[:, result.k].mean())
     worst = max(
         worst,
-        float(np.max(np.abs(result.tv_bound(t) - expected))),
+        float(np.max(np.abs(result.tv_bound(t)[0] - expected))),
         abs(result.diagnostics()["tv_bound_at_k"] - at_k),
     )
     print(f"seed {seed}: lag {lag}, cap {cap}, {result.n_censored} of 60 censored")

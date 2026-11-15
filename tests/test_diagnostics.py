@@ -77,6 +77,8 @@ def test_the_w1_bound_refuses_invalid_owners():
         w1_bound([0], [1, 2], [0.5, 0.5], 2, 1, [0])
     with pytest.raises(ValueError, match="distance_owner must be non-negative integers"):
         w1_bound([-1, 0], [1, 2], [0.5, 0.5], 2, 1, [0])
+    with pytest.raises(ValueError, match="distance_owner holds 3 replicates, more than"):
+        w1_bound([0, 4, 7], [1, 2, 2], [0.5, 0.5, 0.5], 2, 1, [0])
 
 
 def test_the_bounds_standard_errors_are_those_of_the_per_pair_terms():
@@ -106,9 +108,10 @@ def test_the_bounds_standard_errors_are_those_of_the_per_pair_terms():
 
 def test_the_bounds_standard_errors_match_their_spread_over_independent_runs():
     # 1,000 independent sets of 200 pairs, at times where no set's TV bound reaches 1. A
-    # squared standard error is unbiased for the variance of its bound, so the root of
-    # their mean is compared with the bounds' spread, whose relative error for near-normal
-    # bounds is about 1/sqrt(2 * 999) = 2.2%: 4 of them allow 9%.
+    # squared standard error is unbiased for the variance of its bound, so the mean of
+    # the squares, a, is compared with the bounds' sample variance, v, by log(a / v),
+    # within 4 of its Monte Carlo error by the delta method over the sets, which counts
+    # the spread of the squares, the kurtosis of the bounds and their correlation.
     rng = np.random.default_rng(11)
     n_sets, n_pairs, lag, t = 1000, 200, 2, np.array([13, 16, 19])
     tv, w1 = [], []
@@ -121,11 +124,16 @@ def test_the_bounds_standard_errors_match_their_spread_over_independent_runs():
         w1.append(w1_bound(owner, time, distance, n_pairs, lag, t))
     assert np.all(np.array(tv)[:, 0] < 1)
     for bound, error in (np.array(tv).transpose(1, 0, 2), np.array(w1).transpose(1, 0, 2)):
-        np.testing.assert_allclose(
-            np.sqrt(np.mean(error**2, axis=0)),
-            bound.std(axis=0, ddof=1),
-            rtol=4 / np.sqrt(2 * (n_sets - 1)),
+        squares, deviations = error**2, (bound - bound.mean(axis=0)) ** 2
+        a, v = squares.mean(axis=0), deviations.sum(axis=0) / (n_sets - 1)
+        covariance = np.mean(
+            (squares - squares.mean(axis=0)) * (deviations - deviations.mean(axis=0)), axis=0
         )
+        spread = np.sqrt(
+            (squares.var(axis=0) / a**2 + deviations.var(axis=0) / v**2 - 2 * covariance / (a * v))
+            / n_sets
+        )
+        assert np.all(np.abs(np.log(a / v)) < 4 * spread)
 
 
 @pytest.mark.parametrize("alpha", [1.5, 3.0])

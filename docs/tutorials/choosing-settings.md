@@ -216,19 +216,26 @@ mystnb:
     caption: >-
       The estimated upper bound on the total variation distance between the law of
       $X_t$ and the target, from the run with lag 1 and the run with lag $k$, each
-      with a band of two standard errors, with $k$ dashed.
+      with a band of two standard errors where it is below 1, with $k$ dashed.
 ---
 t = np.arange(2 * k)
 fig, ax = plt.subplots(figsize=(5, 3.5))
-for label, result in (("lag 1", results["lag_1"]), (f"lag {k}", recipe)):
-    bound, error = result.tv_bound(t)
+bounds = {"lag 1": results["lag_1"].tv_bound(t), f"lag {k}": recipe.tv_bound(t)}
+colors = {}
+for label, (bound, error) in bounds.items():
     shown = bound > 0
     (line,) = ax.plot(t[shown], bound[shown], label=label)
-    lower = np.maximum(bound - 2 * error, 1e-4)
-    upper = np.minimum(bound + 2 * error, 1)
-    ax.fill_between(t[shown], lower[shown], upper[shown], color=line.get_color(), alpha=0.3)
+    colors[label] = line.get_color()
 ax.axvline(k, color="gray", linestyle="--", label="$k$")
 ax.set(yscale="log", xlabel="$t$", ylabel=r"TV bound on $X_t$")
+# Two standard errors where the bound is below its cap of 1, reaching the bottom of
+# the axis where the lower edge is not positive.
+bottom = ax.get_ylim()[0]
+for label, (bound, error) in bounds.items():
+    lower, upper = np.clip(bound - 2 * error, bottom, 1), np.minimum(bound + 2 * error, 1)
+    below = (bound > 0) & (bound < 1)
+    ax.fill_between(t, lower, upper, where=below, color=colors[label], alpha=0.3, linewidth=0)
+ax.set_ylim(bottom=bottom)
 ax.legend();
 ```
 
