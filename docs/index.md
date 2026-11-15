@@ -94,6 +94,7 @@ tutorials/failure-modes
 :caption: Gallery
 
 gallery/funnel
+gallery/burn-in
 ```
 
 ```{toctree}

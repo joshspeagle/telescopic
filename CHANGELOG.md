@@ -116,7 +116,9 @@ All notable changes to this project are documented here. The format follows
   of a replicate's cost, and a table of times measured by `benchmarks/run_faster.py`.
 - A Gallery section of executed worked examples: Neal's funnel, which compares the
   random walk, HMC and a change of coordinates by their meeting times, warnings and
-  marginal of v.
+  marginal of v; and Checking the burn-in of an existing sampler, which couples a
+  Metropolis sampler of one's own, chooses a burn-in from the total variation bound and
+  checks the bounds against runs of that sampler.
 - The API reference is an index of one-line summaries grouped by section, with a page for
   each class, its attributes and methods, a page for `sample`, and a page for each module
   that the index lists, its functions and a table of its classes. The page of a class with
