@@ -353,23 +353,31 @@ class MetropolisHastings(Kernel):
 
     Parameters
     ----------
-    proposal : Proposal
-        The proposal of every chain.
+    proposal : Proposal or None
+        The proposal of every chain. ``None`` leaves the kernel untuned, for a subclass
+        that sets its proposal by tuning, as :class:`~telescopic.kernels.RandomWalk` does.
     coupling : Coupling
-        A coupling whose ``supports(proposal)`` is true.
+        A coupling whose ``supports(proposal)`` is true; otherwise ``ValueError``.
     """
 
-    def __init__(self, proposal: Proposal, coupling: Coupling) -> None:
-        instance("proposal", proposal, Proposal)
+    # What _ready raises while the proposal is unset; each tunable subclass words its own.
+    _untuned = "MetropolisHastings needs a proposal"
+
+    def __init__(self, proposal: Proposal | None, coupling: Coupling) -> None:
         instance("coupling", coupling, Coupling)
-        if not coupling.supports(proposal):
-            raise ValueError(f"{coupling!r} does not couple a {type(proposal).__name__}")
-        self._proposal: Proposal | None = proposal
-        self._coupling = coupling
+        if proposal is not None:
+            instance("proposal", proposal, Proposal)
+            if not coupling.supports(proposal):
+                raise ValueError(f"{coupling!r} does not couple a {type(proposal).__name__}")
+        self._proposal, self._coupling = proposal, coupling
 
     @property
     def needs_grad(self) -> bool:
         return self._proposal is not None and self._proposal.needs_grad
+
+    @property
+    def is_tuned(self) -> bool:
+        return self._proposal is not None
 
     @property
     def ndim(self) -> int | None:
@@ -405,8 +413,9 @@ class MetropolisHastings(Kernel):
         )
 
     def _ready(self) -> tuple[Proposal, Coupling]:
-        # The shipped kernels override it to raise while they are untuned.
-        return cast(Proposal, self._proposal), self._coupling
+        if self._proposal is None:
+            raise ValueError(self._untuned)
+        return self._proposal, self._coupling
 
     def __repr__(self) -> str:
         return f"MetropolisHastings({self._proposal!r}, {self._coupling!r})"

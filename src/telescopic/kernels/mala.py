@@ -8,9 +8,9 @@ import numpy.typing as npt
 
 from telescopic._linalg import inverse_lower
 from telescopic._types import FloatArray
-from telescopic.couplings import Coupling, Reflection
+from telescopic.couplings import Reflection
 from telescopic.kernels.base import GradientKernel
-from telescopic.kernels.metropolis import LangevinProposal, MetropolisHastings, Proposal
+from telescopic.kernels.metropolis import LangevinProposal, MetropolisHastings
 
 
 # Spec R-KER-MALA and section 5.4.
@@ -67,18 +67,18 @@ class MALA(GradientKernel, MetropolisHastings):
     """
 
     target_acceptance = 0.574
+    _untuned = "MALA needs step_size and cov; give them, or tune the kernel on a pilot run"
 
     def __init__(
         self, step_size: float | None = None, *, cov: npt.ArrayLike | None = None
     ) -> None:
-        super().__init__(step_size, cov)
+        GradientKernel.__init__(self, step_size, cov)
         self._inverse = None if self._chol is None else inverse_lower(self._chol)
-        self._coupling: Coupling = Reflection()
-        self._proposal: Proposal | None = self._langevin()
+        MetropolisHastings.__init__(self, self._langevin(), Reflection())
 
     def with_step_size(self, step_size: float) -> MALA:
         kernel = cast(MALA, super().with_step_size(step_size))
-        kernel._proposal = kernel._langevin()
+        MetropolisHastings.__init__(kernel, kernel._langevin(), kernel._coupling)
         return kernel
 
     def _with_cov(self, cov: FloatArray) -> MALA:
@@ -96,13 +96,6 @@ class MALA(GradientKernel, MetropolisHastings):
         return LangevinProposal._trusted(
             self.step_size * self._chol, self._inverse / self.step_size
         )
-
-    def _ready(self) -> tuple[Proposal, Coupling]:
-        if self._proposal is None:
-            raise ValueError(
-                "MALA needs step_size and cov; give them, or tune the kernel on a pilot run"
-            )
-        return self._proposal, self._coupling
 
     def __repr__(self) -> str:
         cov = "None" if self.cov is None else f"<{len(self.cov)}x{len(self.cov)}>"

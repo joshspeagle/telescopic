@@ -200,9 +200,15 @@ def test_metropolis_hastings_refuses_a_coupling_for_a_proposal_or_subclass_it_do
         MetropolisHastings(proposal, coupling)
 
 
-def test_random_walk_refuses_a_coupling_object_of_another_proposal():
-    with pytest.raises(ValueError, match="coupling must be"):
-        RandomWalk(np.eye(2), coupling=Shared())
+class OwnReflection(Reflection):
+    """A subclass, which could couple other laws than the random walk's."""
+
+
+@pytest.mark.parametrize("coupling", [Shared(), OwnReflection(), "independent"])
+def test_random_walk_refuses_a_coupling_other_than_its_two(coupling):
+    for cov in (np.eye(2), None):  # untuned too, where no proposal is there to check
+        with pytest.raises(ValueError, match="coupling must be"):
+            RandomWalk(cov, coupling=coupling)
 
 
 def test_kernels_with_coupling_objects_survive_pickling():

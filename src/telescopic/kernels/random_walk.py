@@ -11,7 +11,7 @@ from telescopic._linalg import covariance, inverse_lower
 from telescopic._types import FloatArray, Seed, real
 from telescopic.couplings import Coupling, Maximal, Reflection
 from telescopic.kernels.base import Kernel
-from telescopic.kernels.metropolis import MetropolisHastings, Proposal, RandomWalkProposal
+from telescopic.kernels.metropolis import MetropolisHastings, RandomWalkProposal
 from telescopic.target import Target
 from telescopic.tuning import OPTIMAL_SCALE, PilotRun, TuningReport
 
@@ -69,6 +69,8 @@ class RandomWalk(MetropolisHastings):
     (False, True)
     """
 
+    _untuned = "RandomWalk needs cov; give it, or tune the kernel on a pilot run"
+
     def __init__(
         self,
         cov: npt.ArrayLike | None = None,
@@ -76,24 +78,32 @@ class RandomWalk(MetropolisHastings):
         scale: float | None = None,
         coupling: Literal["reflection", "maximal"] | Reflection | Maximal = "reflection",
     ) -> None:
-        if isinstance(coupling, Reflection | Maximal):
-            self._coupling: Coupling = coupling
-        elif isinstance(coupling, str) and coupling in ("reflection", "maximal"):
-            self._coupling = Reflection() if coupling == "reflection" else Maximal()
+        coupling_object: Coupling
+        if isinstance(coupling, str) and coupling in ("reflection", "maximal"):
+            coupling_object = Reflection() if coupling == "reflection" else Maximal()
+        elif isinstance(coupling, Reflection | Maximal) and type(coupling) in (
+            Reflection,
+            Maximal,
+        ):
+            # Exactly these classes: a subclass could couple other laws than the walk's.
+            coupling_object = coupling
         else:
             raise ValueError(
                 "coupling must be 'reflection', 'maximal', Reflection() or Maximal(), not "
                 f"{coupling!r}"
             )
         self.scale = None if scale is None else real("scale", scale, 0, np.inf)
+        # The argument as given, for coupling and the description; the object is the
+        # base class's.
         self._given_coupling = coupling
         self.cov: FloatArray | None = None
-        self._proposal: Proposal | None = None
+        proposal = None
         if cov is not None:
             self.cov, chol = covariance("cov", cov)
             scale = OPTIMAL_SCALE / np.sqrt(len(chol)) if self.scale is None else self.scale
             scaled = scale * chol
-            self._proposal = RandomWalkProposal._trusted(scaled, inverse_lower(scaled))
+            proposal = RandomWalkProposal._trusted(scaled, inverse_lower(scaled))
+        super().__init__(proposal, coupling_object)
 
     @property
     def coupling(self) -> Literal["reflection", "maximal"] | Reflection | Maximal:
@@ -105,20 +115,11 @@ class RandomWalk(MetropolisHastings):
         """
         return self._given_coupling
 
-    @property
-    def is_tuned(self) -> bool:
-        return self.cov is not None
-
     def _tuned(
         self, target: Target, initial: Any, pilot: PilotRun, rng: Seed
     ) -> tuple[Kernel, TuningReport]:
         tuned = type(self)(pilot.cov, scale=self.scale, coupling=self.coupling)
         return tuned, pilot.report()
-
-    def _ready(self) -> tuple[Proposal, Coupling]:
-        if self._proposal is None:
-            raise ValueError("RandomWalk needs cov; give it, or tune the kernel on a pilot run")
-        return self._proposal, self._coupling
 
     def __repr__(self) -> str:
         cov = "None" if self.cov is None else f"<{len(self.cov)}x{len(self.cov)}>"

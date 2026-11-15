@@ -12,9 +12,9 @@ from scipy.special import gammaln
 from telescopic._linalg import covariance, inverse_lower, matvec
 from telescopic._random import Draws
 from telescopic._types import FloatArray, ProposalDistribution, Seed, integer, vector
-from telescopic.couplings import Coupling, Shared
+from telescopic.couplings import Shared
 from telescopic.kernels.base import Kernel
-from telescopic.kernels.metropolis import IndependenceProposal, MetropolisHastings, Proposal
+from telescopic.kernels.metropolis import IndependenceProposal, MetropolisHastings
 from telescopic.target import Target
 from telescopic.tuning import PilotRun, TuningReport
 
@@ -178,11 +178,10 @@ class Independence(MetropolisHastings):
     True
     """
 
+    _untuned = "Independence needs a proposal; give one, or tune the kernel"
+
     def __init__(self, proposal: ProposalDistribution | None = None) -> None:
-        self._coupling: Coupling = Shared()
-        self._proposal: Proposal | None = (
-            None if proposal is None else IndependenceProposal(proposal)
-        )
+        super().__init__(None if proposal is None else IndependenceProposal(proposal), Shared())
 
     @property
     def proposal(self) -> ProposalDistribution | None:
@@ -198,10 +197,6 @@ class Independence(MetropolisHastings):
             return None
         return cast(IndependenceProposal, self._proposal).distribution
 
-    @property
-    def is_tuned(self) -> bool:
-        return self.proposal is not None
-
     def _tuned(
         self, target: Target, initial: Any, pilot: PilotRun, rng: Seed
     ) -> tuple[Kernel, TuningReport]:
@@ -210,11 +205,6 @@ class Independence(MetropolisHastings):
         log_weights = pilot.log_prob.ravel() - proposal.log_density(draws)
         ratio = float(np.exp(np.max(log_weights) - np.median(log_weights)))
         return Independence(proposal), pilot.report(max_weight_ratio=ratio)
-
-    def _ready(self) -> tuple[Proposal, Coupling]:
-        if self._proposal is None:
-            raise ValueError("Independence needs a proposal; give one, or tune the kernel")
-        return self._proposal, self._coupling
 
     def __repr__(self) -> str:
         return f"Independence(proposal={self.proposal!r})"
