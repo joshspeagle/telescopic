@@ -13,8 +13,9 @@ that leaves the target $\pi$ invariant. Its state $X_t$ after $t$ steps is rando
 the chain from fresh draws of $\pi_0$ many times, and the values of $X_t$ form a
 distribution, the law $\pi_t$ of $X_t$. Each step moves $\pi_t$ toward $\pi$, and for a
 chain that can reach every part of the target, $\pi_t$ approaches $\pi$ as $t$ grows.
-Unless the chain starts from $\pi$ itself, it does not reach $\pi$ at any finite $t$:
-some memory of the start remains after any number of steps.
+In general, and for the random walk of the figure below, a chain that does not start
+from $\pi$ itself does not reach $\pi$ at any finite $t$: some memory of the start
+remains after any number of steps.
 
 ```{diagram} burn-in
 The density of $X_t$ at three times, in magenta, for random-walk Metropolis on a
@@ -29,13 +30,17 @@ $X_t$: it shrinks as $t$ grows, and it is not zero at any of the three times.
 After a burn-in of $k$ steps, a run averages $h(X_k), \dots, h(X_m)$ to estimate the
 expectation $\pi(h)$ of a function $h$ under the target. The expected value of that
 average is the average of the expectations of $h$ under $\pi_k, \dots, \pi_m$, so its
-bias is the mean of their distances from $\pi(h)$:
+bias is the mean of their differences from $\pi(h)$:
 
-$$\mathbb E\Big[\frac{1}{m-k+1}\sum_{t=k}^{m} h(X_t)\Big] - \pi(h)
-= \frac{1}{m-k+1}\sum_{t=k}^{m}\big(\mathbb E[h(X_t)] - \pi(h)\big).$$
+$$\begin{aligned}
+&\mathbb E\Big[\frac{1}{m-k+1}\sum_{t=k}^{m} h(X_t)\Big] - \pi(h) \\
+&\qquad = \frac{1}{m-k+1}\sum_{t=k}^{m}\big(\mathbb E[h(X_t)] - \pi(h)\big).
+\end{aligned}$$
 
-Each term is nonzero when $\pi_t$ differs from $\pi$ in the way that $h$ measures, so the
-bias shrinks as $k$ grows but stays above zero. Choosing $k$ by looking at a trace plot
+Each difference is nonzero when $\pi_t$ differs from $\pi$ in the way that $h$
+measures, and differences of opposite signs can partly cancel. In general the bias
+shrinks as $k$ grows, though not always at every step, and it is not zero at any
+finite $k$. Choosing $k$ by looking at a trace plot
 or a convergence diagnostic judges whether $\pi_k$ looks close to $\pi$; it does not make
 the two equal.
 
@@ -50,8 +55,8 @@ bars from the target's mean.
 
 ## Why a correction needs two chains
 
-The bias at $k$ is the distance from $\mathbb E[h(X_k)]$ to $\pi(h)$, and it can be
-written as the sum of the steps that $\mathbb E[h(X_t)]$ takes on its way to $\pi(h)$
+The bias at $k$ is the difference between $\mathbb E[h(X_k)]$ and $\pi(h)$, and it can
+be written as the sum of the steps that $\mathbb E[h(X_t)]$ takes on its way to $\pi(h)$
 after time $k$. Each step is the change of the expectation over $L$ steps, and a second
 chain that runs $L$ steps behind the first estimates it by the difference
 $h(X_t) - h(Y_{t-L})$ between the two chains at each time $t$

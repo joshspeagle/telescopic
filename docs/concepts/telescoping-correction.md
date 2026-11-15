@@ -14,8 +14,10 @@ value $\pi(h)$ under the target by the bias of a burn-in of $k$
 toward $\pi(h)$, and the bias equals the total of its moves. Counted in steps of the lag
 $L$, from $k$ to $k + L$, from $k + L$ to $k + 2L$, and so on:
 
-$$\pi(h) = \mathbb E[h(X_k)] + \sum_{j \ge 1}
-\big(\mathbb E[h(X_{k+jL})] - \mathbb E[h(X_{k+(j-1)L})]\big).$$
+$$\begin{aligned}
+\pi(h) = {}& \mathbb E[h(X_k)] \\
+&+ \sum_{j \ge 1}\big(\mathbb E[h(X_{k+jL})] - \mathbb E[h(X_{k+(j-1)L})]\big).
+\end{aligned}$$
 
 The sum is called telescoping because each intermediate expectation is added once and
 subtracted once: the first $n$ steps add up to
@@ -23,13 +25,15 @@ $\mathbb E[h(X_{k+nL})] - \mathbb E[h(X_k)]$, which tends to $\pi(h) - \mathbb E
 as $n$ grows.
 
 ```{diagram} telescoping
-Top: the expectation of $h(X_t) = X_t$ at $t = k, k + L, k + 2L, \dots$, in magenta, for
-random-walk Metropolis on a standard normal target with chains started from
-$\mathcal N(5, 1)$, computed on a grid from the kernel's transition probabilities, falling
-toward $\pi(h) = 0$. The blue arrows are the steps $\mathbb E[\Delta_{k+jL}]$ between
-successive points, and together they span the gap between $\mathbb E[h(X_k)]$ and
-$\pi(h)$. Bottom: one pair run by telescopic with the same kernel, its differences
-$\Delta_t$ at the same times; every difference from the meeting time $\tau$ on is zero.
+Top: the expectation of $h(X_t) = X_t$ at $t = k, k + L, k + 2L, \dots$, with $k = 2$
+and $L = 3$, in magenta, for random-walk Metropolis on a standard normal target with
+chains started from $\mathcal N(5, 1)$, computed on a grid from the kernel's transition
+probabilities, falling toward $\pi(h) = 0$. The blue arrows are the steps
+$\mathbb E[\Delta_{k+jL}]$ between successive points; the seven drawn nearly span the
+gap between $\mathbb E[h(X_k)]$ and $\pi(h)$, and the steps after them close it.
+Bottom: one pair run by telescopic with the same kernel and settings, its differences
+$\Delta_t$ at the same times, as bars on a scale of their own; every difference from the
+meeting time $\tau$ on is zero.
 ```
 
 ## Each step from one pair
