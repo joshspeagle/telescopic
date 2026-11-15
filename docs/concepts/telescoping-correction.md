@@ -16,7 +16,8 @@ $L$, from $k$ to $k + L$, from $k + L$ to $k + 2L$, and so on:
 
 $$\begin{aligned}
 \pi(h) = {}& \mathbb E[h(X_k)] \\
-&+ \sum_{j \ge 1}\big(\mathbb E[h(X_{k+jL})] - \mathbb E[h(X_{k+(j-1)L})]\big).
+&+ \sum_{j \ge 1}\big(\mathbb E[h(X_{k+jL})] \\
+&\qquad - \mathbb E[h(X_{k+(j-1)L})]\big).
 \end{aligned}$$
 
 The sum is called telescoping because each intermediate expectation is added once and

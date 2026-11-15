@@ -24,10 +24,10 @@ current state and accepts it with the Metropolis probability. The coupling draws
 proposals from the **reflection-maximal coupling** of the two Gaussians: it draws $X$'s
 proposal, and with probability equal to the ratio of $Y$'s proposal density to $X$'s at
 that point, capped at 1, it gives $Y$ the same point; otherwise it gives $Y$ the mirror
-image of $X$'s proposal across the line, or plane, halfway between the two centers, in
-coordinates where the proposal covariance is the identity. Each proposal on its own has
-its chain's Gaussian law, and the two coincide as often as two draws from those
-Gaussians can. Both chains then decide whether to accept with one shared uniform number,
+image of $X$'s proposal across the line, plane or hyperplane halfway between the two
+centers, in coordinates where the proposal covariance is the identity. Each proposal on
+its own has its chain's Gaussian law, and the two coincide as often as two draws from
+those Gaussians can. Both chains then decide whether to accept with one shared uniform number,
 so that when the proposals coincide and both chains accept, the chains are at the same
 point.
 

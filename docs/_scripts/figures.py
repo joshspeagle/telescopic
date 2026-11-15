@@ -203,7 +203,7 @@ def burn_in() -> str:
     grid, density = laws(max(times))
     means = density @ grid * (grid[1] - grid[0])
     width, row, top = 640.0, 92.0, 22.0
-    x = Scale(-4.0, 9.0, 92.0, 620.0)
+    x = Scale(-4.0, 9.0, 92.0, 590.0)
     # Every fourth point of the grid, 0.08 apart, draws the curves.
     keep = (grid >= -4.0) & (grid <= 9.0) & (np.arange(len(grid)) % 4 == 0)
     target = stats.norm.pdf(grid[keep])
@@ -344,7 +344,7 @@ def reflection() -> str:
     if identical.tolist() != [False, True]:
         raise SystemExit("the draws of the reflection figure no longer reflect, then meet")
     p_meet = 2 * stats.norm.cdf(-delta / 2)
-    width, height = 640.0, 330.0
+    width, height = 640.0, 356.0
     unit = 52.0
     cx0, cy0 = 330.0, 176.0
 
@@ -366,8 +366,9 @@ def reflection() -> str:
         body.append(dot(px, py, color, r=3.5))
     (ax, ay), (bx, by) = at(mu_x[0]), at(mu_y[0])
     body += [
-        text(ax - 8, ay + 18, rich(("μ", "x")), "end", CX),
-        text(bx + 8, by + 18, rich(("μ", "y")), "start", CY),
+        # Below the discs, clear of the contours.
+        text(ax - 14, ay + 2 * unit + 26, rich(("μ", "x")), "middle", CX),
+        text(bx + 14, by + 2 * unit + 26, rich(("μ", "y")), "middle", CY),
         segment(cx0, 60.0, cx0, height - 26.0, INK, width=1.2, dash="5 4"),
         text(cx0, height - 6, "mirror line", "middle", MUTED),
     ]
@@ -382,7 +383,7 @@ def reflection() -> str:
     (x3, y3) = at(xs[1])
     body += [
         dot(x3, y3, MET, r=5.5, ring=True),
-        text(x3 - 74, y3 + 5, rich(("x", ""), f"{PRIME} = ", ("y", ""), PRIME)),
+        text(x3 - 84, y3 + 5, rich(("x", ""), f"{PRIME} = ", ("y", ""), PRIME)),
     ]
     body += [
         text(20, 26, rich(("δ", ""), f" = {delta:g}: the proposals coincide")),
