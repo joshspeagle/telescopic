@@ -70,6 +70,7 @@ def save(result: Result, path: str | os.PathLike[str] | IO[bytes]) -> None:
         "kernel": None if result.kernel is None else str(result.kernel),
         "initial": None if result.initial is None else str(result.initial),
         "counts": {name: getattr(replicates, name) for name in (*COUNTS, "seconds")},
+        "k_chosen": result._k_chosen,
         "tuning": None
         if tuning is None
         else {
@@ -124,7 +125,7 @@ def load(path: str | os.PathLike[str] | IO[bytes], cls: type[Result]) -> Result:
             tuning = TuningReport(
                 **{name: data[f"tuning.{name}"] for name in TUNING_ARRAYS}, **tuning
             )
-        return cls(
+        result = cls(
             replicates,
             names=metadata["names"],
             kernel=metadata["kernel"],
@@ -132,6 +133,8 @@ def load(path: str | os.PathLike[str] | IO[bytes], cls: type[Result]) -> Result:
             tuning=tuning,
             pilot=data.get("pilot"),
         )
+        result._k_chosen = metadata.get("k_chosen", False)
+        return result
 
 
 def record_times(

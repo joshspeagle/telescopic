@@ -100,8 +100,7 @@ variance and the cost, and decides whether the chains find every mode.
   A start a few to ten times wider than the target avoids this. The tuning chains warn
   when the start is more than 30 times wider
   ([A start far wider than the target](../reference/warnings.md#a-start-far-wider-than-the-target-wide)),
-  and [Settings](settings.md#a-start-far-wider-than-the-target) shows a larger `k` for a
-  start that cannot be narrowed.
+  when `k` is left to the pilot.
 - **For a target with one mode,** a Gaussian centered on an optimizer's fit, with its
   inverse Hessian scaled by 100, is ten times wider than the fit's error bars
   ([Quickstart](../start/quickstart.md#a-first-run)).

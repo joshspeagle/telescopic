@@ -205,6 +205,7 @@ class CoupledSampler:
         self.tuning: TuningReport | None = None
         self.pilot: FloatArray | None = None
         self._pilot_zero_density = 0  # pilot pairs started where the density is zero
+        self._k_chosen = False  # whether the pilot's quantile chose k (DECISIONS #259)
         self._replicates: engine.Replicates | None = None
         # From its own stream, before any tuning, so that it changes no result.
         self.gradient_check: diagnostics.GradientCheck | None = None
@@ -296,11 +297,12 @@ class CoupledSampler:
         # or a warning made an error, leaves the sampler either as it was or resumed.
         self.seed, self.kernel, self.tuning = seed, kernel, report
         self.names, self.pilot = result.names, result.pilot
+        self._k_chosen = result._k_chosen
         self._replicates = result._replicates
         differs = False
         if report is not result.tuning:  # tuned again
             new, kept = cast(TuningReport, report), cast(TuningReport, result.tuning)
-            _warn_tuning(new)
+            _warn_tuning(new, result._k_chosen)
             differs = not (
                 np.array_equal(new.mean, kept.mean) and np.array_equal(new.cov, kept.cov)
             )
@@ -318,7 +320,9 @@ class CoupledSampler:
         """Tune the kernel's unset parameters on pilot chains, once, and freeze the kernel.
 
         Warns when the chains disagree, a sign of several modes or of chains that have not
-        converged; chains that agree do not show that the target has one mode.
+        converged; chains that agree do not show that the target has one mode. Warns too
+        when the initial distribution is more than 30 times wider than the target
+        (:func:`~telescopic.diagnostics.wide_start`), since ``k`` is not given yet.
 
         Returns
         -------
@@ -327,11 +331,13 @@ class CoupledSampler:
         """
         return self._tune(self.progress)
 
-    def _tune(self, progress: bool) -> TuningReport | None:
+    def _tune(self, progress: bool, wide: bool = True) -> TuningReport | None:
+        # wide: whether the warning about a wide start applies, which it does not once k
+        # is given.
         if not self.kernel.is_tuned:
             with tuning(progress):
                 self.kernel, self.tuning = self.kernel.tune(self.target, self.initial, self.seed)
-            _warn_tuning(self.tuning)
+            _warn_tuning(self.tuning, wide)
         return self.tuning
 
     # Spec R-TUNE-2 and section 6.3.
@@ -499,7 +505,7 @@ class CoupledSampler:
         return result
 
     def _result(self) -> Result:
-        return Result(
+        result = Result(
             cast(engine.Replicates, self._replicates),
             names=self.names,
             kernel=self.kernel,
@@ -507,6 +513,8 @@ class CoupledSampler:
             tuning=self.tuning,
             pilot=self.pilot,
         )
+        result._k_chosen = self._k_chosen
+        return result
 
     def _stopped(self, part: engine.Replicates, n: int, others: int) -> str:
         # The note on an error that stopped a run of n replicates, of which part finished,
@@ -633,8 +641,9 @@ class CoupledSampler:
     def _configure(self, given: dict[str, int], pool: Any, progress: bool) -> engine.Settings:
         # The first run's settings, which tune the kernel and, for an automatic k, complete
         # the pilot to 100 pairs: meeting_times can leave fewer.
-        self._tune(progress)
-        if "k" not in given:
+        self._k_chosen = "k" not in given
+        self._tune(progress, self._k_chosen)
+        if self._k_chosen:
             done = 0 if self.pilot is None else len(self.pilot)
             if done < PILOT_REPLICATES:
                 self._meeting_times(PILOT_REPLICATES - done, PILOT_SETTINGS, pool, progress)
@@ -964,9 +973,13 @@ class _ZeroedGradients:
             )
 
 
-def _warn_tuning(report: TuningReport | None) -> None:
-    # The warnings about the tuning pilot, emitted when the kernel is tuned (spec 7.4).
-    for message in (diagnostics.tuning_disagreement(report), diagnostics.wide_start(report)):
+def _warn_tuning(report: TuningReport | None, wide: bool) -> None:
+    # The warnings about the tuning pilot, emitted when the kernel is tuned (spec 7.4);
+    # wide: whether k is left to the pilot's quantile.
+    messages = [diagnostics.tuning_disagreement(report)]
+    if wide:
+        messages.append(diagnostics.wide_start(report))
+    for message in messages:
         if message:
             warn(message, ConvergenceWarning)
 

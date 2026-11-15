@@ -133,6 +133,7 @@ tuning pilot
   The adaptive chains that tune the kernel's parameters left as `None` before any pair
   runs, followed for MALA and HMC by a tuning of `step_size`
   ([Choose a kernel](../guide/kernels.md)). The `tuning` warning checks their $\hat R$,
+  the `wide` warning their spread against that of the initial distribution's draws,
   and `result.tuning` holds their report
   ([The automatic pipeline](../guide/settings.md#the-automatic-pipeline)).
 

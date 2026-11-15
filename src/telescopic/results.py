@@ -211,6 +211,9 @@ class Result:
         self.n_grad_zeroed = replicates.n_grad_zeroed
         self.wall_time = replicates.seconds
         self.tuning, self.pilot = tuning, pilot
+        # Whether the pilot's quantile chose k: the sampler sets it, and only then does the
+        # warning about a start far wider than the target apply (DECISIONS #259).
+        self._k_chosen = False
         # The engine runs only requested indices, so missing ones make index shorter.
         self.interrupted = len(replicates.index) < len(replicates.requested)
         self.abandoned = np.setdiff1d(replicates.abandoned, replicates.index)
@@ -672,7 +675,7 @@ class Result:
             The union of the replicates and of the requested indices; interrupted if a
             requested replicate ran in neither.
         """
-        return type(self)(
+        merged = type(self)(
             engine.merge([self._replicates, other._replicates]),
             names=self.names,
             kernel=self.kernel if self.kernel is not None else other.kernel,
@@ -680,6 +683,9 @@ class Result:
             tuning=self.tuning if self.tuning is not None else other.tuning,
             pilot=self.pilot if self.pilot is not None else other.pilot,
         )
+        # Merged runs share k, so one chosen by the pilot's quantile is the rule's.
+        merged._k_chosen = self._k_chosen or other._k_chosen
+        return merged
 
     # Spec R-OUT-1.
     def save(self, path: str | os.PathLike[str] | IO[bytes]) -> None:

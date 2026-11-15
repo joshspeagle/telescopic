@@ -177,6 +177,26 @@ def test_schema_1_files_load_with_the_times_a_new_run_records(result):
     assert repr(loaded.summary()) == repr(result.summary())
 
 
+def test_a_file_without_the_initial_width_loads_it_as_none(result):
+    # Files written before the warning about a wide start hold neither field.
+    buffer = io.BytesIO()
+    result.save(buffer)
+    buffer.seek(0)
+    with np.load(buffer) as data:
+        arrays = {name: data[name] for name in data.files}
+    metadata = json.loads(str(arrays["metadata"]))
+    del metadata["k_chosen"]
+    if metadata["tuning"] is not None:
+        del metadata["tuning"]["initial_width"]
+    arrays["metadata"] = np.array(json.dumps(metadata))
+    old = io.BytesIO()
+    np.savez(old, **arrays)
+    old.seek(0)
+    loaded = Result.load(old)
+    assert loaded._k_chosen is False
+    assert result.tuning is None or loaded.tuning.initial_width is None
+
+
 def test_a_file_of_an_unknown_family_raises_naming_it(result):
     buffer = io.BytesIO()
     result.save(buffer)

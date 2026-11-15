@@ -29,7 +29,7 @@ __all__ = [
 
 # The initial width above which a start counts as far wider than the target: silent on
 # the examples' default starts, which reached 14.1, and on the starts 10 times wider than the
-# target, which reached 21.5; above it on most starts 100 times wider (DECISIONS #258).
+# target, which reached 21.5; above it on most starts 100 times wider (DECISIONS #259).
 WIDE_START = 30.0
 
 
@@ -363,7 +363,8 @@ def issues(result: Result) -> list[Issue]:
     disagreement = tuning_disagreement(result.tuning)
     if disagreement:
         found.append(Issue("tuning", disagreement))
-    wide = wide_start(result.tuning)
+    # Only for a k from the pilot's quantile: a k given is the warning's remedy.
+    wide = wide_start(result.tuning) if result._k_chosen else None
     if wide:
         found.append(Issue("wide", wide))
     threshold = slow_pair_threshold(result.lag, result.m)
@@ -441,12 +442,14 @@ def tuning_disagreement(tuning: TuningReport | None) -> str | None:
 def wide_start(tuning: TuningReport | None) -> str | None:
     r"""The warning about an initial distribution far wider than the target, or ``None``.
 
-    The tuning pilot shows a start far wider than the target when its
-    ``initial_width`` of the report, the geometric mean over
-    coordinates of the ratio of the standard deviations of the initial distribution's
-    draws to those of the tuning chains, exceeds 30. From such a start, ``k`` from the
-    99% quantile of the pilot's meeting times can leave a few replicates still on their
-    way to the target, and those dominate the variance of the estimates.
+    The tuning pilot shows a start far wider than the target when the report's
+    ``initial_width``, the geometric mean over coordinates of the ratio of the standard
+    deviations of the initial distribution's draws to those of the tuning chains,
+    exceeds 30. From such a start, ``k`` from the 99% quantile of the pilot's meeting
+    times can leave a few replicates still on their way to the target, and those can
+    dominate the variance of the estimates. The sampler and
+    :func:`~telescopic.diagnostics.issues` apply it only where that quantile chooses
+    ``k``.
 
     Parameters
     ----------
@@ -463,8 +466,8 @@ def wide_start(tuning: TuningReport | None) -> str | None:
         f"the initial distribution is about {tuning.initial_width:.0f} times wider than the "
         "target, by the standard deviations of its draws against those of the tuning "
         "chains: k from the 99% quantile of the pilot meeting times can leave a few "
-        "replicates on their way to the target, which then dominate the variance; use a "
-        "narrower initial distribution, give k by hand, or take k from a confirmation "
-        "round of pilot pairs at lag k (A start far wider than the target, in the guide "
-        "'Set k, m, the lag, thin and max_iter')"
+        "replicates on their way to the target, which can dominate the variance; use a "
+        "narrower initial distribution, or else give a larger k by hand; a confirmation "
+        "round of pilot pairs at lag k is an option (A start far wider than the target, "
+        "in the guide 'Set k, m, the lag, thin and max_iter')"
     )

@@ -117,16 +117,18 @@ warning is then silent ([Tuning](../guide/kernels.md#tuning)).
 **Trigger:** the initial distribution is more than 30 times wider than the target, as
 the tuning pilot measures it: `result.tuning.initial_width`, the geometric mean over
 coordinates of the ratio of the standard deviations of the 100 draws of the initial
-distribution that start the tuning chains to the standard deviations of the chains'
-second halves. It costs no evaluation of the target. A kernel given with every
-parameter has no tuning pilot, and the warning is then silent. **Meaning:** the
+distribution that set the tuning chains' first covariance to the standard deviations of
+the chains' second halves. It costs no evaluation of the target. It applies only where
+the pilot's quantile chooses `k`: with `k` given, to the sampler's `run`, to `sample` or
+in a resumed result, it is neither emitted nor listed. A kernel given with every
+parameter has no tuning pilot, and the warning is then silent too. **Meaning:** the
 automatic `k`, the 99% quantile of the pilot's meeting times, leaves about one pair in a
 hundred meeting while its chain is still on its way to the target; from a start this
 wide, those replicates can dominate the variance of the estimates
-([Initial distributions](../guide/initial-distribution.md#choosing-one)). **Remedy:** a
-narrower initial distribution; or `k` given by hand, or taken from a confirmation round
-of pilot pairs at lag `k`
-([A start far wider than the target](../guide/settings.md#a-start-far-wider-than-the-target)).
+([Initial distributions](../guide/initial-distribution.md#choosing-one)). **Remedy:**
+first a narrower initial distribution; failing that, a larger `k` given by hand; a
+confirmation round of pilot pairs at lag `k` is an option, which does not always raise
+`k` ([A start far wider than the target](../guide/settings.md#a-start-far-wider-than-the-target)).
 A geometric mean reads a start that is far too wide in only a few of many coordinates
 as moderately wide, and the warning can then stay silent; a start offset from the
 target but no wider does not trigger it either.

@@ -513,6 +513,51 @@ def test_tuning_chains_in_separate_modes_warn():
         sampler.tune()
 
 
+WIDE = Normal(np.zeros(1), [[100.0**2]])  # 100 times wider than N(0, 1)
+
+
+def test_a_wide_start_warns_at_tuning_and_is_listed_when_the_pilot_chooses_k():
+    sampler = CoupledSampler(gaussian_log_prob, WIDE, rng=0)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = sampler.run(100)
+    # Once, at tuning: the end of the run does not repeat it.
+    assert sum("times wider than the target" in str(w.message) for w in caught) == 1
+    assert "wide" in [issue.kind for issue in telescopic.diagnostics.issues(result)]
+    assert "wide" in [issue.kind for issue in telescopic.diagnostics.issues(reloaded(result))]
+
+
+@pytest.mark.parametrize("call", ["run", "sample", "resume"])
+def test_a_wide_start_with_k_given_neither_warns_nor_lists_the_wide_start(call):
+    # A k given is the warning's remedy, so the warning would persist after it.
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        if call == "sample":
+            result = sample(gaussian_log_prob, WIDE, k=300, rng=0)
+        else:
+            result = CoupledSampler(gaussian_log_prob, WIDE, rng=0).run(100, k=300)
+        if call == "resume":
+            # Tuned again from the result's seed, and continued with its given k.
+            resumed = CoupledSampler(gaussian_log_prob, WIDE)
+            resumed.resume(reloaded(result))
+            result = resumed.run(10)
+    assert not [w for w in caught if "times wider" in str(w.message)]
+    assert "wide" not in [issue.kind for issue in telescopic.diagnostics.issues(result)]
+    raised = ""
+    try:
+        result.check(strict=True)
+    except RuntimeError as error:
+        raised = str(error)
+    assert "times wider" not in raised
+
+
+def reloaded(result):
+    buffer = io.BytesIO()
+    result.save(buffer)
+    buffer.seek(0)
+    return Result.load(buffer)
+
+
 def test_a_run_with_censored_pairs_warns():
     kernel = RandomWalk(np.eye(2), scale=0.1)
     with pytest.warns(ConvergenceWarning) as record:  # censored pairs are also late
