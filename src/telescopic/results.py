@@ -7,7 +7,6 @@ import html
 import os
 import re
 import textwrap
-import warnings
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import IO, Any
@@ -200,10 +199,11 @@ class Result:
         self._n_stored = int(stored.sum())
         kept = met & stored
         self.n_kept = int(kept.sum())
+        self._kept_index = replicates.index[kept]
         self.measure = SignedMeasure(
             replicates.atoms,
             replicates.weights,
-            np.searchsorted(replicates.index[kept], replicates.owner),
+            np.searchsorted(self._kept_index, replicates.owner),
             self.n_kept,
         )
         self.seed, self.kernel, self.initial = replicates.seed, kernel, initial
@@ -756,44 +756,43 @@ class Result:
         The ``posterior`` group holds one variable per coordinate, named by ``names``, of
         dimensions ``(chain, draw)``: a chain for each kept replicate that met, whose
         coordinate is the replicate's index, and a draw for each time :math:`t \in S`, whose
-        coordinate is :math:`t`. The values are those of :meth:`chains`. There is no
-        ``sample_stats`` group, since a result stores no log-density values.
+        coordinate is :math:`t`. There is no ``sample_stats`` group, since a result stores
+        no log-density values.
 
-        These draws carry no bias correction: they are the ordinary MCMC chains after a
-        burn-in of ``k`` steps. ArviZ's summaries of them, its :math:`\hat R` and effective
-        sample sizes included, describe those chains, not the unbiased estimates of this
-        result, whose error bars come from the spread of the replicates (What replaces a
-        judgment of convergence, in :doc:`/concepts/error-bars`).
+        ArviZ's :math:`\hat R` and effective sample sizes of these chains describe the
+        uncorrected chains, not the estimates of this result (What replaces a judgment of
+        convergence, in :doc:`/concepts/error-bars`).
 
         Returns
         -------
         xarray.DataTree
-            The data structure of ArviZ 1.0 and later, which needs Python 3.12 or newer.
+            Each variable of ``posterior`` has shape ``(n_kept, len(S))``.
         """
-        try:
-            # The typed package of ArviZ 1.0 that holds from_dict; the arviz package
-            # installs it.
-            import arviz_base
-
-            too_old = int(arviz_base.__version__.split(".")[0]) < 1
-        except ImportError:
-            too_old = True
-        if too_old:
-            raise ImportError(
-                "to_datatree needs ArviZ 1.0 or later, which needs Python 3.12 or "
-                "newer: pip install 'telescopic[arviz]'"
+        reserved = [name for name in self.names if name in ("chain", "draw") or "/" in name]
+        if reserved:
+            raise ValueError(
+                f"names {reserved} cannot name ArviZ variables: a name must not be "
+                "'chain' or 'draw' or contain '/'"
             )
+        needs = (
+            "to_datatree needs ArviZ 1.0 or later, which needs Python 3.12 and NumPy 2: "
+            "pip install 'telescopic[arviz]'"
+        )
+        try:
+            # The typed package of ArviZ 1.0 that holds from_dict; arviz installs it.
+            import arviz_base
+        except ImportError as error:
+            raise ImportError(needs) from error
+        # arviz-base 0.x was a standalone package with another from_dict.
+        if int(arviz_base.__version__.split(".")[0]) < 1:
+            raise ImportError(needs)
         chains = self.chains()
         posterior = {name: chains[..., i] for i, name in enumerate(self.names)}
-        # Atoms are sorted by owner, so these are the replicates of the chains, in order.
-        coords = {
-            "chain": np.unique(self._replicates.owner),
-            "draw": averaging_times(self.k, self.m, self.thin),
-        }
-        with warnings.catch_warnings():
-            # ArviZ warns of more chains than draws, the usual shape of many replicates.
-            warnings.filterwarnings("ignore", "Found chain dimension", UserWarning)
-            return arviz_base.from_dict({"posterior": posterior}, coords=coords)
+        coords = {"chain": self._kept_index, "draw": averaging_times(self.k, self.m, self.thin)}
+        # The conventions checked include more chains than draws, the usual shape here.
+        return arviz_base.from_dict(
+            {"posterior": posterior}, coords=coords, check_conventions=False
+        )
 
     def plot_meeting_times(self, axes: Sequence[Any] | None = None) -> Any:
         """Plot the meeting times and their survival function (needs matplotlib).

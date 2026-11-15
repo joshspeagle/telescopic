@@ -630,16 +630,24 @@ def test_datatree_holds_the_chains_by_name_replicate_and_time():
     kept = result.index[np.isfinite(result.meeting_times) & (result.index < 20)]
     np.testing.assert_array_equal(posterior["chain"], kept)
     np.testing.assert_array_equal(posterior["draw"], [3, 7, 11, 15])
+    assert list(posterior.data_vars) == result.names
+    chains = result.chains()
     for i, name in enumerate(result.names):
         assert posterior[name].dims == ("chain", "draw")
-        np.testing.assert_array_equal(posterior[name], result.chains()[..., i])
-    assert set(posterior.data_vars) == {"a", "b"}
+        np.testing.assert_array_equal(posterior[name], chains[..., i])
 
 
-@pytest.mark.parametrize("arviz", [None, SimpleNamespace(__version__="0.23.4")])
-def test_without_arviz_1_to_datatree_names_the_extra_to_install(monkeypatch, arviz):
-    # None makes the import fail; the namespace stands for an ArviZ before 1.0.
-    monkeypatch.setitem(sys.modules, "arviz_base", arviz)
+@pytest.mark.parametrize("names", [["chain", "b"], ["a", "draw"], ["a/1", "b"]])
+def test_to_datatree_refuses_names_that_arviz_reserves(names):
+    result = Result(RESULT._replicates, names=names)
+    with pytest.raises(ValueError, match=r"names \[.+\] cannot name ArviZ variables"):
+        result.to_datatree()
+
+
+@pytest.mark.parametrize("arviz_base", [None, SimpleNamespace(__version__="0.6.0")])
+def test_without_arviz_1_to_datatree_names_the_extra_to_install(monkeypatch, arviz_base):
+    # None makes the import fail; the namespace stands for the standalone arviz-base 0.x.
+    monkeypatch.setitem(sys.modules, "arviz_base", arviz_base)
     with pytest.raises(ImportError, match=r"ArviZ 1\.0 or later.*telescopic\[arviz\]"):
         RESULT.to_datatree()
 
