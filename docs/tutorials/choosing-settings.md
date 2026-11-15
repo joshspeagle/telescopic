@@ -159,6 +159,63 @@ assert rows["k_50"]["inefficiency"] > 100 * recipe_row["inefficiency"]
 assert "late" in rows["k_50"]["issues"]
 ```
 
+Drawn, with the weight that each setting gives the differences of a late pair, as the
+next section explains, and with 95% intervals from 1,000 bootstrap resamples of each
+run's replicates:
+
+```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      Left: the weight of a difference against t for lag 1, a ramp from k + 1 that
+      reaches 1 at m + 1, and for lag k, a staircase that rises every k steps from
+      2k and is flat from m + k, on a log scale, with a late pair's meeting time
+      marked. Right: the
+      inefficiency on a log scale against the relative cost for four runs, the
+      recipe lowest, then m = 2k and lag 1, and k = 50 far above the others.
+  figure:
+    caption: >-
+      Left: the weight $v_t/(m - k + 1)$ of the difference $\Delta_t$ against $t$ at
+      the recipe's $k$ and $m = 10k$, on a log scale, for $L = 1$, a ramp, and for
+      $L = k$, a staircase; the dashed line marks a late pair that meets at
+      $\tau = k + L + 100$ with $L = 1$, whose differences up to $\tau - 1$ enter
+      its estimate with these weights. Right: the inefficiency, on a log scale,
+      against the relative cost, of the four runs above, with 95% bootstrap
+      intervals. The recipe's is the lowest.
+---
+from telescopic.estimators import correction_coefficients
+
+fig, (left, right) = plt.subplots(1, 2, figsize=(7.5, 3), width_ratios=(1.2, 1))
+m = 10 * k
+t = np.arange(0, m + 2 * k + 1)
+for lag, color in ((1, "C0"), (k, "C1")):
+    weight = correction_coefficients(t, k, m, lag, 1)
+    left.step(t, weight, where="post", color=color, label=f"$L = {lag}$")
+late = k + 1 + 100
+left.axvline(late, color="gray", linestyle="--", linewidth=0.8)
+left.annotate(r"$\tau = k + 101$", (late + 40, 0.01), color="gray")
+left.set(yscale="log", xlabel="$t$", ylabel="weight of $\\Delta_t$")
+left.legend(loc="center right")
+
+bootstrap = np.random.default_rng(0)
+labels = {"recipe": "recipe", "m_2k": "$m = 2k$", "lag_1": "lag 1", "k_50": "$k = 50$"}
+for name, result in results.items():
+    values = result.estimate(second_moment).replicates
+    costs = result.costs[np.isfinite(result.meeting_times)]
+    draws = bootstrap.integers(len(values), size=(1000, len(values)))
+    resampled = np.var(values[draws], axis=1, ddof=1) * costs[draws].mean(axis=1)
+    low, high = np.percentile(resampled, [2.5, 97.5])
+    x, y = rows[name]["relative_cost"], rows[name]["inefficiency"]
+    color = "C2" if name == "recipe" else "C0"
+    right.errorbar(x, y, yerr=[[y - low], [high - y]], fmt="o", color=color, capsize=3)
+    right.annotate(
+        labels[name], (x, y), xytext=(8, 0), textcoords="offset points", va="center",
+        color=color,
+    )
+right.set(yscale="log", xlabel="relative cost", ylabel="inefficiency");
+```
+
 Every estimate lies within two standard errors of 1: the settings change the variance,
 not the bias ([Settings](../guide/settings.md)).
 The inefficiency compares settings at equal compute, and the recipe's is the lowest:
