@@ -107,7 +107,7 @@ def test_resumed_run_from_a_loaded_result_equals_the_uninterrupted_run(first_run
 
 def test_resume_warns_when_retuning_differs_from_the_results_tuning(first_run):
     sampler = CoupledSampler(lambda x: log_prob(x / 2), INIT)
-    with pytest.warns(InputWarning, match="tuned again from the result's seed differs"):
+    with pytest.warns(InputWarning, match="the sampler's kernel differs from the result's"):
         sampler.resume(first_run[0])
     assert not np.array_equal(sampler.tuning.cov, first_run[0].tuning.cov)
 
@@ -127,6 +127,21 @@ def test_a_resume_whose_tuning_raises_leaves_the_sampler_unchanged(first_run):
         sampler.resume(first_run[0])
     assert sampler.seed is seed
     assert (sampler.tuning, sampler.pilot, sampler.settings) == (None, None, None)
+
+
+def test_resume_warns_when_a_given_kernel_differs_from_the_results(first_run):
+    kernel = RandomWalk(cov=first_run[0].tuning.cov, coupling="maximal")
+    with pytest.warns(InputWarning, match="the sampler's kernel differs from the result's"):
+        resumed(first_run[0], kernel=kernel)
+
+
+def test_a_resume_whose_warning_is_an_error_has_already_resumed(first_run):
+    # The suite turns warnings into errors (pyproject.toml), as a user's filter can.
+    sampler = CoupledSampler(lambda x: log_prob(x / 2), INIT)
+    with pytest.raises(InputWarning):
+        sampler.resume(first_run[0])
+    assert sampler.settings == first_run[0]._replicates.settings
+    assert engine._seed_key(sampler.seed) == engine._seed_key(first_run[0].seed)
 
 
 def test_resumed_vectorized_run_equals_the_samplers_next_call():
@@ -242,7 +257,7 @@ def test_resume_refuses_different_names(first_run):
 
 def test_resume_refuses_an_untuned_kernel_without_tuning():
     first = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=9).run(2, k=20)
-    with pytest.raises(ValueError, match="the result's kernel needed no tuning"):
+    with pytest.raises(ValueError, match="the result holds no tuning report"):
         resumed(first)
 
 

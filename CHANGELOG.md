@@ -412,4 +412,5 @@ All notable changes to this project are documented here. The format follows
   above the highest index requested. It checks the dimension, the kernel's class, an
   `rng` given to the constructor and the names; the target and the kernel's parameters
   are the caller's to match. An untuned kernel, as a loaded result needs, is tuned again
-  from the result's seed, with an `InputWarning` if its tuning differs from the result's.
+  from the result's seed; an `InputWarning` says when the kernel's tuning or description
+  differs from the result's.

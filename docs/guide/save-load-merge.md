@@ -94,9 +94,9 @@ continued.n_replicates, int(continued.index[-1])
 A loaded result holds only the description of its kernel. Pass the kernel as it was
 built, here `"auto"`, untuned: `resume` tunes it again from the result's seed, which
 gives the run's tuned kernel back when the target, the initial distribution, the kernel
-and the machine are the same, and emits an `InputWarning` when the tuning differs from
-the result's, as it can on another machine or with another version of NumPy, SciPy or
-BLAS:
+and the machine are the same. It emits an `InputWarning` when the kernel's tuning or
+its description, which shows a tuned step size, differs from the result's, as the tuning
+can on another machine or with another version of NumPy, SciPy or BLAS:
 
 ```{code-cell} python
 sampler = telescopic.CoupledSampler(gaussian.log_prob, gaussian.initial, vectorize=True)

@@ -243,7 +243,8 @@ class CoupledSampler:
         a different target or kernel goes unnoticed and mixes replicates of two runs. Pass
         ``result.kernel`` when it is a kernel. A loaded result holds only the kernel's
         description: pass the kernel as it was built, untuned, and ``resume`` tunes it
-        again from the result's seed and warns if the tuning differs from the result's.
+        again from the result's seed. It warns when the kernel's tuning or description
+        differs from the result's; everything is adopted before any warning.
 
         Parameters
         ----------
@@ -264,14 +265,16 @@ class CoupledSampler:
                 f"the result has dimension {result.ndim}, but the initial distribution "
                 f"draws points of dimension {self.ndim}"
             )
-        # A loaded result holds the kernel's description, which starts with its class.
-        ran = result.kernel
-        ran = ran.split("(", 1)[0] if isinstance(ran, str) else type(ran).__name__
-        if result.kernel is not None and ran != type(self.kernel).__name__:
-            raise ValueError(
-                f"the result was run with {ran}, but the sampler's kernel is "
-                f"{type(self.kernel).__name__}"
-            )
+        # Kernels are compared by their descriptions, which a loaded result holds and which
+        # start with the class's name; a description without one (an object's default
+        # repr) is not compared.
+        ran = None if result.kernel is None else str(result.kernel)
+        if ran is not None and "(" in ran:
+            ran, mine = ran.split("(", 1)[0], str(self.kernel).split("(", 1)[0]
+            if ran != mine:
+                raise ValueError(
+                    f"the result was run with {ran}, but the sampler's kernel is {mine}"
+                )
         if self._rng_given and engine._seed_key(self.seed) != engine._seed_key(result.seed):
             raise ValueError(
                 "rng was given, but the result has another seed; omit rng to resume it"
@@ -280,35 +283,37 @@ class CoupledSampler:
             raise ValueError(f"names {self.names} differ from the result's {result.names}")
         if not self.kernel.is_tuned and result.tuning is None:
             raise ValueError(
-                "the result's kernel needed no tuning, so the sampler's must have every "
+                "the result holds no tuning report, so the sampler's kernel must have every "
                 "parameter set; pass the kernel the result was run with"
             )
-        seed, self.seed = self.seed, root_seed(result.seed)
-        if self.kernel.is_tuned:
-            self.tuning = result.tuning
-        else:
+        seed, kernel, report = root_seed(result.seed), self.kernel, result.tuning
+        if not kernel.is_tuned:
             # From the tuning namespace of the result's seed, as the run tuned it (spec
-            # section 6.1), before anything else is adopted, so that a tuning that raises
-            # leaves the sampler as it was. No tolerance: rounding can move a pilot's
-            # accept decision.
-            try:
-                report = cast(TuningReport, self._tune(self.progress))
-            except BaseException:
-                self.seed = seed
-                raise
-            kept = cast(TuningReport, result.tuning)
-            if not (
-                np.array_equal(report.mean, kept.mean) and np.array_equal(report.cov, kept.cov)
-            ):
-                warn(
-                    "the kernel tuned again from the result's seed differs from the result's "
-                    "tuning: the target, the initial distribution or the kernel differ from "
-                    "the run's, or the machine, a library version or the number of BLAS "
-                    "threads does; the resumed run keeps the new tuning",
-                    InputWarning,
-                )
+            # section 6.1). No tolerance: rounding can move a pilot's accept decision.
+            with tuning(self.progress):
+                kernel, report = kernel.tune(self.target, self.initial, seed)
+        # Everything is adopted at once, before any warning, so that a tuning that raises,
+        # or a warning made an error, leaves the sampler either as it was or resumed.
+        self.seed, self.kernel, self.tuning = seed, kernel, report
         self.names, self.pilot = result.names, result.pilot
         self._replicates = result._replicates
+        differs = False
+        if report is not result.tuning:  # tuned again
+            new, kept = cast(TuningReport, report), cast(TuningReport, result.tuning)
+            disagreement = diagnostics.tuning_disagreement(new)
+            if disagreement:
+                warn(disagreement, ConvergenceWarning)
+            differs = not (
+                np.array_equal(new.mean, kept.mean) and np.array_equal(new.cov, kept.cov)
+            )
+        if differs or (result.kernel is not None and str(kernel) != str(result.kernel)):
+            warn(
+                "the sampler's kernel differs from the result's: the target, the initial "
+                "distribution or the kernel differ from the run's, or the kernel was tuned "
+                "again on another machine, library version or number of BLAS threads; the "
+                "resumed run keeps the sampler's kernel",
+                InputWarning,
+            )
 
     # Spec section 5.3.
     def tune(self) -> TuningReport | None:

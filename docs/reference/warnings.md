@@ -200,7 +200,7 @@ density, gradients taken as 0 because they were not finite where the log-density
 the log-density when a sampler is built, or a check of it that could compare nothing
 ([Checking the gradient](../guide/log-density.md#checking-the-gradient)), a run that, with its
 first estimates, would take more than 1 GB ([Settings](../guide/settings.md#memory-and-thinning)),
-and a resumed result whose kernel, tuned again, differs from the result's tuning
+and a resumed result whose kernel, given or tuned again, differs from the result's
 ([Continuing a run](../guide/save-load-merge.md#continuing-a-run)).
 Each warning points at the line of your code that called telescopic.
 
