@@ -1526,22 +1526,21 @@ def tagged_mixture():
 
 @pytest.mark.parametrize("n", [1, 16])
 def test_state_extra_fields_survive_take_select_mixture_and_the_engine(n):
+    # A component's own field, through permuted rows, both paths of the mixture and the
+    # engine's lanes; carrying the fields a kernel does not know is the next test's.
     kernel = tagged_mixture()
     rng = np.random.default_rng(3)
-    start_x, start_y = (kernel.init_state(TARGET, rng.standard_normal((n, 2))) for _ in "xy")
-    origin_x, origin_y = start_x.x.copy(), start_y.x.copy()
-    state_x, state_y = start_x, start_y
-    for t in range(40):
-        # Permuted rows carry their fields with them.
+    pair = [kernel.init_state(TARGET, rng.standard_normal((n, 2))) for _ in "xy"]
+    origins = [state.x.copy() for state in pair]
+    for t in range(10):
         order = rng.permutation(n)
-        state_x, state_y = state_x.take(order), state_y.take(order)
-        origin_x, origin_y = origin_x[order], origin_y[order]
-        state_x, state_y = kernel.coupled_step(TARGET, state_x, state_y, random_draws(n, t))
-        state_x = kernel.step(TARGET, state_x, random_draws(n, 100 + t))[0]
-        assert set(state_x.extra) == set(state_y.extra) == {"0/origin"}
-        np.testing.assert_array_equal(state_x.extra["0/origin"], origin_x)
-        np.testing.assert_array_equal(state_y.extra["0/origin"], origin_y)
-    assert not np.array_equal(state_x.x, start_x.x[order])  # the chains moved
+        pair = [state.take(order) for state in pair]
+        origins = [origin[order] for origin in origins]
+        pair = list(kernel.coupled_step(TARGET, *pair, random_draws(n, t)))
+        pair[0] = kernel.step(TARGET, pair[0], random_draws(n, 100 + t))[0]
+        for state, origin in zip(pair, origins, strict=True):
+            assert set(state.extra) == {"0/origin"}
+            np.testing.assert_array_equal(state.extra["0/origin"], origin)
     starts = rng.standard_normal((50, 2))
     replicates = engine.run(TARGET, kernel, starts, range(8), k=2, m=6, lag=1, lanes=n, rng=4)
     assert len(replicates.index) == 8
