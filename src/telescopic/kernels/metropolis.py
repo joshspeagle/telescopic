@@ -10,8 +10,7 @@ import numpy as np
 
 from telescopic._linalg import matvec
 from telescopic._random import Draws
-from telescopic._types import BoolArray, FloatArray, instance, log_densities
-from telescopic._types import Proposal as Distribution
+from telescopic._types import BoolArray, FloatArray, ProposalDistribution, instance, log_densities
 from telescopic.couplings import _reflection, maximal
 from telescopic.kernels.base import (
     Kernel,
@@ -284,7 +283,7 @@ class IndependenceProposal(Proposal):
         :class:`~telescopic.kernels.MultivariateT`.
     """
 
-    def __init__(self, distribution: Distribution) -> None:
+    def __init__(self, distribution: ProposalDistribution) -> None:
         self.distribution = distribution
 
     def sample(self, target: Target, state: State, draws: Draws) -> tuple[FloatArray, Any]:
@@ -417,7 +416,7 @@ def _log_alpha(
     return log_alpha
 
 
-def _log_weights(q: Distribution, proposal: State, *states: State) -> list[FloatArray]:
+def _log_weights(q: ProposalDistribution, proposal: State, *states: State) -> list[FloatArray]:
     # log pi - log q at the proposal's positions, then at each state's, from one call of
     # q.log_density, whose rows do not depend on each other (spec R-KER-6). A NaN log q
     # would make every move to its point a rejection, and so bias the chain without an

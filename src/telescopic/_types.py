@@ -35,7 +35,7 @@ class Distribution(Protocol):
     def rvs(self, *, random_state: np.random.Generator) -> Any: ...
 
 
-class Proposal(Protocol):
+class ProposalDistribution(Protocol):
     """A proposal of the independence kernel, such as :class:`~telescopic.kernels.MultivariateT`."""
 
     def sample(self, draws: Draws) -> FloatArray: ...
