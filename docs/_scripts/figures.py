@@ -586,22 +586,23 @@ def telescoping() -> str:
     return svg(width, height, label, "".join(body))
 
 
-@functools.cache
-def run(k: int, m: int, lag: int) -> telescopic.Result:
-    """REPLICATES replicates of the tutorial's setting with the settings given, run by the
-    package with a target evaluated point by point, without its warnings."""
+def quietly(make: Callable[[], telescopic.Result]) -> telescopic.Result:
+    """The result of a run of the tutorial's setting, without its warnings: the figures
+    choose settings that the warnings would advise against."""
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", telescopic.ConvergenceWarning)
-        return telescopic.sample(
-            log_density, initial(), REPLICATES, kernel=kernel(), k=k, m=m, lag=lag, rng=SEED
-        )
+        return make()
 
 
-def weight_axis(x: float, scale: Scale, zero: float, values: np.ndarray) -> str:
-    """A vertical axis at x through zero, with a tick and a label at each of values."""
+def weight_axis(
+    x: float, scale: Scale, zero: float, values: np.ndarray, data: tuple[float, float]
+) -> str:
+    """A vertical axis at x through zero that spans the data's range and the ticks, with a
+    tick and a label at each of values."""
     rule = FIGURE["rule"]
     ys = zero - scale(values)
-    out = [segment(x, float(ys.min()), x, float(ys.max()), MUTED, width=rule)]
+    ends = zero - scale(np.array([min(values.min(), data[0]), max(values.max(), data[1])]))
+    out = [segment(x, float(ends.min()), x, float(ends.max()), MUTED, width=rule)]
     for value, y in zip(values, ys, strict=True):
         out.append(segment(x - 5, float(y), x, float(y), MUTED, width=rule))
         out.append(text(x - 9, float(y) + 6, f"{value:g}".replace("-", MINUS), "end", MUTED))
@@ -613,7 +614,11 @@ def signed_measure() -> str:
     weights down in Y's; below, the signed histogram of all the replicates, with the
     target's mass in each bin and its most negative bin highlighted."""
     name, k, m, lag = "signed-measure", 2, 12, LAG
-    result = run(k, m, lag)
+    result = quietly(
+        lambda: telescopic.sample(
+            log_density, initial(), REPLICATES, kernel=kernel(), k=k, m=m, lag=lag, rng=SEED
+        )
+    )
     measure, taus = result.measure, result.meeting_times
     check(result.n_censored == 0, name, "every pair met")
     lo, hi, gap = -3.5, 7.5, 0.15  # the drawn range, and the least gap between two stems
@@ -672,7 +677,7 @@ def signed_measure() -> str:
     body = [
         text(20, 26, rich("one replicate, ", ("τ", ""), f" = {tau}: its weights sum to 1")),
         segment(axis_x, zero, float(x(hi)), zero, MUTED, width=rule),
-        weight_axis(axis_x, w, zero, ticks),
+        weight_axis(axis_x, w, zero, ticks, (weights.min(), weights.max())),
     ]
     for point, weight in zip(points, weights, strict=True):
         px, end = float(x(point)), zero - float(w(weight))
@@ -715,11 +720,12 @@ def signed_measure() -> str:
     body += [
         _stroke(outline, MUTED, FIGURE["outline"]),
         segment(axis_x, base, float(x(hi)), base, MUTED, width=rule),
+        # Under the bin, below the error lines of its neighbors.
         text(
-            float(x(edges[low + 1])) + 6,
-            base + 24,
+            float(x((edges[low] + edges[low + 1]) / 2)),
+            base + 38,
             f"{MINUS}{abs(masses[low]):.3f}",
-            "start",
+            "middle",
             CATEGORICAL[2],
         ),
     ]
@@ -737,7 +743,8 @@ def signed_measure() -> str:
         f"Top: one replicate's signed measure, for random-walk Metropolis on N(0, 1) started "
         f"from N(5, 1) with k = {k}, L = {lag}, m = {m}, and meeting time tau = {tau}: its "
         f"{len(own)} atoms at {len(points)} distinct points, drawn as one stem per point "
-        f"with the summed weight. Magenta stems rise at "
+        f"with the summed weight, on the horizontal axis of the panel below. Magenta stems "
+        f"rise at "
         + ", ".join(f"{p:.2f} to {v:.2f}" for p, v in zip(points, weights, strict=True) if v > 0)
         + "; teal stems fall at "
         + ", ".join(f"{p:.2f} to {v:.2f}" for p, v in zip(points, weights, strict=True) if v < 0)
@@ -756,10 +763,11 @@ def tv_bound() -> str:
     t + L, t + 2L, ... for one t stacked into the bound at t; below, the bound against t
     on a log scale, with k marked."""
     name, lag, at = "tv-bound", LAG, 6
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", telescopic.ConvergenceWarning)
-        sampler = telescopic.CoupledSampler(log_density, initial(), kernel=kernel(), rng=SEED)
-        result = sampler.run(REPLICATES, lag=lag)
+    result = quietly(
+        lambda: telescopic.CoupledSampler(log_density, initial(), kernel=kernel(), rng=SEED).run(
+            REPLICATES, lag=lag
+        )
+    )
     k, taus = result.k, result.meeting_times
     check(result.n_censored == 0, name, "every pair met")
     check(len(result.pilot) == 100 and result.lag == lag, name, "k from 100 lag-1 pilot pairs")
@@ -784,7 +792,14 @@ def tv_bound() -> str:
     shown = int(np.max(np.nonzero(bound > 0)))
     width, height, drawn = 640.0, 560.0, 30
     t = Scale(0.0, drawn, 84.0, 470.0)
-    check(shown <= drawn and steps[heights > 0].max() <= drawn, name, "the times fit the axis")
+    check(
+        shown <= drawn <= end and steps[heights > 0].max() <= drawn,
+        name,
+        f"the times fit the axis, and the survival function reaches its end, t = {drawn}",
+    )
+    ticks, marks = range(drawn + 1), {u: str(u) for u in range(0, drawn + 1, 6)}
+    last_one = int(np.max(np.nonzero(survival == 1)))
+    first_below = int(np.max(np.nonzero(bound == 1)))
     rule = FIGURE["rule"]
     axis_x = 64.0
     # Top: the survival function, a step at each integer time, with two binomial standard
@@ -822,7 +837,7 @@ def tv_bound() -> str:
         _stroke(
             np.column_stack([t(edge), s(np.repeat(survival[:drawn], 2))]), BLUE, FIGURE["outline"]
         ),
-        segment(axis_x, zero, float(t(30)), zero, MUTED, width=rule),
+        segment(axis_x, zero, float(t(drawn)), zero, MUTED, width=rule),
         segment(axis_x, float(s(0)), axis_x, float(s(1)), MUTED, width=rule),
     ]
     for value in (0.0, 0.5, 1.0):
@@ -855,7 +870,7 @@ def tv_bound() -> str:
     body += [
         text(bar_x + bar_width / 2, float(s(below)) - 34, "bound", "middle"),
         text(bar_x + bar_width / 2, float(s(below)) - 10, f"{bound[at]:.2f}", "middle"),
-        time_axis(t, zero + 10, range(31), {u: str(u) for u in range(0, 31, 6)}),
+        time_axis(t, zero + 10, ticks, marks),
     ]
     # Bottom: the bound against t on a log scale, with two standard errors as a band cut
     # at the axis, and k marked.
@@ -879,7 +894,7 @@ def tv_bound() -> str:
         ),
         f'<path d="{_path(band)} Z" fill="{BLUE}" fill-opacity="{FIGURE["area"]}"/>',
         _stroke(curve, BLUE, FIGURE["chain"]),
-        segment(axis_x, base, float(t(30)), base, MUTED, width=rule),
+        segment(axis_x, base, float(t(drawn)), base, MUTED, width=rule),
         segment(axis_x, float(lg(-floor)), axis_x, float(lg(0)), MUTED, width=rule),
     ]
     for power in range(0, -4, -1):
@@ -894,21 +909,21 @@ def tv_bound() -> str:
         text(kx + 6, base - span + 14, rich(("k", ""), f" = {k}: {bound[k]:.3f}")),
         dot(float(t(at)), float(lg(np.log10(bound[at]))), BLUE, r=FIGURE["meeting"], ring=True),
         text(float(t(at)) + 10, float(lg(np.log10(bound[at]))) - 10, f"{bound[at]:.2f}"),
-        time_axis(t, base + 10, range(31), {u: str(u) for u in range(0, 31, 6)}),
-        text(float(t(30)), base + 52, rich(("t", "")), "end", MUTED),
+        time_axis(t, base + 10, ticks, marks),
+        text(float(t(drawn)), base + 52, rich(("t", "")), "end", MUTED),
     ]
     label = (
         f"Top: the fraction of {len(taus):,} pairs with lag L = {lag} whose meeting time tau "
         f"exceeds t, for random-walk Metropolis on N(0, 1) started from N(5, 1), a step "
-        f"curve on a linear scale, 1 up to t = {int(np.max(np.nonzero(survival == 1)))}, down to {survival[drawn - 1]:.3f} at "
-        f"t = {drawn - 1}, with "
+        f"curve on a linear scale, 1 up to t = {last_one}, down to "
+        f"{survival[drawn - 1]:.3f} at t = {drawn - 1}, with "
         f"a band of two standard errors. A dashed line marks t = {at}, and stems mark the "
         f"curve at t + L, t + 2L, ...: "
         + ", ".join(f"{v:.3f} at {u}" for u, v in zip(steps, heights, strict=True) if v > 0)
         + f". At the right, a bar stacks these heights; its total, labeled bound, is "
         f"{bound[at]:.3f}. Bottom: the estimated bound on the total variation distance "
-        f"against t, on a log scale from 1 to 0.001, with a band of two standard errors: 1 "
-        f"up to t = {int(np.max(np.nonzero(bound == 1)))}, {bound[at]:.3f} at t = {at}, "
+        f"against t, on a log scale from 1 to {10**-floor:.2g}, with a band of two standard "
+        f"errors: 1 up to t = {first_below}, {bound[at]:.3f} at t = {at}, "
         f"{bound[k]:.3f} at the burn-in k = {k}, marked by a dashed line, and 0 after "
         f"t = {shown}."
     )
