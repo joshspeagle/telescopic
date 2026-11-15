@@ -394,6 +394,12 @@ All notable changes to this project are documented here. The format follows
   component, a meeting time can move, and with it a replicate's estimates (one of 100 on
   a logistic regression of 6 dimensions with HMC, which moved the estimates by up to
   0.075 standard errors).
+- `MALA` computes its step and coupled step in whitened coordinates: 3 products of a
+  row with a $d \times d$ factor per step and 7 per coupled step, against 7 and 14. A
+  single step took 0.66 to 0.76 times the time at d = 100 and 200, and a coupled step
+  0.80 to 0.82 times at d = 100 (medians of four benchmark runs on a dense vectorized
+  target, with the form as prototyped). It is the same kernel; seeded outputs of runs
+  that step MALA change in the last bits.
 - The tuning pilot draws its normals and uniforms 256 steps at a time instead of at
   every step, which made it 1.24 to 1.32 times faster on a Gaussian target at d = 2 to
   100. Its outputs are unchanged.

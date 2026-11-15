@@ -60,29 +60,43 @@ def reflection_maximal(
     identical : ndarray of bool, shape (n,)
         Whether each row's draws are equal.
     """
-    z = draws.normal(mu_x.shape[1])
-    log_u = draws.log_uniform()
     # Infinite means, from a drift that overflowed, can give inf - inf = NaN, which fails
     # the test as it should.
-    with np.errstate(invalid="ignore", divide="ignore"):
+    with np.errstate(invalid="ignore"):
         difference = mu_x - mu_y
         delta = matvec(inverse, difference, blas=blas)
-        squared = np.einsum("ij,ij->i", delta, delta)
-        along = np.einsum("ij,ij->i", z, delta)
-        identical = log_u < -along - 0.5 * squared
-        coefficient = 2.0 * along / squared
     # C e = (mu_x - mu_y) / |delta|, so C(z - 2(e.z)e) = Cz - 2(z.delta)/|delta|^2
-    # (mu_x - mu_y), which reuses Cz. e = 0 where |delta|^2 is 0 or not finite, so the
-    # shift is 0 there and y is mu_y + Cz, which keeps its law; the mask also keeps
-    # 0 * inf out where mu_x - mu_y is not finite.
-    finite = (squared > 0) & (squared < np.inf)
-    shift = np.multiply(
-        coefficient[:, None], difference, out=np.zeros_like(difference), where=finite[:, None]
-    )
+    # (mu_x - mu_y), which reuses Cz.
+    z, identical, shift = _reflection(delta, draws, difference)
     step = matvec(chol, z, blas=blas)
     x = mu_x + step
     y = np.where(identical[:, None], x, mu_y + step - shift)
     return x, y, identical
+
+
+def _reflection(
+    delta: FloatArray, draws: Draws, direction: FloatArray
+) -> tuple[FloatArray, BoolArray, FloatArray]:
+    # The reflection-maximal coupling for the whitened difference of the means delta, which
+    # MALA's whitened step also uses: the normals z, the rows where the pair is identical
+    # (log u < -z.delta - |delta|^2 / 2; a NaN in delta fails the test), and the shift
+    # 2 (z.delta) / |delta|^2 direction that reflects z, with direction = delta in whitened
+    # coordinates. The shift is 0 where |delta|^2 is 0 or not finite, so y keeps its law
+    # there; the mask also keeps 0 * inf out where direction is not finite.
+    z = draws.normal(delta.shape[1])
+    log_u = draws.log_uniform()
+    # z.delta can overflow where |delta|^2 is already infinite, as from MALA's whitened
+    # difference at an enormous step; the mask below discards the coefficient there.
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        squared = np.einsum("ij,ij->i", delta, delta)
+        along = np.einsum("ij,ij->i", z, delta)
+        identical = log_u < -along - 0.5 * squared
+        coefficient = 2.0 * along / squared
+    finite = (squared > 0) & (squared < np.inf)
+    shift = np.multiply(
+        coefficient[:, None], direction, out=np.zeros_like(direction), where=finite[:, None]
+    )
+    return z, identical, shift
 
 
 # Spec R-CPL-2.

@@ -1,0 +1,4 @@
+whitened at 7cf165e (clean), previous at 3c8d5b2; NumPy 2.5.3, Python 3.13.18, x86_64, {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1'}
+MALA from the same states and draws: largest |difference| of acceptance 1.9e-14, of positions 1.2e-15; differing accept or meeting decisions 0 of 20480
+bitwise equal: RandomWalk True, HMC True (steps and coupled steps, 80 configurations each)
+seeded runs: 30; k moved in 0; meeting times moved: 0 of 3840; largest move of an estimate 3.4e-11 standard errors

@@ -377,6 +377,8 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 
 **Coupling:** reflection-maximal coupling of the two Gaussian proposals, which share the covariance $\epsilon^2\Sigma$, plus a common $u$ (JOA20 §4.4; AJ24 §4.3).
 
+**Computation:** in whitened coordinates. With $B = \epsilon C$ and $h = B^\top\nabla\log\pi(x)$, the proposal is $x' = x + B(h/2 + z)$, and $\log q(x \mid x') - \log q(x' \mid x) = (\lVert r\rVert^2 - \lVert r + (h + h')/2\rVert^2)/2$ with $r = B^{-1}(x' - x) - h/2$; the coupled step reflects the whitened difference of the means $\delta = B^{-1}(x - y) + (h_x - h_y)/2$. A step costs 3 products with $B$ or $B^\top$ per row and a coupled step 7, and both read their draws in the order of the form they replaced ($d$ normals, then the uniforms), so they are the same kernel; `reflection_maximal` is unchanged (DECISIONS #216, #217).
+
 **Tuning:** `cov` from the RWMH pilot of §5.3, then $\epsilon$ by dual averaging toward acceptance 0.574, on 4 chains started from the pilot's last states (Hoffman & Gelman 2014, §3.2.1, with their constants; 1000 iterations from $\epsilon_0 = 1.65\,d^{-1/6}$, on the chains' mean acceptance probability; DECISIONS #13).
 
 ### 5.5 HMC (R-KER-HMC)
