@@ -75,14 +75,16 @@ class Streams:
     # remain, the buffer keeps them and is topped up, so a replicate's numbers depend
     # only on its generator and its own requests, never on the other lanes, the batch
     # size or the buffer width (width: values of each kind per lane; a request for more
-    # than an eighth of a buffer widens it).
+    # than an eighth of a buffer widens it). A buffer is only ever replaced, never resized
+    # in place, and after construction only where _start widens it, which clears the
+    # cache of views of it.
 
     def __init__(self, n_lanes: int, width: int = 512) -> None:
         self._buffers = [np.empty((n_lanes, width)) for _ in (NORMAL, UNIFORM)]
         self._cursors = [np.full(n_lanes, width, dtype=np.intp) for _ in (NORMAL, UNIFORM)]
         self._generators: list[Generator | None] = [None] * n_lanes
         self._sources: list[list[Generator]] = [[] for _ in range(n_lanes)]
-        self._windows: list[FloatArray | None] = [None, None]
+        self._windows: list[dict[int, FloatArray]] = [{}, {}]
 
     def assign(self, lane: int, generator: Generator) -> None:
         # A new replicate enters the lane; its buffers read its sources.
@@ -97,18 +99,48 @@ class Streams:
     def _take(self, kind: int, lanes: IndexArray, size: int) -> FloatArray:
         if not len(lanes):
             # A buffer is widened only for lanes that ask, so the windows below could be
-            # longer than an unwidened buffer.
+            # longer than an unwidened buffer; and _start would take the max of nothing.
             return np.empty((0, size))
+        start = self._start(kind, lanes, size)
+        # windows[i, j] is buffer[i, j : j + size], so whole windows are gathered without
+        # an (n, size) index array; kept per size, since building one costs as much as
+        # the gather.
+        windows = self._windows[kind].get(size)
+        if windows is None:
+            buffer = self._buffers[kind]
+            windows = self._windows[kind][size] = np.ndarray(
+                (len(buffer), buffer.shape[1] - size + 1, size),
+                buffer.dtype,
+                buffer,
+                strides=(buffer.strides[0], buffer.strides[1], buffer.strides[1]),
+            )
+        taken: FloatArray = windows[lanes, start]
+        return taken
+
+    def _take_one(self, kind: int, lanes: IndexArray) -> FloatArray:
+        # One number per lane, as a vector.
+        if not len(lanes):
+            return np.empty(0)  # _start would take the max of nothing
+        start = self._start(kind, lanes, 1)  # first: it can replace the buffer
+        taken: FloatArray = self._buffers[kind][lanes, start]
+        return taken
+
+    def _start(self, kind: int, lanes: IndexArray, size: int) -> IndexArray:
+        # The lanes' first positions of their next size numbers, after topping up the
+        # lanes with fewer left; the cursors move past them.
         buffer, cursor = self._buffers[kind], self._cursors[kind]
         start = cursor[lanes]
-        # max, not any of a comparison: this test runs at every request.
-        if start.max() > buffer.shape[1] - size:
-            short = start > buffer.shape[1] - size
+        last = buffer.shape[1] - size
+        # The max exceeds last exactly when any start does, and costs less at every request.
+        if start.max() > last:
+            # Per lane still, since only the short lanes are refilled.
+            short = start > last
             if 8 * size > buffer.shape[1]:
                 # Widen on the left, so each lane's unread numbers stay at the end; only
                 # before a top-up, so that a buffer of given numbers is not copied.
                 pad = 8 * size - buffer.shape[1]
                 buffer = self._buffers[kind] = np.pad(buffer, ((0, 0), (pad, 0)))
+                self._windows[kind].clear()
                 cursor += pad
                 start += pad
             for lane in lanes[short].tolist():
@@ -117,22 +149,7 @@ class Streams:
                 self._fill(kind, lane, buffer[lane, unread:])
             start[short] = 0
         cursor[lanes] = start + size
-        if size == 1:
-            one: FloatArray = buffer[lanes, start, None]
-            return one
-        # windows[i, j] is buffer[i, j : j + size], so whole windows are gathered without
-        # an (n, size) index array; kept until the buffer or the size changes, since
-        # building it costs as much as the gather.
-        windows = self._windows[kind]
-        if windows is None or windows.base is not buffer or windows.shape[2] != size:
-            windows = self._windows[kind] = np.ndarray(
-                (len(buffer), buffer.shape[1] - size + 1, size),
-                buffer.dtype,
-                buffer,
-                strides=(buffer.strides[0], buffer.strides[1], buffer.strides[1]),
-            )
-        taken: FloatArray = windows[lanes, start]
-        return taken
+        return start
 
     def _fill(self, kind: int, lane: int, out: FloatArray) -> None:
         source = self._sources[lane][kind]
@@ -184,7 +201,7 @@ class Draws:
         -------
         ndarray, shape (n,)
         """
-        return self._streams._take(UNIFORM, self._lanes, 1)[:, 0]
+        return self._streams._take_one(UNIFORM, self._lanes)
 
     def log_uniform(self) -> FloatArray:
         """Logarithms of uniform draws on [0, 1), one per row; ``-inf`` for a draw of 0.

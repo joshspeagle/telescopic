@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from hypothesis import given
+from hypothesis import example, given
 from hypothesis import strategies as st
 from numpy.random import PCG64DXSM, Generator, SeedSequence
 
@@ -79,6 +79,12 @@ requests = st.tuples(
 
 
 @given(steps=st.lists(st.one_of(requests, st.integers(0, N_LANES - 1)), max_size=30))
+# A view of a buffer kept across a widening: one lane, then several lanes at different
+# positions of which one widens it, sizes in turn, and uniforms after a widening.
+@example(steps=[([0], True, 2)] + [([0], True, 3)] * 6)
+@example(steps=[([0, 1, 2], True, 2)] + [([0], True, 3)] * 4 + [([2, 1, 0], True, 3)] * 3)
+@example(steps=[([0, 1], True, 2), ([1, 0], True, 5)] * 4)
+@example(steps=[([0, 1], False, 3), ([1], True, 30), ([1], False, 12), ([0, 1], False, 10)])
 @pytest.mark.parametrize("width", [0, 3, 1024])
 def test_each_row_reads_its_replicates_streams_in_order(width, steps):
     # Every row of every request must equal the next numbers of its replicate's two
@@ -107,18 +113,6 @@ def test_each_row_reads_its_replicates_streams_in_order(width, steps):
             taken = np.stack([draws.uniform() for _ in range(size)], axis=1)
             expected = [children[lane][1].random(size) for lane in lanes]
         np.testing.assert_array_equal(taken, expected)
-
-
-def test_a_request_that_widens_the_buffer_reads_the_widened_buffer():
-    # A request of size 3 widens a buffer of width 16 only once its numbers run short,
-    # after earlier requests of that size read the narrow buffer.
-    root = root_seed(10)
-    streams = Streams(1, width=16)
-    streams.assign(0, replicate_generator(root, MAIN, 0))
-    draws = streams.view([0])
-    taken = np.hstack([draws.normal(2), *(draws.normal(3) for _ in range(6))])
-    expected = replicate_generator(root, MAIN, 0).spawn(2)[0].standard_normal(20)
-    np.testing.assert_array_equal(taken, [expected])
 
 
 def test_subset_rows_keep_their_lanes():
