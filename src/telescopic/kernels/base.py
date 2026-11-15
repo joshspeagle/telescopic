@@ -153,7 +153,7 @@ class Kernel(ABC):
     def init_extra(self, state: State) -> dict[str, npt.NDArray[Any]]:
         """The initial values of the kernel's own fields at the chains of ``state``.
 
-        :meth:`init_state` attaches them; none by default.
+        :meth:`~telescopic.kernels.Kernel.init_state` attaches them; none by default.
 
         Parameters
         ----------
@@ -269,7 +269,7 @@ class Kernel(ABC):
     def init_state(self, target: Target, x: FloatArray) -> State:
         """The states at the rows of ``x``: the target's values, and the kernel's fields.
 
-        Gradients are evaluated if the kernel needs them, and :meth:`init_extra` gives the
+        Gradients are evaluated if the kernel needs them, and :meth:`~telescopic.kernels.Kernel.init_extra` gives the
         fields, which must include every Markov field.
 
         A gradient that is not finite where the log-density is raises ``ValueError``
@@ -285,7 +285,7 @@ class Kernel(ABC):
         Returns
         -------
         State
-            With the fields of :meth:`init_extra`.
+            With the fields of :meth:`~telescopic.kernels.Kernel.init_extra`.
         """
         self.check_ndim(x.shape[1])
         self.check_target(target)
