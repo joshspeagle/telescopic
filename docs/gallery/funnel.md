@@ -77,9 +77,11 @@ def pilot(log_prob, grad, initial, kernel, n, cap):
     return tau
 
 
+# The kernel, the number of pairs and the cap of each pilot.
+funnel_pilots = {"random walk": ("rwmh", 200, 20_000), "HMC": ("hmc", 50, 2_000)}
 funnel_tau = {
-    "random walk": pilot(funnel.log_prob, funnel.grad, funnel.initial, "rwmh", 200, 20_000),
-    "HMC": pilot(funnel.log_prob, funnel.grad, funnel.initial, "hmc", 50, 2_000),
+    name: pilot(funnel.log_prob, funnel.grad, funnel.initial, *settings)
+    for name, settings in funnel_pilots.items()
 }
 ```
 
@@ -244,10 +246,10 @@ glue("slowest_new", float(slowest), display=False)
 ```
 
 Every pair of both kernels met, the slowest after {glue:text}`slowest_new:.0f`
-iterations. The survival functions of
-the meeting times, the fraction of pairs not yet met at each time
-([Meeting times and distance to stationarity](../concepts/meeting-times.md)), put the four
-pilots side by side:
+iterations. The survival functions of $\tau - 1$, the meeting time less the lag
+([Meeting times and distance to stationarity](../concepts/meeting-times.md)), drawn by
+{func}`telescopic.plotting.survival` from each pilot's times, its lag of 1 and its cap,
+put the four pilots side by side:
 
 ```{code-cell} python
 ---
@@ -257,21 +259,22 @@ mystnb:
       Four survival curves of meeting times on logarithmic axes. In the new
       coordinates, the curves of the random walk and of HMC fall to zero early. On
       the funnel, the random walk's curve has a long tail, and HMC's curve ends well
-      above zero, at the fraction of its pairs unmet at the cap.
+      above zero, at the cap less 1, at the fraction of its pairs unmet at the cap.
   figure:
     caption: >-
-      The fraction of pilot pairs not yet met, $P(\tau > t)$, against $t$, for the random
-      walk and HMC on the funnel and in the new coordinates. A curve that ends above 0
-      ends at the fraction of pairs unmet at the cap.
+      The survival function $P(\tau - 1 > t)$ of the pilots' meeting times less the
+      lag, against $t$, for the random walk and HMC on the funnel and in the new
+      coordinates. A curve that ends above 0 ends at the cap less 1, at the fraction
+      of pairs unmet at the cap.
 ---
+from telescopic import plotting
+
 fig, ax = plt.subplots(figsize=(6, 3.8))
+caps = {name: cap for name, (_, _, cap) in funnel_pilots.items()}
 for label, tau in {**funnel_tau, **noncentered_tau}.items():
-    met = np.sort(tau[np.isfinite(tau)])
-    # Unmet pairs count in the denominator, so the curve ends at their fraction.
-    survival = 1 - np.arange(1, len(met) + 1) / len(tau)
-    shown = survival > 0  # the last step falls to 0, off a log scale
-    ax.step(met[shown], survival[shown], where="post", label=label)
-ax.set(xscale="log", yscale="log", xlabel="$t$", ylabel=r"$P(\tau > t)$")
+    # Every pair in the new coordinates met, so only the funnel's pilots need their cap.
+    plotting.survival(tau, 1, ax, max_iter=caps.get(label), label=label)
+ax.set(xscale="log", ylabel=r"$P(\tau - 1 > t)$")
 ax.legend(fontsize=9);
 ```
 

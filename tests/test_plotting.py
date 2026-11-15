@@ -45,11 +45,48 @@ def test_the_survival_curve_ends_at_the_censored_fraction():
     assert survival.get_yscale() == "log"
 
 
+def test_the_survival_curve_of_an_array_is_that_of_its_result():
+    # RESULT has censored pairs, which the array gives as inf with the cap beside it.
+    _, expected = RESULT.plot_meeting_times()
+    ax = plotting.survival(RESULT.meeting_times, RESULT.lag, max_iter=RESULT.max_iter)
+    for mine, theirs in zip(ax.lines[0].get_data(), expected.lines[0].get_data(), strict=True):
+        np.testing.assert_array_equal(mine, theirs)
+    assert ax.get_yscale() == "log"
+    plotting.survival(RESULT.meeting_times[np.isfinite(RESULT.meeting_times)], RESULT.lag, ax)
+    assert len(ax.lines) == 2
+
+
+@pytest.mark.parametrize(
+    ("times", "options", "message"),
+    [
+        ([3.0, np.inf], {}, "give their max_iter"),
+        ([0.0, 3.0], {}, "integers from lag = 1 on"),
+        ([2.5, 3.0], {}, "integers from lag = 1 on"),
+        ([3.0, -np.inf], {"max_iter": 9}, "integers from lag = 1 on"),
+        ([3.0, np.nan], {"max_iter": 9}, "integers from lag = 1 on"),
+        ([], {}, "non-empty"),
+    ],
+)
+def test_the_survival_curve_refuses_invalid_meeting_times(times, options, message):
+    with pytest.raises(ValueError, match=message):
+        plotting.survival(times, 1, **options)
+
+
 def test_the_tv_bound_plot_draws_the_bound_and_marks_k():
     ax = RESULT.plot_tv_bound()
     t, bound = ax.lines[0].get_data()
     assert t[0] == 0
-    np.testing.assert_array_equal(bound, RESULT.tv_bound(t))
+    np.testing.assert_array_equal(bound, RESULT.tv_bound(t)[0])
+    # Two standard errors about the average before its cap, capped and cut at the bottom
+    # of the axis: where the cap holds the average 2 standard errors above 1, the band is
+    # the line at 1, not an interval below it.
+    band = ax.collections[0].get_paths()[0].vertices
+    assert band[:, 1].max() <= 1
+    assert band[:, 1].min() >= ax.get_ylim()[0]
+    average, error = RESULT._tv_average(t)
+    capped = t[average - 2 * error >= 1]
+    assert len(capped)
+    np.testing.assert_array_equal(band[np.isin(band[:, 0], capped), 1], 1)
     assert ax.get_yscale() == "log"
     assert ax.lines[-1].get_xdata()[0] == RESULT.k
 

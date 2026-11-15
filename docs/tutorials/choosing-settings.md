@@ -43,7 +43,8 @@ print(f"k = {k}; pairs with tau - 1 > k: {np.sum(times - 1 > k)} of {len(times)}
 ```
 
 The recipe then sets the lag to $k$ and $m$ to $10k$. The pilot's {term}`meeting times <meeting time>`, with $k$
-dashed and the level 0.01 dotted:
+dashed and the level 0.01 dotted, and their survival function drawn by
+{func}`telescopic.plotting.survival` from the array and its lag:
 
 ```{code-cell} python
 ---
@@ -59,15 +60,14 @@ mystnb:
       (left) and survival function on a log scale (right), with $k$ dashed and the
       level 0.01 dotted.
 ---
-shifted = np.sort(times - 1)
-survival = 1 - np.arange(1, len(shifted) + 1) / len(shifted)
-survival[-1] = survival[-2]  # the last step falls to 0, off a log scale
+from telescopic import plotting
+
 fig, (left, right) = plt.subplots(1, 2, figsize=(9, 3.5))
-left.hist(shifted, bins=20)
+left.hist(times - 1, bins=20)
 left.set(xlabel=r"$\tau - 1$", ylabel="pilot pairs")
-right.step(shifted, survival, where="post")
+plotting.survival(times, 1, right)
 right.axhline(0.01, color="gray", linestyle=":")
-right.set(yscale="log", xlabel="$t$", ylabel=r"$P(\tau - 1 > t)$")
+right.set(ylabel=r"$P(\tau - 1 > t)$")
 for ax in (left, right):
     ax.axvline(k, color="gray", linestyle="--", label="$k$")
 right.legend();
@@ -267,25 +267,37 @@ mystnb:
   image:
     alt: >-
       Two lines on a logarithmic scale, one for lag 1 and one for lag k, each
-      falling from 1 as t grows, with a dashed vertical line at k.
+      falling from 1 as t grows inside a shaded band, with a dashed vertical line at
+      k.
   figure:
     caption: >-
       The estimated upper bound on the total variation distance between the law of
-      $X_t$ and the target, from the run with lag 1 and the run with lag $k$, with
-      $k$ dashed.
+      $X_t$ and the target, from the run with lag 1 and the run with lag $k$, each
+      with a band of two standard errors where it is below 1, with $k$ dashed.
 ---
 t = np.arange(2 * k)
 fig, ax = plt.subplots(figsize=(5, 3.5))
-for label, result in (("lag 1", results["lag_1"]), (f"lag {k}", recipe)):
-    bound = result.tv_bound(t)
-    ax.plot(t[bound > 0], bound[bound > 0], label=label)
+bounds = {"lag 1": results["lag_1"].tv_bound(t), f"lag {k}": recipe.tv_bound(t)}
+colors = {}
+for label, (bound, error) in bounds.items():
+    shown = bound > 0
+    (line,) = ax.plot(t[shown], bound[shown], label=label)
+    colors[label] = line.get_color()
 ax.axvline(k, color="gray", linestyle="--", label="$k$")
 ax.set(yscale="log", xlabel="$t$", ylabel=r"TV bound on $X_t$")
+# Two standard errors where the bound is below its cap of 1, reaching the bottom of
+# the axis where the lower edge is not positive.
+bottom = ax.get_ylim()[0]
+for label, (bound, error) in bounds.items():
+    lower, upper = np.clip(bound - 2 * error, bottom, 1), np.minimum(bound + 2 * error, 1)
+    below = (bound > 0) & (bound < 1)
+    ax.fill_between(t, lower, upper, where=below, color=colors[label], alpha=0.3, linewidth=0)
+ax.set_ylim(bottom=bottom)
 ax.legend();
 ```
 
 ```{code-cell} python
-lag_one, lag_k = results["lag_1"].tv_bound([k])[0], recipe.tv_bound([k])[0]
+lag_one, lag_k = results["lag_1"].tv_bound([k])[0][0], recipe.tv_bound([k])[0][0]
 print(f"at t = k: lag 1, {lag_one:.3f}; lag {k}, {lag_k:.3f}")
 ```
 

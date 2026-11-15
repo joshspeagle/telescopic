@@ -222,8 +222,7 @@ class Result:
         # The cap for a censored pair makes the bounds of section 3.6 lower bounds of
         # their estimates. The engine compared its chains at the cap before censoring
         # it, so the TV bound counts it as meeting at cap + 1, the least it can.
-        self._stopped = replicates.stopped.astype(np.int64)
-        self._earliest_meeting = self._stopped + ~met
+        self._earliest_meeting = replicates.stopped.astype(np.int64) + ~met
 
     def __repr__(self) -> str:
         # Stored fields only: an echo in a notebook must not compute the diagnostics.
@@ -474,12 +473,13 @@ class Result:
         return mean.reshape(shape), error.reshape(shape), edges if np.ndim(dims) else edges[0]
 
     # Spec section 3.6.
-    def tv_bound(self, t: npt.ArrayLike | None = None) -> FloatArray:
+    def tv_bound(self, t: npt.ArrayLike | None = None) -> tuple[FloatArray, FloatArray]:
         """Estimated upper bound on the total variation distance from the law of X_t to the target.
 
-        The bound derived under Distance to stationarity, in :doc:`/theory`. A censored pair
-        counts as meeting just after its cap, the earliest it can, so with censored pairs
-        it is a lower bound of the estimate without a cap.
+        The bound derived under Distance to stationarity, in :doc:`/theory`, with its
+        standard error, as :func:`telescopic.diagnostics.tv_bound` computes them. A
+        censored pair counts as meeting just after its cap, the earliest it can, so with
+        censored pairs it is a lower bound of the estimate without a cap.
 
         Parameters
         ----------
@@ -489,18 +489,25 @@ class Result:
 
         Returns
         -------
-        ndarray, shape of ``t``
+        bound, standard_error : ndarray, shape of ``t``
         """
+        average, error = self._tv_average(t)
+        bound: FloatArray = np.minimum(1.0, average)
+        return bound, error
+
+    def _tv_average(self, t: npt.ArrayLike | None = None) -> tuple[FloatArray, FloatArray]:
+        # tv_bound before its cap at 1, with the standard error.
         if t is None:
             t = self._times(int(np.max(self._earliest_meeting)))
-        return diagnostics.tv_bound(self._earliest_meeting, self.lag, t)
+        return diagnostics._tv_average(self._earliest_meeting, self.lag, t)
 
     # Spec section 3.6.
-    def w1_bound(self, t: npt.ArrayLike | None = None) -> FloatArray:
+    def w1_bound(self, t: npt.ArrayLike | None = None) -> tuple[FloatArray, FloatArray]:
         """Estimated upper bound on the 1-Wasserstein distance from the law of X_t to the target.
 
-        The bound derived under Distance to stationarity, in :doc:`/theory`. It depends on
-        the parameterization of the target. A censored
+        The bound derived under Distance to stationarity, in :doc:`/theory`, with its
+        standard error, as :func:`telescopic.diagnostics.w1_bound` computes them. It
+        depends on the parameterization of the target. A censored
         pair's distances stop at its cap, so with censored pairs it is a lower bound of the
         estimate without a cap. With ``keep``, it averages over the kept replicates,
         censored ones included.
@@ -512,7 +519,7 @@ class Result:
 
         Returns
         -------
-        ndarray, shape of ``t``
+        bound, standard_error : ndarray, shape of ``t``
         """
         replicates = self._replicates
         if not self._n_stored:
@@ -520,7 +527,12 @@ class Result:
         if t is None:
             t = self._times(int(np.max(replicates.distance_time, initial=0)) + 1)
         return diagnostics.w1_bound(
-            replicates.distance_time, replicates.distance, self._n_stored, self.lag, t
+            replicates.distance_owner,
+            replicates.distance_time,
+            replicates.distance,
+            self._n_stored,
+            self.lag,
+            t,
         )
 
     # Spec section 3.6 and R-TUNE-4.

@@ -806,14 +806,10 @@ def tv_bound() -> str:
     survival = (taus[None, :] > times[:, None]).mean(axis=1)
     steps = at + lag * np.arange(1, (end - at) // lag + 1)
     heights = survival[steps]
-    bound = result.tv_bound(times)
+    bound, spread = result.tv_bound(times)
     # The bound at t is the sum of the survival function at t + L, t + 2L, ..., below 1
-    # here, so the stacked bar is the package's estimate; and the average over replicates
-    # of max(0, ceil((tau - L - t) / L)), whose spread gives its standard error.
+    # here, so the stacked bar is the package's estimate.
     check(np.isclose(heights.sum(), bound[at]) and bound[at] < 1, name, "the bar is the bound")
-    each = np.maximum(0, np.ceil((taus[None, :] - lag - times[:, None]) / lag))
-    check(np.allclose(np.minimum(1, each.mean(axis=1)), bound), name, "the bound's average")
-    spread = each.std(axis=1, ddof=1) / np.sqrt(len(taus))
     check(
         bound[0] == 1 and np.all(np.diff(bound) <= 0) and bound[k] < bound[at],
         name,

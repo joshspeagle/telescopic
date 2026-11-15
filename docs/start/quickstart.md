@@ -117,12 +117,13 @@ the correction removes what remains at `k`:
 mystnb:
   image:
     alt: >-
-      A line on a logarithmic scale that falls from 1 as t grows, with a dashed
-      vertical line at k.
+      A line on a logarithmic scale that falls from 1 as t grows, inside a shaded
+      band, with a dashed vertical line at k.
   figure:
     caption: >-
       The estimated upper bound on the total variation distance between the law of
-      $X_t$ and the posterior, against $t$, with the burn-in $k$ dashed.
+      $X_t$ and the posterior, against $t$, with a band of two standard errors and the
+      burn-in $k$ dashed.
 ---
 result.plot_tv_bound();
 ```

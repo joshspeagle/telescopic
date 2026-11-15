@@ -48,6 +48,28 @@ mystnb:
 result.plot_meeting_times();
 ```
 
+{func}`telescopic.plotting.survival` draws the survival function alone, from an array of
+meeting times and their lag, such as the times that
+{meth}`telescopic.CoupledSampler.meeting_times` returns, into a given axis, so that the
+curves of several runs share one; censored pairs, `inf`, need their cap as `max_iter`:
+
+```{code-cell} python
+---
+mystnb:
+  image:
+    alt: >-
+      The fraction of pairs with tau minus L above t, on a logarithmic scale,
+      falling with t.
+  figure:
+    caption: >-
+      The survival function $P(\tau - L > t)$ of the run's meeting times, drawn from
+      the array.
+---
+from telescopic import plotting
+
+plotting.survival(result.meeting_times, result.lag, max_iter=result.max_iter);
+```
+
 ## Distance to stationarity
 
 With `keep`, the 1-Wasserstein bound comes from the distances of the kept replicates,
@@ -57,43 +79,49 @@ and the other diagnostics of this page come from every replicate.
 {meth}`telescopic.Result.tv_bound` estimates the upper bound on the total variation
 distance between the law of $X_t$ and the target
 ([Theory](../theory.md#distance-to-stationarity)) by its average over the replicates,
-capped at 1. By default it returns the bound at every $t$ from 0 to the last time at
-which it is positive, so that entry `t` is the bound at `t`. A censored pair is known to
+capped at 1, and returns it with its standard error: the sample standard deviation of
+the replicates' terms $\max(0, \lceil(\tau - L - t)/L\rceil)$ over $\sqrt R$, the error of
+the average before the cap. By default it returns both at every $t$ from 0 to the last
+time at which the bound is positive, so that entry `t` is the bound at `t`. A censored pair is known to
 meet after its cap, where its chains were last compared, and counts as meeting at the
 cap plus 1, so with censored pairs the estimate is a lower bound of the one without a
 cap.
 
 ```{code-cell} python
-result.tv_bound([0, result.k // 2, result.k])
+bound, standard_error = result.tv_bound([0, result.k // 2, result.k])
+print(bound, standard_error)
 ```
 
-{meth}`telescopic.Result.plot_tv_bound` draws it on a log scale, with `k` marked:
+{meth}`telescopic.Result.plot_tv_bound` draws it on a log scale, with a band of two
+standard errors and `k` marked:
 
 ```{code-cell} python
 ---
 mystnb:
   image:
     alt: >-
-      A line on a logarithmic scale that falls from 1 as t grows, with a dashed
-      vertical line at k.
+      A line on a logarithmic scale that falls from 1 as t grows, inside a shaded
+      band, with a dashed vertical line at k.
   figure:
     caption: >-
       The estimated upper bound on the total variation distance between the law of
-      $X_t$ and the target, against $t$, with $k$ dashed.
+      $X_t$ and the target, against $t$, with a band of two standard errors and $k$
+      dashed.
 ---
 result.plot_tv_bound();
 ```
 
 {meth}`telescopic.Result.w1_bound` estimates the bound on the 1-Wasserstein distance in
-the same way, from the distances $\lVert X_t - Y_{t-L} \rVert$ that the engine records
-before each pair meets. A censored pair's distances stop at its cap, so with censored
+the same way, with its standard error, from the distances $\lVert X_t - Y_{t-L} \rVert$
+that the engine records before each pair meets. A censored pair's distances stop at its cap, so with censored
 pairs it too is a lower bound. It depends on the parameterization of the target through
 the Euclidean norm: in other units or coordinates the bound changes.
 
 ```{code-cell} python
-result.w1_bound([0, result.k // 2, result.k])
+bound, standard_error = result.w1_bound([0, result.k // 2, result.k])
+print(bound, standard_error)
 ```
 
 {func}`telescopic.diagnostics.tv_bound` and {func}`telescopic.diagnostics.w1_bound`
-compute the same bounds from arrays, such as meeting times of your own, with each
-censored pair given as the cap plus 1.
+compute the same bounds and standard errors from arrays, such as meeting times of your
+own, with each censored pair given as the cap plus 1.

@@ -61,7 +61,9 @@ are shown in [Read meeting times and the distance to stationarity](meeting-times
 Each method returns its matplotlib axes, and all but `plot_corner` draw on axes given as
 `axes` or `ax`. The functions of {mod}`telescopic.plotting`, which `import telescopic`
 leaves out since it needs matplotlib, take the result as their first argument and do the
-same; {func}`telescopic.plotting.paths` also draws the coupled paths of a few {term}`replicates <replicate>`
+same; {func}`telescopic.plotting.survival` draws the survival function of an array of
+meeting times ([Meeting times](meeting-times.md#meeting-times)), and
+{func}`telescopic.plotting.paths` also draws the coupled paths of a few {term}`replicates <replicate>`
 of an engine run with `keep_paths=True` ([How it works](../tutorials/how-it-works.md)).
 
 The {term}`atoms <atom>` are not samples of the target, even when plotted without their weights: the

@@ -519,3 +519,18 @@ All notable changes to this project are documented here. The format follows
   pilot's, `PilotRun.initial_var` the draws' variances, and `diagnostics.wide_start`
   words the warning. The guide on settings shows a confirmation round of pilot pairs at
   lag `k` as an option.
+- `plotting.survival(meeting_times, lag, ax=None, *, max_iter=None, label=None)` draws
+  the survival function of an array of meeting times, such as
+  `CoupledSampler.meeting_times` returns, into a given axis, so that several runs share
+  one; a censored pair (`inf`) counts up to `max_iter`, as in
+  `plotting.meeting_times`, which now draws its curve with it.
+
+### Changed
+
+- `diagnostics.tv_bound`, `diagnostics.w1_bound`, `Result.tv_bound` and
+  `Result.w1_bound` return the pair `(bound, standard_error)`, the standard error being
+  that of the average over replicates of each pair's term; the bounds are unchanged, bit
+  for bit. `diagnostics.w1_bound` takes `distance_owner` first, as
+  `engine.Replicates` holds it, since the error needs each record's replicate.
+  `plot_tv_bound` draws a band of two standard errors. Code that used the single array,
+  or the former arguments of `diagnostics.w1_bound`, breaks.
