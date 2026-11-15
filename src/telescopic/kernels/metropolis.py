@@ -44,6 +44,16 @@ class Proposal(ABC):
         """
         return False
 
+    @property
+    def ndim(self) -> int | None:
+        """The dimension that the proposal fixes, or ``None``.
+
+        Returns
+        -------
+        int or None
+        """
+        return None
+
     @abstractmethod
     def sample(self, target: Target, state: State, draws: Draws) -> tuple[FloatArray, Any]:
         r"""Draw a proposal :math:`x' \sim q(\cdot \mid x)` for each chain.
@@ -151,6 +161,10 @@ class _GaussianProposal(Proposal):
         # The arrays as given, in their memory order, on which einsum's order of summation
         # and so the last bits of the products depend; real_array's copies are C-ordered.
         self.factor, self.inverse = (np.asarray(array, dtype=np.float64) for array in given)
+
+    @property
+    def ndim(self) -> int:
+        return len(self.factor)
 
     @classmethod
     def _trusted(cls, factor: FloatArray, inverse: FloatArray) -> Self:
@@ -279,11 +293,24 @@ class IndependenceProposal(Proposal):
     ----------
     distribution : object
         An object with ``sample(draws)`` and a normalized ``log_density(x)``, such as
-        :class:`~telescopic.kernels.MultivariateT`.
+        :class:`~telescopic.kernels.MultivariateT`; one without them raises
+        ``TypeError``. Its ``mean``, if it has one that is not a method, fixes the
+        dimension.
     """
 
     def __init__(self, distribution: ProposalDistribution) -> None:
+        if not (hasattr(distribution, "sample") and hasattr(distribution, "log_density")):
+            raise TypeError(
+                "the proposal distribution must have sample(draws) and log_density(x), as "
+                f"MultivariateT does, not {type(distribution).__name__}"
+            )
         self.distribution = distribution
+
+    @property
+    def ndim(self) -> int | None:
+        # The size of the distribution's mean, if it has one that is not a method.
+        mean = getattr(self.distribution, "mean", None)
+        return None if mean is None or callable(mean) else int(np.size(mean))
 
     def sample(self, target: Target, state: State, draws: Draws) -> tuple[FloatArray, Any]:
         return self.distribution.sample(draws), None
@@ -343,6 +370,10 @@ class MetropolisHastings(Kernel):
     @property
     def needs_grad(self) -> bool:
         return self._proposal is not None and self._proposal.needs_grad
+
+    @property
+    def ndim(self) -> int | None:
+        return None if self._proposal is None else self._proposal.ndim
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
         proposal, _ = self._ready()

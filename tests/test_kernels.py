@@ -548,7 +548,7 @@ def test_independence_takes_a_proposal_whose_mean_is_a_method():
 
 
 def test_independence_refuses_a_proposal_without_sample_and_log_density():
-    with pytest.raises(TypeError, match="proposal must have sample"):
+    with pytest.raises(TypeError, match="proposal distribution must have sample"):
         Independence(stats.multivariate_normal(np.zeros(2)))
 
 

@@ -109,10 +109,6 @@ class RandomWalk(MetropolisHastings):
     def is_tuned(self) -> bool:
         return self.cov is not None
 
-    @property
-    def ndim(self) -> int | None:
-        return None if self.cov is None else len(self.cov)
-
     def _tuned(
         self, target: Target, initial: Any, pilot: PilotRun, rng: Seed
     ) -> tuple[Kernel, TuningReport]:

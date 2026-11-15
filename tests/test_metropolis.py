@@ -3,6 +3,7 @@ import pickle
 import _frozen_kernels as frozen
 import numpy as np
 import pytest
+from scipy import stats
 
 from references import dense
 from telescopic.couplings import Maximal, Reflection, Shared
@@ -243,3 +244,22 @@ def test_gaussian_proposals_refuse_a_factor_and_inverse_that_do_not_match(
 ):
     with pytest.raises(error, match=message):
         proposal(factor, inverse)
+
+
+@pytest.mark.parametrize(
+    "proposal",
+    [
+        RandomWalkProposal(np.eye(2), np.eye(2)),
+        IndependenceProposal(MultivariateT(np.zeros(2), np.eye(2))),
+    ],
+)
+def test_metropolis_hastings_refuses_starts_of_another_dimension_than_its_proposal(proposal):
+    coupling = Reflection() if isinstance(proposal, RandomWalkProposal) else Shared()
+    kernel = MetropolisHastings(proposal, coupling)
+    with pytest.raises(ValueError, match="works in 2 dimensions"):
+        kernel.init_state(bounded_target(3, False), np.zeros((4, 3)))
+
+
+def test_independence_proposal_refuses_a_distribution_without_sample_and_log_density():
+    with pytest.raises(TypeError, match="must have sample"):
+        IndependenceProposal(stats.multivariate_normal(np.zeros(2)))

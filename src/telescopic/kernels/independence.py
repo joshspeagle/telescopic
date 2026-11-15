@@ -179,13 +179,6 @@ class Independence(MetropolisHastings):
     """
 
     def __init__(self, proposal: ProposalDistribution | None = None) -> None:
-        if proposal is not None and not (
-            hasattr(proposal, "sample") and hasattr(proposal, "log_density")
-        ):
-            raise TypeError(
-                "proposal must have sample(draws) and log_density(x), as MultivariateT "
-                f"does, not {type(proposal).__name__}"
-            )
         self._coupling: Coupling = Shared()
         self._proposal: Proposal | None = (
             None if proposal is None else IndependenceProposal(proposal)
@@ -208,11 +201,6 @@ class Independence(MetropolisHastings):
     @property
     def is_tuned(self) -> bool:
         return self.proposal is not None
-
-    @property
-    def ndim(self) -> int | None:
-        mean = getattr(self.proposal, "mean", None)
-        return None if mean is None or callable(mean) else int(np.size(mean))
 
     def _tuned(
         self, target: Target, initial: Any, pilot: PilotRun, rng: Seed
