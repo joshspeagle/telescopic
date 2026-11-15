@@ -121,6 +121,12 @@ All notable changes to this project are documented here. The format follows
   Neal's funnel, which compares the random walk, HMC and a change of coordinates; and
   Checking the burn-in of an existing sampler, which couples a Metropolis sampler of
   one's own and chooses a burn-in from the total variation bound.
+- Figures on existing pages: the automatic pipeline (Settings), what a `Result` holds,
+  a pool's chunks and their random streams (Parallel runs), coupled HMC trajectories and
+  a meeting step (Choose a kernel), what the lag and `k` trade (Choosing k, m and the
+  lag), the estimates of Unbiased on average, telescopic beside emcee, and the two-mode
+  target with its two initial distributions; Write a kernel adds a template of every
+  member a kernel needs and a figure of the marginal check.
 - The API reference is an index of one-line summaries grouped by section, with a page for
   each class, its attributes and methods, a page for `sample`, and a page for each module
   that the index lists, its functions and a table of its classes. The page of a class with
