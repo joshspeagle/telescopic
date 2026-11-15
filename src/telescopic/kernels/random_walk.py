@@ -93,7 +93,7 @@ class RandomWalk(MetropolisHastings):
             self.cov, chol = covariance("cov", cov)
             scale = OPTIMAL_SCALE / np.sqrt(len(chol)) if self.scale is None else self.scale
             scaled = scale * chol
-            self._proposal = RandomWalkProposal(scaled, inverse_lower(scaled))
+            self._proposal = RandomWalkProposal._trusted(scaled, inverse_lower(scaled))
 
     @property
     def coupling(self) -> Literal["reflection", "maximal"] | Reflection | Maximal:

@@ -224,3 +224,22 @@ def test_kernels_with_coupling_objects_survive_pickling():
         draws, reference = twin_draws(n, d, 9)
         expected = kernel.coupled_step(target, state_x, state_y, reference)
         assert_same_states(copy.coupled_step(target, state_x, state_y, draws), expected)
+
+
+@pytest.mark.parametrize("proposal", [RandomWalkProposal, LangevinProposal])
+@pytest.mark.parametrize(
+    ("factor", "inverse", "error", "message"),
+    [
+        # An inverse that is not B's inverse would bias every coupled step silently.
+        ([[2.0, 0.0], [1.0, 1.0]], np.eye(2), ValueError, "inverse must be the inverse"),
+        (np.ones((2, 3)), np.ones((2, 3)), ValueError, "factor must be a square"),
+        (np.eye(2), np.eye(3), ValueError, "inverse must have the shape"),
+        ([[np.inf, 0.0], [0.0, 1.0]], np.eye(2), ValueError, "must be finite"),
+        ("eye", np.eye(2), TypeError, "factor must be real numbers"),
+    ],
+)
+def test_gaussian_proposals_refuse_a_factor_and_inverse_that_do_not_match(
+    proposal, factor, inverse, error, message
+):
+    with pytest.raises(error, match=message):
+        proposal(factor, inverse)

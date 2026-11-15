@@ -93,7 +93,9 @@ class MALA(GradientKernel, MetropolisHastings):
         # d = 200.
         if self._chol is None or self._inverse is None or self.step_size is None:
             return None
-        return LangevinProposal(self.step_size * self._chol, self._inverse / self.step_size)
+        return LangevinProposal._trusted(
+            self.step_size * self._chol, self._inverse / self.step_size
+        )
 
     def _ready(self) -> tuple[Proposal, Coupling]:
         if self._proposal is None:

@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from functools import partial
-from typing import Any, Protocol, cast
+from typing import Any, Protocol, Self, cast
 
 import numpy as np
+import numpy.typing as npt
 
 from telescopic._linalg import matvec
 from telescopic._random import Draws
-from telescopic._types import FloatArray, ProposalDistribution, instance, log_densities
+from telescopic._types import FloatArray, ProposalDistribution, instance, log_densities, real_array
 from telescopic.couplings import CoupledProposals, Coupling, _reflection, reflection_maximal
 from telescopic.kernels.base import (
     Kernel,
@@ -123,8 +124,49 @@ class Proposal(ABC):
         )
 
 
+class _GaussianProposal(Proposal):
+    # The factor B of the covariance BB^T and its inverse, which the random-walk and the
+    # Langevin proposals share.
+    def __init__(self, factor: npt.ArrayLike, inverse: npt.ArrayLike) -> None:
+        given = factor, inverse
+        factor = real_array("factor", factor, "real numbers of shape (d, d)", ndmin=2)
+        inverse = real_array("inverse", inverse, "real numbers of shape (d, d)", ndmin=2)
+        if factor.ndim != 2 or factor.shape[0] != factor.shape[1] or not len(factor):
+            raise ValueError(f"factor must be a square matrix, not shape {factor.shape}")
+        if inverse.shape != factor.shape:
+            raise ValueError(
+                f"inverse must have the shape {factor.shape} of factor, not {inverse.shape}"
+            )
+        if not (np.all(np.isfinite(factor)) and np.all(np.isfinite(inverse))):
+            raise ValueError("factor and inverse must be finite")
+        # The residual of a computed inverse is within d u cond(B) of 0 (Higham 2002,
+        # §14.1); a wrong inverse would bias every coupled step without an error.
+        residual = float(np.abs(inverse @ factor - np.eye(len(factor))).max())
+        scale = np.linalg.norm(inverse, np.inf) * np.linalg.norm(factor, np.inf)
+        if not residual <= 1e-8 * scale:
+            raise ValueError(
+                f"inverse must be the inverse of factor, but inverse @ factor differs from "
+                f"the identity by {residual:.3g}"
+            )
+        # The arrays as given, in their memory order, on which einsum's order of summation
+        # and so the last bits of the products depend; real_array's copies are C-ordered.
+        self.factor, self.inverse = (np.asarray(array, dtype=np.float64) for array in given)
+
+    @classmethod
+    def _trusted(cls, factor: FloatArray, inverse: FloatArray) -> Self:
+        # For the kernels, whose inverse comes from inverse_lower: no check and no copy,
+        # since MALA builds a proposal at each step size of dual averaging.
+        proposal = cls.__new__(cls)
+        proposal.factor, proposal.inverse = factor, inverse
+        return proposal
+
+    def __repr__(self) -> str:
+        d = len(self.factor)
+        return f"{type(self).__name__}(factor=<{d}x{d}>)"
+
+
 # Spec R-KER-RW.
-class RandomWalkProposal(Proposal):
+class RandomWalkProposal(_GaussianProposal):
     r"""The Gaussian random-walk proposal :math:`x' = x + Bz`, :math:`z \sim \mathcal N(0, I)`.
 
     Its density is symmetric, so the log acceptance ratio is
@@ -132,14 +174,13 @@ class RandomWalkProposal(Proposal):
 
     Parameters
     ----------
-    factor : ndarray, shape (d, d)
-        :math:`B`, a lower-triangular factor of the proposal covariance :math:`BB^\top`.
-    inverse : ndarray, shape (d, d)
-        :math:`B^{-1}`.
+    factor : array_like, shape (d, d)
+        :math:`B`, a factor of the proposal covariance :math:`BB^\top`, such as its
+        Cholesky factor.
+    inverse : array_like, shape (d, d)
+        :math:`B^{-1}`, checked against ``factor`` to within rounding; a matrix that is
+        not its inverse raises ``ValueError``.
     """
-
-    def __init__(self, factor: FloatArray, inverse: FloatArray) -> None:
-        self.factor, self.inverse = factor, inverse
 
     def sample(self, target: Target, state: State, draws: Draws) -> tuple[FloatArray, Any]:
         normals = draws.normal(len(self.factor))
@@ -158,13 +199,9 @@ class RandomWalkProposal(Proposal):
         )
         return CoupledProposals(x, y, identical, None, None)
 
-    def __repr__(self) -> str:
-        d = len(self.factor)
-        return f"RandomWalkProposal(factor=<{d}x{d}>)"
-
 
 # Spec R-KER-MALA and section 5.4.
-class LangevinProposal(Proposal):
+class LangevinProposal(_GaussianProposal):
     r"""The Langevin proposal :math:`x' = x + B(h/2 + z)`, with :math:`h = B^\top\nabla\log\pi(x)`.
 
     With :math:`z \sim \mathcal N(0, I)`, it is a draw from
@@ -175,14 +212,13 @@ class LangevinProposal(Proposal):
 
     Parameters
     ----------
-    factor : ndarray, shape (d, d)
-        :math:`B`, a lower-triangular factor of the proposal covariance :math:`BB^\top`.
-    inverse : ndarray, shape (d, d)
-        :math:`B^{-1}`.
+    factor : array_like, shape (d, d)
+        :math:`B`, a factor of the proposal covariance :math:`BB^\top`, such as its
+        Cholesky factor.
+    inverse : array_like, shape (d, d)
+        :math:`B^{-1}`, checked against ``factor`` to within rounding; a matrix that is
+        not its inverse raises ``ValueError``.
     """
-
-    def __init__(self, factor: FloatArray, inverse: FloatArray) -> None:
-        self.factor, self.inverse = factor, inverse
 
     @property
     def needs_grad(self) -> bool:
@@ -227,10 +263,6 @@ class LangevinProposal(Proposal):
             state_y.x + matvec(self.factor, 0.5 * drift_y + residual_y, blas=blas),
         )
         return CoupledProposals(x, y, identical, (z, drift_x), (residual_y, drift_y))
-
-    def __repr__(self) -> str:
-        d = len(self.factor)
-        return f"LangevinProposal(factor=<{d}x{d}>)"
 
 
 # Spec R-KER-IMH.
