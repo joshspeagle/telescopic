@@ -30,9 +30,9 @@ estimator pairs them with a lag of 1. The lines join at the meeting time, and on
 - [**How can MCMC be unbiased?**](tutorials/how-it-works.md)
 
   One run taken apart: pairs that meet, and the correction that removes the bias.
-- [**My chains do not meet**](reference/warnings.md)
+- [**My chains do not meet**](guide/troubleshooting.md)
 
-  What each warning says, and what to change.
+  Find the error or warning you see, its cause and what to change.
 :::
 
 This example estimates the mean of a correlated Gaussian, (0, 0), and the mean of the
@@ -102,7 +102,9 @@ guide/estimates
 guide/plots
 guide/save-load-merge
 guide/meeting-times
+guide/troubleshooting
 guide/parallel
+guide/faster
 guide/custom-kernels
 ```
 
