@@ -327,7 +327,7 @@ mystnb:
       The quantiles of 10,000 coupled steps of AR(1) from $x = 0.5$ and $y = 0.8$,
       chain $X$ in magenta and chain $Y$ in teal, against the quantiles of 10,000
       steps of the kernel alone from the same points. Each chain's points fall on
-      the diagonal, so each chain of the coupling moves with the law of the
+      the diagonal within sampling error, so each chain of the coupling moves with the law of the
       kernel, the first rule above.
 ---
 import matplotlib.pyplot as plt

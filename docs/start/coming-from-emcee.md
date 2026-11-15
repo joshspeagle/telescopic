@@ -217,7 +217,7 @@ left.legend(loc="upper center", ncols=2)
 
 span = np.column_stack([exact_mean - 3.5 * exact_std, exact_mean + 3.5 * exact_std])
 masses, _, (slope_edges, intercept_edges) = result.histogram([0, 1], bins=24, range=span)
-shade = LinearSegmentedColormap.from_list("shade", ["#FBFAF7", "#1E4BF0"])
+shade = LinearSegmentedColormap.from_list("shade", [fig.get_facecolor(), "C0"])
 right.pcolormesh(slope_edges, intercept_edges, masses.T, cmap=shade, vmin=0)
 cov = np.linalg.inv(precision)
 values, vectors = np.linalg.eigh(cov)
@@ -225,7 +225,7 @@ angle = np.linspace(0, 2 * np.pi, 200)
 circle = np.stack([np.cos(angle), np.sin(angle)])
 for radius in (1, 2):
     ellipse = exact_mean[:, None] + radius * vectors @ (np.sqrt(values)[:, None] * circle)
-    right.plot(*ellipse, color="#062A4F", linewidth=1.2)
+    right.plot(*ellipse, color="0.25", linewidth=1.2)
 shown = samples[np.random.default_rng(0).choice(len(samples), 1000, replace=False)]
 right.plot(*shown.T, ".", color="C2", markersize=1.5, alpha=0.6)
 right.set(xlim=span[0], ylim=span[1], xlabel="slope", ylabel="intercept");

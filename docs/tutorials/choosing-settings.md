@@ -159,8 +159,20 @@ assert rows["k_50"]["inefficiency"] > 100 * recipe_row["inefficiency"]
 assert "late" in rows["k_50"]["issues"]
 ```
 
-Drawn, with the weight that each setting gives the differences of a late pair, as the
-next section explains, and with 95% intervals from 1,000 bootstrap resamples of each
+Every estimate lies within two standard errors of 1: the settings change the variance,
+not the bias ([Settings](../guide/settings.md)).
+The inefficiency compares settings at equal compute, and the recipe's is the lowest:
+
+- **$m = 2k$** costs less per replicate, but averages only $k + 1$ states: its relative
+  cost and its inefficiency are higher than the recipe's.
+- **Lag 1** has the recipe's $k$ and $m$, and about its cost, but a higher inefficiency,
+  and one replicate holds most of the variance of an estimate.
+- **$k = 50$** leaves most pairs to meet after $k + L$, so that most replicates carry a
+  bias correction: its inefficiency is orders of magnitude above the recipe's, and the
+  run warns that $k$ may be too small.
+
+Drawn, with the weight that each setting gives the differences of a late pair, as
+explained below, and with 95% intervals from 1,000 bootstrap resamples of each
 run's replicates:
 
 ```{code-cell} python
@@ -182,7 +194,7 @@ mystnb:
       $\tau = k + L + 100$ with $L = 1$, whose differences up to $\tau - 1$ enter
       its estimate with these weights. Right: the inefficiency, on a log scale,
       against the relative cost, of the four runs above, with 95% bootstrap
-      intervals. The recipe's is the lowest.
+      intervals, colored by lag as on the left. The recipe's is the lowest.
 ---
 from telescopic.estimators import correction_coefficients
 
@@ -207,7 +219,7 @@ for name, result in results.items():
     resampled = np.var(values[draws], axis=1, ddof=1) * costs[draws].mean(axis=1)
     low, high = np.percentile(resampled, [2.5, 97.5])
     x, y = rows[name]["relative_cost"], rows[name]["inefficiency"]
-    color = "C2" if name == "recipe" else "C0"
+    color = "C0" if result.lag == 1 else "C1"
     right.errorbar(x, y, yerr=[[y - low], [high - y]], fmt="o", color=color, capsize=3)
     right.annotate(
         labels[name], (x, y), xytext=(8, 0), textcoords="offset points", va="center",
@@ -215,18 +227,6 @@ for name, result in results.items():
     )
 right.set(yscale="log", xlabel="relative cost", ylabel="inefficiency");
 ```
-
-Every estimate lies within two standard errors of 1: the settings change the variance,
-not the bias ([Settings](../guide/settings.md)).
-The inefficiency compares settings at equal compute, and the recipe's is the lowest:
-
-- **$m = 2k$** costs less per replicate, but averages only $k + 1$ states: its relative
-  cost and its inefficiency are higher than the recipe's.
-- **Lag 1** has the recipe's $k$ and $m$, and about its cost, but a higher inefficiency,
-  and one replicate holds most of the variance of an estimate.
-- **$k = 50$** leaves most pairs to meet after $k + L$, so that most replicates carry a
-  bias correction: its inefficiency is orders of magnitude above the recipe's, and the
-  run warns that $k$ may be too small.
 
 The variance of lag 1 comes from its {term}`late pairs <late pair>`. A difference $\Delta_t$ enters a
 replicate's estimate with the weight $v_t/(m - k + 1)$ of the

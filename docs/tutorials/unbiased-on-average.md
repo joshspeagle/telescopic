@@ -45,6 +45,7 @@ for lag, seed in ((1, 2), (k, 3)):
     mcmc = np.array([runs.paths[i][0][k : m + 1, 0].mean() for i in runs.index])
     full = telescopic.Result(runs).estimate(lambda x: x[:, 0]).replicates
     estimates[lag, "MCMC average"], estimates[lag, "full"] = mcmc, full
+errors = {key: v.std(ddof=1) / np.sqrt(len(v)) for key, v in estimates.items()}
 ```
 
 The mean of each set of replicates, with two standard errors, and the replicates' own
@@ -72,9 +73,10 @@ mystnb:
 ---
 fig, (left, right) = plt.subplots(1, 2, figsize=(7, 2.8), width_ratios=(1.1, 1))
 for row, ((lag, name), values) in enumerate(estimates.items()):
-    error = values.std(ddof=1) / np.sqrt(len(values))
     color = "C0" if name == "MCMC average" else "C1"
-    left.errorbar(values.mean(), row, xerr=2 * error, fmt="o", color=color, capsize=3)
+    left.errorbar(
+        values.mean(), row, xerr=2 * errors[lag, name], fmt="o", color=color, capsize=3
+    )
 left.axvline(0, color="gray", linewidth=0.8)
 left.set_yticks(range(4), [f"{name}, $L = {lag}$" for lag, name in estimates])
 left.invert_yaxis()
@@ -91,13 +93,16 @@ right.set(xlabel=f"one replicate's estimate, $L = {k}$", yticks=[]);
 :tags: [remove-cell]
 
 # The claims of the next paragraph.
-z = {key: v.mean() / (v.std(ddof=1) / np.sqrt(len(v))) for key, v in estimates.items()}
+z = {key: v.mean() / errors[key] for key, v in estimates.items()}
 assert all(abs(z[lag, "MCMC average"]) > 10 for lag in (1, k))
 assert all(abs(z[lag, "full"]) < 2 for lag in (1, k))
-assert estimates[k, "full"].std() < estimates[1, "full"].std()
+assert errors[k, "full"] < errors[1, "full"]
 assert estimates[k, "full"].std() > estimates[k, "MCMC average"].std()
 # The histograms' range holds nearly every replicate.
-assert all(np.mean((-8 < estimates[k, name]) & (estimates[k, name] < 6)) > 0.99 for name in ("MCMC average", "full"))
+assert all(
+    np.mean((-8 < estimates[k, name]) & (estimates[k, name] < 6)) > 0.99
+    for name in ("MCMC average", "full")
+)
 ```
 
 The MCMC average is many error bars from 0 with either lag, since the lag does not change
