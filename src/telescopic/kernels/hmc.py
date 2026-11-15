@@ -29,38 +29,46 @@ class HMC(Mixture):
     :math:`\nu \sim \mathcal N(0, I)`, ``n_steps`` updates
 
     .. math::
-        \nu \leftarrow \nu + \tfrac\epsilon2 C^\top\nabla\log\pi(x), \quad
-        x \leftarrow x + \epsilon C\nu, \quad
-        \nu \leftarrow \nu + \tfrac\epsilon2 C^\top\nabla\log\pi(x),
+        \nu \leftarrow \nu + \tfrac{\epsilon_u}2 C^\top\nabla\log\pi(x), \quad
+        x \leftarrow x + \epsilon_u C\nu, \quad
+        \nu \leftarrow \nu + \tfrac{\epsilon_u}2 C^\top\nabla\log\pi(x),
 
-    with :math:`CC^\top = \Sigma` (``cov``), accepted on the change in
+    with :math:`CC^\top = \Sigma` (``cov``) and the step
+    :math:`\epsilon_u = \epsilon(1 + j(2u - 1))`, :math:`u \sim \mathcal U(0, 1)` drawn
+    afresh for each trajectory (:math:`j` = ``jitter``), accepted on the change in
     :math:`\log\pi(x) - \tfrac12\lVert\nu\rVert^2`. A trajectory that reaches a non-finite
     position or a log-density of ``-inf`` stops there and is rejected. With probability
     :math:`\gamma` (``meeting_weight``), a random-walk step with proposal covariance
     :math:`\sigma^2\Sigma` (``meeting_scale`` :math:`= \sigma`).
 
-    Coupled chains take the same component. Their trajectories share the momentum and the
-    uniform, so the chains contract; the random-walk step couples them by the
-    reflection-maximal coupling, so chains that have come close meet (Heng & Jacob 2019,
-    with a whitened meeting step). When the step size is automatic, a given ``n_steps``,
-    or a given ``cov`` that does not whiten the target, can put the tuned step on a
-    resonance of the leapfrog, where the trajectories do not contract (When the automatic
-    step fails, in :doc:`/guide/step-size`).
+    Coupled chains take the same component. Their trajectories share :math:`u`, the
+    momentum and the uniform, so the chains contract; the random-walk step couples them by
+    the reflection-maximal coupling, so chains that have come close meet (Heng & Jacob
+    2019, with a whitened meeting step). Without the jitter, a given ``n_steps``, or a
+    given ``cov`` that does not whiten the target, can put an automatic step on a
+    resonance of the leapfrog, where the trajectories do not contract; the jitter varies
+    the step from one trajectory to the next, so that no step stays on it (When the
+    automatic step fails, in :doc:`/guide/step-size`).
 
     Parameters
     ----------
     step_size : float, optional
-        :math:`\epsilon`. ``None`` leaves it to :meth:`~telescopic.kernels.Kernel.tune`: dual averaging of the
-        trajectories alone toward an acceptance rate of 0.8, from
+        :math:`\epsilon`, the nominal step. ``None`` leaves it to :meth:`~telescopic.kernels.Kernel.tune`: dual averaging of the
+        jittered trajectories alone toward an acceptance rate of 0.8, from
         :math:`\epsilon_0 = d^{-1/4}`. The scaling :math:`d^{-1/4}` is
         that of Beskos et al. (2013); the rate 0.8 is this package's choice, where they
         find 0.651 optimal for product targets as :math:`d` grows.
     n_steps : int, optional
         Leapfrog steps per trajectory; :math:`\lceil 1/\epsilon\rceil` by default, a
-        trajectory of length about 1 in whitened coordinates, and at most 1,000.
+        trajectory of length about 1 in whitened coordinates at the nominal step, and at
+        most 1,000. The jitter leaves it fixed, so it varies the length of a trajectory
+        between :math:`1 - j` and :math:`1 + j` times its nominal value.
     cov : array_like, shape (d, d), optional
         :math:`\Sigma`; ``None`` leaves it to :meth:`~telescopic.kernels.Kernel.tune`, which takes the covariance of
         adaptive Metropolis pilot chains.
+    jitter : float
+        :math:`j`, in [0, 1): the step of a trajectory is uniform on
+        :math:`[(1 - j)\epsilon, (1 + j)\epsilon)`. 0 gives a fixed step.
     meeting_weight : float
         :math:`\gamma`, in (0, 1).
     meeting_scale : float
@@ -68,9 +76,12 @@ class HMC(Mixture):
 
     Notes
     -----
-    A step uses 1 uniform to choose its component, then ``d`` normals and 1 uniform; a
-    coupled step uses the same, plus 1 uniform for a meeting step. A trajectory evaluates
-    the log-density and its gradient ``n_steps`` times per chain.
+    A step uses 1 uniform to choose its component, then, for a trajectory, 1 uniform for
+    :math:`u` when ``jitter`` is not 0, ``d`` normals and 1 uniform; a coupled step uses
+    the same, plus 1 uniform for a meeting step. A trajectory at a fixed step leaves
+    :math:`\pi` invariant, and :math:`u` does not depend on the state, so the jittered
+    trajectory, a mixture of them, does too. A trajectory evaluates the log-density and
+    its gradient ``n_steps`` times per chain.
 
     Examples
     --------
@@ -94,19 +105,21 @@ class HMC(Mixture):
         n_steps: int | None = None,
         *,
         cov: npt.ArrayLike | None = None,
+        jitter: float = 0.5,
         meeting_weight: float = 0.05,
         meeting_scale: float = 1e-3,
     ) -> None:
         meeting_weight = real("meeting_weight", meeting_weight, 0, 1)
         meeting_scale = real("meeting_scale", meeting_scale, 0, np.inf)
-        leapfrog = _Leapfrog(step_size, n_steps, cov)
+        jitter = real("jitter", jitter, 0, 1, closed_low=True)
+        leapfrog = _Leapfrog(step_size, n_steps, cov, jitter)
         walk = RandomWalk(leapfrog.cov, scale=meeting_scale)
         super().__init__([leapfrog, walk], [1 - meeting_weight, meeting_weight])
         self.meeting_weight, self.meeting_scale = meeting_weight, meeting_scale
 
     @property
     def step_size(self) -> float | None:
-        """The leapfrog step size :math:`\\epsilon`, or ``None`` while unset.
+        """The nominal leapfrog step size :math:`\\epsilon`, or ``None`` while unset.
 
         Returns
         -------
@@ -135,6 +148,16 @@ class HMC(Mixture):
         return self._leapfrog.cov
 
     @property
+    def jitter(self) -> float:
+        """The relative width :math:`j` of the jitter of the step.
+
+        Returns
+        -------
+        float
+        """
+        return self._leapfrog.jitter
+
+    @property
     def _leapfrog(self) -> _Leapfrog:
         # Read from the components, which tuning replaces in a copy (Mixture.tune).
         return cast(_Leapfrog, self.kernels[0])
@@ -143,21 +166,28 @@ class HMC(Mixture):
         cov = "None" if self.cov is None else f"<{len(self.cov)}x{len(self.cov)}>"
         return (
             f"HMC(step_size={self.step_size}, n_steps={self.n_steps}, cov={cov}, "
-            f"meeting_weight={self.meeting_weight}, meeting_scale={self.meeting_scale})"
+            f"jitter={self.jitter}, meeting_weight={self.meeting_weight}, "
+            f"meeting_scale={self.meeting_scale})"
         )
 
 
 class _Leapfrog(GradientKernel):
-    # The trajectory component of HMC. Coupled chains share the momentum and the uniform.
+    # The trajectory component of HMC. Coupled chains share the jitter's uniform, the
+    # momentum and the acceptance uniform.
     target_acceptance = 0.8
 
     def __init__(
-        self, step_size: float | None, n_steps: int | None, cov: npt.ArrayLike | None
+        self,
+        step_size: float | None,
+        n_steps: int | None,
+        cov: npt.ArrayLike | None,
+        jitter: float,
     ) -> None:
         super().__init__(step_size, cov)
         if n_steps is not None:
             n_steps = integer("n_steps", n_steps, "an integer or None", minimum=1)
         self._n_steps = n_steps
+        self.jitter = jitter
 
     @property
     def n_steps(self) -> int | None:
@@ -168,7 +198,9 @@ class _Leapfrog(GradientKernel):
         return math.ceil(1 / max(self.step_size, 1 / MAX_STEPS))
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
-        end, log_alpha = self._trajectory(target, state, draws.normal(state.x.shape[1]), 1)
+        epsilon = self._step_sizes(draws, 1)
+        momentum = draws.normal(state.x.shape[1])
+        end, log_alpha = self._trajectory(target, state, momentum, epsilon, 1)
         accepted = draws.log_uniform() < log_alpha
         return select(accepted, end, state), acceptance(log_alpha)
 
@@ -177,13 +209,16 @@ class _Leapfrog(GradientKernel):
     ) -> tuple[State, State]:
         # Both chains in one batch, so that each leapfrog step calls the target once.
         n = len(state_x)
+        epsilon = self._step_sizes(draws, 2)
         momentum = draws.normal(state_x.x.shape[1])
         both = State(
             np.concatenate([state_x.x, state_y.x]),
             np.concatenate([state_x.log_prob, state_y.log_prob]),
             np.concatenate([cast(FloatArray, state_x.grad), cast(FloatArray, state_y.grad)]),
         )
-        end, log_alpha = self._trajectory(target, both, np.concatenate([momentum, momentum]), 2)
+        end, log_alpha = self._trajectory(
+            target, both, np.concatenate([momentum, momentum]), epsilon, 2
+        )
         log_u = draws.log_uniform()
         moved = select(np.concatenate([log_u, log_u]) < log_alpha, end, both)
         grad = cast(FloatArray, moved.grad)
@@ -191,13 +226,31 @@ class _Leapfrog(GradientKernel):
         return first, State(moved.x[n:], moved.log_prob[n:], grad[n:])
 
     def _with_cov(self, cov: FloatArray) -> _Leapfrog:
-        return _Leapfrog(self.step_size, self._n_steps, cov)
+        return _Leapfrog(self.step_size, self._n_steps, cov, self.jitter)
 
     def _first_step_size(self, d: int) -> float:
         return float(d**-0.25)
 
+    def _step_sizes(self, draws: Draws, chains: int) -> float | FloatArray:
+        # The step of each trajectory: eps, or eps (1 + j (2u - 1)) with one uniform u per
+        # row, read before the momentum, as a column repeated for each of `chains` chains.
+        # The count of leapfrog steps stays that of eps (issue #91's arm J5).
+        if self._chol is None or self.step_size is None:
+            raise ValueError(
+                "HMC needs step_size and cov; give them, or tune the kernel on a pilot run"
+            )
+        if not self.jitter:
+            return self.step_size
+        steps = self.step_size * (1 + self.jitter * (2 * draws.uniform() - 1))
+        return np.tile(steps, chains)[:, None]
+
     def _trajectory(
-        self, target: Target, state: State, momentum: FloatArray, chains: int
+        self,
+        target: Target,
+        state: State,
+        momentum: FloatArray,
+        epsilon: float | FloatArray,
+        chains: int,
     ) -> tuple[State, FloatArray]:
         # The end of each trajectory and its log acceptance ratio, -inf for a trajectory
         # that stopped. Stopped rows keep moving in the arithmetic, never in the target.
@@ -205,11 +258,7 @@ class _Leapfrog(GradientKernel):
         # products are a separate BLAS call of the same shape, since two equal rows of one
         # call can get different bits. Equal chains then stay equal if the target gives
         # equal rows of its batch equal values.
-        if self._chol is None or self.step_size is None:
-            raise ValueError(
-                "HMC needs step_size and cov; give them, or tune the kernel on a pilot run"
-            )
-        chol, epsilon, length = self._chol, self.step_size, cast(int, self.n_steps)
+        chol, length = cast(FloatArray, self._chol), cast(int, self.n_steps)
         x, grad = state.x, cast(FloatArray, state.grad)
 
         def product(matrix: FloatArray, vectors: FloatArray) -> FloatArray:

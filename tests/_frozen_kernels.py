@@ -1,9 +1,10 @@
-"""Frozen copies of RandomWalk, MALA and Independence and the helpers they call.
+"""Frozen copies of RandomWalk, MALA, Independence and HMC's leapfrog, and their helpers.
 
-The steps of the three kernels as they stood before issue #77 re-based them on one
-Metropolis-Hastings kernel, copied verbatim but for their docstrings, tuning and
-validation, so that a test can compare the re-based kernels with them bit for bit. They
-are removed once the re-basing has merged.
+The steps of the first three kernels as they stood before issue #77 re-based them on one
+Metropolis-Hastings kernel, and the leapfrog of HMC as it stood before issue #91 jittered
+its step, copied verbatim but for their docstrings, tuning and validation, so that a test
+can compare the new kernels with them bit for bit. They are removed once the change has
+merged.
 """
 
 from collections.abc import Callable
@@ -16,6 +17,7 @@ from telescopic._linalg import covariance, inverse_lower, matvec
 from telescopic._types import log_densities
 from telescopic.couplings import maximal
 from telescopic.kernels.base import Kernel, State, acceptance, log_ratio
+from telescopic.kernels.hmc import _Leapfrog
 from telescopic.tuning import OPTIMAL_SCALE
 
 
@@ -223,3 +225,50 @@ def _log_weights(q, proposal, *states):
         state.log_prob - np.where(state.log_prob == -np.inf, 0.0, part)
         for state, part in zip(states, log_q[1:], strict=True)
     ]
+
+
+class Leapfrog(_Leapfrog):
+    def __init__(self, step_size, n_steps, cov):
+        super().__init__(step_size, n_steps, cov, 0.0)
+
+    def step(self, target, state, draws):
+        end, log_alpha = self._trajectory(target, state, draws.normal(state.x.shape[1]), 1)
+        accepted = draws.log_uniform() < log_alpha
+        return select(accepted, end, state), acceptance(log_alpha)
+
+    def coupled_step(self, target, state_x, state_y, draws):
+        n = len(state_x)
+        momentum = draws.normal(state_x.x.shape[1])
+        both = State(
+            np.concatenate([state_x.x, state_y.x]),
+            np.concatenate([state_x.log_prob, state_y.log_prob]),
+            np.concatenate([state_x.grad, state_y.grad]),
+        )
+        end, log_alpha = self._trajectory(target, both, np.concatenate([momentum, momentum]), 2)
+        log_u = draws.log_uniform()
+        moved = select(np.concatenate([log_u, log_u]) < log_alpha, end, both)
+        grad = moved.grad
+        first = State(moved.x[:n], moved.log_prob[:n], grad[:n])
+        return first, State(moved.x[n:], moved.log_prob[n:], grad[n:])
+
+    def _trajectory(self, target, state, momentum, chains):
+        chol, epsilon, length = self._chol, self.step_size, self.n_steps
+        x, grad = state.x, state.grad
+
+        def product(matrix, vectors):
+            stacked = vectors.reshape(chains, -1, vectors.shape[1])
+            return matvec(matrix, stacked, blas=target.vectorize).reshape(vectors.shape)
+
+        going = np.ones(len(x), dtype=bool)
+        with np.errstate(over="ignore", invalid="ignore"):
+            start = state.log_prob - 0.5 * np.einsum("ij,ij->i", momentum, momentum)
+            momentum = momentum + 0.5 * epsilon * product(chol.T, grad)
+            for leap in range(length):
+                x = x + epsilon * product(chol, momentum)
+                reached = evaluate_proposal(target, x, going)
+                log_prob, grad = reached.log_prob, reached.grad
+                going = np.isfinite(log_prob)
+                kick = epsilon if leap < length - 1 else 0.5 * epsilon
+                momentum = momentum + kick * product(chol.T, grad)
+            log_alpha = log_prob - 0.5 * np.einsum("ij,ij->i", momentum, momentum) - start
+        return State(x, log_prob, grad), np.where(going, log_alpha, -np.inf)

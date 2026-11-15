@@ -6,7 +6,7 @@ import pytest
 from scipy import linalg
 
 import references
-from telescopic import examples, tuning
+from telescopic import CoupledSampler, examples, tuning
 from telescopic._random import (
     NORMAL,
     TUNING,
@@ -322,11 +322,37 @@ def test_dual_averaging_reaches_the_target_acceptance(kernel, goal):
     assert abs(acceptance.mean() - goal) < 0.05
 
 
+def test_hmc_keeps_its_jitter_through_tuning():
+    # Tuning rebuilds the leapfrog with the pilot's covariance, then copies it at each
+    # step size; each copy must keep the jitter.
+    tuned, _ = HMC(jitter=0.2).tune(TARGET, START, 7)
+    assert tuned.kernels[0].jitter == 0.2
+    assert "jitter=0.2" in repr(tuned)
+
+
 @pytest.mark.parametrize("lowest", [1, 4])
 def test_choose_k_takes_the_inverted_cdf_quantile_of_tau_minus_one(lowest):
     # Of 100 pilot pairs, the 99% quantile is the 99th smallest meeting time, 30.
     assert choose_k(np.concatenate([np.full(98, lowest), [30, 50]])) == 29
     assert choose_k(np.full(100, lowest), quantile=0.5) == max(1, lowest - 1)
+
+
+@pytest.mark.parametrize("seed", [0, 5, 7])
+def test_the_jittered_hmc_chooses_a_small_k_where_a_given_n_steps_resonates(seed):
+    # On examples.gaussian(10) with n_steps=3, dual averaging puts a fixed step near
+    # 3 theta = pi, where shared-momentum trajectories do not contract (issue #137). At
+    # the default cap, jitter=0 gave k = 22,932 at seed 0 and could not choose k at seeds
+    # 5 and 7 (93 and 38 pilot pairs unmet); the jitter gives k near 100.
+    example = examples.gaussian(10)
+    sampler = CoupledSampler(
+        example.log_prob,
+        example.initial,
+        grad=example.grad,
+        vectorize=True,
+        kernel=HMC(n_steps=3),
+        rng=seed,
+    )
+    assert choose_k(sampler.meeting_times()) < 1000
 
 
 def test_choose_k_takes_the_inverted_cdf_quantile_of_any_pilot_size():

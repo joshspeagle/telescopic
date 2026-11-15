@@ -656,9 +656,9 @@ class CoupledSampler:
                 if self.kernel.needs_grad and self.tuning is not None:
                     error.add_note(
                         "with MALA or HMC, an automatic step size can fail to couple: try a "
-                        "step_size checked on pilot pairs, or, for HMC with a given n_steps "
-                        "or cov, leaving them unset (When the automatic step fails, in the "
-                        "guide 'Check and set a step size')"
+                        "step_size checked on pilot pairs, or, for HMC with jitter=0 and a "
+                        "given n_steps or cov, the default jitter (When the automatic step "
+                        "fails, in the guide 'Check and set a step size')"
                     )
                 raise
             raise ValueError(

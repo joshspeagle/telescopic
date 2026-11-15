@@ -89,6 +89,9 @@ CASES = {
     "hmc-nan-gradient": Case(
         BROKEN_GRADIENT, HMC(0.5, 4, cov=G1.cov), Empirical([[-1.0]]), k=5, m=50, lag=5
     ),
+    # A nominal step on the resonance 3 theta = pi, theta = 2 arcsin(1/2), which the
+    # jitter spreads over steps from 0.5 to 1.5.
+    "hmc-d5-resonant-step": Case(G5, HMC(1.0, 3, cov=G5.cov), far(5), k=2, m=20),
 }
 
 
