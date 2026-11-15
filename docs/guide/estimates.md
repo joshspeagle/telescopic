@@ -7,7 +7,7 @@ kernelspec:
 # Estimate anything from a result
 
 {func}`telescopic.sample` and {meth}`telescopic.CoupledSampler.run` return a
-{class}`telescopic.Result`. It stores each replicate's signed measure, meeting time and
+{class}`telescopic.Result`. It stores each {term}`replicate`'s {term}`signed measure`, {term}`meeting time` and
 cost, and the settings of the run, so every estimate is computed after the run.
 
 The examples use a correlated Gaussian in two dimensions, whose moments are known
@@ -28,7 +28,7 @@ result
 ```
 
 A result prints as one line of its settings: $R$, the dimension $d$, `k`, `m`, `lag`,
-the number of censored pairs and whether the run was interrupted.
+the number of {term}`censored pairs <censored pair>` and whether the run was interrupted.
 
 ```{code-cell} python
 :tags: [remove-cell]
@@ -37,7 +37,7 @@ the number of censored pairs and whether the run was interrupted.
 assert 0 < result.diagnostics()["late_fraction"] < 0.05
 ```
 
-A few of the pairs met after `k + lag`, so a few replicates carry bias corrections.
+A few of the {term}`pairs <pair>` met after `k + lag`, so a few replicates carry bias corrections.
 
 ## Expectations
 
@@ -63,7 +63,7 @@ probabilities. The exact $P(x_i > 1)$ is $1 - \Phi(1)$:
 result.estimate(lambda x: x > 1), stats.norm.sf(1)
 ```
 
-{meth}`telescopic.Result.mean` is `estimate(lambda x: x)`. The value is unbiased for a
+{meth}`telescopic.Result.mean` is `estimate(lambda x: x)`. The value is {term}`unbiased` for a
 number of replicates fixed in advance
 ([How many replicates](settings.md#how-many-replicates)), and the interval is valid as
 $R$ grows when the variance is finite
@@ -83,7 +83,7 @@ result.cov(), gaussian.cov
 ```
 
 {meth}`telescopic.Result.std` returns $\sqrt{\max(0, \widehat{\mathrm{Var}})}$ for each
-coordinate, which is consistent but not unbiased:
+coordinate, which is {term}`consistent` but not unbiased:
 
 ```{code-cell} python
 result.std()
@@ -110,7 +110,7 @@ result.credible_interval(0.9)
 ```
 
 Both take a function `h`, as `estimate` does, for the quantiles of a quantity derived
-from the coordinates: those of its values at the atoms, with each atom's weight divided
+from the coordinates: those of its values at the {term}`atoms <atom>`, with each atom's weight divided
 by $R$ (the quantiles of {func}`telescopic.estimators.weighted_quantile`). They have
 shape `()` or `(p,)` for one level and `(len(q),)` or `(len(q), p)` for several, and the
 credible interval has shape `(2,)` or `(2, p)`. The sum $x_0 + x_1$ is Gaussian, with a

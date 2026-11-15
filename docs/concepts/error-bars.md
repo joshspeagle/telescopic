@@ -3,14 +3,14 @@
 An MCMC run is usually judged by its trace plots, the Gelman-Rubin $\hat R$, the
 effective sample size and the autocorrelation time: together they say whether the chains
 have converged and how large the error bar of an average is. telescopic answers the same
-two questions in other ways. Its error bars come from independent replicates, and its
-meeting times bound the distance of the chain from the target. This page explains where
+two questions in other ways. Its error bars come from independent {term}`replicates <replicate>`, and its
+{term}`meeting times <meeting time>` bound the distance of the chain from the target. This page explains where
 the error bars come from, maps each familiar diagnostic to its counterpart, and lists
 what to report. It uses the notation of [Theory](../theory.md#estimates-from-many-replicates).
 
 ## Where the error bar comes from
 
-A run has $R$ replicates. Each is a pair of chains with random numbers of its own, so
+A run has $R$ replicates. Each is a {term}`pair` of chains with random numbers of its own, so
 the replicates are independent, and each returns an estimate $H_r$ of the expectation
 $\pi(h)$ whose expected value is exactly $\pi(h)$
 ([The telescoping correction](telescoping-correction.md)). The estimate of the run is
@@ -35,9 +35,9 @@ Two things that an MCMC error bar needs are not part of it:
   $H_r$: it makes the estimates of the replicates vary more, and $\hat\sigma$ measures
   that variation directly. Different replicates share nothing, so there is no
   correlation between them to estimate.
-- **No bias outside the error bar.** The error bar of an average after a burn-in leaves
+- **No bias outside the error bar.** The error bar of an average after a {term}`burn-in` leaves
   out the bias of the burn-in ([Why burn-in biases MCMC](burn-in-bias.md)). Each $H_r$
-  is unbiased, so the error bar of $\bar H$ describes its whole error.
+  is {term}`unbiased`, so the error bar of $\bar H$ describes its whole error.
 
 The error bar still needs a finite variance of the estimates. Meeting times with a heavy
 tail, or one replicate that holds most of the variance, can make it unreliable, and a
@@ -99,7 +99,7 @@ Effective sample size
 Autocorrelation time
 : How many steps apart two draws are nearly independent, which sets the error bar, the
   burn-in and the thinning. In telescopic: not needed for the error bar; the
-  inefficiency, the mean cost times the variance of one replicate's estimate, compares
+  {term}`inefficiency`, the mean cost times the variance of one replicate's estimate, compares
   kernels and settings at equal cost ([Cost](../guide/settings.md#cost)). In a result:
   `result.costs` and `result.estimate(h).replicates`, and `relative_cost` in
   `result.diagnostics()`.
@@ -121,14 +121,14 @@ A reader of a paper needs the estimate, its error and enough of the run to judge
 Quote:
 
 - each estimate with its standard error, or its interval with the level; quantiles and
-  credible intervals are consistent estimates without a standard error
+  credible intervals are {term}`consistent` estimates without a standard error
   ([Quantiles and credible intervals](../guide/estimates.md#quantiles-and-credible-intervals));
 - the number of replicates $R$ behind each estimate, and with `keep` the number of kept
   replicates behind the estimates that come from them;
-- the settings $k$, $m$ and the lag $L$, with `thin` when it is not 1, and the kernel
+- the settings $k$, $m$ and the {term}`lag` $L$, with `thin` when it is not 1, and the kernel
   with its parameters;
 - the median, 90% and 99% quantiles and the maximum of the meeting times, and the number
-  of censored pairs, and the bound on the total variation distance at $k$, which says
+  of {term}`censored pairs <censored pair>`, and the bound on the total variation distance at $k$, which says
   how far $\pi_k$ was from $\pi$
   ([Meeting times and distance to stationarity](meeting-times.md#the-bound));
 - each warning that the run emitted, and what was done about it;

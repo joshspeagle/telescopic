@@ -8,9 +8,9 @@ mystnb:
 
 # Run in parallel
 
-Replicates are independent, so they run in parallel without communicating. The `pool`
+{term}`Replicates <replicate>` are independent, so they run in parallel without communicating. The `pool`
 argument of {func}`telescopic.sample` and {class}`telescopic.CoupledSampler` decides where
-the meeting-time pilot and the replicates run, and `n_workers` how many workers a pool of
+the {term}`meeting-time pilot` and the replicates run, and `n_workers` how many workers a pool of
 your own has; the kernel is tuned in this process ([Tuning](#tuning)).
 
 ## Pools
@@ -35,7 +35,7 @@ pool. The workers of an executor or a pool of your own live as long as it does a
 every run given it, and you close it. The executor below spawns its workers, as
 telescopic does: forking a process that runs threads, such as a notebook's kernel or a
 multithreaded BLAS, can deadlock. With `progress=True`, the sampler shows the progress of
-its pilot pairs and of each run ([Progress](#progress)):
+its pilot {term}`pairs <pair>` and of each run ([Progress](#progress)):
 
 ```{code-cell} python
 import multiprocessing
@@ -189,7 +189,7 @@ it makes a single chunk, and worker processes run BLAS on one thread, which this
 process does only when limited to one, with `threadpoolctl.threadpool_limits(1)`.
 Between such runs, as between runs with other numbers of workers or chunks, merged runs
 and a sampler's later calls, a replicate can differ by rounding, and a difference of rounding can change an acceptance or the step at
-which the two chains become equal: the replicate's meeting time, and with it its whole
+which the two chains become equal: the replicate's {term}`meeting time`, and with it its whole
 output, can then differ. The estimates agree within their error bars. With HMC with a
 fixed step (`jitter=0`) on a Gaussian of 2 dimensions, the same 64 replicates run one at a time and all at once
 differed in 17 meeting times, and the estimates of the mean from all 64 by at most 0.067
@@ -265,7 +265,7 @@ The first Ctrl-C during the replicates of a run starts no new replicate and lets
 progress finish. In this process they run 256 at a time, so a run of 256 or fewer has
 started them all, and Ctrl-C then waits for them. The run then returns a result flagged `interrupted`, with every replicate
 that started, and telescopic prints that a second Ctrl-C stops at once. Its estimates are
-consistent but not exactly unbiased, since the number of replicates that ran depends on
+{term}`consistent` but not exactly {term}`unbiased`, since the number of replicates that ran depends on
 their costs, and its summary says so. The sampler's next `run` starts with the missing
 replicates, so a run of as many as are missing completes the requested set, which
 restores exact unbiasedness:
@@ -329,7 +329,7 @@ chains, then the step size. On a pool, the count of replicates moves as chunks f
 
 ## Memory
 
-The workers send the signed measures of their replicates back to this process, which
+The workers send the {term}`signed measures <signed measure>` of their replicates back to this process, which
 holds them all. A worker holds those of one chunk at a time, at most 1,024 replicates,
 and sends them back when the chunk ends, so its memory does not grow with the number of
 replicates; the memory of this process does, since it keeps every chunk's replicates and

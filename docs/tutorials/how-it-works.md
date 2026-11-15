@@ -8,7 +8,7 @@ kernelspec:
 
 The [Quickstart](../start/quickstart.md) describes a run in words. This
 page runs one by hand, on a standard normal target in one dimension with chains started
-far from it: the paths of a few pairs and one replicate's estimate taken apart;
+far from it: the paths of a few {term}`pairs <pair>` and one {term}`replicate`'s estimate taken apart;
 [Unbiased on average](unbiased-on-average.md) shows the bias that the correction removes
 on average. [Theory](../theory.md) derives each step.
 
@@ -23,10 +23,10 @@ from myst_nb import glue
 The target $\pi$ is $\mathcal N(0, 1)$, and the chains start from $\mathcal N(5, 1)$,
 five standard deviations away. The kernel is random-walk Metropolis with proposals
 $x' \sim \mathcal N(x, 2.38^2)$, its default for `cov=[[1.0]]`, coupled by the
-reflection-maximal coupling ([Kernels and couplings](../guide/kernels.md)).
+{term}`reflection-maximal coupling` ([Kernels and couplings](../guide/kernels.md)).
 {func}`telescopic.engine.run` runs replicates with given settings, and with
-`keep_paths=True` it keeps the paths of both chains. Here the burn-in $k$ is 5, the run
-length $m$ is 20 and the lag $L$ is 1; the output is the meeting times $\tau$ of sixteen
+`keep_paths=True` it keeps the paths of both chains. Here the {term}`burn-in` $k$ is 5, the
+{term}`run length` $m$ is 20 and the {term}`lag` $L$ is 1; the output is the {term}`meeting times <meeting time>` $\tau$ of sixteen
 pairs:
 
 ```{code-cell} python
@@ -91,7 +91,7 @@ that the chains have reached the target.
 
 ## One replicate's estimate
 
-Each replicate's estimate is a signed measure: atoms with weights, whose weighted sum of
+Each replicate's estimate is a {term}`signed measure`: {term}`atoms <atom>` with weights, whose weighted sum of
 a function $h$ estimates its expectation $\pi(h)$ under the target
 ([Theory](../theory.md#signed-measures)). {class}`telescopic.Result` holds the measures of
 all replicates in its `measure`, a {class}`telescopic.SignedMeasure` whose `replicate`
@@ -154,5 +154,5 @@ print(f"signed measure: {estimate:.6f}")
 ```
 
 One replicate's correction can move its estimate toward the target's mean, 0, or away
-from it: only the average over replicates is unbiased. For a pair that meets by $k + L$
+from it: only the average over replicates is {term}`unbiased`. For a pair that meets by $k + L$
 the correction is zero, and the estimate is the MCMC average alone.

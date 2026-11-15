@@ -6,7 +6,7 @@ kernelspec:
 
 # When unbiased is not enough
 
-The estimates are unbiased for any settings and every initial distribution from which
+The estimates are {term}`unbiased` for any settings and every initial distribution from which
 the chain converges ([Theory](../theory.md#guarantees-and-their-limits)), yet a run can
 miss the truth by many times its error bar, or cover it with an error bar too wide to
 use. This page runs such cases and shows what telescopic reports for each. A run's
@@ -33,7 +33,7 @@ np.set_printoptions(precision=3)
 
 The target is the mixture $\tfrac12\mathcal N(-4, 1) + \tfrac12\mathcal N(4, 1)$ of
 Jacob, O'Leary & Atchadé (2020, §5.1), with their random walk of proposal variance 1,
-$k = 50$, $m = 500$, lag 1 and 1,000 replicates. The test function is the indicator of
+$k = 50$, $m = 500$, {term}`lag` 1 and 1,000 {term}`replicates <replicate>`. The test function is the indicator of
 $x > 3$, whose expectation is $\tfrac12\Phi(1) + \tfrac12\Phi(-7)$. From
 $\mathcal N(10, 1)$, every chain starts above the mode at 4, far from the mode at $-4$:
 
@@ -116,7 +116,7 @@ assert high - low > 10
 ```
 
 The interval now covers the truth, but it is far wider than the range of a probability.
-The meeting times show why:
+The {term}`meeting times <meeting time>` show why:
 
 ```{code-cell} python
 ---
@@ -167,12 +167,12 @@ assert measured["tail_index"] < 2
 assert values.max() - values.min() > 1000
 ```
 
-Every pair from $\mathcal N(10, 1)$ met within a few dozen steps. From
+Every {term}`pair` from $\mathcal N(10, 1)$ met within a few dozen steps. From
 $\mathcal N(10, 10^2)$, the fraction of pairs slower than 200 steps is close to
 $2\Phi(1)\Phi(-1)$, the probability that two draws fall on either side of 0: such a pair
 meets only after one of its chains crosses between the modes. The warnings report the
 consequences: more than a quarter of the pairs met after $k + L$, a pair was still unmet
-after 10,000 iterations, and the tail index of the meeting times is below 2, so the
+after 10,000 iterations, and the {term}`tail index` of the meeting times is below 2, so the
 variance of the estimates may be infinite. Until a pair meets, each difference
 $\Delta_t$ enters its bias correction with a weight of up to 1
 ([Theory](../theory.md#the-time-averaged-estimator)), so single replicates estimate this

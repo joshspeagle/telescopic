@@ -1,6 +1,6 @@
 # The telescoping correction
 
-A pair of chains that meet turns the bias of a burn-in into a sum that one pair can
+A {term}`pair` of chains that meet turns the bias of a {term}`burn-in` into a sum that one pair can
 compute. This page explains why the differences between the two chains add up to the
 bias at the burn-in $k$, why one pair has only finitely many nonzero differences, and why
 the result is unbiased for any $k$. It uses the notation of
@@ -11,7 +11,7 @@ the result is unbiased for any $k$. It uses the notation of
 After $k$ steps, the expectation $\mathbb E[h(X_k)]$ of a function $h$ differs from its
 value $\pi(h)$ under the target by the bias of a burn-in of $k$
 ([Why burn-in biases MCMC](burn-in-bias.md)). As the chain runs on, the expectation moves
-toward $\pi(h)$, and the bias equals the total of its moves. Counted in steps of the lag
+toward $\pi(h)$, and the bias equals the total of its moves. Counted in steps of the {term}`lag`
 $L$, from $k$ to $k + L$, from $k + L$ to $k + 2L$, and so on:
 
 $$\begin{aligned}
@@ -50,7 +50,7 @@ side of the equation above, $\pi(h)$, under the conditions given below.
 
 ## Finitely many terms
 
-From the meeting time $\tau$ on, the two chains are equal, $X_t = Y_{t-L}$, so
+From the {term}`meeting time` $\tau$ on, the two chains are equal, $X_t = Y_{t-L}$, so
 $\Delta_t = 0$ for every $t \ge \tau$ ([Two chains that meet](two-chains.md)). The sum
 in $H_k$ stops at its last term before $\tau$, and one pair computes $H_k$ in finite
 time: the pair needs to run only until it has met and has reached $k$. A pair that meets
