@@ -109,6 +109,18 @@ def test_each_row_reads_its_replicates_streams_in_order(width, steps):
         np.testing.assert_array_equal(taken, expected)
 
 
+def test_a_request_that_widens_the_buffer_reads_the_widened_buffer():
+    # A request of size 3 widens a buffer of width 16 only once its numbers run short,
+    # after earlier requests of that size read the narrow buffer.
+    root = root_seed(10)
+    streams = Streams(1, width=16)
+    streams.assign(0, replicate_generator(root, MAIN, 0))
+    draws = streams.view([0])
+    taken = np.hstack([draws.normal(2), *(draws.normal(3) for _ in range(6))])
+    expected = replicate_generator(root, MAIN, 0).spawn(2)[0].standard_normal(20)
+    np.testing.assert_array_equal(taken, [expected])
+
+
 def test_subset_rows_keep_their_lanes():
     root = root_seed(4)
     streams = Streams(3)

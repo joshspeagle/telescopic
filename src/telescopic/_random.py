@@ -82,6 +82,7 @@ class Streams:
         self._cursors = [np.full(n_lanes, width, dtype=np.intp) for _ in (NORMAL, UNIFORM)]
         self._generators: list[Generator | None] = [None] * n_lanes
         self._sources: list[list[Generator]] = [[] for _ in range(n_lanes)]
+        self._windows: list[FloatArray | None] = [None, None]
 
     def assign(self, lane: int, generator: Generator) -> None:
         # A new replicate enters the lane; its buffers read its sources.
@@ -100,8 +101,9 @@ class Streams:
             return np.empty((0, size))
         buffer, cursor = self._buffers[kind], self._cursors[kind]
         start = cursor[lanes]
-        short = start > buffer.shape[1] - size
-        if short.any():
+        # max, not any of a comparison: this test runs at every request.
+        if start.max() > buffer.shape[1] - size:
+            short = start > buffer.shape[1] - size
             if 8 * size > buffer.shape[1]:
                 # Widen on the left, so each lane's unread numbers stay at the end; only
                 # before a top-up, so that a buffer of given numbers is not copied.
@@ -115,14 +117,20 @@ class Streams:
                 self._fill(kind, lane, buffer[lane, unread:])
             start[short] = 0
         cursor[lanes] = start + size
+        if size == 1:
+            one: FloatArray = buffer[lanes, start, None]
+            return one
         # windows[i, j] is buffer[i, j : j + size], so whole windows are gathered without
-        # an (n, size) index array.
-        windows: FloatArray = np.ndarray(
-            (len(buffer), buffer.shape[1] - size + 1, size),
-            buffer.dtype,
-            buffer,
-            strides=(buffer.strides[0], buffer.strides[1], buffer.strides[1]),
-        )
+        # an (n, size) index array; kept until the buffer or the size changes, since
+        # building it costs as much as the gather.
+        windows = self._windows[kind]
+        if windows is None or windows.base is not buffer or windows.shape[2] != size:
+            windows = self._windows[kind] = np.ndarray(
+                (len(buffer), buffer.shape[1] - size + 1, size),
+                buffer.dtype,
+                buffer,
+                strides=(buffer.strides[0], buffer.strides[1], buffer.strides[1]),
+            )
         taken: FloatArray = windows[lanes, start]
         return taken
 
