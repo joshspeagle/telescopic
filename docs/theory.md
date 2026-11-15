@@ -197,6 +197,23 @@ $\bar a$ and sample covariance $S_a$ (divisor $R - 1$).
   $\beta$-quantile is the smallest atom whose projected cumulative weight is at least
   $\beta$. This is consistent as $R \to \infty$ but not unbiased (JOA20, Prop. 3.2).
 
+### Keeping a subset
+
+With `keep` $= K$, the replicates of index below $K$ store their signed measures and every
+replicate stores its moments. The kept set is fixed before any replicate runs, so the
+estimates of the kept replicates are unbiased, or consistent for quantiles, as those of a
+run of them alone. Each replicate stores its center $c_r = X_k$, $f_r = \hat\pi_r(x -
+c_r)$ and the entries of $S_r = \hat\pi_r((x - c_r)(x - c_r)^\top)$ on and above the
+diagonal, or only the diagonal above $d = 100$. Since each replicate's weights sum to 1,
+
+$$a_r = \hat\pi_r(x) = c_r + f_r, \qquad \hat\pi_r\big((x - b)(x - b)^\top\big) = S_r +
+f_r e^\top + e f_r^\top + e e^\top, \quad e = c_r - b,$$
+
+so the mean and the covariance estimator above, with $b = \bar a$, are exactly those of
+the atoms, for any centers, and are unbiased over all $R$ replicates; the centers affect
+only rounding. The two sets of replicates are not independent, so no error statement
+covers an estimate from one combined with one from the other.
+
 ## Choosing k, m and L
 
 The settings change the cost and the variance, never the bias. telescopic follows AJ24:

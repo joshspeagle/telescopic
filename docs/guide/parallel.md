@@ -301,6 +301,23 @@ Otherwise Ctrl-C kills its idle workers and breaks the pool: the run returns the
 that had finished, flagged `interrupted`, or raises `BrokenProcessPool` if none had, and
 the pool cannot run again.
 
+## Errors
+
+An error in a worker, such as one of the log-density, stops the run as a first Ctrl-C
+does, except that no chunk starts afterwards, not even the first: the running chunks
+finish, and the replicates of every chunk that returned are kept, with those finished
+before the error in its own chunk. The error is raised again in this process with the
+result of the kept replicates attached
+([Continuing after an error](save-load-merge.md#continuing-after-an-error)). An error
+that cannot be unpickled in this process, such as one whose class needs two arguments,
+is replaced by a `RuntimeError` that names its type and message, and an error from a
+worker process carries a note with the traceback in the worker. When several chunks fail,
+the error of the lowest-indexed one is raised and the note counts the others. A pool that
+breaks without a Ctrl-C, and an error raised in this process while it waits, such as a
+warning made an error by a warnings filter, stop the run in the same way. On a
+`ProcessPoolExecutor` of your own the chunks it has already queued run in full, and a
+pool with only `map` loses the other results of a wave whose `map` raised.
+
 ## Progress
 
 `progress=True`, given to {func}`telescopic.sample`, to {class}`telescopic.CoupledSampler`
@@ -318,5 +335,6 @@ and sends them back when the chunk ends, so its memory does not grow with the nu
 replicates; the memory of this process does, since it keeps every chunk's replicates and
 then joins them. [Settings](settings.md#memory-and-thinning) gives their size, the
 {class}`telescopic.InputWarning <telescopic.warnings.InputWarning>` that the sampler emits
-when the run and its first estimates would take more than 1 GB, and `thin`, which stores
-fewer.
+when the run and its first estimates would take more than 1 GB, and `thin` and `keep`,
+which store fewer. With `keep`, each engine also holds the sums of the moments of its 256
+lanes, 20.9 MB at $d = 100$, so an integer pool holds that once per worker.

@@ -216,3 +216,30 @@ def test_paths_keep_the_legend_entries_of_the_axes_they_are_given():
     plotting.paths(PAIRS, ax=ax)
     labels = [text.get_text() for text in ax.get_legend().get_texts()]
     assert labels == ["target mean", "$X$", "$Y$ (shifted by the lag)", "after the meeting"]
+
+
+def test_plots_of_a_reduced_run_draw_its_kept_replicates():
+    # The marginals and the pairs of a run that keeps replicates 0 to 12 are those of a run
+    # of them alone; the divisors are the kept replicates', not R.
+    def result(indices, **options):
+        replicates = run(
+            Target(gaussian_log_prob),
+            RandomWalk(np.eye(2)),
+            INIT,
+            indices,
+            rng=3,
+            k=2,
+            m=8,
+            lag=2,
+            **options,
+        )
+        return telescopic.Result(replicates)
+
+    reduced, alone = result(range(40), keep=13), result(range(13))
+    for ax, other in zip(reduced.plot_marginals(), alone.plot_marginals(), strict=True):
+        heights = [patch.get_height() for patch in ax.patches]
+        assert heights == [patch.get_height() for patch in other.patches]
+    mine, theirs = reduced.plot_corner(), alone.plot_corner()
+    np.testing.assert_array_equal(
+        mine[1, 0].collections[0].get_array(), theirs[1, 0].collections[0].get_array()
+    )

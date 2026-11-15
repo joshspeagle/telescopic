@@ -6,7 +6,7 @@ import itertools
 import time
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, Self, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -36,6 +36,19 @@ __all__ = ["Replicates", "Settings", "Status", "check_settings", "merge", "run",
 # Replicates advanced together by default (DECISIONS #52).
 LANES = 256
 
+# The largest time that the int32 times of the atoms hold (DECISIONS #234).
+MAX_TIME = 2**31 - 1
+
+# The dimension up to which a run that keeps a subset stores every second moment, and
+# above which only the squares: at d = 1,000 the (d, d) sums of 256 lanes would take
+# 2.05 GB (DECISIONS #236, #245).
+FULL_MOMENTS = 100
+
+# The floats of a block of products that a run with keep adds at a time, 1 MiB, and the
+# dimension above which it adds the products of one atom at a time (DECISIONS #245).
+BLOCK = 2**17
+ROW_PRODUCTS = 24
+
 # The target's counters, which a run's replicates hold under the same names.
 COUNTS = ("n_log_prob", "n_grad", "n_grad_zeroed")
 
@@ -57,6 +70,10 @@ class Settings(NamedTuple):
     store : bool
         Whether the run stores the signed measures and distances; meeting-time pilots do
         not.
+    keep : int or None
+        With ``store``: the replicates of index below ``keep`` store their signed measures
+        and distances, and every replicate stores its moments; ``None`` stores the signed
+        measures and distances of every replicate, and no moments.
     """
 
     k: int
@@ -65,6 +82,7 @@ class Settings(NamedTuple):
     thin: int = 1
     max_iter: int | None = None
     store: bool = True
+    keep: int | None = None
 
 
 # Spec section 6.2; seed, section 6.1; atoms, R-EST-6; requested, section 6.5; evaluations,
@@ -85,7 +103,19 @@ class Replicates:
     atoms, weights, owner : ndarrays, shapes (N, d), (N,), (N,)
         The signed measures of the replicates that met: the atoms, their
         weights (each replicate's sum to 1), and the index of the replicate each atom
-        belongs to. Sorted by owner.
+        belongs to. Sorted by owner, and within a replicate in record order: by time, and
+        at each time the averaged atom first.
+    time : ndarray of int32, shape (N,)
+        The time :math:`t` of the pair :math:`(X_t, Y_{t-L})` at which each atom was
+        recorded; -1 for replicates made without it.
+    center : ndarray, shape (R, d), or (R, 0) without ``keep``
+        :math:`c_r = X_k`, each replicate's first averaged state; ``nan`` for a censored
+        pair.
+    moments : ndarray, shape (R, p), or (R, 0) without ``keep``
+        :math:`\hat\pi_r(x - c_r)`, then :math:`\hat\pi_r` of the products
+        :math:`(x - c_r)_i (x - c_r)_j` for ``i, j`` in ``numpy.triu_indices(d)`` up to
+        :math:`d = 100`, or of the squares :math:`(x - c_r)_j^2` above it; ``nan`` for a
+        censored pair. The rows of every replicate, whether its atoms are stored or not.
     distance_owner, distance_time, distance : ndarrays, shape (M,)
         :math:`\lVert X_t - Y_{t-L}\rVert` for each pair, at each time :math:`L \le t < \tau`
         (to the cap for a censored pair).
@@ -93,7 +123,10 @@ class Replicates:
         The replicates whose :math:`X_0` or :math:`Y_0` has zero target density.
     requested : ndarray of int
         The indices the run was asked for, sorted: ``index`` lacks those of replicates
-        that an interrupted run never started.
+        that an interrupted run never started, or that an error stopped.
+    abandoned : ndarray of int
+        The replicates in progress when an error stopped the run, sorted; nothing of them
+        is recorded.
     n_log_prob, n_grad : int
         Evaluations of the log-density and its gradient.
     n_grad_zeroed : int
@@ -117,11 +150,25 @@ class Replicates:
     distance: FloatArray
     zero_density: IntArray
     requested: IntArray
+    abandoned: IntArray = field(default_factory=lambda: np.zeros(0, dtype=np.int64))
+    time: npt.NDArray[np.int32] = field(default_factory=lambda: np.zeros(0, dtype=np.int32))
+    center: FloatArray = field(default_factory=lambda: np.zeros((0, 0)))
+    moments: FloatArray = field(default_factory=lambda: np.zeros((0, 0)))
     n_log_prob: int = 0
     n_grad: int = 0
     n_grad_zeroed: int = 0
     seconds: float = 0.0
     paths: dict[int, tuple[FloatArray, FloatArray]] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        # Replicates made without times, as by hand, get -1 for each atom, and without
+        # moments, rows with no columns.
+        if not len(self.time) and len(self.atoms):
+            self.time = np.full(len(self.atoms), -1, dtype=np.int32)
+        if not self.center.shape[1]:
+            self.center = np.zeros((len(self.index), 0))
+        if not self.moments.shape[1]:
+            self.moments = np.zeros((len(self.index), 0))
 
     @property
     def stopped(self) -> FloatArray:
@@ -150,6 +197,15 @@ class Replicates:
         stopped = self.stopped
         cost: IntArray = (stopped + np.maximum(stopped, self.settings.m)).astype(np.int64)
         return cost - self.settings.lag
+
+
+class _Outcome(NamedTuple):
+    # What a run returns inside the package (spec section 6.5): the record of its finished
+    # replicates, None when none could be made, and the error that stopped it, None when
+    # none did; others counts the errors of a pool's other chunks.
+    replicates: Replicates | None
+    error: Exception | None
+    others: int = 0
 
 
 class Status(NamedTuple):
@@ -195,6 +251,7 @@ def run(
     rng: Seed = None,
     lanes: int = LANES,
     store: bool = True,
+    keep: int | None = None,
     keep_paths: bool = False,
     monitor: Callable[[Status], bool] | None = None,
 ) -> Replicates:
@@ -240,6 +297,13 @@ def run(
         Number of replicates advanced together, at most the number requested.
     store : bool
         Whether to store the signed measures and distances; meeting-time pilots do not.
+    keep : int, optional
+        With ``store``: store the signed measures, their times and the distances of the
+        replicates of index below ``keep`` only, and the moments of every replicate
+        (``center`` and ``moments`` of :class:`Replicates`), at a cost of
+        :math:`O(p)` per atom with :math:`p = d(d + 3)/2` up to :math:`d = 100` and
+        :math:`2d` above it. ``None`` stores the signed measures and distances of every
+        replicate, and no moments.
     keep_paths : bool
         Whether to keep the paths of both chains, for inspection.
     monitor : callable, optional
@@ -251,13 +315,108 @@ def run(
     -------
     Replicates
 
+    Raises
+    ------
+    Exception
+        An error raised while the replicates run, such as one of the log-density, is
+        raised again as the same object once the replicates finished before it are
+        recorded: its attribute ``telescopic_replicates`` holds them, a
+        :class:`Replicates` whose ``abandoned`` lists the replicates in progress, or
+        ``None`` when no record could be made, and one note says so. An exception object
+        raised in several runs carries the attribute and the note of the last of them.
+
     Notes
     -----
     Memory: :func:`stored_bytes` gives the size of the stored atoms and distances.
     """
+    outcome = _run(
+        target,
+        kernel,
+        initial,
+        indices,
+        k=k,
+        m=m,
+        lag=lag,
+        thin=thin,
+        max_iter=max_iter,
+        rng=rng,
+        lanes=lanes,
+        store=store,
+        keep=keep,
+        keep_paths=keep_paths,
+        monitor=monitor,
+    )
+    replicates, error, _ = outcome
+    if error is None:
+        return cast(Replicates, replicates)
+    if replicates is None:
+        _attach(error, "telescopic_replicates", None)  # _run noted why
+    else:
+        note = (
+            f"{_STOPPED} the run with {len(replicates.index)} of its "
+            f"{len(replicates.requested)} replicates finished and {len(replicates.abandoned)} "
+            "in progress abandoned; error.telescopic_replicates holds the finished ones"
+        )
+        _attach(error, "telescopic_replicates", replicates, note)
+    try:
+        raise error
+    finally:
+        # The traceback keeps this frame, whose names would otherwise keep the error.
+        del error, outcome
+
+
+# The start of the note that a run adds to the error that stopped it, and the notes of a
+# run that recorded nothing: none of its replicates had finished, or their record failed.
+_STOPPED = "telescopic: this error stopped"
+_NONE = f"{_STOPPED} the run before any of its replicates finished"
+_LOST = (
+    f"{_STOPPED} the run, and no record of the replicates finished before it could be made, "
+    "so they were lost"
+)
+
+
+def _attach(error: Exception, name: str, value: Any, note: str | None = None) -> None:
+    # Sets a run's attribute on the error that stopped it, and its note.
+    setattr(error, name, value)
+    _note(error, note)
+
+
+def _note(error: Exception, note: str | None = None) -> None:
+    # The one note of a run on the error that stopped it, which replaces that of an earlier
+    # run that raised the same object; without a note, the error keeps the run's note it
+    # has, or gets _NONE.
+    notes = getattr(error, "__notes__", [])
+    kept = [line for line in notes if line.startswith(_STOPPED)]
+    if note is None:
+        note = kept[0] if kept else _NONE
+    notes[:] = [line for line in notes if not line.startswith(_STOPPED)]
+    error.add_note(note)
+
+
+def _run(
+    target: Target,
+    kernel: Kernel,
+    initial: Any,
+    indices: npt.ArrayLike,
+    *,
+    k: int,
+    m: int,
+    lag: int,
+    thin: int = 1,
+    max_iter: int | None = None,
+    rng: Seed = None,
+    lanes: int = LANES,
+    store: bool = True,
+    keep: int | None = None,
+    keep_paths: bool = False,
+    monitor: Callable[[Status], bool] | None = None,
+) -> _Outcome:
+    # run, returning an outcome: an error that stops the replicates is returned with the
+    # record of those finished before it, never raised, while KeyboardInterrupt and the
+    # other BaseExceptions are. Invalid arguments raise before any replicate starts.
     instance("target", target, Target)
     instance("kernel", kernel, Kernel)
-    settings = check_settings(Settings(k, m, lag, thin, max_iter, flag("store", store)))
+    settings = check_settings(Settings(k, m, lag, thin, max_iter, flag("store", store), keep))
     keep_paths = flag("keep_paths", keep_paths)
     lanes = integer("lanes", lanes, minimum=1)
     requested = real_array("indices", indices, "distinct integers >= 0", dtype=None)
@@ -275,19 +434,49 @@ def run(
     queue = iter(requested.tolist())
     first = next(queue)
     start = time.perf_counter()
-    head = _Start(first, initial, seed, None)
+    with _Caught() as caught:
+        head = _Start(first, initial, seed, None)
+    if caught.error is not None:
+        _note(caught.error, _NONE)
+        return _Outcome(None, caught.error)
     ndim = len(head.x0)
     starts = itertools.chain([head], (_Start(i, initial, seed, ndim) for i in queue))
     batch = _Batch(target, kernel, ndim, lanes, settings, keep_paths)
-    batch.fill(np.arange(lanes), starts)
-    stopping = False
-    while batch.active.any():
-        batch.advance()
-        free = batch.finish()
-        stopping = (monitor is not None and monitor(batch.status())) or stopping
-        if not stopping:
-            batch.fill(free, starts)
-    return batch.result(seed, np.sort(requested), start)
+    with _Caught() as caught:
+        batch.fill(np.arange(lanes), starts)
+        stopping = False
+        while batch.active.any():
+            batch.advance()
+            free = batch.finish()
+            stopping = (monitor is not None and monitor(batch.status())) or stopping
+            if not stopping:
+                batch.fill(free, starts)
+    error = caught.error
+    with _Caught() as recording:
+        return _Outcome(batch.result(seed, np.sort(requested), start), error)
+    error = error or recording.error
+    _note(cast(Exception, error), _LOST)
+    return _Outcome(None, error)
+
+
+class _Caught:
+    # A block that stops an Exception raised in it and keeps it in error, while
+    # KeyboardInterrupt and the other BaseExceptions pass. The error's traceback keeps the
+    # frame of the block, so a frame that must not outlive the error, such as one that
+    # holds worker processes, catches in a function of its own.
+    def __init__(self) -> None:
+        self.error: Exception | None = None
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(
+        self, kind: type[BaseException] | None, error: BaseException | None, _: object
+    ) -> bool:
+        if isinstance(error, Exception):
+            self.error = error
+            return True
+        return False
 
 
 # Spec section 3.2.
@@ -295,8 +484,9 @@ def check_settings(settings: Settings) -> Settings:
     r"""Check the settings of a run and return them with Python integers.
 
     They need integers :math:`0 \le k \le m`, :math:`L \ge 1` and ``thin`` :math:`\ge 1`,
-    and an integer ``max_iter`` above :math:`\max(L, m)` or ``None``. NumPy integers
-    become ``int``.
+    and an integer ``max_iter`` above :math:`\max(L, m)` or ``None``, at most
+    :math:`2^{31} - 1` when the run stores the times of its atoms, and ``keep`` ``None`` or
+    an integer :math:`\ge 0`, only with ``store``. NumPy integers become ``int``.
 
     Parameters
     ----------
@@ -321,16 +511,26 @@ def check_settings(settings: Settings) -> Settings:
         max_iter = integer("max_iter", max_iter, "an integer or None")
     if max_iter is not None and max_iter <= max(lag, m):
         raise ValueError(f"max_iter must exceed max(lag, m) = {max(lag, m)}, not {max_iter}")
-    return Settings(k, m, lag, thin, max_iter, settings.store)
+    keep = settings.keep
+    if keep is not None:
+        keep = integer("keep", keep, "None or an integer >= 0", minimum=0)
+        if not settings.store:
+            raise ValueError("keep needs store=True")
+    if max_iter is not None and max_iter > MAX_TIME and settings.store and keep != 0:
+        raise ValueError(
+            f"max_iter must be at most 2**31 - 1 = {MAX_TIME} where times are stored, not "
+            f"{max_iter}"
+        )
+    return Settings(k, m, lag, thin, max_iter, settings.store, keep)
 
 
 def merge(parts: Sequence[Replicates]) -> Replicates:
     """Join the outputs of disjoint sets of replicates of one run, sorted by replicate index.
 
     The parts must share the root seed, the settings and the dimension; the requested
-    indices are the union of theirs. For a target evaluated point by point the result is
-    bitwise that of one run of all the replicates; for a vectorized one it can differ
-    from it as a run with other ``lanes`` does (:func:`run`).
+    and the abandoned indices are the unions of theirs. For a target evaluated point by
+    point the result is bitwise that of one run of all the replicates; for a vectorized
+    one it can differ from it as a run with other ``lanes`` does (:func:`run`).
 
     Parameters
     ----------
@@ -358,8 +558,8 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
                 f"cannot merge runs of dimensions {first.atoms.shape[1]} and {part.atoms.shape[1]}"
             )
     groups = {
-        "index": ("index", "meeting_time"),
-        "owner": ("owner", "atoms", "weights"),
+        "index": ("index", "meeting_time", "center", "moments"),
+        "owner": ("owner", "atoms", "weights", "time"),
         "distance_owner": ("distance_owner", "distance_time", "distance"),
         "zero_density": ("zero_density",),
     }
@@ -379,6 +579,7 @@ def merge(parts: Sequence[Replicates]) -> Replicates:
         settings=first.settings,
         **columns,
         requested=np.unique(np.concatenate([part.requested for part in parts])),
+        abandoned=np.unique(np.concatenate([part.abandoned for part in parts])),
         **{name: sum(getattr(part, name) for part in parts) for name in (*COUNTS, "seconds")},
         paths=paths,
     )
@@ -401,16 +602,20 @@ class _Start:
 
 
 def stored_bytes(settings: Settings, ndim: int, coupled: npt.ArrayLike) -> float:
-    r"""Bytes of the atoms and distances that replicates store.
+    r"""Bytes of the atoms, distances and moments that replicates store.
 
     A replicate that met after :math:`c = \tau - L` coupled steps stores the
     :math:`|S|` atoms of the time average and two atoms for each of the
-    :math:`\max(0, c - k)` terms of the bias correction, each of :math:`8d + 16` bytes (its
-    coordinates in ``atoms``, its weight and its replicate in ``owner``), and :math:`c`
+    :math:`\max(0, c - k)` terms of the bias correction, each of :math:`8d + 20` bytes (its
+    coordinates in ``atoms``, its weight, its replicate in ``owner`` and its ``time``), and
+    :math:`c`
     distances of 24 bytes (``distance_owner``, ``distance_time`` and ``distance``). This
     is exact when ``thin`` is 1 and :math:`m - k + 1 \ge L`, and an upper bound otherwise,
     where some terms of the correction have no atoms. With ``store=False`` nothing is
-    stored.
+    stored. With ``keep``, only the first ``keep`` replicates store atoms and distances,
+    and every replicate stores its moments, :math:`8(p + d)` bytes (``center`` and
+    ``moments`` of :class:`Replicates`), with :math:`p = d(d + 3)/2` up to :math:`d = 100`
+    and :math:`2d` above.
 
     Parameters
     ----------
@@ -419,7 +624,7 @@ def stored_bytes(settings: Settings, ndim: int, coupled: npt.ArrayLike) -> float
     ndim : int
         The dimension :math:`d`.
     coupled : array_like of int, shape (R,)
-        :math:`\tau - L` of each replicate, non-negative.
+        :math:`\tau - L` of each replicate, non-negative, in the order of their indices.
 
     Returns
     -------
@@ -427,15 +632,19 @@ def stored_bytes(settings: Settings, ndim: int, coupled: npt.ArrayLike) -> float
         The total over the replicates.
     """
     instance("settings", settings, Settings)
-    k, m, _, thin, _, store = check_settings(settings)
+    k, m, _, thin, _, store, keep = check_settings(settings)
     ndim = integer("ndim", ndim, minimum=1)
     c = real_array("coupled", coupled, "non-negative integers of shape (R,)")
     if c.ndim != 1 or not integral(c, 0):
         raise ValueError("coupled must be non-negative integers of shape (R,)")
     if not store:
         return 0.0
+    moments = 0
+    if keep is not None:
+        moments = len(c) * 8 * (2 * ndim + len(_pairs(ndim)[0]))
+        c = c[:keep]
     atoms = len(c) * len(range(k, m + 1, thin)) + 2 * np.maximum(0, c - k).sum()
-    return float(atoms * (8 * ndim + 16) + 24 * c.sum())
+    return float(atoms * (8 * ndim + 20) + 24 * c.sum() + moments)
 
 
 class _Batch:
@@ -461,7 +670,7 @@ class _Batch:
         integers, reals = np.zeros(0, dtype=np.int64), np.zeros(0)
         self.finished = _Chunks(integers, integers)
         # The columns that stored_bytes counts: a change here changes it.
-        self.atoms = _Chunks(integers, np.zeros((0, ndim)), reals)
+        self.atoms = _Chunks(integers, np.zeros((0, ndim)), reals, np.zeros(0, dtype=np.int32))
         self.distances = _Chunks(integers, integers, reals)
         # The replicates started at zero density, and whether each lane's did.
         self.zero_density: list[int] = []
@@ -469,6 +678,21 @@ class _Batch:
         self.paths: dict[int, tuple[list[FloatArray], list[FloatArray]]] = {}
         self.n_finished = 0
         self.counts = {name: getattr(target, name) for name in COUNTS}  # before any step
+        # With keep: whether each lane's replicate stores its rows, and its center c_r and
+        # sums of w h_c(x): of x - c_r, and of the products, all of them up to FULL_MOMENTS
+        # dimensions, of which finish keeps those of _pairs, or the squares above it (spec
+        # R-EST-9).
+        self.reducing = settings.keep is not None
+        self.kept = np.ones(lanes, dtype=bool)
+        width = ndim if self.reducing else 0
+        self.full = self.reducing and ndim <= FULL_MOMENTS
+        self.center = np.zeros((lanes, width))
+        self.first = np.zeros((lanes, width))
+        self.second = np.zeros((lanes, width, width) if self.full else (lanes, width))
+        columns = width + len(_pairs(ndim)[0]) if self.reducing else 0
+        self.reduced = _Chunks(integers, np.zeros((0, width)), np.zeros((0, columns)))
+        # Rows a block of the products holds: its temporaries take at most a few MiB.
+        self.block = max(1, BLOCK // max(1, self.second[0].size))
 
     @property
     def active(self) -> BoolArray:
@@ -491,6 +715,10 @@ class _Batch:
             if self.keep_paths:
                 self.paths[start.index] = ([start.x0], [start.y0])
         self.replicate[lanes] = [s.index for s in starting]
+        if self.reducing:
+            self.kept[lanes] = self.replicate[lanes] < cast(int, self.settings.keep)
+            self.first[lanes] = 0.0
+            self.second[lanes] = 0.0
         self.t[lanes] = 0
         self.tau[lanes] = -1
         self._record(lanes, np.zeros(0, dtype=np.int64))
@@ -532,6 +760,14 @@ class _Batch:
         lanes = (self.active & done).nonzero()[0]
         if len(lanes):
             self.finished.add(self.replicate[lanes], self.tau[lanes])
+            if self.reducing:
+                second = self.second[lanes]
+                if self.full:
+                    second = second[:, *_pairs(self.center.shape[1])]
+                center, sums = self.center[lanes], np.hstack([self.first[lanes], second])
+                censored = self.tau[lanes] < 0
+                center[censored], sums[censored] = np.nan, np.nan
+                self.reduced.add(self.replicate[lanes], center, sums)
             self.replicate[lanes] = -1
             self.n_finished += len(lanes)
         return lanes
@@ -551,10 +787,19 @@ class _Batch:
         )
 
     def result(self, seed: SeedSequence, requested: IntArray, start: float) -> Replicates:
-        # The seconds since start include this join, a large part of a run with many atoms.
+        # The finished replicates' outputs. After an error, the lanes still active hold the
+        # abandoned replicates, whose rows, starts at zero density and paths are left out
+        # (spec section 6.5). The seconds since start include this join, a large part of a
+        # run with many atoms.
         index, tau = self.finished.join()
-        owner, atoms, weights = self.atoms.join(keep=index[tau >= 0])
-        distance_owner, distance_time, distance = self.distances.join()
+        abandoned = np.sort(self.replicate[self.active])
+        owner, atoms, weights, times = self.atoms.join(keep=index[tau >= 0])
+        _, center, moments = self.reduced.join()
+        distance_owner, distance_time, distance = self.distances.join(
+            keep=index if len(abandoned) else None
+        )
+        zero_density = np.array(self.zero_density, dtype=np.int64)
+        finished = set(index.tolist())
         return Replicates(
             seed=seed,
             settings=self.settings,
@@ -566,26 +811,45 @@ class _Batch:
             distance_owner=distance_owner,
             distance_time=distance_time,
             distance=distance,
-            zero_density=np.sort(np.array(self.zero_density, dtype=np.int64)),
+            zero_density=np.sort(zero_density[np.isin(zero_density, index)]),
             requested=requested,
+            abandoned=abandoned,
+            time=times,
+            center=center,
+            moments=moments,
             **{name: getattr(self.target, name) - n for name, n in self.counts.items()},
             seconds=time.perf_counter() - start,
-            paths={i: (np.array(x), np.array(y)) for i, (x, y) in self.paths.items()},
+            paths={
+                i: (np.array(x), np.array(y)) for i, (x, y) in self.paths.items() if i in finished
+            },
         )
 
     def _record(self, stepped: IntArray, unmet: IntArray) -> None:
         # The averaged atoms X_t, t in S, of the lanes that moved, and the bias-correction
         # atoms and distances of the unmet pairs (spec R-EST-6, section 3.6). Kinds without
         # rows are skipped: at one lane most iterations lack one, and its calls add up.
-        k, m, lag, thin, _, store = self.settings
+        k, m, lag, thin, _, store, _ = self.settings
         if not store:
             return
         t = self.t[stepped]
-        averaged = stepped[(t >= k) & (t <= m) & ((t - k) % thin == 0)]
+        if t.max(initial=0) > MAX_TIME:
+            # A time beyond int32, reachable without a cap, raises naming its replicate,
+            # where the replicate stores the times of its atoms (spec R-EST-6).
+            late = stepped[(t > MAX_TIME) & self.kept[stepped]]
+            if len(late):
+                raise OverflowError(
+                    f"replicate {self.replicate[late[0]]} reached t = {self.t[late[0]]}, "
+                    "beyond the 2**31 - 1 that the times of its atoms hold; set max_iter"
+                )
+        chosen = (t >= k) & (t <= m) & ((t - k) % thin == 0)
+        averaged = stepped[chosen]
         if len(averaged):
-            self.atoms.add(
-                self.replicate[averaged], self.x.x[averaged], np.full(len(averaged), self.weight)
-            )
+            if self.reducing:
+                # c_r = X_k, before any atom of the replicate (the corrections start at
+                # k + L).
+                first = averaged[t[chosen] == k]
+                self.center[first] = self.x.x[first]
+            self._add(averaged, self.x.x[averaged], np.full(len(averaged), self.weight))
         if not len(unmet):
             return
         coefficient = correction_coefficients(self.t[unmet], k, m, lag, thin)
@@ -593,14 +857,51 @@ class _Batch:
         if positive.any():
             corrected = unmet[positive]
             for chain, sign in ((self.x, 1.0), (self.y, -1.0)):
-                self.atoms.add(
-                    self.replicate[corrected], chain.x[corrected], sign * coefficient[positive]
-                )
+                self._add(corrected, chain.x[corrected], sign * coefficient[positive])
+        if self.reducing:
+            unmet = unmet[self.kept[unmet]]
         self.distances.add(
             self.replicate[unmet],
             self.t[unmet],
             np.linalg.norm(self.x.x[unmet] - self.y.x[unmet], axis=1),
         )
+
+    def _add(self, lanes: IntArray, points: FloatArray, weights: FloatArray) -> None:
+        # Atoms of distinct lanes: their weighted moments, with keep, and their rows, for
+        # the replicates that store them.
+        if self.reducing:
+            self._accumulate(lanes, points, weights)
+            stored = self.kept[lanes]
+            lanes, points, weights = lanes[stored], points[stored], weights[stored]
+            if not len(lanes):
+                return
+        self.atoms.add(self.replicate[lanes], points, weights, self.t[lanes].astype(np.int32))
+
+    def _accumulate(self, lanes: IntArray, points: FloatArray, weights: FloatArray) -> None:
+        # Adds w h_c(x) to each lane's sums: w (x - c_r), and w (x - c_r)_i (x - c_r)_j for
+        # every i, j, or i = j above FULL_MOMENTS. Elementwise, with no BLAS, so that a
+        # row's sums do not depend on its batch (claims K1 and E1). Up to ROW_PRODUCTS
+        # dimensions the products of a block of rows are formed at once, the block's
+        # temporaries within 1 MiB (DECISIONS #180); above, those of one row at a time,
+        # which skips gathering and scattering the lanes' (d, d) sums (DECISIONS #245).
+        dx = points - self.center[lanes]
+        self.first[lanes] += weights[:, None] * dx
+        if self.full and len(dx[0]) > ROW_PRODUCTS:
+            for lane, row, weight in zip(lanes.tolist(), dx, weights.tolist(), strict=True):
+                products = np.multiply.outer(row, row)
+                products *= weight
+                self.second[lane] += products
+            return
+        for start in range(0, len(lanes), self.block):
+            rows = slice(start, start + self.block)
+            lane, weight, block = lanes[rows], weights[rows], dx[rows]
+            if self.full:
+                products = block[:, :, None] * block[:, None, :]
+                products *= weight[:, None, None]
+            else:
+                products = block * block
+                products *= weight[:, None]
+            self.second[lane] += products
 
 
 class _Chunks:
@@ -630,6 +931,21 @@ class _Chunks:
 
 def _concatenate(chunks: list[tuple[npt.NDArray[Any], ...]]) -> tuple[npt.NDArray[Any], ...]:
     return tuple(np.concatenate(parts) for parts in zip(*chunks, strict=True))
+
+
+def _lane_bytes(ndim: int) -> int:
+    # The bytes of one lane's center and sums in a run with keep: d, d and d^2 floats up to
+    # FULL_MOMENTS dimensions, 3 d above.
+    return 8 * (2 * ndim + (ndim * ndim if ndim <= FULL_MOMENTS else ndim))
+
+
+def _pairs(ndim: int) -> tuple[IntArray, IntArray]:
+    # The coordinates (i, j) of the second moments that a run with keep stores: i <= j up
+    # to FULL_MOMENTS dimensions, in the order of numpy.triu_indices, and i = j above.
+    if ndim <= FULL_MOMENTS:
+        return np.triu_indices(ndim)
+    diagonal = np.arange(ndim)
+    return diagonal, diagonal
 
 
 def _empty_state(lanes: int, ndim: int, with_grad: bool) -> State:

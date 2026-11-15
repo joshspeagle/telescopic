@@ -86,6 +86,29 @@ class Counted:
         return self.function(x)
 
 
+class Failing:
+    # A log-density, the standard normal one by default, that raises `error` once, at its
+    # evaluation number `at`.
+    def __init__(self, at, error=None, log_prob=None):
+        self.at, self.calls = at, 0
+        self.error = ValueError(f"failed at evaluation {at}") if error is None else error
+        self.log_prob = gaussian_log_prob if log_prob is None else log_prob
+
+    def __call__(self, x):
+        self.calls += 1
+        if self.calls == self.at:
+            raise self.error
+        return self.log_prob(x)
+
+
+def assert_same_outputs(a, b):
+    # The replicates' outputs, without the evaluations, the wall time and the abandoned
+    # replicates, which depend on how a run was split.
+    for name, value in vars(a).items():
+        if name not in ("seed", "seconds", "abandoned", "n_log_prob", "n_grad", "n_grad_zeroed"):
+            np.testing.assert_array_equal(value, getattr(b, name), err_msg=name)
+
+
 def dense(d):
     # A dense covariance near the identity, so that most proposals are accepted.
     a = np.random.default_rng(14).standard_normal((d, d))

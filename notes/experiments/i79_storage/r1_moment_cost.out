@@ -1,0 +1,5 @@
+commit 80a1e55-dirty; Intel(R) Xeon(R) Processor @ 2.10GHz, 4 CPUs, Linux; Python 3.13.18, NumPy 2.5.3, SciPy 1.18.1, telescopic 0.1.0.dev0; BLAS [('openblas', '0.3.34.106.0', 1), ('openblas', '0.3.31.dev', 1)]
+   d      p    atoms   none s    all s      0 s  ns/atom all/none   0/none  buffer MB   rows
+   2      5   103936    0.119    0.133    0.132      136     1.12     1.11       0.02    1.6
+  10     65   103936    0.181    0.249    0.253      653     1.38     1.40       0.25    6.0
+ 100   5150   103936    1.637    4.066    3.613    23370     2.48     2.21      20.89   51.2

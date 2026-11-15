@@ -21,6 +21,8 @@ import pytest
 import telescopic
 from references import (
     Counted,
+    Failing,
+    assert_same_outputs,
     assert_same_replicates,
     gaussian_log_prob,
     never_called,
@@ -631,11 +633,11 @@ def test_a_run_that_would_store_gigabytes_warns():
 
 def test_the_memory_warning_compares_the_peak_with_the_threshold():
     # A pilot pair meeting at 1001 stands for 1000 distances of 24 bytes and 2001 atoms
-    # of 32 bytes at k = 0: 0.44 GB stored for 5,000 replicates, of which the atoms are
-    # 0.32, and a peak of three times that, up to twice as much in two dimensions.
+    # of 36 bytes at k = 0: 0.48 GB stored for 5,000 replicates, of which the atoms are
+    # 0.36, and a peak of three times that, up to twice as much in two dimensions.
     sampler = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=10)
     sampler.pilot = np.full(100, 1001.0)
-    with pytest.warns(InputWarning, match="store about 0.4 GB .* take about 1.3 to 2.6 GB"):
+    with pytest.warns(InputWarning, match="store about 0.5 GB .* take about 1.4 to 2.9 GB"):
         sampler._check_memory(Settings(0, 0, 1), 5_000)
 
 
@@ -974,3 +976,99 @@ def test_a_run_with_log_prob_and_grad_takes_its_values_from_it_alone(kernel, che
         rng=0,
     )
     assert result.n_log_prob == result.n_grad > 0
+
+
+def failed_sampler(at=30_000, n=600):
+    # A sampler whose run of n replicates raised at evaluation `at`, and that error.
+    failing = Failing(at)
+    sampler = CoupledSampler(failing, INIT, kernel=KERNEL, rng=7)
+    with pytest.raises(ValueError, match=f"failed at evaluation {at}") as caught:
+        sampler.run(n, k=40, m=40)
+    assert caught.value is failing.error
+    return sampler, caught.value
+
+
+def test_sampler_keeps_finished_replicates_and_runs_the_missing_ones_next():
+    sampler, error = failed_sampler()
+    kept = error.telescopic_result
+    assert 0 < len(kept.index) < 600
+    assert_same_replicates(kept._replicates, sampler._replicates)
+    notes = [note for note in error.__notes__ if note.startswith("telescopic:")]
+    assert len(notes) == 1
+    assert f"next run starts with the {600 - len(kept.index)} missing ones" in notes[0]
+    completed = sampler.run(600 - len(kept.index))
+    whole = sample(gaussian_log_prob, INIT, 600, kernel=KERNEL, k=40, m=40, rng=7)
+    assert_same_outputs(completed._replicates, whole._replicates)
+
+
+def test_abandoned_replicates_are_flagged_saved_and_cleared_when_run():
+    sampler, error = failed_sampler()
+    kept = error.telescopic_result
+    assert len(kept.abandoned)
+    buffer = io.BytesIO()
+    kept.save(buffer)
+    buffer.seek(0)
+    np.testing.assert_array_equal(Result.load(buffer).abandoned, kept.abandoned)
+    assert kept.interrupted
+    summary = kept.summary()
+    assert summary.footer["abandoned"] == len(kept.abandoned)
+    assert f"an error abandoned {len(kept.abandoned)} replicates in progress" in repr(summary)
+    assert "interrupted" not in repr(summary)
+    completed = sampler.run(600 - len(kept.index))
+    assert not len(completed.abandoned)
+    assert not completed.interrupted
+    assert completed.summary().footer["abandoned"] == 0
+
+
+@pytest.mark.parametrize("stage", ["meeting_times", "run"])
+def test_a_pilot_error_keeps_no_replicates(stage):
+    # Evaluation 1,000 falls inside the 100 lag-1 pilot pairs of an automatic k.
+    failing = Failing(1_000)
+    sampler = CoupledSampler(failing, INIT, kernel=KERNEL, rng=7)
+    with pytest.raises(ValueError, match="failed at evaluation") as caught:
+        getattr(sampler, stage)(100)
+    assert caught.value is failing.error
+    assert not hasattr(caught.value, "telescopic_result")
+    assert not getattr(caught.value, "__notes__", [])
+    assert sampler.pilot is None
+    assert sampler.settings is None
+
+
+def test_keep_is_fixed_by_the_first_run():
+    sampler = CoupledSampler(gaussian_log_prob, INIT, kernel=KERNEL, rng=3)
+    first = sampler.run(30, k=40, m=40, keep=10)
+    assert (first.keep, first.n_kept) == (10, 10)
+    second = sampler.run(30)
+    assert second.keep == 10
+    assert second.n_kept == 10
+    assert second.n_replicates == 60
+    with pytest.raises(ValueError, match=r"keep was 10 in the earlier runs; .* for keep=5"):
+        sampler.run(10, keep=5)
+    with pytest.raises(TypeError, match="keep must be None or an integer >= 0"):
+        CoupledSampler(gaussian_log_prob, INIT, kernel=KERNEL).run(10, k=40, keep=1.5)
+    reduced = sample(gaussian_log_prob, INIT, 30, kernel=KERNEL, k=40, m=40, keep=10, rng=3)
+    assert_same_replicates(reduced._replicates, first._replicates)
+
+
+def test_the_memory_warning_counts_the_moments_of_every_replicate():
+    # At d = 100, 8 (2 d + d (d + 1) / 2) = 42,000 bytes of moments per replicate: 4.2 GB
+    # for 100,000 replicates, though keep=0 stores no atom.
+    sampler = CoupledSampler(gaussian_log_prob, Normal(np.zeros(100), np.eye(100)), rng=10)
+    with pytest.warns(InputWarning, match=r"store about 4\.2 GB of atoms, distances and moments"):
+        sampler._check_memory(Settings(0, 0, 1, keep=0), 100_000)
+
+
+def test_a_sampler_whose_record_failed_says_the_replicates_were_lost(monkeypatch):
+    lost = MemoryError("no memory")
+
+    def result(*args):
+        raise lost
+
+    monkeypatch.setattr(engine._Batch, "result", result)
+    sampler = CoupledSampler(gaussian_log_prob, INIT, kernel=KERNEL, rng=3)
+    with pytest.raises(MemoryError):
+        sampler.run(20, k=40, m=40)
+    assert lost.telescopic_result is None
+    notes = [line for line in lost.__notes__ if line.startswith("telescopic:")]
+    assert len(notes) == 1
+    assert "so they were lost" in notes[0]

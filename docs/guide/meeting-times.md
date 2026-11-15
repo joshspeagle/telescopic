@@ -49,6 +49,10 @@ result.plot_meeting_times();
 
 ## Distance to stationarity
 
+With `keep`, the 1-Wasserstein bound comes from the distances of the kept replicates,
+censored ones included, which are the only ones stored; the meeting times, the TV bound
+and the other diagnostics of this page come from every replicate.
+
 {meth}`telescopic.Result.tv_bound` estimates the upper bound on the total variation
 distance between the law of $X_t$ and the target
 ([Theory](../theory.md#distance-to-stationarity)) by its average over the replicates,
