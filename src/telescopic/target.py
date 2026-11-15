@@ -100,6 +100,9 @@ class Target:
         self.n_grad = 0
         self.n_grad_zeroed = 0
         self._warned_precision = False
+        # The narrowest float itemsizes of the log-densities and of the gradients returned
+        # since the gradient check last reset them.
+        self._itemsizes = [8, 8]
 
     @property
     def has_grad(self) -> bool:
@@ -259,9 +262,11 @@ class Target:
         if out is None or not _fits(out, expected):
             out = self._converted(name, values, x, event)
         out = out.reshape(expected)
-        return out if out.dtype == np.float64 else self._float64(name, out, x)
+        return out if out.dtype == np.float64 else self._float64(name, out, x, bool(event))
 
-    def _float64(self, name: str, out: npt.NDArray[Any], x: FloatArray) -> FloatArray:
+    def _float64(
+        self, name: str, out: npt.NDArray[Any], x: FloatArray, gradient: bool
+    ) -> FloatArray:
         # A complex output with an imaginary part of exactly 0, as complex-step code gives,
         # is its real part (DECISIONS #109). Floats narrower than float64, as JAX
         # returns without 64-bit mode, round the target, so they warn once (#110).
@@ -275,14 +280,16 @@ class Target:
                     "imaginary part"
                 )
             out = out.real
-        if out.dtype.kind == "f" and out.dtype.itemsize < 8 and not self._warned_precision:
-            self._warned_precision = True
-            warn(
-                f"{name} returned {returned} values: the chains target the density "
-                f"rounded to {out.dtype} precision; with JAX, enable 64-bit mode with "
-                "jax.config.update('jax_enable_x64', True)",
-                InputWarning,
-            )
+        if out.dtype.kind == "f" and out.dtype.itemsize < 8:
+            self._itemsizes[gradient] = min(self._itemsizes[gradient], out.dtype.itemsize)
+            if not self._warned_precision:
+                self._warned_precision = True
+                warn(
+                    f"{name} returned {returned} values: the chains target the density "
+                    f"rounded to {out.dtype} precision; with JAX, enable 64-bit mode with "
+                    "jax.config.update('jax_enable_x64', True)",
+                    InputWarning,
+                )
         return out.astype(np.float64)
 
     def _converted(
