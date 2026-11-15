@@ -52,8 +52,8 @@ class MALA(GradientKernel):
     uniforms. Each evaluates the log-density once per chain, once per pair when the
     proposals coincide, and the gradient where the log-density is finite.
 
-    Both compute in whitened coordinates. With :math:`L = \epsilon C` and the whitened
-    drift :math:`h = L^\top\nabla\log\pi(x)`, the proposal is :math:`x' = x + L(h/2 + z)`
+    Both compute in whitened coordinates. With :math:`B = \epsilon C` and the whitened
+    drift :math:`h = B^\top\nabla\log\pi(x)`, the proposal is :math:`x' = x + B(h/2 + z)`
     and the log ratio of the proposal densities is
     :math:`(\lVert z\rVert^2 - \lVert z + (h + h')/2\rVert^2)/2`, so a step costs 3
     products of a row with a :math:`d \times d` factor and a coupled step 7.
@@ -98,23 +98,19 @@ class MALA(GradientKernel):
         chol, inverse = self._ready()
         blas = target.vectorize
         drift_x, drift_y = _drift(state_x, chol, blas), _drift(state_y, chol, blas)
-        # The whitened difference of the proposals' means, L^{-1}(mu_x - mu_y). Infinite
+        # The whitened difference of the proposals' means, B^{-1}(mu_x - mu_y). Infinite
         # drifts, from a gradient that overflowed, can give inf - inf = NaN, which fails
         # the meeting test as in reflection_maximal.
         with np.errstate(over="ignore", invalid="ignore"):
             delta = matvec(inverse, state_x.x - state_y.x, blas=blas) + 0.5 * (drift_x - drift_y)
         z, identical, shift = _reflection(delta, draws, delta)
         # y's whitened residual: the reflected z, or z + delta where the pair is identical,
-        # since there y' = x' = mu_y + L(z + delta).
-        with np.errstate(over="ignore", invalid="ignore"):
-            residual_y = np.where(identical[:, None], z + delta, z - shift)
+        # since there y' = x' = mu_y + B(z + delta).
+        residual_y = np.where(identical[:, None], z + delta, z - shift)
         x = state_x.x + matvec(chol, 0.5 * drift_x + z, blas=blas)
-        with np.errstate(over="ignore", invalid="ignore"):
-            y = np.where(
-                identical[:, None],
-                x,
-                state_y.x + matvec(chol, 0.5 * drift_y + residual_y, blas=blas),
-            )
+        y = np.where(
+            identical[:, None], x, state_y.x + matvec(chol, 0.5 * drift_y + residual_y, blas=blas)
+        )
         proposal_x, proposal_y = evaluate_pair(partial(evaluate_proposal, target), x, y, identical)
         log_u = draws.log_uniform()
         state_x = select(
@@ -158,10 +154,9 @@ class MALA(GradientKernel):
 
 
 def _drift(state: State, chol: FloatArray, blas: bool) -> FloatArray:
-    # The whitened drift h = L^T grad log pi(x), with chol = L = epsilon C, so that the
-    # mean of q(. | x) is x + L h / 2.
-    with np.errstate(over="ignore", invalid="ignore"):
-        drift: FloatArray = matvec(chol.T, cast(FloatArray, state.grad), blas=blas)
+    # The whitened drift h = B^T grad log pi(x), with chol = B = epsilon C, so that the
+    # mean of q(. | x) is x + B h / 2.
+    drift: FloatArray = matvec(chol.T, cast(FloatArray, state.grad), blas=blas)
     return drift
 
 
@@ -173,8 +168,8 @@ def _log_alpha(
     chol: FloatArray,
     blas: bool,
 ) -> FloatArray:
-    # log pi(x') - log pi(x) + log q(x | x') - log q(x' | x): x' = x + L(h / 2 + r) gives
-    # L^{-1}(x' - mu(x)) = r and L^{-1}(x - mu(x')) = -(r + (h + h') / 2); the Gaussian
+    # log pi(x') - log pi(x) + log q(x | x') - log q(x' | x): x' = x + B(h / 2 + r) gives
+    # B^{-1}(x' - mu(x)) = r and B^{-1}(x - mu(x')) = -(r + (h + h') / 2); the Gaussian
     # constants cancel. A rejected proposal (log pi = -inf) carries a zero gradient and may
     # hold non-finite positions: no warnings, and a NaN ratio rejects as -inf does.
     with np.errstate(over="ignore", invalid="ignore"):

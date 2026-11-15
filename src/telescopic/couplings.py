@@ -85,7 +85,9 @@ def _reflection(
     # there; the mask also keeps 0 * inf out where direction is not finite.
     z = draws.normal(delta.shape[1])
     log_u = draws.log_uniform()
-    with np.errstate(invalid="ignore", divide="ignore"):
+    # z.delta can overflow where |delta|^2 is already infinite, as from MALA's whitened
+    # difference at an enormous step; the mask below discards the coefficient there.
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
         squared = np.einsum("ij,ij->i", delta, delta)
         along = np.einsum("ij,ij->i", z, delta)
         identical = log_u < -along - 0.5 * squared

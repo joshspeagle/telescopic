@@ -861,13 +861,18 @@ def test_mala_step_matches_the_reference_with_both_proposal_densities(u):
     np.testing.assert_allclose(acceptance[0], alpha, atol=1e-12)
 
 
-def test_mala_coupled_step_with_an_overflowing_drift_emits_no_warning_and_keeps_the_states():
+@pytest.mark.parametrize("step_size", [1e300, 1e308])
+def test_mala_coupled_step_with_an_overflowing_drift_emits_no_warning_and_keeps_the_states(
+    step_size,
+):
     # A step size of 1e300 makes the drift infinite; the warning was an error under
     # the filter of the test suite, and reached users of sample(). This test relies on
-    # that filter (filterwarnings = error in pyproject.toml) to catch it.
-    kernel = MALA(1e300, cov=[[1.0]])
-    x, y = state([[1.0], [2.0]], grad=True), state([[-1.0], [3.0]], grad=True)
-    new_x, new_y = kernel.coupled_step(TARGET, x, y, random_draws(2, 0))
+    # that filter (filterwarnings = error in pyproject.toml) to catch it. At 1e308 the
+    # whitened drifts stay finite, and z.delta can overflow in the reflection's test.
+    kernel = MALA(step_size, cov=[[1.0]])
+    x, y = state([[1.0], [1.0]], grad=True), state([[-1.0], [1.5]], grad=True)
+    draws = fixed_draws(np.array([[0.3], [-4.0]]), np.full((2, 2), 0.5))
+    new_x, new_y = kernel.coupled_step(TARGET, x, y, draws)
     np.testing.assert_array_equal(new_x.x, x.x)
     np.testing.assert_array_equal(new_y.x, y.x)
 
