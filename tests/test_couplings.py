@@ -6,7 +6,12 @@ from scipy import stats
 from scipy.integrate import quad
 
 from references import P_MIN, Normal, maximal_table, reflection
-from telescopic.couplings import discrete_maximal, maximal, reflection_maximal
+from telescopic.couplings import (
+    _whitened_reflection,
+    discrete_maximal,
+    maximal,
+    reflection_maximal,
+)
 from telescopic.testing import fixed_draws, random_draws
 
 
@@ -50,6 +55,27 @@ def test_reflection_maximal_flags_exactly_the_equal_pairs(seed, d, scale):
     np.testing.assert_allclose(
         np.linalg.norm(zx[~identical], axis=1), np.linalg.norm(zy[~identical], axis=1), rtol=1e-9
     )
+
+
+@given(seed=st.integers(0, 2**32 - 1), d=st.integers(1, 6), scale=st.floats(0.0, 4.0))
+@example(seed=2, d=3, scale=0.0)  # delta = 0: no reflection
+def test_the_whitened_reflection_is_reflection_maximal_with_an_identity_factor(seed, d, scale):
+    # MALA's coupled step relies on this: with C = I, mu_x = delta and mu_y = 0, the same
+    # draws give x = delta + z and, off the identical rows, y = z_y.
+    rng = np.random.default_rng(seed)
+    n = 64
+    delta = scale * rng.standard_normal((n, d))
+    delta[0] = np.inf  # an overflowed drift: no reflection, and the row does not meet
+    normals, uniforms = rng.standard_normal((n, d)), rng.random((n, 1))
+    eye = np.eye(d)
+    x, y, identical = reflection_maximal(
+        delta, np.zeros((n, d)), eye, eye, fixed_draws(normals, uniforms)
+    )
+    z, z_y, flags = _whitened_reflection(delta, fixed_draws(normals, uniforms))
+    np.testing.assert_array_equal(flags, identical)
+    np.testing.assert_array_equal(z, normals)
+    np.testing.assert_array_equal((delta + z)[1:], x[1:])
+    np.testing.assert_array_equal(z_y[~identical], y[~identical])
 
 
 @pytest.mark.parametrize("d", [1, 3, 10])

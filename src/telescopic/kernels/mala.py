@@ -11,7 +11,7 @@ import numpy.typing as npt
 from telescopic._linalg import inverse_lower, matvec
 from telescopic._random import Draws
 from telescopic._types import FloatArray
-from telescopic.couplings import reflection_maximal
+from telescopic.couplings import _whitened_reflection
 from telescopic.kernels.base import (
     GradientKernel,
     State,
@@ -52,6 +52,12 @@ class MALA(GradientKernel):
     uniforms. Each evaluates the log-density once per chain, once per pair when the
     proposals coincide, and the gradient where the log-density is finite.
 
+    Both compute in whitened coordinates. With :math:`L = \epsilon C` and the whitened
+    drift :math:`h = L^\top\nabla\log\pi(x)`, the proposal is :math:`x' = x + L(h/2 + z)`
+    and the log ratio of the proposal densities is
+    :math:`(\lVert z\rVert^2 - \lVert z + (h + h')/2\rVert^2)/2`, so a step costs 3
+    products of a row with a :math:`d \times d` factor and a coupled step 7.
+
     Examples
     --------
     MALA needs the gradient, as ``grad`` or ``log_prob_and_grad``, which it evaluates
@@ -77,13 +83,12 @@ class MALA(GradientKernel):
         self._factors = self._scaled()
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
-        chol, inverse = self._ready()
+        chol, _ = self._ready()
         blas = target.vectorize
-        mean = _mean(state, chol, blas)
-        proposal = evaluate_proposal(
-            target, mean + matvec(chol, draws.normal(len(chol)), blas=blas)
-        )
-        log_alpha = _log_alpha(state, proposal, mean, chol, inverse, blas)
+        drift = _drift(state, chol, blas)
+        z = draws.normal(len(chol))
+        proposal = evaluate_proposal(target, state.x + matvec(chol, 0.5 * drift + z, blas=blas))
+        log_alpha = _log_alpha(state, proposal, z, drift, chol, blas)
         accepted = draws.log_uniform() < log_alpha
         return select(accepted, proposal, state), acceptance(log_alpha)
 
@@ -92,17 +97,27 @@ class MALA(GradientKernel):
     ) -> tuple[State, State]:
         chol, inverse = self._ready()
         blas = target.vectorize
-        mean_x, mean_y = _mean(state_x, chol, blas), _mean(state_y, chol, blas)
-        x, y, identical = reflection_maximal(mean_x, mean_y, chol, inverse, draws, blas=blas)
+        drift_x, drift_y = _drift(state_x, chol, blas), _drift(state_y, chol, blas)
+        # The whitened difference of the proposals' means, L^{-1}(mu_x - mu_y). Infinite
+        # drifts, from a gradient that overflowed, can give inf - inf = NaN, which fails
+        # the meeting test as in reflection_maximal.
+        with np.errstate(over="ignore", invalid="ignore"):
+            delta = matvec(inverse, state_x.x - state_y.x, blas=blas) + 0.5 * (drift_x - drift_y)
+        z, z_y, identical = _whitened_reflection(delta, draws)
+        x = state_x.x + matvec(chol, 0.5 * drift_x + z, blas=blas)
+        with np.errstate(over="ignore", invalid="ignore"):
+            y = np.where(
+                identical[:, None], x, state_y.x + matvec(chol, 0.5 * drift_y + z_y, blas=blas)
+            )
+            # On identical rows y' = mu_y + L(z + delta), so y's residual is z + delta.
+            residual_y = np.where(identical[:, None], z + delta, z_y)
         proposal_x, proposal_y = evaluate_pair(partial(evaluate_proposal, target), x, y, identical)
         log_u = draws.log_uniform()
         state_x = select(
-            log_u < _log_alpha(state_x, proposal_x, mean_x, chol, inverse, blas),
-            proposal_x,
-            state_x,
+            log_u < _log_alpha(state_x, proposal_x, z, drift_x, chol, blas), proposal_x, state_x
         )
         state_y = select(
-            log_u < _log_alpha(state_y, proposal_y, mean_y, chol, inverse, blas),
+            log_u < _log_alpha(state_y, proposal_y, residual_y, drift_y, chol, blas),
             proposal_y,
             state_y,
         )
@@ -138,27 +153,32 @@ class MALA(GradientKernel):
         return f"MALA(step_size={self.step_size}, cov={cov})"
 
 
-def _mean(state: State, chol: FloatArray, blas: bool) -> FloatArray:
-    # The mean of q(. | x): x + (epsilon^2 / 2) Sigma grad, with chol = epsilon C.
-    grad = cast(FloatArray, state.grad)
-    mean: FloatArray = state.x + 0.5 * matvec(chol, matvec(chol.T, grad, blas=blas), blas=blas)
-    return mean
+def _drift(state: State, chol: FloatArray, blas: bool) -> FloatArray:
+    # The whitened drift h = L^T grad log pi(x), with chol = L = epsilon C, so that the
+    # mean of q(. | x) is x + L h / 2.
+    with np.errstate(over="ignore", invalid="ignore"):
+        drift: FloatArray = matvec(chol.T, cast(FloatArray, state.grad), blas=blas)
+    return drift
 
 
 def _log_alpha(
     current: State,
     proposal: State,
-    forward: FloatArray,
+    residual: FloatArray,
+    drift: FloatArray,
     chol: FloatArray,
-    inverse: FloatArray,
     blas: bool,
 ) -> FloatArray:
-    # log pi(x') - log pi(x) + log q(x | x') - log q(x' | x); the Gaussian constants cancel.
-    # A rejected proposal (log pi = -inf) may hold non-finite positions: no warnings, and a
-    # NaN ratio rejects as -inf does.
+    # log pi(x') - log pi(x) + log q(x | x') - log q(x' | x), with the residuals whitened:
+    # x' = x + L(h / 2 + r) gives L^{-1}(x' - mu(x)) = r and L^{-1}(x - mu(x')) =
+    # -(r + (h + h') / 2), so the log ratio of q is (|r|^2 - |r + (h + h')/2|^2) / 2; the
+    # Gaussian constants cancel. A rejected proposal (log pi = -inf) carries a zero
+    # gradient and may hold non-finite positions: no warnings, and a NaN ratio rejects as
+    # -inf does.
     with np.errstate(over="ignore", invalid="ignore"):
-        to = matvec(inverse, proposal.x - forward, blas=blas)
-        back = matvec(inverse, current.x - _mean(proposal, chol, blas), blas=blas)
-        log_q = 0.5 * (np.einsum("ij,ij->i", to, to) - np.einsum("ij,ij->i", back, back))
+        back = residual + 0.5 * (drift + _drift(proposal, chol, blas))
+        log_q = 0.5 * (
+            np.einsum("ij,ij->i", residual, residual) - np.einsum("ij,ij->i", back, back)
+        )
         log_alpha: FloatArray = proposal.log_prob - current.log_prob + log_q
     return log_alpha
