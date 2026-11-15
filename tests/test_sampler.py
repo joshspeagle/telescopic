@@ -1056,3 +1056,19 @@ def test_the_memory_warning_counts_the_moments_of_every_replicate():
     sampler = CoupledSampler(gaussian_log_prob, Normal(np.zeros(100), np.eye(100)), rng=10)
     with pytest.warns(InputWarning, match=r"store about 4\.2 GB of atoms, distances and moments"):
         sampler._check_memory(Settings(0, 0, 1, keep=0), 100_000)
+
+
+def test_a_sampler_whose_record_failed_says_the_replicates_were_lost(monkeypatch):
+    lost = MemoryError("no memory")
+
+    def result(*args):
+        raise lost
+
+    monkeypatch.setattr(engine._Batch, "result", result)
+    sampler = CoupledSampler(gaussian_log_prob, INIT, kernel=KERNEL, rng=3)
+    with pytest.raises(MemoryError):
+        sampler.run(20, k=40, m=40)
+    assert lost.telescopic_result is None
+    notes = [line for line in lost.__notes__ if line.startswith("telescopic:")]
+    assert len(notes) == 1
+    assert "so they were lost" in notes[0]

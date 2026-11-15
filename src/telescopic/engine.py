@@ -350,14 +350,14 @@ def run(
     if error is None:
         return cast(Replicates, replicates)
     if replicates is None:
-        note = "no record of its finished replicates could be made"
+        _attach(error, "telescopic_replicates", None)  # _run noted why
     else:
         note = (
-            f"{len(replicates.index)} of its {len(replicates.requested)} replicates "
-            f"finished and {len(replicates.abandoned)} in progress abandoned; "
-            "error.telescopic_replicates holds the finished ones"
+            f"{_STOPPED} the run with {len(replicates.index)} of its "
+            f"{len(replicates.requested)} replicates finished and {len(replicates.abandoned)} "
+            "in progress abandoned; error.telescopic_replicates holds the finished ones"
         )
-    _attach(error, "telescopic_replicates", replicates, f"{_STOPPED} the run with {note}")
+        _attach(error, "telescopic_replicates", replicates, note)
     try:
         raise error
     finally:
@@ -365,17 +365,31 @@ def run(
         del error, outcome
 
 
-# The start of the note that a run adds to the error that stopped it.
+# The start of the note that a run adds to the error that stopped it, and the notes of a
+# run that recorded nothing: none of its replicates had finished, or their record failed.
 _STOPPED = "telescopic: this error stopped"
+_NONE = f"{_STOPPED} the run before any of its replicates finished"
+_LOST = (
+    f"{_STOPPED} the run, and no record of the replicates finished before it could be made, "
+    "so they were lost"
+)
 
 
-def _attach(error: Exception, name: str, value: Any, note: str) -> None:
-    # Sets a run's attribute and its one note on the error that stopped it; the note of
-    # an earlier run that raised the same object goes.
-    notes = getattr(error, "__notes__", None)
-    if notes:
-        notes[:] = [line for line in notes if not line.startswith(_STOPPED)]
+def _attach(error: Exception, name: str, value: Any, note: str | None = None) -> None:
+    # Sets a run's attribute on the error that stopped it, and its note.
     setattr(error, name, value)
+    _note(error, note)
+
+
+def _note(error: Exception, note: str | None = None) -> None:
+    # The one note of a run on the error that stopped it, which replaces that of an earlier
+    # run that raised the same object; without a note, the error keeps the run's note it
+    # has, or gets _NONE.
+    notes = getattr(error, "__notes__", [])
+    kept = [line for line in notes if line.startswith(_STOPPED)]
+    if note is None:
+        note = kept[0] if kept else _NONE
+    notes[:] = [line for line in notes if not line.startswith(_STOPPED)]
     error.add_note(note)
 
 
@@ -423,6 +437,7 @@ def _run(
     with _Caught() as caught:
         head = _Start(first, initial, seed, None)
     if caught.error is not None:
+        _note(caught.error, _NONE)
         return _Outcome(None, caught.error)
     ndim = len(head.x0)
     starts = itertools.chain([head], (_Start(i, initial, seed, ndim) for i in queue))
@@ -439,12 +454,8 @@ def _run(
     error = caught.error
     with _Caught() as recording:
         return _Outcome(batch.result(seed, np.sort(requested), start), error)
-    if error is None:
-        return _Outcome(None, recording.error)
-    error.add_note(
-        "telescopic: no record of the replicates finished before this error could be made, "
-        "so they were lost"
-    )
+    error = error or recording.error
+    _note(cast(Exception, error), _LOST)
     return _Outcome(None, error)
 
 

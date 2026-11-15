@@ -487,8 +487,10 @@ class CoupledSampler:
                     note = self._stopped(part, len(indices), others)
                     engine._attach(error, "telescopic_result", self._result(), note)
             elif error is not None:
-                note = f"{engine._STOPPED} the run before any of its replicates finished"
-                engine._attach(error, "telescopic_result", None, note)
+                # The engine's note when it recorded nothing, else none had finished.
+                engine._attach(
+                    error, "telescopic_result", None, None if part is None else engine._NONE
+                )
             if error is not None:
                 try:
                     raise error

@@ -11,7 +11,7 @@ from references import (
 )
 from telescopic._io import record_times
 from telescopic._random import MAIN, replicate_generator
-from telescopic.engine import Settings, Status, merge, run, stored_bytes
+from telescopic.engine import Settings, Status, _Batch, merge, run, stored_bytes
 from telescopic.estimators import averaging_times, correction_coefficients
 from telescopic.initial import Empirical, Normal
 from telescopic.kernels import MALA, Gibbs, RandomWalk, State
@@ -614,3 +614,39 @@ def test_merged_moments_and_centers_follow_their_replicates():
     merged = merge([simulate(indices=range(12, 20), keep=10), simulate(n=12, keep=10)])
     assert_same_outputs(merged, whole)
     assert whole.moments.shape == (20, 5)
+
+
+def run_notes(error):
+    return [line for line in error.__notes__ if line.startswith("telescopic:")]
+
+
+def test_the_note_says_whether_no_replicate_finished_or_their_record_was_lost(monkeypatch):
+    # No replicate ran: the initial distribution failed on the first draw.
+    failed = RuntimeError("no draw")
+
+    def initial(rng):
+        raise failed
+
+    with pytest.raises(RuntimeError, match="no draw"):
+        simulate(initial=initial)
+    assert failed.telescopic_replicates is None
+    assert run_notes(failed) == [
+        "telescopic: this error stopped the run before any of its replicates finished"
+    ]
+    # The replicates finished, but their record failed; the same object raised twice
+    # keeps one note.
+    lost = MemoryError("no memory")
+
+    def result(*args):
+        raise lost
+
+    monkeypatch.setattr(_Batch, "result", result)
+    for _ in range(2):
+        with pytest.raises(MemoryError):
+            simulate()
+    assert lost.telescopic_replicates is None
+    note = (
+        "telescopic: this error stopped the run, and no record of the replicates finished "
+        "before it could be made, so they were lost"
+    )
+    assert run_notes(lost) == [note]
