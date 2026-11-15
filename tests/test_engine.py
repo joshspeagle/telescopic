@@ -2,13 +2,20 @@ import numpy as np
 import pytest
 from scipy import stats
 
-from references import Failing, assert_same_replicates, dense, gaussian_log_prob
+from references import (
+    Failing,
+    assert_same_outputs,
+    assert_same_replicates,
+    dense,
+    gaussian_log_prob,
+)
 from telescopic._io import record_times
 from telescopic._random import MAIN, replicate_generator
 from telescopic.engine import Settings, Status, merge, run, stored_bytes
 from telescopic.estimators import averaging_times, correction_coefficients
 from telescopic.initial import Empirical, Normal
 from telescopic.kernels import MALA, Gibbs, RandomWalk, State
+from telescopic.measure import SignedMeasure
 from telescopic.target import Target
 
 # Point by point, so that a replicate's results are bitwise independent of the batch.
@@ -472,8 +479,137 @@ def test_max_iter_beyond_int32_raises_only_where_times_are_stored(monkeypatch):
     with pytest.raises(ValueError, match=r"max_iter must be at most 2\*\*31 - 1"):
         simulate(max_iter=2**31)
     simulate(k=0, m=0, store=False, max_iter=2**31)
+    simulate(keep=0, max_iter=2**31)
     # Without a cap, a replicate that reaches the largest time raises, keeping the others.
     monkeypatch.setattr("telescopic.engine.MAX_TIME", 4)
     with pytest.raises(OverflowError, match=r"replicate \d+ reached t = 5") as caught:
         simulate(k=0, m=2)
     assert np.all(caught.value.telescopic_replicates.meeting_time <= 5)
+
+
+def test_keep_must_be_none_or_a_non_negative_integer_with_store():
+    with pytest.raises(TypeError, match=r"keep must be None or an integer >= 0, not 2\.5"):
+        simulate(keep=2.5)
+    with pytest.raises(ValueError, match="keep must be at least 0, not -1"):
+        simulate(keep=-1)
+    with pytest.raises(ValueError, match="keep needs store=True"):
+        simulate(k=0, m=0, store=False, keep=3)
+
+
+@pytest.mark.parametrize(
+    "target",
+    [TARGET, Target(gaussian_log_prob, vectorize=True)],
+    ids=["point by point", "vectorized"],
+)
+def test_kept_rows_equal_the_same_rows_of_a_run_that_keeps_every_atom(target):
+    # Replicate 12, the last kept, met; the others' rows are left out.
+    options = {"n": 40, "k": 2, "m": 10, "lag": 2, "max_iter": 30, "target": target}
+    full, reduced = simulate(**options), simulate(keep=13, **options)
+    assert 12 in full.owner
+    for name in ("index", "meeting_time"):
+        np.testing.assert_array_equal(getattr(reduced, name), getattr(full, name), name)
+    rows, distances = full.owner < 13, full.distance_owner < 13
+    for name in ("atoms", "weights", "owner", "time"):
+        np.testing.assert_array_equal(getattr(reduced, name), getattr(full, name)[rows], name)
+    for name in ("distance_owner", "distance_time", "distance"):
+        np.testing.assert_array_equal(getattr(reduced, name), getattr(full, name)[distances], name)
+    assert full.moments.shape == (40, 0)
+    assert reduced.moments.shape == (40, 5)
+
+
+def moment_values(replicates):
+    # Each replicate's values of h_c(x) = (x - c_r, products over triu_indices(d)), the
+    # sums of |w h_c(x)|, and the atom counts n, for the replicates that met.
+    met = np.isfinite(replicates.meeting_time)
+    position = np.searchsorted(replicates.index[met], replicates.owner)
+    center = replicates.center[met]
+    shifted = replicates.atoms - center[position]
+    i, j = np.triu_indices(replicates.atoms.shape[1])
+    h = np.concatenate([shifted, shifted[:, i] * shifted[:, j]], axis=1)
+    measure = SignedMeasure(replicates.atoms, replicates.weights, position, int(met.sum()))
+    magnitude = SignedMeasure(replicates.atoms, np.abs(replicates.weights), position, len(center))
+    count = np.bincount(position, minlength=len(center))[:, None]
+    return measure.per_replicate(lambda _: h), magnitude.per_replicate(lambda _: np.abs(h)), count
+
+
+def test_moments_equal_per_replicate_values_of_the_kept_atoms_within_rounding():
+    # Claim M2: |moments - pi_r(h_c)| <= 2 gamma_{n+1} sum |w h_c(x)| elementwise, and for
+    # the means |a_r - pi_r(x)| <= |s_r - 1| |c_r| + 2 gamma_{n+1} sum |w x| + eps |a_r|,
+    # with s_r the sum of the replicate's weights. Censored pairs have NaN rows, and c_r is
+    # the replicate's first atom, X_k.
+    replicates = simulate(n=30, k=3, m=12, lag=4, max_iter=14, keep=30)
+    met = np.isfinite(replicates.meeting_time)
+    assert 0 < met.sum() < 30
+    assert np.isnan(replicates.moments[~met]).all()
+    assert np.isnan(replicates.center[~met]).all()
+    first = np.searchsorted(replicates.owner, replicates.index[met])
+    np.testing.assert_array_equal(replicates.center[met], replicates.atoms[first])
+    assert (replicates.time[first] == 3).all()
+    expected, magnitude, n = moment_values(replicates)
+    eps = np.finfo(float).eps
+    gamma = (n + 1) * eps / (1 - (n + 1) * eps)
+    moments = replicates.moments[met]
+    assert np.all(np.abs(moments - expected) <= 2 * gamma * magnitude)
+    position = np.searchsorted(replicates.index[met], replicates.owner)
+    measure = SignedMeasure(replicates.atoms, replicates.weights, position, int(met.sum()))
+    plain = measure.per_replicate(lambda x: x)
+    size = SignedMeasure(replicates.atoms, np.abs(replicates.weights), position, len(plain))
+    total = np.bincount(position, replicates.weights)[:, None]
+    mean = replicates.center[met] + moments[:, :2]
+    bound = (
+        np.abs(total - 1) * np.abs(replicates.center[met])
+        + 2 * gamma * size.per_replicate(np.abs)
+        + eps * np.abs(mean)
+    )
+    assert np.all(np.abs(mean - plain) <= bound)
+
+
+def test_moments_do_not_depend_on_the_number_of_lanes():
+    runs = [simulate(n=30, k=3, m=8, lag=2, lanes=lanes, keep=10) for lanes in (1, 7, 64)]
+    for other in runs[1:]:
+        np.testing.assert_array_equal(other.center, runs[0].center)
+        np.testing.assert_array_equal(other.moments, runs[0].moments)
+
+
+@pytest.mark.parametrize(("ndim", "width"), [(100, 100 + 5050), (101, 202)])
+def test_moments_are_variances_above_100_dimensions(ndim, width):
+    # From a point mass, a pair meets when X rejects its first proposal; those that do not
+    # are censored at 20.
+    replicates = run(
+        Target(gaussian_log_prob, vectorize=True),
+        RandomWalk(np.eye(ndim)),
+        Empirical(np.zeros((1, ndim))),
+        range(8),
+        k=0,
+        m=2,
+        lag=1,
+        max_iter=20,
+        keep=8,
+        rng=2,
+    )
+    assert replicates.moments.shape == (8, width)
+    met = np.isfinite(replicates.meeting_time)
+    assert met.any()
+    position = np.searchsorted(replicates.index[met], replicates.owner)
+    shifted = replicates.atoms - replicates.center[met][position]
+    measure = SignedMeasure(replicates.atoms, replicates.weights, position, int(met.sum()))
+    i, j = np.triu_indices(ndim) if ndim <= 100 else (np.arange(ndim), np.arange(ndim))
+    squares = replicates.moments[met][:, ndim:][:, i == j]
+    np.testing.assert_allclose(
+        squares, measure.per_replicate(lambda _: shifted**2), rtol=1e-12, atol=1e-12
+    )
+
+
+def test_store_false_records_nothing():
+    # The meeting-time pilot: no rows, no times and no moments.
+    replicates = simulate(k=0, m=0, store=False)
+    for name in ("atoms", "weights", "owner", "time", "distance_owner", "distance"):
+        assert not len(getattr(replicates, name)), name
+    assert replicates.center.shape == replicates.moments.shape == (20, 0)
+
+
+def test_merged_moments_and_centers_follow_their_replicates():
+    whole = simulate(keep=10)
+    merged = merge([simulate(indices=range(12, 20), keep=10), simulate(n=12, keep=10)])
+    assert_same_outputs(merged, whole)
+    assert whole.moments.shape == (20, 5)

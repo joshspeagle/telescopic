@@ -178,7 +178,7 @@ class Result:
             np.searchsorted(replicates.index[met], replicates.owner),
             self.n_replicates,
         )
-        self.k, self.m, self.lag, self.thin, self.max_iter, _ = replicates.settings
+        self.k, self.m, self.lag, self.thin, self.max_iter, *_ = replicates.settings
         self.seed, self.kernel, self.initial = replicates.seed, kernel, initial
         self._replicates = replicates
         self.n_log_prob, self.n_grad = replicates.n_log_prob, replicates.n_grad
