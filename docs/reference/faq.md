@@ -15,21 +15,17 @@ draw the signed histograms instead ([Plot a result](../guide/plots.md)), and
 {meth}`~telescopic.Result.chains` returns the ordinary MCMC chains of the kept
 {term}`replicates <replicate>`, without the bias correction, for tools that need draws.
 
-### Why is my variance negative?
+### Why is my variance negative, or a probability outside [0, 1]?
 
-{meth}`~telescopic.Result.var` and {meth}`~telescopic.Result.cov` are {term}`unbiased`,
-and the negative weights of the {term}`signed measures <signed measure>` let an unbiased
-estimate fall below 0; a start far wider than the target can make it so.
+An estimate is a weighted sum over the atoms, and some weights of the
+{term}`signed measures <signed measure>` are negative, so an {term}`unbiased` estimate
+can fall outside the range of the function averaged
+([What the atoms give](../concepts/signed-measures.md#what-the-atoms-give)).
+{meth}`~telescopic.Result.var` and {meth}`~telescopic.Result.cov` are unbiased, and a
+start far wider than the target can make a variance negative;
 {meth}`~telescopic.Result.std` returns $\sqrt{\max(0, \widehat{\mathrm{Var}})}$, which
 is {term}`consistent` but not unbiased
 ([Covariances and variances](../guide/estimates.md#covariances-and-variances)).
-
-### Why is an estimated probability below 0 or above 1?
-
-For the same reason: an estimate is a weighted sum with some negative weights, so it can
-fall outside the range of the function averaged, though its average over
-replicates is unbiased
-([What the atoms give](../concepts/signed-measures.md#what-the-atoms-give)).
 
 ### Do quantiles and credible intervals have error bars?
 
@@ -41,14 +37,14 @@ of replicates grows, but not unbiased and without a standard error
 
 ### How many replicates do I need?
 
-{func}`telescopic.sample` runs 100 by default and needs at least 2. The standard errors
-fall as $1/\sqrt R$; to reach a target error, size a second run from the standard error
-of a first one, and fix the number before looking at the results
+The standard errors fall as $1/\sqrt R$; to reach a target error, size a second run
+from the standard error of a first one, and fix the number before looking at the results
 ([How many replicates](../guide/settings.md#how-many-replicates)).
 
 ### Can I add replicates to a run, or continue one that stopped?
 
-Yes. {meth}`telescopic.CoupledSampler.resume` makes a new sampler continue a returned or
+Yes: a second `sampler.run(n)` on the same sampler adds `n` replicates;
+{meth}`telescopic.CoupledSampler.resume` makes a new sampler continue a returned or
 loaded result with its seed, settings, pilot and tuning, first running the replicates
 that an interrupted run never started
 ([Continuing a run](../guide/save-load-merge.md#continuing-a-run)), and

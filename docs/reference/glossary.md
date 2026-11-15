@@ -23,8 +23,8 @@ burn-in
 censored pair
   A pair still unmet when $t$ reaches the cap `max_iter`. Its meeting time is `inf`,
   and it is left out of the estimates, of $R$ and of the signed measure, which biases
-  the estimates. Without a cap, the default, no pair of a run is censored; pairs of
-  the {term}`meeting-time pilot` are censored at 100,000 iterations
+  the estimates. Without a cap, the default, no pair of a run is censored, but pairs of
+  the {term}`meeting-time pilot` can be
   ([Censored pairs](warnings.md#censored-pairs-censored)).
 
 common random numbers
@@ -48,21 +48,21 @@ coupling
   space never are ([Two chains that meet](../concepts/two-chains.md#a-coupling)).
 
 inefficiency
-  The mean cost of a replicate times the variance of its estimate,
-  $\mathbb E[C]\,\mathbb V[H_{k:m}]$: the variance of an average over replicates at a
-  fixed budget of kernel applications, times that budget. It is the figure to minimize
-  when comparing kernels or settings ([Cost](../guide/settings.md#cost)).
+  $\mathbb E[C]\,\mathbb V[H_{k:m}]$, the mean cost of a replicate times the variance of
+  its estimate: the figure to minimize when comparing kernels or settings, computed from
+  `result.costs` and `result.estimate(h).replicates`
+  ([Theory](../theory.md#cost), [Cost](../guide/settings.md#cost)).
 
 lag
   $L$, the argument `lag`, at least 1: how many steps the second chain of a pair runs
-  behind the first, so that $X_t$ is compared with $Y_{t-L}$. The automatic settings
-  take $L = \max(1, k)$ ([The lag](../concepts/two-chains.md#the-lag)).
+  behind the first, so that $X_t$ is compared with $Y_{t-L}$
+  ([The lag](../concepts/two-chains.md#the-lag)).
 
 late pair
   A pair that meets after $k + L$: only such pairs can carry a bias correction.
   `result.diagnostics()["late_fraction"]` is the fraction of pairs that are late or
   censored, since a {term}`censored pair` is left out of the estimates and carries no
-  correction, and the `late` warning fires above a quarter
+  correction, and the `late` warning fires when it is high
   ([Late pairs](warnings.md#late-pairs-late)).
 
 maximal coupling
@@ -80,9 +80,9 @@ meeting time
   [Meeting times and distance to stationarity](../concepts/meeting-times.md)).
 
 meeting-time pilot
-  The 100 pairs with lag 1 that the automatic settings run before the replicates, until
-  they meet or until 100,000 iterations; the burn-in $k$ is chosen from their meeting
-  times, which `sampler.pilot` and `result.pilot` hold
+  The pairs with lag 1 that the automatic settings run before the replicates, until
+  they meet or reach a cap; the burn-in $k$ is chosen from their meeting times.
+  `sampler.pilot` holds the meeting times of every pilot pair run so far
   ([The automatic pipeline](../guide/settings.md#the-automatic-pipeline)).
 
 pair
@@ -90,11 +90,6 @@ pair
   initial distribution, move by the same kernel under a {term}`coupling`, and run
   with $Y$ the {term}`lag` $L$ behind $X$
   ([Two chains that meet](../concepts/two-chains.md)).
-
-pilot
-  A run before the replicates that sets what the replicates use: the
-  {term}`tuning pilot` or the {term}`meeting-time pilot`
-  ([The automatic pipeline](../guide/settings.md#the-automatic-pipeline)).
 
 reflection-maximal coupling
   The {term}`maximal coupling` of two Gaussians with one covariance: it gives both
@@ -105,10 +100,9 @@ reflection-maximal coupling
   ([Two chains that meet](../concepts/two-chains.md#a-coupling)).
 
 relative cost
-  The mean cost of a replicate, in kernel applications with a coupled step counted as
-  two, divided by $m - k + 1$, the number of averaged states: about 1 for an MCMC
-  average without a burn-in. `result.diagnostics()["relative_cost"]` holds it
-  ([Cost](../guide/settings.md#cost)).
+  $\mathbb E[C]/(m - k + 1)$, the mean cost of a replicate per averaged state, which
+  `result.diagnostics()["relative_cost"]` holds
+  ([Theory](../theory.md#cost), [Cost](../guide/settings.md#cost)).
 
 replicate
   One {term}`pair` of coupled chains, run with random numbers of its own, and what it
@@ -118,30 +112,28 @@ replicate
   ([Error bars from replicates](../concepts/error-bars.md#where-the-error-bar-comes-from)).
 
 run length
-  $m$, the argument `m`: the last averaged time. A replicate runs until $\max(\tau, m)$,
-  and the automatic settings take $m = 10k$
+  $m$, the argument `m`: the last averaged time. A replicate runs until $\max(\tau, m)$
   ([The settings](../guide/settings.md#the-settings)).
 
 signed measure
   A set of {term}`atoms <atom>` with weights that sum to 1, some of which can be
-  negative: a pair that meets within $k + L$ steps gives none. Each
+  negative: a pair that meets within $k + L$ steps gives no negative weight. Each
   replicate returns one, $\hat\pi_r$, whose weighted sum of any $h$ at its atoms is the
   replicate's estimate of $\pi(h)$. The atoms are not draws from the target
   ([Signed measures, not samples](../concepts/signed-measures.md)).
 
 tail index
   The power $\alpha$ at which the probability that $\tau - L + 1$ exceeds $t$ falls as
-  $t^{-\alpha}$, estimated by Hill's estimator from the largest meeting times of at
-  least 500 replicates. Below 2 the meeting times have an infinite variance, and the
-  `tail` warning fires
-  ([Heavy-tailed meeting times](warnings.md#heavy-tailed-meeting-times-tail)).
+  $t^{-\alpha}$, estimated by Hill's estimator from the largest meeting times and held
+  in `result.diagnostics()["tail_index"]`. Below 2 the meeting times have an infinite
+  variance; the `tail` warning gives when the index is computed and when the warning
+  fires ([Heavy-tailed meeting times](warnings.md#heavy-tailed-meeting-times-tail)).
 
 tuning pilot
-  The four adaptive Metropolis chains that tune the kernel's parameters left as `None`
-  before any pair runs. MALA and HMC then tune their `step_size` by dual averaging on
-  four more chains started from the pilot's last states
-  ([Choose a kernel](../guide/kernels.md#mala)). The $\hat R$ of the adaptive chains is
-  checked by the `tuning` warning, and `result.tuning` holds their report
+  The adaptive chains that tune the kernel's parameters left as `None` before any pair
+  runs, followed for MALA and HMC by a tuning of `step_size`
+  ([Choose a kernel](../guide/kernels.md)). The `tuning` warning checks their $\hat R$,
+  and `result.tuning` holds their report
   ([The automatic pipeline](../guide/settings.md#the-automatic-pipeline)).
 
 unbiased

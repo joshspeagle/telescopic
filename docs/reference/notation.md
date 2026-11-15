@@ -92,25 +92,18 @@ $\hat\pi_r$
 $C$
 : The cost of each replicate, in kernel applications: `result.costs`.
 
-Relative cost
-: $\mathbb E[C]/(m - k + 1)$: `result.diagnostics()["relative_cost"]`.
-
-Inefficiency
-: $\mathbb E[C]\,\mathbb V[H_{k:m}]$: not an attribute;
-  [Cost](../guide/settings.md#cost) computes it from `result.costs` and
-  `estimate.replicates`.
-
 ## Guarantees and estimates from many replicates
 
 $R$
-: The number of replicates: the argument `n_replicates` of `sample` and of
-  {meth}`~telescopic.CoupledSampler.run`, the number requested, and
-  `result.n_replicates`, the number whose pairs met.
+: The number of replicates: the argument `n_replicates` of `sample`, the number
+  requested; {meth}`CoupledSampler.run(n) <telescopic.CoupledSampler.run>` adds `n`
+  replicates to those so far; and `result.n_replicates`, the number whose pairs met.
 
 $\alpha$
 : One minus the confidence level: the argument `level` of `result.estimate` is
   $1 - \alpha$, 0.95 by default. `estimate.interval` holds the interval
-  $\bar H \pm t_{R-1,\,1-\alpha/2}\,\hat\sigma/\sqrt R$.
+  $\bar H \pm t_{R-1,\,1-\alpha/2}\,\hat\sigma/\sqrt R$. Not the $\alpha$ of the
+  {term}`tail index`.
 
 $a_r$, $\bar a$, $\sqrt{\mathrm{diag}(S_a)/R}$
 : `estimate.replicates[r]`, `estimate.value` and `estimate.standard_error`.
@@ -138,13 +131,13 @@ $c_r$, $f_r$, $S_r$
 ## Choosing k, m and L
 
 $R_0$
-: The number of pilot pairs, 100: the default of
-  {meth}`sampler.meeting_times() <telescopic.CoupledSampler.meeting_times>`, and the
-  length of `sampler.pilot` after the automatic settings.
+: The number of pairs in `sampler.pilot`, which holds every pilot pair run so far; the
+  automatic settings complete it to their count, and
+  {meth}`sampler.meeting_times() <telescopic.CoupledSampler.meeting_times>` adds more.
 
 $\beta$, $\hat q_\beta$
-: The argument `quantile` of {func}`telescopic.tuning.choose_k`, 0.99 by default, and
-  the quantile that it takes of $\tau - 1$.
+: The argument `quantile` of {func}`telescopic.tuning.choose_k`, and the quantile that
+  it takes of $\tau - 1$.
 
 ## Distance to stationarity
 
@@ -162,26 +155,23 @@ These symbols appear in the [kernels guide](../guide/kernels.md) and in the docs
 of the kernels, not in Theory.
 
 $\Sigma$
-: The argument `cov` of a kernel, the proposal covariance or the inverse mass matrix.
+: The argument `cov` of a kernel: the shape of the proposal, whose covariance is
+  $\lambda^2\Sigma$ for {class}`~telescopic.kernels.RandomWalk` and $\epsilon^2\Sigma$
+  for {class}`~telescopic.kernels.MALA`, or the inverse mass matrix of
+  {class}`~telescopic.kernels.HMC`.
 
 $\lambda$
-: The argument `scale` of {class}`~telescopic.kernels.RandomWalk`, $2.38/\sqrt d$ by
-  default.
+: The argument `scale` of {class}`~telescopic.kernels.RandomWalk`.
 
 $\epsilon$
 : The argument `step_size` of {class}`~telescopic.kernels.MALA` and
   {class}`~telescopic.kernels.HMC`.
 
 $j$
-: The argument `jitter` of {class}`~telescopic.kernels.HMC`, 0.5 by default: each
-  trajectory's step is uniform between $(1 - j)\epsilon$ and $(1 + j)\epsilon$.
+: The argument `jitter` of {class}`~telescopic.kernels.HMC`, which varies the step from
+  one trajectory to the next.
 
 $\gamma$, $\sigma$
 : The arguments `meeting_weight` and `meeting_scale` of
   {class}`~telescopic.kernels.HMC`: the probability of its meeting step and the scale of
   that step.
-
-$\alpha$ (tail index)
-: The tail index of the meeting times, `result.diagnostics()["tail_index"]`
-  ([Heavy-tailed meeting times](warnings.md#heavy-tailed-meeting-times-tail)); not the
-  $\alpha$ of a confidence level.
