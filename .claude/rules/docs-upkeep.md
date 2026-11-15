@@ -15,7 +15,7 @@ the same pull request. The documentation states only what the code does now.
 
 ## Which pages a module maps to
 
-| Module of `src/telescopic/` | Start and how-to guides | Tutorials | Theory and reference |
+| Module of `src/telescopic/` | Start and how-to guides | Tutorials | Concepts, theory and reference |
 |---|---|---|---|
 | `__init__.py` (the public namespace) | `start/quickstart.md` | | `api.md` |
 | `sampler.py`, `tuning.py` | `start/quickstart.md`, `start/coming-from-emcee.md`, `guide/settings.md`, `guide/step-size.md` | `tutorials/choosing-settings.md` | `theory.md`, `api.md` (Running, Building blocks) |
@@ -23,7 +23,7 @@ the same pull request. The documentation states only what the code does now.
 | `target.py`, `initial.py` | `start/quickstart.md`, `start/coming-from-emcee.md`, `guide/log-density.md`, `guide/initial-distribution.md` | | `api.md` (Targets and initial distributions) |
 | `engine.py`, `_parallel.py`, `_random.py` | `guide/parallel.md`, `guide/settings.md` | `tutorials/how-it-works.md`, `tutorials/unbiased-on-average.md` | `api.md` (Building blocks) |
 | `_progress.py` | `start/install.md`, `guide/parallel.md` | | |
-| `estimators.py`, `measure.py`, `results.py` | `start/coming-from-emcee.md`, `guide/estimates.md`, `guide/plots.md`, `guide/save-load-merge.md`, `guide/meeting-times.md` | `tutorials/how-it-works.md`, `tutorials/unbiased-on-average.md` | `theory.md`, `reference/result-fields.md`, `reference/warnings.md`, `api.md` (Results, Building blocks) |
+| `estimators.py`, `measure.py`, `results.py` | `start/coming-from-emcee.md`, `guide/estimates.md`, `guide/plots.md`, `guide/save-load-merge.md`, `guide/meeting-times.md` | `tutorials/how-it-works.md`, `tutorials/unbiased-on-average.md` | `concepts/burn-in-bias.md`, `theory.md`, `reference/result-fields.md`, `reference/warnings.md`, `api.md` (Results, Building blocks) |
 | `_io.py` (saving and loading) | `guide/save-load-merge.md` | | `api.md` (Results) |
 | `diagnostics.py`, `warnings.py` | `guide/meeting-times.md` | `tutorials/failure-modes.md`, `tutorials/choosing-settings.md` | `theory.md`, `reference/result-fields.md`, `reference/warnings.md`, `api.md` (Diagnostics, plots and checks; Warnings) |
 | `plotting.py` | `guide/plots.md`, `guide/meeting-times.md` | `tutorials/how-it-works.md` | `api.md` (Diagnostics, plots and checks) |

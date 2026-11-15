@@ -65,6 +65,13 @@ start/coming-from-emcee
 
 ```{toctree}
 :hidden:
+:caption: Concepts
+
+concepts/burn-in-bias
+```
+
+```{toctree}
+:hidden:
 :caption: Tutorials
 
 tutorials/how-it-works
