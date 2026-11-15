@@ -53,8 +53,9 @@ bars from the target's mean.
 The bias at $k$ is the distance from $\mathbb E[h(X_k)]$ to $\pi(h)$, and it can be
 written as the sum of the steps that $\mathbb E[h(X_t)]$ takes on its way to $\pi(h)$
 after time $k$. Each step is the change of the expectation over $L$ steps, and a second
-chain that runs $L$ steps behind the first estimates it: at each time $t$,
-the difference $h(X_t) - h(Y_{t-L})$ between the two chains.
+chain that runs $L$ steps behind the first estimates it by the difference
+$h(X_t) - h(Y_{t-L})$ between the two chains at each time $t$
+([The telescoping correction](telescoping-correction.md)).
 
 The sum has infinitely many steps. It can be computed from one pair of chains only if
 the differences between the two chains become zero after a finite time, which requires

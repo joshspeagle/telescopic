@@ -23,8 +23,8 @@ can make two chains equal. Each chain proposes a point from a Gaussian centered 
 current state and accepts it with the Metropolis probability. The coupling draws the two
 proposals from the **reflection-maximal coupling** of the two Gaussians: it draws $X$'s
 proposal, and with probability equal to the ratio of $Y$'s proposal density to $X$'s at
-that point, capped at 1, it gives $Y$ the same point; otherwise it gives $Y$ the mirror image of $X$'s offset across the
-line halfway between the two centers. Each proposal on its own has its chain's Gaussian
+that point, capped at 1, it gives $Y$ the same point; otherwise it gives $Y$ the mirror
+image of $X$'s offset across the line halfway between the two centers. Each proposal on its own has its chain's Gaussian
 law, and the two coincide as often as two draws from those Gaussians can. Both chains
 then decide whether to accept with one shared uniform number, so that when the proposals
 coincide and both chains accept, the chains are at the same point.
@@ -74,9 +74,9 @@ correction.
 ```
 
 The lag sets which differences the pair provides. A difference between $X_t$ and
-$Y_{t-L}$ compares the chain at two times $L$ steps apart, which is what the telescoping
-correction adds up. The lag also sets
-how much correction a pair needs: a pair that meets within $k + L$ steps contributes no
+$Y_{t-L}$ compares the chain at two times $L$ steps apart, which is what
+[the telescoping correction](telescoping-correction.md) adds up. The lag also sets how
+much correction a pair needs: a pair that meets within $k + L$ steps contributes no
 correction, and its estimate is the ordinary average after the burn-in. telescopic's
 automatic settings take $L = k$, so that most pairs meet that early
 ([Settings](../guide/settings.md#the-settings)), and
