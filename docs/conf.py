@@ -114,9 +114,10 @@ nitpicky = True
 
 # Sphinx fetches each inventory once. CI fetches them with retries into the directory
 # TELESCOPIC_DOCS_INVENTORIES, read first; the site is read when that file is missing.
-# A relative directory is taken from the working directory, not from docs/.
+# Sphinx runs this file in docs/, where a relative path would no longer be the one meant.
 _inventories = os.environ.get("TELESCOPIC_DOCS_INVENTORIES")
-_inventories = os.path.abspath(_inventories) if _inventories else None
+if _inventories and not os.path.isabs(_inventories):
+    raise ValueError(f"TELESCOPIC_DOCS_INVENTORIES must be an absolute path, not {_inventories!r}")
 intersphinx_mapping = {
     name: (url, (os.path.join(_inventories, f"{name}.inv"), None) if _inventories else None)
     for name, url in {
