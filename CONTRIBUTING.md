@@ -54,6 +54,13 @@ full build:
 TELESCOPIC_DOCS_EXECUTE=cache sphinx-build docs docs/_build/html
 ```
 
+The build reads the inventories of Python, NumPy, SciPy and Matplotlib, which resolve
+references to their documentation, from their sites. When the environment variable
+`TELESCOPIC_DOCS_INVENTORIES` names a directory by its absolute path, it reads
+`<name>.inv` there first, as `python.inv`, and the site when that file is missing. CI
+fetches the four into one with retries before it builds, so that a site that does not
+answer once does not fail the build.
+
 The API reference, `docs/api.md`, is an index of autosummary tables, one per section. The
 build generates a page for each name the tables list into `docs/api/`, which is not
 committed: a class's page shows its attributes and methods, and a module's page its
