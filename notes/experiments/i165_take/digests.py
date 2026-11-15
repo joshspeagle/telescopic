@@ -13,7 +13,7 @@ that widen a buffer and lanes that leave and enter at different times:
   the buffer), at 1, 7 and 256 lanes, with `max_iter` so that some pairs are censored;
 - `dual_averaging` alone, for `MALA` and `HMC`;
 - `testing.random_draws` and `testing.fixed_draws`, with requests of sizes 1, 3 and 100.
-The parent prints both trees' setup lines and the lines that differ, then a verdict.
+The parent prints both trees' three header lines, the lines that differ, then a count.
 
 Run as `OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 python
 notes/experiments/i165_take/digests.py BEFORE AFTER`, where BEFORE and AFTER are the roots
@@ -28,6 +28,7 @@ from pathlib import Path
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
+HEADER = 3
 
 
 def lines():
@@ -98,14 +99,17 @@ def run(root):
 
 def compare(before, after):
     old, new = run(before), run(after)
-    print("before", old[0])
-    print("after ", new[0])
-    # The setup lines name the commits; every other line must agree.
-    different = [(a, b) for a, b in zip(old[1:], new[1:], strict=True) if a != b]
+    # The first HEADER lines are those of seeded_outputs.py: the setup, which names the
+    # commit, NumPy's build and whether the threads are pinned. Every later line must agree.
+    for a, b in zip(old[:HEADER], new[:HEADER], strict=True):
+        print("before", a)
+        print("after ", b)
+    pairs = list(zip(old[HEADER:], new[HEADER:], strict=True))
+    different = [(a, b) for a, b in pairs if a != b]
     for a, b in different:
         print("before", a)
         print("after ", b)
-    print(f"{len(old) - 1} lines, {len(different)} differ")
+    print(f"{len(pairs)} lines of digests, {len(different)} differ")
 
 
 if __name__ == "__main__":

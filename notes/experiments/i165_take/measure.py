@@ -10,13 +10,18 @@ Method. A nearly free target: the standard normal in d = 2, log-density and grad
 vectorized. Each workload runs twice per round, in alternation:
 - plain, timed as a whole in CPU time of the process (`time.process_time`), since the
   machine may be shared with other jobs;
-- instrumented, with `Streams._take` wrapped so that the wall time inside each call is
-  summed (one `perf_counter` pair per call, about 0.1 us, is counted as `_take`'s), and
-  its requests and the numbers they return counted.
-The share is the median over rounds of the instrumented time inside `_take` per step
-divided by the median over rounds of the plain time per step. The fixed part is that
-time less the time to generate the numbers returned, measured in blocks of 2^16: it
-bounds what drawing in blocks could save, since a block still generates the same numbers.
+- instrumented, with the two requests of a kernel, `Draws.normal` and `Draws.uniform`
+  (which `log_uniform` calls), wrapped so that the wall time inside each is summed (one
+  `perf_counter` pair per request, about 0.1 us, is counted as the request's), and the
+  requests and the numbers they return counted. Both serve a request through
+  `Streams._take` (or, for uniforms after #165, its vector form).
+The share is the median over rounds of the instrumented time in requests per step
+divided by the median over rounds of the plain time per step. The script also times the
+generation of one normal and one uniform in blocks of 2^16 (`per_call` of
+`i77_kernels/step_times.py`, CPU time); `summarize.py` subtracts the generation of the
+numbers returned, at one cost pooled over all the runs it reads, to give the fixed part,
+which bounds what drawing in blocks could save, since a block still generates the same
+numbers.
 
 Workloads:
 - `dual_averaging` itself, as `MALA` and `HMC` tuning run it, on its 4 chains (it always
@@ -29,9 +34,11 @@ Workloads:
   run's time divided by its calls to `_Batch.advance`.
 
 Run as `OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 PYTHONPATH=src python
-notes/experiments/i165_take/measure.py`; the first line gives the setup. To compare two
-commits, run it on each in turn, alternating, with the package of each first on
-`PYTHONPATH`.
+notes/experiments/i165_take/measure.py`; the first line gives the setup, the second the
+generation costs, then one line per workload: its name, lanes, steps, the plain time per
+step, requests per step, normals and uniforms per step, and the time in requests per
+step (times in us). To compare two commits, run it on each in turn, alternating, with
+the package of each first on `PYTHONPATH`, and give the outputs to `summarize.py`.
 """
 
 import sys
@@ -41,10 +48,12 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "i77_kernels"))
 from i85_setup import setup
+from step_times import per_call
 
 from telescopic import engine, tuning
-from telescopic._random import NORMAL, UNIFORM, Streams, replicate_generator, root_seed
+from telescopic._random import Draws, Streams, replicate_generator, root_seed
 from telescopic.initial import Normal
 from telescopic.kernels import HMC, MALA, RandomWalk
 from telescopic.kernels.base import evaluate
@@ -58,48 +67,52 @@ TARGET = Target(lambda x: -0.5 * np.einsum("ij,ij->i", x, x), lambda x: -x, vect
 
 
 class Probe:
-    # Wraps Streams._take and Batch.advance to sum the time inside _take and count calls.
+    # Wraps the requests of Draws and Batch.advance, to sum the time in requests and count
+    # them, the numbers they return and the engine's steps.
     def __init__(self):
-        self.take, self.advance = Streams._take, engine._Batch.advance
+        self.normal, self.uniform = Draws.normal, Draws.uniform
+        self.advance = engine._Batch.advance
 
     def __enter__(self):
         self.calls = self.steps = 0
         self.seconds = 0.0
         self.numbers = [0, 0]  # normals and uniforms returned
-        take, advance = self.take, self.advance
+        normal, uniform, advance = self.normal, self.uniform, self.advance
 
-        def timed(streams, kind, lanes, size):
+        def timed_normal(draws, size):
             start = time.perf_counter()
-            out = take(streams, kind, lanes, size)
+            out = normal(draws, size)
             self.seconds += time.perf_counter() - start
             self.calls += 1
-            self.numbers[kind] += len(lanes) * size
+            self.numbers[0] += out.size
+            return out
+
+        def timed_uniform(draws):
+            start = time.perf_counter()
+            out = uniform(draws)
+            self.seconds += time.perf_counter() - start
+            self.calls += 1
+            self.numbers[1] += out.size
             return out
 
         def counted(batch):
             self.steps += 1
             advance(batch)
 
-        Streams._take, engine._Batch.advance = timed, counted
+        Draws.normal, Draws.uniform = timed_normal, timed_uniform
+        engine._Batch.advance = counted
         return self
 
     def __exit__(self, *_):
-        Streams._take, engine._Batch.advance = self.take, self.advance
+        Draws.normal, Draws.uniform = self.normal, self.uniform
+        engine._Batch.advance = self.advance
 
 
 def generation_seconds():
-    # Seconds to generate one normal and one uniform, in blocks of 2^16.
+    # CPU seconds to generate one normal and one uniform, in blocks of 2^16.
     generator, out = replicate_generator(root_seed(1), 0, 0), np.empty(2**16)
-    times = []
-    for fill in (generator.standard_normal, generator.random):
-        rounds = []
-        for _ in range(ROUNDS):
-            start = time.perf_counter()
-            for _ in range(100):
-                fill(out=out)
-            rounds.append((time.perf_counter() - start) / (100 * len(out)))
-        times.append(float(np.median(rounds)))
-    return times
+    fills = (generator.standard_normal, generator.random)
+    return [per_call(lambda fill=fill: fill(out=out)) / len(out) for fill in fills]
 
 
 def pilot():
@@ -150,16 +163,16 @@ def main():
     mala, hmc = MALA(1.65 * D ** (-1 / 6), cov=EYE), HMC(0.5, cov=EYE)
     walk = RandomWalk(EYE, scale=2.38 / np.sqrt(D))
     workloads = {
-        ("dual_averaging MALA", 4): dual_averaging(lambda e: MALA(e, cov=EYE)),
-        ("dual_averaging HMC", 4): dual_averaging(lambda e: HMC(e, cov=EYE)),
-        ("step loop MALA", 1): loop(mala, 1),
-        ("step loop MALA", 256): loop(mala, 256),
-        ("step loop HMC", 1): loop(hmc, 1),
-        ("step loop HMC", 256): loop(hmc, 256),
-        ("engine RandomWalk", 1): run(walk, 1, 64),
-        ("engine RandomWalk", 256): run(walk, 256, 1024),
-        ("engine MALA", 1): run(mala, 1, 64),
-        ("engine MALA", 256): run(mala, 256, 1024),
+        ("dual_averaging/MALA", 4): dual_averaging(lambda e: MALA(e, cov=EYE)),
+        ("dual_averaging/HMC", 4): dual_averaging(lambda e: HMC(e, cov=EYE)),
+        ("step_loop/MALA", 1): loop(mala, 1),
+        ("step_loop/MALA", 256): loop(mala, 256),
+        ("step_loop/HMC", 1): loop(hmc, 1),
+        ("step_loop/HMC", 256): loop(hmc, 256),
+        ("engine/RandomWalk", 1): run(walk, 1, 64),
+        ("engine/RandomWalk", 256): run(walk, 256, 1024),
+        ("engine/MALA", 1): run(mala, 1, 64),
+        ("engine/MALA", 256): run(mala, 256, 1024),
     }
     plain = {key: [] for key in workloads}
     inside = {key: [] for key in workloads}
@@ -167,7 +180,7 @@ def main():
     for key, call in workloads.items():  # an uncounted warm-up, which counts the steps
         with probe:
             call()
-        steps[key] = probe.steps if key[0].startswith("engine") else STEPS
+        steps[key] = probe.steps if key[0].startswith("engine/") else STEPS
         requests[key] = probe.calls / steps[key]
         numbers[key] = [count / steps[key] for count in probe.numbers]
     for _ in range(ROUNDS):
@@ -180,22 +193,13 @@ def main():
             plain[key].append((time.process_time() - start) / steps[key])
     per_number = generation_seconds()
     print(
-        f"{ROUNDS} rounds, each workload instrumented then plain; medians over the rounds. "
-        f"Generation in blocks: {1e9 * per_number[NORMAL]:.1f} ns per normal, "
-        f"{1e9 * per_number[UNIFORM]:.1f} ns per uniform. Fixed: the time in _take less "
-        "the generation of the numbers it returned"
-    )
-    print(
-        f"{'workload':20} {'lanes':>5} {'steps':>5} {'us/step':>8} {'requests':>8} "
-        f"{'us in _take':>11} {'share':>6} {'us fixed':>8} {'share':>6}"
+        f"generation: {1e9 * per_number[0]:.2f} ns per normal, {1e9 * per_number[1]:.2f} ns per uniform"
     )
     for key in workloads:
-        per_step, in_take = np.median(plain[key]), np.median(inside[key])
-        fixed = in_take - np.dot(numbers[key], per_number)
+        per_step, in_requests = np.median(plain[key]), np.median(inside[key])
         print(
-            f"{key[0]:20} {key[1]:5d} {steps[key]:5d} {1e6 * per_step:8.1f} "
-            f"{requests[key]:8.2f} {1e6 * in_take:11.2f} {in_take / per_step:6.1%} "
-            f"{1e6 * fixed:8.2f} {fixed / per_step:6.1%}"
+            f"{key[0]} {key[1]} {steps[key]} {1e6 * per_step:.2f} {requests[key]:.3f} "
+            f"{numbers[key][0]:.2f} {numbers[key][1]:.2f} {1e6 * in_requests:.3f}"
         )
 
 
