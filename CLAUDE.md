@@ -22,7 +22,7 @@ Rhee (2014) and Jacob, O'Leary & Atchadé (2020).
 |---|---|
 | `src/telescopic/` | the package |
 | `tests/` | the pytest suite; `slow` marks statistical tests |
-| `docs/` | the Sphinx site in MyST Markdown, with its own theme (`docs/_themes/`, `docs/_ext/`); `docs/start/`, `docs/tutorials/` and `docs/guide/` hold the pages of the sections Start, Tutorials and How-to guides, and `docs/reference/` those of Reference other than the API reference, Citing and the Changelog, executed as notebooks where they have code cells; `docs/_scripts/brand.py` writes the identity; `docs/design/` holds the spec, the plans and the design of the identity, read in the repository and not built |
+| `docs/` | the Sphinx site in MyST Markdown, with its own theme (`docs/_themes/`, `docs/_ext/`); `docs/start/`, `docs/concepts/`, `docs/tutorials/` and `docs/guide/` hold the pages of the sections Start, Concepts, Tutorials and How-to guides, and `docs/reference/` those of Reference other than the API reference, Citing and the Changelog, executed as notebooks where they have code cells; `docs/_scripts/brand.py` writes the identity, and `docs/_scripts/figures.py` the generated figures in `docs/_static/figures/`; `docs/design/` holds the spec, the plans and the design of the identity, read in the repository and not built |
 | `benchmarks/` | timing and efficiency scripts, run by hand |
 | `scripts/` | `verify.sh`, the gate that runs what CI runs |
 | `notes/` | decisions, questions and experiments; the closed plan, log, review reports and checkpoint of the first draft; `review/`, Josh's review of it; not part of the site |

@@ -11,6 +11,9 @@
 * ``{hero}`` inlines the landing page's coupled pair (``_themes/telescopic/hero.svg``,
   written by ``_scripts/brand.py``) as a figure, with its one paragraph of content as
   caption. A page has at most one hero, since the drawing carries fixed ids.
+* ``{diagram} name`` inlines ``_static/figures/name.svg``, written by
+  ``_scripts/figures.py``, as a figure in the same way, so that its text is set in the
+  site's faces; the drawing carries its own alternative text.
 """
 
 from __future__ import annotations
@@ -27,21 +30,39 @@ from sphinx.util.docutils import SphinxDirective
 
 logger = logging.getLogger(__name__)
 HERO = Path(__file__).parents[1] / "_themes" / "telescopic" / "hero.svg"
+FIGURES = Path(__file__).parents[1] / "_static" / "figures"
+
+
+def _inline_figure(directive: SphinxDirective, svg: Path, kind: str) -> list[nodes.Node]:
+    directive.env.note_dependency(str(svg))
+    caption = nodes.Element()
+    directive.state.nested_parse(directive.content, directive.content_offset, caption)
+    if len(caption) != 1 or not isinstance(caption[0], nodes.paragraph):
+        raise directive.error(
+            f"the {kind} directive expects one paragraph, its caption, as content"
+        )
+    figure = nodes.figure(classes=[kind])
+    figure += nodes.raw("", svg.read_text(encoding="utf-8"), format="html")
+    figure += nodes.caption("", "", *caption[0].children)
+    return [figure]
 
 
 class Hero(SphinxDirective):
     has_content = True
 
     def run(self) -> list[nodes.Node]:
-        self.env.note_dependency(str(HERO))
-        caption = nodes.Element()
-        self.state.nested_parse(self.content, self.content_offset, caption)
-        if len(caption) != 1 or not isinstance(caption[0], nodes.paragraph):
-            raise self.error("the hero directive expects one paragraph, its caption, as content")
-        figure = nodes.figure(classes=["hero"])
-        figure += nodes.raw("", HERO.read_text(encoding="utf-8"), format="html")
-        figure += nodes.caption("", "", *caption[0].children)
-        return [figure]
+        return _inline_figure(self, HERO, "hero")
+
+
+class Diagram(SphinxDirective):
+    has_content = True
+    required_arguments = 1
+
+    def run(self) -> list[nodes.Node]:
+        svg = FIGURES / f"{self.arguments[0]}.svg"
+        if not svg.is_file():
+            raise self.error(f"no figure {svg.name} in docs/_static/figures (run figures.py)")
+        return _inline_figure(self, svg, "diagram")
 
 
 def _sections(app: Sphinx, env: BuildEnvironment) -> set[str]:
@@ -103,6 +124,7 @@ def _page_context(
 
 def setup(app: Sphinx) -> dict[str, bool]:
     app.add_directive("hero", Hero)
+    app.add_directive("diagram", Diagram)
     # Last, so that the theme wins over the extensions' style sheets at equal specificity.
     app.add_css_file("telescopic.css", priority=900)
     app.add_js_file("telescopic.js", loading_method="defer")

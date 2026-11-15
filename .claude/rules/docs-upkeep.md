@@ -15,15 +15,15 @@ the same pull request. The documentation states only what the code does now.
 
 ## Which pages a module maps to
 
-| Module of `src/telescopic/` | Start and how-to guides | Tutorials | Theory and reference |
+| Module of `src/telescopic/` | Start and how-to guides | Tutorials | Concepts, theory and reference |
 |---|---|---|---|
 | `__init__.py` (the public namespace) | `start/quickstart.md` | | `api.md` |
 | `sampler.py`, `tuning.py` | `start/quickstart.md`, `start/coming-from-emcee.md`, `guide/settings.md`, `guide/step-size.md` | `tutorials/choosing-settings.md` | `theory.md`, `api.md` (Running, Building blocks) |
-| `kernels/`, `couplings.py` | `guide/kernels.md`, `guide/step-size.md`, `guide/custom-kernels.md` | `tutorials/gradients.md`, `tutorials/gibbs.md`, `tutorials/how-it-works.md` | `theory.md`, `api.md` (Kernels and couplings) |
+| `kernels/`, `couplings.py` | `guide/kernels.md`, `guide/step-size.md`, `guide/custom-kernels.md` | `tutorials/gradients.md`, `tutorials/gibbs.md`, `tutorials/how-it-works.md` | `concepts/two-chains.md`, `theory.md`, `api.md` (Kernels and couplings) |
 | `target.py`, `initial.py` | `start/quickstart.md`, `start/coming-from-emcee.md`, `guide/log-density.md`, `guide/initial-distribution.md` | | `api.md` (Targets and initial distributions) |
-| `engine.py`, `_parallel.py`, `_random.py` | `guide/parallel.md`, `guide/settings.md` | `tutorials/how-it-works.md`, `tutorials/unbiased-on-average.md` | `api.md` (Building blocks) |
+| `engine.py`, `_parallel.py`, `_random.py` | `guide/parallel.md`, `guide/settings.md` | `tutorials/how-it-works.md`, `tutorials/unbiased-on-average.md` | `concepts/two-chains.md`, `api.md` (Building blocks) |
 | `_progress.py` | `start/install.md`, `guide/parallel.md` | | |
-| `estimators.py`, `measure.py`, `results.py` | `start/coming-from-emcee.md`, `guide/estimates.md`, `guide/plots.md`, `guide/save-load-merge.md`, `guide/meeting-times.md` | `tutorials/how-it-works.md`, `tutorials/unbiased-on-average.md` | `theory.md`, `reference/result-fields.md`, `reference/warnings.md`, `api.md` (Results, Building blocks) |
+| `estimators.py`, `measure.py`, `results.py` | `start/coming-from-emcee.md`, `guide/estimates.md`, `guide/plots.md`, `guide/save-load-merge.md`, `guide/meeting-times.md` | `tutorials/how-it-works.md`, `tutorials/unbiased-on-average.md` | `concepts/burn-in-bias.md`, `concepts/telescoping-correction.md`, `theory.md`, `reference/result-fields.md`, `reference/warnings.md`, `api.md` (Results, Building blocks) |
 | `_io.py` (saving and loading) | `guide/save-load-merge.md` | | `api.md` (Results) |
 | `diagnostics.py`, `warnings.py` | `guide/meeting-times.md` | `tutorials/failure-modes.md`, `tutorials/choosing-settings.md` | `theory.md`, `reference/result-fields.md`, `reference/warnings.md`, `api.md` (Diagnostics, plots and checks; Warnings) |
 | `plotting.py` | `guide/plots.md`, `guide/meeting-times.md` | `tutorials/how-it-works.md` | `api.md` (Diagnostics, plots and checks) |
@@ -53,7 +53,8 @@ reference lists its generated pages.
 3. **The specification.** A change that departs from `docs/design/spec.md` edits it in
    the same commit and records the decision in `notes/DECISIONS.md`.
 4. **Numbers.** A figure quoted in the documentation comes from a script in
-   `notes/experiments/` or `benchmarks/`, or from a tutorial's own executed cell. Change
+   `notes/experiments/` or `benchmarks/`, from `docs/_scripts/figures.py`, which draws the
+   generated figures and checks their text, or from a tutorial's own executed cell. Change
    the figure when its source changes.
 5. **CHANGELOG.** A change that a user can see has a line under *Unreleased*.
 6. **Register.** Pages use the notation of `docs/theory.md`, American English spelling,
@@ -62,7 +63,8 @@ reference lists its generated pages.
    internal.
 7. **Identity.** A change to a color, a font, a size or the mark is made in
    `docs/_scripts/brand.py`, and a change to the package that moves the landing page's
-   coupled pair is saved with `docs/_scripts/hero_pair.py`; `CONTRIBUTING.md`
-   (Documentation) gives the commands, and both scripts' `--check` pass.
+   coupled pair is saved with `docs/_scripts/hero_pair.py`; a change to the package that
+   moves a generated figure is redrawn with `docs/_scripts/figures.py`; `CONTRIBUTING.md`
+   (Documentation) gives the commands, and the three scripts' `--check` pass.
 8. **Build.** `scripts/verify.sh --docs` passes: the build runs the tutorials, treats
    warnings as errors and checks every cross-reference.

@@ -38,5 +38,6 @@ git ls-files -z | xargs -0 "$python" -m codespell_lib
 if $docs; then
   "$python" docs/_scripts/brand.py --check
   "$python" docs/_scripts/hero_pair.py --check
+  "$python" docs/_scripts/figures.py --check
   "$python" -m sphinx -W --keep-going docs docs/_build/html
 fi

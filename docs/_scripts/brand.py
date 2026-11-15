@@ -215,6 +215,26 @@ WORDMARK = "telescopic"
 WORDMARK_FACE = FONT_DIR / "red-hat-display-latin-800-normal.woff2"
 #: the hero's box; its strokes and labels are styled by the theme's classes
 HERO_BOX = (640.0, 256.0)
+#: the generated figures of figures.py, in a box 640 units wide that a page scales to its
+#: column: the text size (19 units is about 10 px on a 390 px screen) and a subscript's
+#: size relative to it; the widths of strokes (chains, arrows, outlines and contours,
+#: rules and ticks) and the radii of points (a state, a meeting, a center); the opacities
+#: of fills (the area under a density, a proposal's disc, a band of times, a hatch)
+FIGURE = {
+    "text": 19.0,
+    "subscript": 0.8,
+    "chain": 2.5,
+    "arrow": 2.0,
+    "outline": 1.5,
+    "rule": 1.0,
+    "dot": 4.5,
+    "meeting": 5.5,
+    "center": 3.5,
+    "area": 0.18,
+    "disc": 0.16,
+    "band": 0.45,
+    "hatch": 0.3,
+}
 
 
 def _f(x: float) -> str:
@@ -242,11 +262,12 @@ def _path(points: np.ndarray) -> str:
     return "M" + " L".join(f"{_f(x)} {_f(y)}" for x, y in points)
 
 
-def _stroke(points: np.ndarray, color: str, width: float, blend: str = "") -> str:
+def _stroke(points: np.ndarray, color: str, width: float, blend: str = "", dash: str = "") -> str:
     style = f' style="mix-blend-mode:{blend}"' if blend else ""
+    dashes = f' stroke-dasharray="{dash}"' if dash else ""
     return (
         f'<path d="{_path(points)}" fill="none" stroke="{color}" stroke-width="{width}" '
-        f'stroke-linecap="round" stroke-linejoin="round"{style}/>'
+        f'stroke-linecap="round" stroke-linejoin="round"{style}{dashes}/>'
     )
 
 
@@ -287,12 +308,19 @@ def mark_body(cut: str, colors: dict[str, str], blend: str) -> str:
     return body
 
 
-def _svg(width: float, height: float, body: str, label: str | None = "telescopic") -> str:
+def _svg(
+    width: float,
+    height: float,
+    body: str,
+    label: str | None = "telescopic",
+    note: str = GENERATED,
+    attributes: str = "",
+) -> str:
     aria = f' role="img" aria-label="{label}"' if label else ""
     return (
-        f"<!-- {GENERATED} -->\n"
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {_f(width)} {_f(height)}"{aria}>'
-        f"{body}</svg>\n"
+        f"<!-- {note} -->\n"
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {_f(width)} {_f(height)}"'
+        f"{aria}{attributes}>{body}</svg>\n"
     )
 
 
@@ -744,13 +772,19 @@ def main(argv: list[str] | None = None) -> int:
     if problems:
         print(*problems, sep="\n")
         return 1
+    return write_or_check(outputs(), "docs/_scripts/brand.py", args.check)
+
+
+def write_or_check(out: dict[Path, str], script: str, check: bool) -> int:
+    """Write each file of ``out``, or with ``check`` write nothing and name each file whose
+    text differs; 1 if one does."""
     stale = []
-    for path, text in outputs().items():
-        if not args.check:
+    for path, text in out.items():
+        if not check:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
         elif not path.exists() or path.read_text(encoding="utf-8") != text:
-            stale.append(f"{path.relative_to(DOCS.parent)} is stale (run docs/_scripts/brand.py)")
+            stale.append(f"{path.relative_to(DOCS.parent)} is stale (run {script})")
     if stale:
         print(*stale, sep="\n")
     return 1 if stale else 0

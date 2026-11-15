@@ -65,6 +65,15 @@ start/coming-from-emcee
 
 ```{toctree}
 :hidden:
+:caption: Concepts
+
+concepts/burn-in-bias
+concepts/two-chains
+concepts/telescoping-correction
+```
+
+```{toctree}
+:hidden:
 :caption: Tutorials
 
 tutorials/how-it-works
