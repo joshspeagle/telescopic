@@ -171,15 +171,12 @@ dict(zip(names, exact_mean.round(3).tolist()))
 ## Three couplings
 
 The [kernels guide](../guide/kernels.md#gibbs) defines the three couplings of `Gibbs`:
-the rejection {term}`maximal coupling` of each block's two conditionals, the default;
-{term}`common random numbers` (`"crn"`), here one uniform through both conditionals'
-`ppf`; and `"two-scale"`, common random numbers while the chains are farther apart than
-`threshold` and the maximal coupling after. As in the pump-failure tutorial, the
-threshold is the square root of the trace of the posterior covariance, here from the
-exact variances. The {term}`pairs <pair>` start from a box that covers the posterior
+`"maximal"`, the default, `"crn"` and `"two-scale"`. As in the pump-failure tutorial,
+the `threshold` of `"two-scale"` is the square root of the trace of the posterior
+covariance, here from the exact variances. The {term}`pairs <pair>` start from a box that covers the posterior
 widely.
 
-{meth}`telescopic.CoupledSampler.meeting_times` runs 200 pilot pairs with
+{meth}`telescopic.CoupledSampler.meeting_times` runs 100 pilot pairs with
 {term}`lag` 1 for each coupling. With one seed for the three, their pairs start from the
 same points:
 
@@ -195,7 +192,7 @@ kernels = {
 tau = {}
 for coupling, kernel in kernels.items():
     sampler = telescopic.CoupledSampler(None, init, kernel=kernel, rng=1)
-    tau[coupling] = sampler.meeting_times(200)
+    tau[coupling] = sampler.meeting_times(100)
     print(
         f"{coupling:9}  median {np.median(tau[coupling]):5.0f}  "
         f"99% {np.quantile(tau[coupling], 0.99, method='inverted_cdf'):5.0f}  "
@@ -214,7 +211,7 @@ mystnb:
       sweeps.
   figure:
     caption: >-
-      The survival functions of the meeting times of 200 pilot pairs for each
+      The survival functions of the meeting times of 100 pilot pairs for each
       coupling, in sweeps, on log-log axes.
 ---
 import matplotlib.pyplot as plt
@@ -239,9 +236,10 @@ assert median["maximal"] < median["two-scale"] < 2 * median["maximal"]
 glue("crn_over_maximal", float(median["crn"] / median["maximal"]), display=False)
 ```
 
-The maximal coupling meets fastest. Common random numbers bring the two chains together
-but make them equal only when their distance reaches the rounding error of float64, so
-their median meeting time is {glue:text}`crn_over_maximal:.0f` times as long. The
+The {term}`maximal coupling` meets fastest.
+{term}`Common random numbers <common random numbers>` bring the two chains together but
+make them equal only when their distance reaches the rounding error of float64, so their
+median meeting time is {glue:text}`crn_over_maximal:.0f` times as long. The
 two-scale coupling switches to the maximal coupling only once the chains are within the
 threshold, and meets a little later than the maximal coupling alone: on this model the
 maximal coupling succeeds from distant starts too, which leaves the switch nothing to
@@ -249,11 +247,11 @@ gain.
 
 ## Estimates against the exact posterior
 
-A run of 1000 {term}`replicates <replicate>` with the maximal coupling. A Gibbs kernel
+A run of 500 {term}`replicates <replicate>` with the maximal coupling. A Gibbs kernel
 never evaluates a log-density, so `log_prob` is `None`:
 
 ```{code-cell} python
-result = telescopic.sample(None, init, 1000, kernel=kernels["maximal"], names=names, rng=2)
+result = telescopic.sample(None, init, 500, kernel=kernels["maximal"], names=names, rng=2)
 result.summary()
 ```
 
@@ -292,8 +290,8 @@ assert correlation[np.triu_indices(J + 1, 1)].min() > 0.5
 ```
 
 The differences are of the size of their standard errors. The nine means of the
-$\theta_j$ and $\mu$ move together: across replicates, the estimates of any two of them
-have a correlation of at least {glue:text}`correlation:.2f`, since every $\theta_j$ is
+$\theta_j$ and $\mu$ move together: across replicates, the smallest correlation between
+the estimates of two of them is about {glue:text}`correlation:.2f`, since every $\theta_j$ is
 pulled toward $\mu$. Their nine differences are therefore close to one draw, not nine
 independent ones.
 
@@ -316,8 +314,9 @@ print(f"tail index of the meeting times: {checks['tail_index']:.2f}")
 assert diagnostics.issues(result) == []
 ```
 
-The run emits no warning: no pair was censored, few met after $k + L$, no replicate
-holds half of the variance of an estimate, and the {term}`tail index` of the meeting
-times is above 2. A Gibbs kernel has nothing to tune, so the warning about disagreeing
+The run emits no warning: no pair was censored, and neither the fraction of pairs that
+met after $k + L$, nor the largest share of one replicate in a variance, nor the
+{term}`tail index` of the meeting times crosses the threshold of its warning. A Gibbs
+kernel has nothing to tune, so the warning about disagreeing
 tuning chains cannot apply. An empty list means only that none of the conditions of
 [Warnings and errors](../reference/warnings.md#warnings) holds, not that the run is right.
