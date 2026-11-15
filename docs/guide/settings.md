@@ -82,6 +82,10 @@ compares the gradient with differences of the log-density, `grad` with those of
   least `k` and `max_iter` above `lag` and `m`, are checked once the pilot has chosen it.
   [Parallel runs](parallel.md#interrupting-a-run) describes what Ctrl-C does during a
   run.
+- {meth}`~telescopic.CoupledSampler.resume` makes a new sampler continue a returned or
+  loaded result: it takes the result's settings, which its runs then keep as a
+  sampler's later calls do, with its seed, replicates, pilot and tuning
+  ([Continuing a run](save-load-merge.md#continuing-a-run)).
 
 [Choosing k, m and the lag](../tutorials/choosing-settings.md) runs these steps one by
 one, and compares other settings with the recipe's.

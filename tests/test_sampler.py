@@ -1,5 +1,7 @@
+import copy
 import importlib
 import inspect
+import io
 import itertools
 import os
 import pkgutil
@@ -9,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import warnings
+from dataclasses import replace
 from importlib import resources
 from pathlib import Path
 
@@ -24,7 +27,7 @@ from references import (
     synthetic,
 )
 from references import Normal as Conditional
-from telescopic import CoupledSampler, __version__, sample
+from telescopic import CoupledSampler, Result, __version__, engine, sample
 from telescopic._parallel import Interrupt
 from telescopic.engine import Settings, Status
 from telescopic.initial import Empirical, Normal
@@ -68,6 +71,217 @@ def test_a_sampler_keeps_its_settings():
             sampler.run(5, **change)
     with pytest.raises(AttributeError):
         sampler.settings = sampler.settings._replace(lag=2)
+
+
+@pytest.fixture(scope="module")
+def first_run():
+    # The first 10 replicates of a run with everything automatic, and 15 of the same run.
+    whole = CoupledSampler(log_prob, INIT, rng=4).run(15)
+    return CoupledSampler(log_prob, INIT, rng=4).run(10), whole
+
+
+def resumed(result, *arguments, **options):
+    sampler = CoupledSampler(log_prob, INIT, *arguments, **options)
+    sampler.resume(result)
+    return sampler
+
+
+def test_resumed_run_equals_the_uninterrupted_runs_replicates(first_run):
+    first, whole = first_run
+    more = resumed(first, kernel=first.kernel).run(5)
+    assert_same_replicates(more._replicates, whole._replicates)
+    assert more.tuning is first.tuning
+    np.testing.assert_array_equal(more.pilot, first.pilot)
+
+
+def test_resumed_run_from_a_loaded_result_equals_the_uninterrupted_run(first_run):
+    first, whole = first_run
+    buffer = io.BytesIO()
+    first.save(buffer)
+    buffer.seek(0)
+    # kernel "auto" is tuned again from the result's seed and matches its tuning, so no warning.
+    sampler = resumed(Result.load(buffer))
+    np.testing.assert_array_equal(sampler.tuning.cov, first.tuning.cov)
+    assert_same_replicates(sampler.run(5)._replicates, whole._replicates)
+
+
+def test_resume_warns_when_retuning_differs_from_the_results_tuning(first_run):
+    sampler = CoupledSampler(lambda x: log_prob(x / 2), INIT)
+    with pytest.warns(InputWarning, match="the sampler's kernel differs from the result's"):
+        sampler.resume(first_run[0])
+    assert not np.array_equal(sampler.tuning.cov, first_run[0].tuning.cov)
+
+
+def test_a_resume_whose_tuning_raises_leaves_the_sampler_unchanged(first_run):
+    calls = []
+
+    def failing(x):
+        calls.append(1)
+        if len(calls) > 50:
+            raise RuntimeError("the target failed")
+        return log_prob(x)
+
+    sampler = CoupledSampler(failing, INIT)
+    seed = sampler.seed
+    with pytest.raises(RuntimeError, match="the target failed"):
+        sampler.resume(first_run[0])
+    assert sampler.seed is seed
+    assert (sampler.tuning, sampler.pilot, sampler.settings) == (None, None, None)
+
+
+def test_resume_warns_when_a_given_kernel_differs_from_the_results(first_run):
+    kernel = RandomWalk(cov=first_run[0].tuning.cov, coupling="maximal")
+    with pytest.warns(InputWarning, match="the sampler's kernel differs from the result's"):
+        resumed(first_run[0], kernel=kernel)
+
+
+def test_a_resume_whose_warning_is_an_error_has_already_resumed(first_run):
+    # The suite turns warnings into errors (pyproject.toml), as a user's filter can.
+    sampler = CoupledSampler(lambda x: log_prob(x / 2), INIT)
+    with pytest.raises(InputWarning):
+        sampler.resume(first_run[0])
+    assert sampler.settings == first_run[0]._replicates.settings
+    assert engine._seed_key(sampler.seed) == engine._seed_key(first_run[0].seed)
+
+
+def test_resumed_vectorized_run_equals_the_samplers_next_call():
+    sampler = CoupledSampler(log_prob, INIT, vectorize=True, rng=5)
+    first = sampler.run(10)
+    following = sampler.run(6)
+    more = resumed(first, vectorize=True, kernel=first.kernel).run(6)
+    assert_same_replicates(more._replicates, following._replicates)
+
+
+def test_resumed_run_completes_an_interrupted_result_and_clears_the_flag():
+    first = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=6).run(8, k=20)
+    # Replicates 8 to 11 were requested but never started: the first two runs complete
+    # half of them, the next the rest and two new ones.
+    interrupted = Result(replace(first._replicates, requested=np.arange(12)), kernel=KERNEL)
+    assert interrupted.interrupted
+    sampler = resumed(interrupted, kernel=KERNEL)
+    assert sampler.run(2).interrupted
+    more = sampler.run(4)
+    assert not more.interrupted
+    whole = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=6).run(14, k=20)
+    assert_same_replicates(more._replicates, whole._replicates)
+
+
+def test_resume_of_a_merged_result_starts_above_its_highest_requested_index():
+    first = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=7).run(5, k=20)
+    apart = engine.run(
+        telescopic.Target(log_prob),
+        KERNEL,
+        INIT,
+        np.arange(10, 15),
+        rng=first.seed,
+        **first._replicates.settings._asdict(),
+    )
+    merged = first.merge(Result(apart, kernel=KERNEL))
+    more = resumed(merged, kernel=KERNEL).run(3)
+    np.testing.assert_array_equal(more.index, [0, 1, 2, 3, 4, 10, 11, 12, 13, 14, 15, 16, 17])
+
+
+def test_resume_never_reruns_censored_replicates():
+    kernel = RandomWalk(np.eye(2), scale=0.1)
+    with pytest.warns(ConvergenceWarning):
+        first = sample(log_prob, INIT, 10, kernel=kernel, k=1, m=2, max_iter=3, rng=8)
+    censored = first.index[np.isinf(first.meeting_times)]
+    assert len(censored)
+    with pytest.warns(ConvergenceWarning):
+        more = resumed(first, kernel=kernel).run(4)
+    np.testing.assert_array_equal(more.index, np.arange(14))
+    np.testing.assert_array_equal(more.meeting_times[:10], first.meeting_times)
+    assert more.max_iter == 3
+
+
+def test_resumed_sampler_refuses_a_change_of_k(first_run):
+    first = first_run[0]
+    sampler = resumed(first, kernel=first.kernel)
+    assert sampler.settings == first._replicates.settings
+    with pytest.raises(ValueError, match=f"k was {first.k} in the earlier runs"):
+        sampler.run(2, k=first.k + 1)
+
+
+def used(kind):
+    kernel = KERNEL if kind == "replicates" else "auto"
+    sampler = CoupledSampler(log_prob, INIT, kernel=kernel, rng=11)
+    if kind == "replicates":
+        sampler.run(2, k=20)
+    elif kind == "pilot":
+        sampler.meeting_times(2)
+    else:
+        sampler.tune()
+    return sampler
+
+
+@pytest.mark.parametrize(
+    ("kind", "message"),
+    [
+        ("replicates", "has already run replicates"),
+        ("pilot", "has already run pilot pairs"),
+        ("tuning", "has already tuned its kernel"),
+    ],
+)
+def test_resume_refuses_a_used_sampler(first_run, kind, message):
+    with pytest.raises(ValueError, match=f"resume needs a new sampler: this one {message}"):
+        used(kind).resume(first_run[0])
+
+
+def test_resume_refuses_another_dimension(first_run):
+    sampler = CoupledSampler(log_prob, Normal(np.zeros(3), np.ones(3)))
+    with pytest.raises(ValueError, match="the result has dimension 2, but the initial"):
+        sampler.resume(first_run[0])
+
+
+@pytest.mark.parametrize("loaded", [False, True])
+def test_resume_refuses_another_kernel_class(first_run, loaded):
+    first = first_run[0]
+    if loaded:
+        first = Result(first._replicates, kernel=str(first.kernel), tuning=first.tuning)
+    sampler = CoupledSampler(log_prob, INIT, kernel="independence")
+    with pytest.raises(ValueError, match="run with RandomWalk, but the sampler's kernel is Ind"):
+        sampler.resume(first)
+
+
+def test_resume_refuses_a_disagreeing_rng(first_run):
+    with pytest.raises(ValueError, match="rng was given, but the result has another seed"):
+        resumed(first_run[0], rng=5)
+    # The result's own seed is accepted.
+    assert resumed(first_run[0], kernel=first_run[0].kernel, rng=4).settings is not None
+
+
+def test_resume_refuses_different_names(first_run):
+    with pytest.raises(ValueError, match=r"names \['a', 'b'\] differ from the result's"):
+        resumed(first_run[0], names=["a", "b"])
+
+
+def test_resume_refuses_an_untuned_kernel_without_tuning():
+    first = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=9).run(2, k=20)
+    with pytest.raises(ValueError, match="the result holds no tuning report"):
+        resumed(first)
+
+
+def test_resume_refuses_a_non_result(first_run):
+    with pytest.raises(TypeError, match=r"result must be a telescopic\.Result, not Replicates"):
+        CoupledSampler(log_prob, INIT).resume(first_run[0]._replicates)
+
+
+def test_resume_without_a_pilot_runs_no_pilot_pairs():
+    first = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=10).run(3, k=20)
+    sampler = resumed(first, kernel=KERNEL)
+    sampler.run(2)
+    assert sampler.pilot is None
+
+
+def test_resume_does_not_modify_the_result(first_run):
+    first = first_run[0]
+    before = copy.deepcopy((first._replicates, first.pilot, first.names))
+    sampler = resumed(first, kernel=first.kernel)
+    sampler.run(3)
+    sampler.meeting_times(2)
+    assert_same_replicates(before[0], first._replicates)
+    np.testing.assert_array_equal(before[1], first.pilot)
+    assert before[2] == first.names
 
 
 def unevaluated(x):

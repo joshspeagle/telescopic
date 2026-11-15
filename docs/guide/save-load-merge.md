@@ -23,9 +23,10 @@ result = telescopic.sample(
 ## Merging runs
 
 A sampler needs no merging: each call of `run` returns the result of all its replicates
-so far. {meth}`telescopic.Result.merge` joins runs made apart, such as runs of
-{func}`telescopic.engine.run` on separate ranges of replicate indices, on one machine or
-several. The runs must have the same root seed, settings and dimension, and no replicate
+so far, and a new sampler continues a returned or loaded result with `resume`
+([Continuing a run](#continuing-a-run)). {meth}`telescopic.Result.merge` joins runs made
+apart, such as runs of {func}`telescopic.engine.run` on separate ranges of replicate
+indices, on one machine or several. The runs must have the same root seed, settings and dimension, and no replicate
 index in common, which `merge` checks. They must also share the target, the kernel and the
 initial distribution, which it cannot check. Here the replicates 1000 to 1199 extend the
 run of [Estimate anything from a result](estimates.md), 1000 replicates of
@@ -71,3 +72,47 @@ with tempfile.TemporaryDirectory() as directory:
     loaded = telescopic.Result.load(Path(directory) / "gaussian")
 loaded.kernel, np.array_equal(loaded.cov(), result.cov())
 ```
+
+## Continuing a run
+
+{meth}`telescopic.CoupledSampler.resume` continues a result on a new sampler, built with
+the result's target, initial distribution and kernel. It adopts the result's seed,
+replicates, settings, pilot meeting times and tuning report, so the next `run` keeps
+`k`, `m`, the lag, `thin` and `max_iter`, first runs the replicates that an interrupted
+run never started, then new replicate indices above the highest the result requested.
+For a result returned in this session, pass its tuned kernel:
+
+```{code-cell} python
+sampler = telescopic.CoupledSampler(
+    gaussian.log_prob, gaussian.initial, vectorize=True, kernel=result.kernel
+)
+sampler.resume(result)
+continued = sampler.run(200)
+continued.n_replicates, int(continued.index[-1])
+```
+
+A loaded result holds only the description of its kernel. Pass the kernel as it was
+built, here `"auto"`, untuned: `resume` tunes it again from the result's seed, which
+gives the run's tuned kernel back when the target, the initial distribution, the kernel
+and the machine are the same. It emits an `InputWarning` when the kernel's tuning or
+its description, which shows a tuned step size, differs from the result's, as the tuning
+can on another machine or with another version of NumPy, SciPy or BLAS:
+
+```{code-cell} python
+sampler = telescopic.CoupledSampler(gaussian.log_prob, gaussian.initial, vectorize=True)
+sampler.resume(loaded)
+sampler.run(200).n_replicates
+```
+
+`resume` checks the dimension, the kernel's class, the names, and an `rng` passed to the
+sampler, which must give the result's seed. It cannot check that the target, the initial
+distribution and the kernel's parameters are the run's: a sampler built with others
+continues the indices of the result and mixes replicates of two different runs without a
+warning. A result merged from runs made apart continues above the highest index any of
+them requested, so the gaps between them stay free for other runs. Replicates that a cap
+censored are kept and never rerun.
+
+With a log-density evaluated point by point, a resumed run's replicates are bitwise
+those of one uninterrupted run. With a vectorized one, the resumed run is bitwise what
+the original sampler's next `run` would have returned, and agrees with one longer run
+within its error bars (Reproducibility, in [Run in parallel](parallel.md)).

@@ -195,6 +195,15 @@ Gaussian of 2 dimensions, the same 64 replicates run one at a time and all at on
 differed in 17 meeting times, and the estimates of the mean from all 64 by at most 0.067
 standard errors.
 
+A sampler that resumes a result ({meth}`telescopic.CoupledSampler.resume`) adopts its
+seed and indices. With a log-density evaluated point by point, its replicates are
+bitwise those of the same indices in one uninterrupted run, whatever the pool, the
+number of workers or the batches, and with a kernel tuned again from the result's seed
+too. With a vectorized one, a resumed `run(n)` is bitwise the original sampler's next
+`run(n)` under the same `pool`, `n_workers`, BLAS build and number of BLAS threads, since
+both batch the same indices in the same way, and it can differ by rounding from one run
+of all the replicates, with estimates that agree within their error bars.
+
 Functions of your own that call multithreaded BLAS or LAPACK, such as a SciPy
 multivariate normal of 200 dimensions as the initial distribution, can also differ by
 rounding between this process and workers with a log-density evaluated point by point,
