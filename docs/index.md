@@ -91,6 +91,17 @@ tutorials/failure-modes
 
 ```{toctree}
 :hidden:
+:caption: Gallery
+
+gallery/radial-velocity
+gallery/hierarchical-gibbs
+gallery/jax-gradients
+gallery/funnel
+gallery/burn-in
+```
+
+```{toctree}
+:hidden:
 :caption: How-to guides
 
 guide/log-density

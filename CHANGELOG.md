@@ -114,6 +114,13 @@ All notable changes to this project are documented here. The format follows
   a run shows, with its cause, a check in code and the fix, and a chart from each warning
   to its remedy; and Make a run faster, which gives each lever with its effect, a figure
   of a replicate's cost, and a table of times measured by `benchmarks/run_faster.py`.
+- A Gallery section of worked examples, executed when the site is built, each ending
+  with its summary, a figure against a known or reference answer, and what its warnings
+  say: the radial-velocity orbit of an exoplanet; a hierarchical model with the three
+  Gibbs couplings; gradients from JAX, for which the `docs` dependency group adds JAX;
+  Neal's funnel, which compares the random walk, HMC and a change of coordinates; and
+  Checking the burn-in of an existing sampler, which couples a Metropolis sampler of
+  one's own and chooses a burn-in from the total variation bound.
 - The API reference is an index of one-line summaries grouped by section, with a page for
   each class, its attributes and methods, a page for `sample`, and a page for each module
   that the index lists, its functions and a table of its classes. The page of a class with
