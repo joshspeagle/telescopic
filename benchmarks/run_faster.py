@@ -37,23 +37,19 @@ def timed(n, **options):
     return best(call, 1 if options.get("pool") else REPEATS)
 
 
-def log_density_and_pool(n):
+def log_density_and_pool(n, available):
     # Seconds of R = n replicates with the log-density evaluated point by point and
-    # vectorized, in this process and on integer pools of up to the CPUs available, and the
-    # kernel applications of a run, the same in every case.
-    available = (
-        len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else os.cpu_count()
-    )
+    # vectorized, in this process and on integer pools of up to the available CPUs.
     out = {}
     for pool in (None, *(w for w in (2, 4, 8) if w <= available)):
         row = "in this process" if pool is None else f"{pool} workers"
         out[row] = {}
         for name, vectorize in (("point by point", False), ("vectorized", True)):
-            seconds, result = timed(
+            seconds, _ = timed(
                 n, kernel=RandomWalk(GAUSSIAN.cov), k=K, vectorize=vectorize, pool=pool
             )
             out[row][name] = round(seconds, 2)
-    return out, int(result.costs.sum())
+    return out
 
 
 def pilots(n):
@@ -83,9 +79,9 @@ if __name__ == "__main__":
             f"telescopic.sample on examples.gaussian(10), R = {args.replicates}, rng=1; "
             f"RandomWalk(cov) with the target's cov and k = {K} unless automatic"
         )
-        seconds, applications = log_density_and_pool(args.replicates)
-        report["seconds by pool and log-density"] = seconds
-        report["kernel applications of each run"] = applications
+        report["seconds by pool and log-density"] = log_density_and_pool(
+            args.replicates, report["available CPUs"] or os.cpu_count()
+        )
         report["seconds with and without the pilots"] = pilots(args.replicates)
     args.output.parent.mkdir(exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n")
