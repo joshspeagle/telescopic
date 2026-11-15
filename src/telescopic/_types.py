@@ -83,18 +83,20 @@ def real(
     low: float = -np.inf,
     high: float = np.inf,
     *,
-    closed: bool = False,
     closed_low: bool = False,
+    closed_high: bool = False,
 ) -> float:
-    # A float in (low, high), with high included if closed and low if closed_low, from a
-    # Python or NumPy real number. A bool, a string, an array or None raises TypeError,
-    # and a number outside, NaN included, ValueError, each naming the argument
+    # A float in (low, high), with low included if closed_low and high if closed_high,
+    # from a Python or NumPy real number. A bool, a string, an array or None raises
+    # TypeError, and a number outside, NaN included, ValueError, each naming the argument
     # (DECISIONS #50).
     if not isinstance(value, numbers.Real) or isinstance(value, bool):
         raise TypeError(f"{name} must be a real number, not {value!r}")
     number = float(value)
-    if not (low < number < high or (closed and number == high) or (closed_low and number == low)):
-        interval = f"{'[' if closed_low else '('}{low:g}, {high:g}{']' if closed else ')'}"
+    above = low < number or (closed_low and number == low)
+    below = number < high or (closed_high and number == high)
+    if not (above and below):
+        interval = f"{'[' if closed_low else '('}{low:g}, {high:g}{']' if closed_high else ')'}"
         raise ValueError(f"{name} must be in {interval}, not {number}")
     return number
 
