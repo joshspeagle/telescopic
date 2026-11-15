@@ -463,7 +463,7 @@ def test_each_atom_records_the_time_it_was_recorded(options):
 
 
 @pytest.mark.parametrize("options", SETTINGS_CASES)
-def test_schema_1_files_load_with_the_times_a_new_run_records(options):
+def test_the_record_order_rebuilds_the_times_of_every_atom(options):
     replicates = simulate(n=30, **options)
     times = record_times(
         replicates.settings, replicates.index, replicates.meeting_time, replicates.owner

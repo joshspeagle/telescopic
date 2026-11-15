@@ -17,10 +17,27 @@ from telescopic.results import Result
 from telescopic.tuning import TuningReport
 
 # The file layout's version; a file of a later version raises on loading.
-SCHEMA = 1
+SCHEMA = 2
 
-# The arrays of a run's replicates, saved as "replicates.<name>".
-REPLICATE_ARRAYS = (
+# The estimator family of this package's results, which a file names (spec section 7.1).
+FAMILY = "coupled"
+
+# The arrays of every family's replicates, saved as "replicates.<name>", and those of the
+# coupled family, as "coupled.<name>".
+COMMON_ARRAYS = (
+    "index",
+    "requested",
+    "abandoned",
+    "atoms",
+    "weights",
+    "owner",
+    "time",
+    "center",
+    "moments",
+)
+COUPLED_ARRAYS = ("meeting_time", "distance_owner", "distance_time", "distance", "zero_density")
+# Schema 1 saved these, all as "replicates.<name>".
+SCHEMA_1_ARRAYS = (
     "index",
     "meeting_time",
     "atoms",
@@ -37,7 +54,8 @@ TUNING_ARRAYS = ("mean", "cov", "acceptance", "rhat")
 
 def save(result: Result, path: str | os.PathLike[str] | IO[bytes]) -> None:
     replicates = result._replicates
-    arrays = {f"replicates.{name}": getattr(replicates, name) for name in REPLICATE_ARRAYS}
+    arrays = {f"replicates.{name}": getattr(replicates, name) for name in COMMON_ARRAYS}
+    arrays |= {f"{FAMILY}.{name}": getattr(replicates, name) for name in COUPLED_ARRAYS}
     tuning = result.tuning
     if tuning is not None:
         arrays |= {f"tuning.{name}": getattr(tuning, name) for name in TUNING_ARRAYS}
@@ -45,6 +63,7 @@ def save(result: Result, path: str | os.PathLike[str] | IO[bytes]) -> None:
         arrays["pilot"] = result.pilot
     metadata = {
         "schema": SCHEMA,
+        "family": FAMILY,
         "settings": replicates.settings._asdict(),
         "seed": replicates.seed.state,
         "names": result.names,
@@ -74,13 +93,26 @@ def load(path: str | os.PathLike[str] | IO[bytes], cls: type[Result]) -> Result:
                 f"the file has schema {metadata['schema']}, newer than this telescopic's "
                 f"{SCHEMA}: upgrade telescopic to load it"
             )
-        arrays = {name: data[f"replicates.{name}"] for name in REPLICATE_ARRAYS}
+        # Schema 1 holds no keep, no times, no moments and no abandoned replicates.
         settings = Settings(**metadata["settings"])
+        if metadata["schema"] == 1:
+            arrays = {name: data[f"replicates.{name}"] for name in SCHEMA_1_ARRAYS}
+            arrays["time"] = record_times(
+                settings, arrays["index"], arrays["meeting_time"], arrays["owner"]
+            )
+        else:
+            family = metadata["family"]
+            if family != FAMILY:
+                raise ValueError(
+                    f"the file holds a result of the estimator family {family!r}, which this "
+                    "telescopic does not know: upgrade telescopic"
+                )
+            arrays = {name: data[f"replicates.{name}"] for name in COMMON_ARRAYS}
+            arrays |= {name: data[f"{FAMILY}.{name}"] for name in COUPLED_ARRAYS}
         replicates = Replicates(
             seed=SeedSequence(**metadata["seed"]),
             settings=settings,
             **arrays,
-            time=record_times(settings, arrays["index"], arrays["meeting_time"], arrays["owner"]),
             **metadata["counts"],
         )
         tuning = metadata["tuning"]
@@ -101,7 +133,8 @@ def load(path: str | os.PathLike[str] | IO[bytes], cls: type[Result]) -> Result:
 def record_times(
     settings: Settings, index: IntArray, meeting_time: npt.NDArray[np.float64], owner: IntArray
 ) -> npt.NDArray[np.int32]:
-    # The times of the atoms of a file that lacks them, which the engine's record order
+    # The times of the atoms of a schema-1 file, which the engine's record order
+
     # fixes (spec R-EST-6): for each replicate that met, in index order, t for each t in S
     # and t twice for each t in [L, tau) with c_t > 0, by t and the averaged atom first.
     # O(N), with no sort: each atom's position within its replicate is computed.

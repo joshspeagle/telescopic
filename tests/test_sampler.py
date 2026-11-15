@@ -1001,10 +1001,14 @@ def test_sampler_keeps_finished_replicates_and_runs_the_missing_ones_next():
     assert_same_outputs(completed._replicates, whole._replicates)
 
 
-def test_abandoned_replicates_are_flagged_and_cleared_when_run():
+def test_abandoned_replicates_are_flagged_saved_and_cleared_when_run():
     sampler, error = failed_sampler()
     kept = error.telescopic_result
     assert len(kept.abandoned)
+    buffer = io.BytesIO()
+    kept.save(buffer)
+    buffer.seek(0)
+    np.testing.assert_array_equal(Result.load(buffer).abandoned, kept.abandoned)
     assert kept.interrupted
     summary = kept.summary()
     assert summary.footer["abandoned"] == len(kept.abandoned)
