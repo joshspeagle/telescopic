@@ -106,8 +106,8 @@ class Result:
     moments, :meth:`mean`, :meth:`var`, :meth:`std` and :meth:`cov` (up to
     :math:`d = 100`), come from the moments of all :math:`R` replicates that met, as do
     the meeting times, costs and bounds on total variation. :meth:`estimate`, the
-    quantiles, the histograms, the plots of marginals, ``measure``, :meth:`chains` and
-    :meth:`cov` above :math:`d = 100` come from the ``n_kept`` replicates of index below
+    quantiles, the histograms, the plots of marginals, ``measure``, :meth:`chains`,
+    :meth:`to_datatree` and :meth:`cov` above :math:`d = 100` come from the ``n_kept`` replicates of index below
     ``keep`` that met, and :meth:`w1_bound` from the kept replicates, censored ones
     included. Each set gives unbiased or consistent estimates on its own; no joint error
     statement holds for estimates from both.

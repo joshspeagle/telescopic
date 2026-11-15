@@ -10,4 +10,4 @@ pip install ".[all]"
 The extras are `plot` (matplotlib, for the plots), `progress` (tqdm, for progress
 bars), `parallel` (cloudpickle, which sends functions defined in a notebook to worker
 processes), `pandas` (summaries as data frames), `arviz` (the ordinary chains of a
-result exported to ArviZ 1.0 or newer, which needs Python 3.12 or newer) and `all`.
+result exported to ArviZ 1.0 or newer, which needs Python 3.12 and NumPy 2) and `all`.
