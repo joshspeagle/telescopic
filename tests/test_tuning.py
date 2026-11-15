@@ -165,6 +165,31 @@ def test_each_pilot_chain_steps_with_the_normals_of_its_own_replicate():
     np.testing.assert_allclose(ratios, np.broadcast_to(ratios[0], ratios.shape), rtol=1e-12)
 
 
+def test_each_pilot_chain_accepts_with_the_uniforms_of_its_own_replicate():
+    # A log-density that ignores its points and returns fresh values at each call makes
+    # each chain's acceptances a function of its values and its uniforms alone: the
+    # pilot's log-densities are those of chains that read replicate c's uniforms in
+    # order, over 600 steps that cross two blocks of draws.
+    n_steps, values = 600, np.random.default_rng(1).normal(size=(601, N_CHAINS))
+    calls = iter(values)
+    pilot = adaptive_metropolis(
+        Target(lambda x: next(calls), vectorize=True), START, rng=8, n_steps=n_steps
+    )
+    root = root_seed(8)
+    uniforms = np.array(
+        [
+            replicate_sources(replicate_generator(root, TUNING, c))[UNIFORM].random(n_steps)
+            for c in range(N_CHAINS)
+        ]
+    )
+    log_p, kept = values[0], []
+    for step in range(n_steps):
+        accept = np.log(uniforms[:, step]) < np.minimum(0.0, values[step + 1] - log_p)
+        log_p = np.where(accept, values[step + 1], log_p)
+        kept.append(log_p)
+    np.testing.assert_array_equal(pilot.log_prob, np.transpose(kept[n_steps // 2 :]))
+
+
 def test_the_pilot_refuses_draws_whose_dimension_changes():
     lengths = itertools.cycle([2, 3])
     with pytest.raises(ValueError, match=r"drew shape \(3,\), not \(2,\)"):
