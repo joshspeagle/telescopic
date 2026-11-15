@@ -283,14 +283,19 @@ class CoupledSampler:
                 "the result's kernel needed no tuning, so the sampler's must have every "
                 "parameter set; pass the kernel the result was run with"
             )
-        self.seed = root_seed(result.seed)
-        self.names, self.pilot = result.names, result.pilot
-        self._replicates = result._replicates
-        self.tuning = result.tuning
-        if not self.kernel.is_tuned:
+        seed, self.seed = self.seed, root_seed(result.seed)
+        if self.kernel.is_tuned:
+            self.tuning = result.tuning
+        else:
             # From the tuning namespace of the result's seed, as the run tuned it (spec
-            # section 6.1). No tolerance: rounding can move a pilot's accept decision.
-            report = cast(TuningReport, self._tune(self.progress))
+            # section 6.1), before anything else is adopted, so that a tuning that raises
+            # leaves the sampler as it was. No tolerance: rounding can move a pilot's
+            # accept decision.
+            try:
+                report = cast(TuningReport, self._tune(self.progress))
+            except BaseException:
+                self.seed = seed
+                raise
             kept = cast(TuningReport, result.tuning)
             if not (
                 np.array_equal(report.mean, kept.mean) and np.array_equal(report.cov, kept.cov)
@@ -302,6 +307,8 @@ class CoupledSampler:
                     "threads does; the resumed run keeps the new tuning",
                     InputWarning,
                 )
+        self.names, self.pilot = result.names, result.pilot
+        self._replicates = result._replicates
 
     # Spec section 5.3.
     def tune(self) -> TuningReport | None:

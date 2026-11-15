@@ -112,6 +112,23 @@ def test_resume_warns_when_retuning_differs_from_the_results_tuning(first_run):
     assert not np.array_equal(sampler.tuning.cov, first_run[0].tuning.cov)
 
 
+def test_a_resume_whose_tuning_raises_leaves_the_sampler_unchanged(first_run):
+    calls = []
+
+    def failing(x):
+        calls.append(1)
+        if len(calls) > 50:
+            raise RuntimeError("the target failed")
+        return log_prob(x)
+
+    sampler = CoupledSampler(failing, INIT)
+    seed = sampler.seed
+    with pytest.raises(RuntimeError, match="the target failed"):
+        sampler.resume(first_run[0])
+    assert sampler.seed is seed
+    assert (sampler.tuning, sampler.pilot, sampler.settings) == (None, None, None)
+
+
 def test_resumed_vectorized_run_equals_the_samplers_next_call():
     sampler = CoupledSampler(log_prob, INIT, vectorize=True, rng=5)
     first = sampler.run(10)
