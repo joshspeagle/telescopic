@@ -131,12 +131,7 @@ class Reflection(Coupling):
         state_y: State,
         draws: Draws,
     ) -> CoupledProposals:
-        gaussian = cast("SharedCovarianceGaussian", proposal)
-        delta, direction, terms_x, terms_y = gaussian.whitened_difference(target, state_x, state_y)
-        z, identical, shift = _reflection(delta, draws, direction)
-        return gaussian.moves(
-            target, state_x, state_y, z, shift, identical, delta, terms_x, terms_y
-        )
+        return cast("SharedCovarianceGaussian", proposal).reflect(target, state_x, state_y, draws)
 
     def supports(self, proposal: Proposal) -> bool:
         from telescopic.kernels.metropolis import LangevinProposal, RandomWalkProposal

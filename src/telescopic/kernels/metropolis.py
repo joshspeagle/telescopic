@@ -10,8 +10,8 @@ import numpy as np
 
 from telescopic._linalg import matvec
 from telescopic._random import Draws
-from telescopic._types import BoolArray, FloatArray, ProposalDistribution, instance, log_densities
-from telescopic.couplings import CoupledProposals, Coupling
+from telescopic._types import FloatArray, ProposalDistribution, instance, log_densities
+from telescopic.couplings import CoupledProposals, Coupling, _reflection, reflection_maximal
 from telescopic.kernels.base import (
     Kernel,
     State,
@@ -150,32 +150,12 @@ class RandomWalkProposal(Proposal):
     ) -> FloatArray:
         return log_ratio(proposed.log_prob, current.log_prob)
 
-    def whitened_difference(
-        self, target: Target, state_x: State, state_y: State
-    ) -> tuple[FloatArray, FloatArray, Any, Any]:
-        # Infinite positions can give inf - inf = NaN, which fails the meeting test as it
-        # should. B e = (x - y) / |delta|, so B(z - 2(e.z)e) = Bz - 2(z.delta)/|delta|^2
-        # (x - y), which reuses Bz: the direction of the reflection is x - y.
-        with np.errstate(invalid="ignore"):
-            difference = state_x.x - state_y.x
-            delta = matvec(self.inverse, difference, blas=target.vectorize)
-        return delta, difference, None, None
-
-    def moves(
-        self,
-        target: Target,
-        state_x: State,
-        state_y: State,
-        z: FloatArray,
-        shift: FloatArray,
-        identical: BoolArray,
-        delta: FloatArray,
-        terms_x: Any,
-        terms_y: Any,
+    def reflect(
+        self, target: Target, state_x: State, state_y: State, draws: Draws
     ) -> CoupledProposals:
-        step = matvec(self.factor, z, blas=target.vectorize)
-        x = state_x.x + step
-        y = np.where(identical[:, None], x, state_y.x + step - shift)
+        x, y, identical = reflection_maximal(
+            state_x.x, state_y.x, self.factor, self.inverse, draws, blas=target.vectorize
+        )
         return CoupledProposals(x, y, identical, None, None)
 
     def __repr__(self) -> str:
@@ -223,35 +203,20 @@ class LangevinProposal(Proposal):
         residual, drift = forward
         return _log_alpha(current, proposed, residual, drift, self.factor, target.vectorize)
 
-    def whitened_difference(
-        self, target: Target, state_x: State, state_y: State
-    ) -> tuple[FloatArray, FloatArray, Any, Any]:
+    def reflect(
+        self, target: Target, state_x: State, state_y: State, draws: Draws
+    ) -> CoupledProposals:
         blas = target.vectorize
         drift_x, drift_y = _drift(state_x, self.factor, blas), _drift(state_y, self.factor, blas)
         # The whitened difference of the proposals' means, B^{-1}(mu_x - mu_y), which is
         # also the direction of the reflection in whitened coordinates. Infinite drifts,
         # from a gradient that overflowed, can give inf - inf = NaN, which fails the
-        # meeting test.
+        # meeting test as in reflection_maximal.
         with np.errstate(over="ignore", invalid="ignore"):
             delta = matvec(self.inverse, state_x.x - state_y.x, blas=blas) + 0.5 * (
                 drift_x - drift_y
             )
-        return delta, delta, drift_x, drift_y
-
-    def moves(
-        self,
-        target: Target,
-        state_x: State,
-        state_y: State,
-        z: FloatArray,
-        shift: FloatArray,
-        identical: BoolArray,
-        delta: FloatArray,
-        terms_x: Any,
-        terms_y: Any,
-    ) -> CoupledProposals:
-        blas = target.vectorize
-        drift_x, drift_y = terms_x, terms_y
+        z, identical, shift = _reflection(delta, draws, delta)
         # y's whitened residual: the reflected z, or z + delta where the pair is identical,
         # since there y' = x' = mu_y + B(z + delta).
         residual_y = np.where(identical[:, None], z + delta, z - shift)
@@ -427,41 +392,10 @@ def _log_weights(q: ProposalDistribution, proposal: State, *states: State) -> li
 class SharedCovarianceGaussian(Protocol):
     r"""Gaussian proposals of two chains that share their covariance :math:`BB^\top`."""
 
-    def whitened_difference(
-        self, target: Target, state_x: State, state_y: State
-    ) -> tuple[FloatArray, FloatArray, Any, Any]:
-        r"""The whitened difference :math:`\delta = B^{-1}(\mu_x - \mu_y)` of the proposals' means.
-
-        Parameters
-        ----------
-        target : Target
-            The target that the chains sample.
-        state_x, state_y : State
-            The first and the second chains of the ``n`` pairs.
-
-        Returns
-        -------
-        delta : ndarray, shape (n, d)
-        direction : ndarray, shape (n, d)
-            The vector along which the reflection shifts the second chain's step.
-        terms_x, terms_y
-            Each chain's terms that :meth:`moves` reuses.
-        """
-        ...
-
-    def moves(
-        self,
-        target: Target,
-        state_x: State,
-        state_y: State,
-        z: FloatArray,
-        shift: FloatArray,
-        identical: BoolArray,
-        delta: FloatArray,
-        terms_x: Any,
-        terms_y: Any,
+    def reflect(
+        self, target: Target, state_x: State, state_y: State, draws: Draws
     ) -> CoupledProposals:
-        """The coupled proposals from the first chain's normals and the reflection's shift.
+        """The proposals of both chains from the reflection-maximal coupling of their laws.
 
         Parameters
         ----------
@@ -469,16 +403,8 @@ class SharedCovarianceGaussian(Protocol):
             The target that the chains sample.
         state_x, state_y : State
             The first and the second chains of the ``n`` pairs.
-        z : ndarray, shape (n, d)
-            The first chain's normals.
-        shift : ndarray, shape (n, d)
-            The shift of the reflection along ``direction``.
-        identical : ndarray of bool, shape (n,)
-            Rows where the proposals are identical.
-        delta : ndarray, shape (n, d)
-            The whitened difference of the means.
-        terms_x, terms_y
-            What :meth:`whitened_difference` returned for each chain.
+        draws : Draws
+            Random numbers for the ``n`` pairs.
 
         Returns
         -------

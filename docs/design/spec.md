@@ -361,7 +361,7 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 | `Maximal()` | `RandomWalkProposal` | rejection maximal with $\eta = 1$, JOA20 Algorithm 2 |
 | `Shared()` | `IndependenceProposal` | one shared proposal, O'Leary, Wang & Jacob (2021) |
 
-- `Reflection` works through the whitened difference of the two proposals' means and the vector along which it reflects, which the two Gaussian proposals supply, so one path gives each kernel the arithmetic of §5.3 and §5.4. `Maximal` has no $\eta$: with $\eta < 1$ equal states would receive identical proposals only with probability $\eta$. Other compositions, such as MALA with `Maximal`, are experiments under DECISIONS #69.
+- `Reflection` asks the proposal for its reflection-maximal pair (`reflect`): the random-walk proposal draws it with `reflection_maximal`, and the Langevin proposal in whitened coordinates (§5.4), so each kernel keeps the arithmetic it had. `Maximal` has no $\eta$: with $\eta < 1$ equal states would receive identical proposals only with probability $\eta$. Other compositions, such as MALA with `Maximal`, are experiments under DECISIONS #69.
 
 ### 5.3 Random-walk Metropolis–Hastings (R-KER-RW)
 
