@@ -1,0 +1,18 @@
+MALA's coupled step at d = 2 and 256 lanes, before (main at 1c702cb..1aed3cc) and after this change, 8 alternating pairs of processes, each the median of 9 rounds of 1,000 calls, CPU time, threads pinned to 1; load average about 1 on 4 cores.
+base 301.55
+new 312.03
+base 303.50
+new 327.72
+base 302.61
+new 307.86
+base 286.98
+new 321.57
+base 358.96
+new 309.39
+base 301.30
+new 305.83
+base 368.90
+new 375.05
+base 368.12
+new 379.12
+median base 303.1 us, new 316.8 us, ratio 1.045 (per pair 1.035 1.080 1.017 1.121 0.862 1.015 1.017 1.030)
