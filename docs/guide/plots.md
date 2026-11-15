@@ -61,10 +61,10 @@ are shown in [Read meeting times and the distance to stationarity](meeting-times
 Each method returns its matplotlib axes, and all but `plot_corner` draw on axes given as
 `axes` or `ax`. The functions of {mod}`telescopic.plotting`, which `import telescopic`
 leaves out since it needs matplotlib, take the result as their first argument and do the
-same; {func}`telescopic.plotting.paths` also draws the coupled paths of a few replicates
+same; {func}`telescopic.plotting.paths` also draws the coupled paths of a few {term}`replicates <replicate>`
 of an engine run with `keep_paths=True` ([How it works](../tutorials/how-it-works.md)).
 
-The atoms are not samples of the target, even when plotted without their weights: the
+The {term}`atoms <atom>` are not samples of the target, even when plotted without their weights: the
 atoms of each Y chain carry negative weights. Packages such as corner and ArviZ compute
 weighted quantiles that assume non-negative weights, so the atoms should not be passed
 to them with their weights either.

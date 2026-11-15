@@ -1,9 +1,9 @@
 # What telescopic does
 
-An MCMC average after a burn-in is biased by an amount that its error bar leaves out, and
+An MCMC average after a {term}`burn-in` is biased by an amount that its error bar leaves out, and
 that error bar holds only if the chains are judged to have converged. telescopic runs
-Markov chain Monte Carlo as pairs of chains that become exactly equal, and returns
-estimates that are unbiased for any burn-in, with error bars from independent pairs.
+Markov chain Monte Carlo as {term}`pairs <pair>` of chains that become exactly equal, and returns
+estimates that are {term}`unbiased` for any burn-in, with error bars from independent pairs.
 
 ## The problem
 
@@ -24,7 +24,7 @@ recipe rest on judgment:
 
 telescopic runs the chains in pairs. The two chains of a pair move by the same MCMC
 kernel, such as random-walk Metropolis, and each on its own is an ordinary chain of that
-kernel. Their moves are drawn jointly, by a coupling, so that the two chains can land on
+kernel. Their moves are drawn jointly, by a {term}`coupling`, so that the two chains can land on
 the same point and stay together from then on
 ([Two chains that meet](../concepts/two-chains.md)). The second chain runs $L$ steps
 behind the first, and the differences between the two chains before they meet add up to
@@ -42,7 +42,7 @@ differences $X_t - Y_{t-L}$ at the hatched times $k + L$ to $\tau - 1$ make its 
 correction.
 ```
 
-Each pair is a replicate, with random numbers of its own, so the replicates are
+Each pair is a {term}`replicate`, with random numbers of its own, so the replicates are
 independent and run in parallel without communicating
 ([Run in parallel](../guide/parallel.md)). By default, telescopic tunes the kernel and
 chooses the burn-in and the length of the chains from pilot runs before the replicates
@@ -60,9 +60,9 @@ chooses the burn-in and the length of the chains from pilot runs before the repl
   number of replicates grows when the estimates have a finite variance
   ([Error bars from replicates](../concepts/error-bars.md)).
 - **Histograms**, unbiased in each bin when the bins are fixed before the run, and
-  **quantiles and credible intervals**, consistent as the number of replicates grows
+  **quantiles and credible intervals**, {term}`consistent` as the number of replicates grows
   ([Estimate anything from a result](../guide/estimates.md)).
-- **Bounds on the distance to the target**, estimated from the meeting times of the
+- **Bounds on the distance to the target**, estimated from the {term}`meeting times <meeting time>` of the
   pairs, on the total variation distance between the law of the chain at each time and
   the target ([Meeting times and distance to stationarity](../concepts/meeting-times.md)).
 

@@ -8,12 +8,12 @@ kernelspec:
 
 ## The settings
 
-Each replicate runs a pair of chains, the second `lag` steps behind the first, until
+Each {term}`replicate` runs a {term}`pair` of chains, the second `lag` steps behind the first, until
 they meet and until time `m`. Its estimate averages the first chain's states from time
 `k` to `m`, plus a bias correction made of the differences between the chains before
 they meet ([Theory](../theory.md#the-time-averaged-estimator)).
 
-- `k` is the first averaged time, the burn-in. The bias correction is zero for a pair
+- `k` is the first averaged time, the {term}`burn-in`. The bias correction is zero for a pair
   that meets within `k + lag` steps.
 - `m` is the last averaged time. A replicate runs until $\max(\tau, m)$, so a larger `m`
   averages more states at a proportional cost.
@@ -24,13 +24,13 @@ they meet ([Theory](../theory.md#the-time-averaged-estimator)).
   ([Memory and thinning](#memory-and-thinning)).
 - `max_iter` censors the pairs still unmet at that time, which biases the estimates
   ([Censored pairs](../reference/warnings.md#censored-pairs-censored)). It must exceed
-  `max(lag, m)` and be at most $2^{31} - 1$, the largest time the atoms record; `None`,
+  `max(lag, m)` and be at most $2^{31} - 1$, the largest time the {term}`atoms <atom>` record; `None`,
   the default, runs every pair until it meets.
-- `keep` stores the signed measures of the replicates of index below it only, and the
+- `keep` stores the {term}`signed measures <signed measure>` of the replicates of index below it only, and the
   moments of every replicate ([Keeping a subset](#keeping-a-subset)); `None`, the
   default, stores every replicate's signed measure.
 
-Any $0 \le k \le m$, `lag` $\ge 1$, `thin` $\ge 1$ and `keep` give unbiased estimates:
+Any $0 \le k \le m$, `lag` $\ge 1$, `thin` $\ge 1$ and `keep` give {term}`unbiased` estimates:
 the settings change the cost and the variance, never the bias.
  {func}`telescopic.sample` and
 {meth}`telescopic.CoupledSampler.run` take each of them as an argument.
@@ -52,17 +52,17 @@ With the defaults, before the replicates run:
    ([Disagreeing tuning chains](../reference/warnings.md#disagreeing-tuning-chains-tuning)); chains
    that agree can still all sit in one mode. A chain that accepts no proposal in its
    second half raises `ValueError`.
-2. **The meeting-time pilot.** 100 pairs with lag 1 run until they meet, or until
+2. **The meeting-time pilot.** 100 pairs with {term}`lag` 1 run until they meet, or until
    100,000 iterations, where they are censored.
 3. **The settings.** `k`, `lag` and `m` follow the recipe of Atchadé & Jacob (2024) from
-   the pilot's meeting times ([Theory](../theory.md#choosing-k-m-and-l)); `thin = 1` and no
+   the pilot's {term}`meeting times <meeting time>` ([Theory](../theory.md#choosing-k-m-and-l)); `thin = 1` and no
    cap. When more than 1% of the pilot pairs are censored, `k` cannot be chosen and the
    run raises `ValueError`, with a note on the step size when MALA or HMC tuned theirs
    ([When the automatic step fails](step-size.md#when-the-automatic-step-fails)).
 
-A value given explicitly is kept. Given `k`, the meeting-time pilot does not run, and an
-automatic `lag` or `m` follows from it: `lag = max(1, k)` and `m = 10k`. The tuning
-pilot runs whenever the kernel has parameters to tune.
+A value given explicitly is kept. Given `k`, the {term}`meeting-time pilot` does not run, and an
+automatic `lag` or `m` follows from it: `lag = max(1, k)` and `m = 10k`. The
+{term}`tuning pilot` runs whenever the kernel has parameters to tune.
 
 {class}`telescopic.CoupledSampler` runs the same pipeline step by step;
 `sample(log_prob, init, n, ...)` is `CoupledSampler(log_prob, init, ...).run(n, ...)`.
@@ -199,7 +199,7 @@ Every evaluation belongs to the run, and no pilot ran.
   ([Theory](../theory.md#guarantees-and-their-limits)).
 - The estimates are exactly unbiased for a number of replicates fixed before the run.
   Choosing it after looking at the estimates, for example by extending a run until the
-  error bar is small enough, is optional stopping: the estimates stay consistent and the
+  error bar is small enough, is optional stopping: the estimates stay {term}`consistent` and the
   large-$R$ intervals stay valid, but the mean is no longer exactly unbiased. To size a
   run, run a first sampler and read the standard error $s_1$ of the estimate that
   matters at $R_1$ replicates; then run a new sampler, with another `rng`, of
@@ -212,13 +212,13 @@ Every evaluation belongs to the run, and no pilot ran.
 
 The cost of a replicate is the number of times it applies the kernel, a coupled step
 before the meeting counting as two; `result.costs` holds it for each replicate. The
-relative cost, the mean cost per averaged state, is the mean cost divided by
+{term}`relative cost`, the mean cost per averaged state, is the mean cost divided by
 $m - k + 1$ ([Theory](../theory.md#cost)), and
 [Choosing k, m and L](../theory.md#choosing-k-m-and-l) gives its value under the
 automatic settings. `result.diagnostics()` gives it, with the mean cost and the seconds
 per replicate.
 
-The inefficiency of an estimate is the mean cost times the variance of one replicate's
+The {term}`inefficiency` of an estimate is the mean cost times the variance of one replicate's
 estimate, $\mathbb E[C]\,\mathbb V[H]$ ([Theory](../theory.md#cost)): the figure to
 minimize when comparing kernels or settings at equal work. We can compute the inefficiency for the slope of the run
 above, with the cost in kernel applications and in evaluations of the log-density:
