@@ -591,7 +591,7 @@ class _Start:
 
 
 def stored_bytes(settings: Settings, ndim: int, coupled: npt.ArrayLike) -> float:
-    r"""Bytes of the atoms and distances that replicates store.
+    r"""Bytes of the atoms, distances and moments that replicates store.
 
     A replicate that met after :math:`c = \tau - L` coupled steps stores the
     :math:`|S|` atoms of the time average and two atoms for each of the
@@ -601,9 +601,10 @@ def stored_bytes(settings: Settings, ndim: int, coupled: npt.ArrayLike) -> float
     distances of 24 bytes (``distance_owner``, ``distance_time`` and ``distance``). This
     is exact when ``thin`` is 1 and :math:`m - k + 1 \ge L`, and an upper bound otherwise,
     where some terms of the correction have no atoms. With ``store=False`` nothing is
-    stored. With ``keep``, only the replicates of index below it store these, so
-    ``coupled`` should hold theirs; the moments of every replicate add
-    :math:`8(p + d)` bytes each (``center`` and ``moments`` of :class:`Replicates`).
+    stored. With ``keep``, only the first ``keep`` replicates store atoms and distances,
+    and every replicate stores its moments, :math:`8(p + d)` bytes (``center`` and
+    ``moments`` of :class:`Replicates`), with :math:`p = d(d + 3)/2` up to :math:`d = 100`
+    and :math:`2d` above.
 
     Parameters
     ----------
@@ -612,7 +613,7 @@ def stored_bytes(settings: Settings, ndim: int, coupled: npt.ArrayLike) -> float
     ndim : int
         The dimension :math:`d`.
     coupled : array_like of int, shape (R,)
-        :math:`\tau - L` of each replicate, non-negative.
+        :math:`\tau - L` of each replicate, non-negative, in the order of their indices.
 
     Returns
     -------
@@ -620,15 +621,19 @@ def stored_bytes(settings: Settings, ndim: int, coupled: npt.ArrayLike) -> float
         The total over the replicates.
     """
     instance("settings", settings, Settings)
-    k, m, _, thin, _, store, _ = check_settings(settings)
+    k, m, _, thin, _, store, keep = check_settings(settings)
     ndim = integer("ndim", ndim, minimum=1)
     c = real_array("coupled", coupled, "non-negative integers of shape (R,)")
     if c.ndim != 1 or not integral(c, 0):
         raise ValueError("coupled must be non-negative integers of shape (R,)")
     if not store:
         return 0.0
+    moments = 0
+    if keep is not None:
+        moments = len(c) * 8 * (2 * ndim + len(_pairs(ndim)[0]))
+        c = c[:keep]
     atoms = len(c) * len(range(k, m + 1, thin)) + 2 * np.maximum(0, c - k).sum()
-    return float(atoms * (8 * ndim + 20) + 24 * c.sum())
+    return float(atoms * (8 * ndim + 20) + 24 * c.sum() + moments)
 
 
 class _Batch:

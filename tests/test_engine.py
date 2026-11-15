@@ -360,14 +360,15 @@ def test_the_replicates_count_the_gradients_taken_as_zero():
     assert_same_replicates(merge([part(range(5)), part(range(5, 10))]), whole)
 
 
+@pytest.mark.parametrize("keep", [None, 13])
 @pytest.mark.parametrize("lag", [1, 3])
-def test_the_storage_estimate_equals_the_bytes_a_run_stores(lag):
+def test_the_storage_estimate_equals_the_bytes_a_run_stores(lag, keep):
     # Pairs met at different times, some before and some after k + L, so that the
-    # correction atoms and the distances both count.
-    replicates = simulate(n=40, k=2, m=6, lag=lag)
+    # correction atoms and the distances both count; with keep, the moments too.
+    replicates = simulate(n=40, k=2, m=6, lag=lag, keep=keep)
     assert len(np.unique(replicates.meeting_time)) > 3
     columns = ("atoms", "weights", "owner", "time", "distance_owner", "distance_time", "distance")
-    stored = sum(getattr(replicates, name).nbytes for name in columns)
+    stored = sum(getattr(replicates, name).nbytes for name in (*columns, "center", "moments"))
     coupled = replicates.meeting_time - lag
     assert stored_bytes(replicates.settings, 2, coupled) == stored
 

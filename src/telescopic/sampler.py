@@ -679,13 +679,15 @@ class CoupledSampler:
         if self.pilot is not None and np.isfinite(self.pilot).any():
             coupled = self.pilot[np.isfinite(self.pilot)] - 1
         keep = n_replicates if settings.keep is None else min(settings.keep, n_replicates)
-        stored = keep * engine.stored_bytes(settings, self.ndim, coupled) / len(coupled)
+        each = engine.stored_bytes(settings._replace(keep=None), self.ndim, coupled)
+        stored = keep * each / len(coupled)
         peak = PEAK_PER_STORED * stored
         stored_what = "atoms and distances"
         if settings.keep is not None:
-            row = 8 * (2 * self.ndim + len(engine._pairs(self.ndim)[0]))
             engines = self.pool if isinstance(self.pool, int) else 1
-            moments = n_replicates * row
+            moments = engine.stored_bytes(
+                settings._replace(keep=0), self.ndim, np.zeros(n_replicates)
+            )
             stored += moments
             peak += moments + engines * engine.LANES * engine._lane_bytes(self.ndim) + 2**20
             stored_what = "atoms, distances and moments"
