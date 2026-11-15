@@ -31,7 +31,7 @@ k, m = 5, 20
 
 From a start five standard deviations away, a {term}`burn-in` of 5 steps is too short, and the
 MCMC average is biased. The bias correction removes this bias on average. 4000 {term}`replicates <replicate>`
-for each of two lags, 1 and $k$, estimate the mean of the target, 0, with `z` the estimate
+for each of two {term}`lags <lag>`, 1 and $k$, estimate the mean of the target, 0, with `z` the estimate
 in units of its error bar:
 
 ```{code-cell} python
@@ -58,6 +58,6 @@ assert all(abs(rows[lag, "full"][0]) < 2 for lag in (1, k))
 assert rows[k, "full"][1] < rows[1, "full"][1]
 ```
 
-The MCMC average is many error bars from 0 with either {term}`lag`, since the lag does not change
+The MCMC average is many error bars from 0 with either lag, since the lag does not change
 the law of $X$. The full estimator is within two error bars of 0 with both lags, and its
 error bar is smaller with $L = k$.

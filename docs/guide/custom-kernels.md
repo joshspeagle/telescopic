@@ -38,8 +38,8 @@ belongs to chain, or pair, `i`:
 - `draws.generator(row)`: the `numpy.random.Generator` of a row, for draws that the
   others do not cover, such as the `rvs` of a SciPy distribution or a rejection sampler;
 - `draws.child(row)`: a new child of that generator, a stream of its own that does not
-  move the row's, for two draws that read the same numbers, as the Gibbs kernel's common
-  random numbers do.
+  move the row's, for two draws that read the same numbers, as the Gibbs kernel's
+  {term}`common random numbers` do.
 
 Other members have defaults that a kernel can override:
 
@@ -65,13 +65,13 @@ Other members have defaults that a kernel can override:
 1. **Marginals.** Each chain of `coupled_step` moves with exactly the law of `step`.
    Otherwise the estimates are biased.
 2. **Exact meetings.** The engine declares a meeting when the two positions of a pair
-   are equal, compared with `==`. Where the coupling makes the two new positions equal,
+   are equal, compared with `==`. Where the {term}`coupling` makes the two new positions equal,
    the second chain must get a copy of the first chain's position, log-density and
    gradient, never a recomputation, which can differ in the last bits.
 3. **Rows are independent.** For a target evaluated point by point, a row's arithmetic
    must not depend on the other rows of the batch. Use elementwise operations, and
    `np.einsum` without `optimize` for linear algebra on rows; `@` and `solve` on a batch
-   can give a row different bits in batches of different sizes. A replicate's results
+   can give a row different bits in batches of different sizes. A {term}`replicate`'s results
    then do not depend on how the replicates are batched
    ([Parallel runs](parallel.md#reproducibility)). Where `target.vectorize` is true,
    the built-in kernels use `@` for its speed and give up that invariance, which a
@@ -91,11 +91,11 @@ that has met. To run on a pool of processes, the kernel must be picklable
 {func}`telescopic.engine.run`, which the sampler calls:
 
 - draws each pair's starting points, runs the first chain alone for `lag` steps, then
-  applies `coupled_step` to the pairs that have not met, many {term}`replicates <replicate>` at a time;
+  applies `coupled_step` to the pairs that have not met, many replicates at a time;
 - compares the positions of each pair after every coupled step, exactly, and records the
   {term}`meeting time`;
 - after the meeting applies `step` to the first chain alone, so the chains stay together
-  whatever the {term}`coupling` does, and a pair that has met costs one chain;
+  whatever the coupling does, and a pair that has met costs one chain;
 - gives each replicate its own random streams, so that its numbers depend only on the
   seed, its index and its own requests;
 - stores the {term}`signed measures <signed measure>`, counts the cost, and censors the pairs that reach

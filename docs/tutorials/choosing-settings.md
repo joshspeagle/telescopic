@@ -111,7 +111,7 @@ for seed, (name, settings) in enumerate(choices.items(), start=1):
 
 For each run: the estimate of $\mathbb E[x_0^2] = 1$, the mean cost of a replicate in
 kernel applications, the relative cost, the fraction of pairs that met after $k + L$,
-the inefficiency ([Theory](../theory.md#cost)), and the kinds of the warnings that
+the {term}`inefficiency` ([Theory](../theory.md#cost)), and the kinds of the warnings that
 apply, from {func}`telescopic.diagnostics.issues`:
 
 ```{code-cell} python
@@ -161,7 +161,7 @@ assert "late" in rows["k_50"]["issues"]
 
 Every estimate lies within two standard errors of 1: the settings change the variance,
 not the bias ([Settings](../guide/settings.md)).
-The {term}`inefficiency` compares settings at equal compute, and the recipe's is the lowest:
+The inefficiency compares settings at equal compute, and the recipe's is the lowest:
 
 - **$m = 2k$** costs less per replicate, but averages only $k + 1$ states: its relative
   cost and its inefficiency are higher than the recipe's.

@@ -21,7 +21,7 @@ Each kernel of telescopic comes with its coupling
 ([Choose a kernel](../guide/kernels.md)). Random-walk Metropolis shows how a coupling
 can make two chains equal. Each chain proposes a point from a Gaussian centered on its
 current state and accepts it with the Metropolis probability. The coupling draws the two
-proposals from the **reflection-maximal coupling** of the two Gaussians: it draws $X$'s
+proposals from the **{term}`reflection-maximal coupling`** of the two Gaussians: it draws $X$'s
 proposal, and with probability equal to the ratio of $Y$'s proposal density to $X$'s at
 that point, capped at 1, it gives $Y$ the same point; otherwise it gives $Y$ the mirror
 image of $X$'s proposal across the line, plane or hyperplane halfway between the two

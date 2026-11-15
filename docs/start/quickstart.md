@@ -16,9 +16,9 @@ to land on the same point. They **meet** when $X_t = Y_{t-L}$, and move together
 afterwards. The replicate's estimate is the average of $X$ from step $k$, the {term}`burn-in`
 (the argument `k`), to step $m$ (`m`), plus a correction made of the differences between
 the chains before they met, which removes the bias that the burn-in leaves. The estimate
-is a **signed measure**: points with weights that sum to 1, some of them negative.
+is a **{term}`signed measure`**: points with weights that sum to 1, some of them negative.
 
-The average of the replicates' estimates is **unbiased**: its expectation is the
+The average of the replicates' estimates is **{term}`unbiased`**: its expectation is the
 posterior expectation, whatever $k$, $m$ and $L$, from every initial distribution from
 which the chain converges, and its error bar is valid as the number of replicates grows.
 [How it works](../tutorials/how-it-works.md) shows a pair meeting, and [Theory](../theory.md)
@@ -82,8 +82,8 @@ lag and `m`. It then ran 100 replicates.
 ## Reading the summary
 
 The table has one row per parameter: the estimate of the posterior mean, which is
-{term}`unbiased`, with its standard error, and the standard deviation and the 16th, 50th and
-84th percentiles, which are **consistent**: they converge to the posterior's values as
+unbiased, with its standard error, and the standard deviation and the 16th, 50th and
+84th percentiles, which are **{term}`consistent`**: they converge to the posterior's values as
 the number of replicates grows, but are not unbiased at a fixed number. Below it are the
 run's diagnostics and the warnings that apply: [The summary](../reference/result-fields.md#the-summary)
 defines each entry, and [Warnings and errors](../reference/warnings.md) says what each
@@ -95,7 +95,7 @@ the default of 100: pass `n_replicates=500` to `sample` to turn it on
 
 ## Any function, after the run
 
-Each replicate is a {term}`signed measure`, so any expectation can be estimated without running
+Each replicate is a signed measure, so any expectation can be estimated without running
 again. For example, to estimate the posterior mean of the product of the slope and intercept:
 
 ```{code-cell} python
