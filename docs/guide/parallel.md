@@ -170,13 +170,9 @@ settings alone.
 ## Reproducibility
 
 ```{diagram} chunks
-A run of 2,000 replicates on a pool of 4 workers: their indices, 0 to 1,999, are cut into
-8 chunks of 250 consecutive indices, as [Chunks and workers](#chunks-and-workers)
-computes, and the first chunk is opened below. Each replicate draws from a random stream
-of its own, derived from the root seed and its index. With a log-density evaluated point
-by point, the replicates are therefore bitwise the same however the indices are cut, as
-this figure's run checks against the same run in one process; with a vectorized one,
-they can differ in the last bits, as this section explains.
+A run of 2,000 replicates on a pool of 4 workers: its indices cut into 8 chunks of 250
+consecutive indices, the first opened below, where each index has a random stream of
+its own, derived from the root seed and the index.
 ```
 
 Each replicate draws from a random stream of its own, derived from the root seed and its

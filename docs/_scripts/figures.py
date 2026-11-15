@@ -44,7 +44,6 @@ from __future__ import annotations
 
 import argparse
 import functools
-import inspect
 import itertools
 import sys
 import warnings
@@ -60,6 +59,7 @@ from brand import (
     FIGURE,
     FIGURE_GROUND,
     FONTS,
+    SIZES,
     TOKENS,
     _f,
     _path,
@@ -70,7 +70,7 @@ from brand import (
 from scipy import stats
 
 import telescopic
-from telescopic import couplings, engine, testing
+from telescopic import couplings, engine, sampler, testing
 from telescopic.tuning import OPTIMAL_SCALE
 
 OUT = DOCS / "_static" / "figures"
@@ -171,6 +171,26 @@ def arrow(
 def dot(x: float, y: float, color: str, r: float = FIGURE["dot"], ring: bool = False) -> str:
     stroke = f' stroke="{FIGURE_GROUND}" stroke-width="{FIGURE["outline"]}"' if ring else ""
     return f'<circle cx="{_f(x)}" cy="{_f(y)}" r="{_f(r)}" fill="{color}"{stroke}/>'
+
+
+def ring(
+    x: float, y: float, r: float, color: str, width: float = FIGURE["outline"], dash: str = ""
+) -> str:
+    """An unfilled circle outlined in color, dashed when dash is given."""
+    dashes = f' stroke-dasharray="{dash}"' if dash else ""
+    return (
+        f'<circle cx="{_f(x)}" cy="{_f(y)}" r="{_f(r)}" fill="none" stroke="{color}" '
+        f'stroke-width="{width}"{dashes}/>'
+    )
+
+
+def lines(
+    x: float, middle: float, rows: tuple[str, ...], anchor: str = "start", color: str = INK
+) -> list[str]:
+    """Rows of text, 22 apart, set in the code face between backticks, centered vertically
+    on middle."""
+    first_line = middle + 6 - 11 * (len(rows) - 1)
+    return [text(x, first_line + 22 * i, words(s), anchor, color) for i, s in enumerate(rows)]
 
 
 def svg(width: float, height: float, label: str, body: str) -> str:
@@ -446,11 +466,7 @@ def reflection() -> str:
             f'<circle cx="{_f(px)}" cy="{_f(py)}" r="{_f(2 * unit)}" fill="{color}" '
             f'fill-opacity="{FIGURE["disc"]}" style="mix-blend-mode: {BLEND[0]}"/>'
         )
-        for r in (1, 2):
-            body.append(
-                f'<circle cx="{_f(px)}" cy="{_f(py)}" r="{_f(r * unit)}" fill="none" '
-                f'stroke="{color}" stroke-width="{FIGURE["outline"]}"/>'
-            )
+        body += [ring(px, py, r * unit, color) for r in (1, 2)]
         body.append(dot(px, py, color, r=FIGURE["center"]))
     (ax, ay), (bx, by) = at(mu_x[0]), at(mu_y[0])
     body += [
@@ -1034,6 +1050,21 @@ def cost() -> str:
     return svg(width, height, label, "".join(body))
 
 
+def box(
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+    color: str = BLUE,
+    radius: float = SIZES["radius"][0],
+) -> str:
+    """A rectangle outlined in color, with the corner radius of the site by default."""
+    return (
+        f'<rect x="{_f(x)}" y="{_f(y)}" width="{_f(width)}" height="{_f(height)}" '
+        f'rx="{_f(radius)}" fill="none" stroke="{color}" stroke-width="{FIGURE["outline"]}"/>'
+    )
+
+
 def words(line: str) -> str:
     """A line of text whose parts between backticks are set in the code face."""
     parts = line.replace(" ", "\u00a0").split("`")
@@ -1176,15 +1207,9 @@ def remedies() -> str:
         y += 36
         for seen, raised, remedy, _ in rows:
             middle = y + row / 2
-            for lines, x in ((seen, 20.0), (remedy, remedy_x)):
-                first_line = middle + 6 - 11 * (len(lines) - 1)
-                body += [text(x, first_line + 22 * i, words(s)) for i, s in enumerate(lines)]
+            body += lines(20.0, middle, seen) + lines(remedy_x, middle, remedy)
             body += [
-                (
-                    f'<rect x="{_f(left)}" y="{_f(middle - tall / 2)}" width="{_f(span)}" '
-                    f'height="{_f(tall)}" rx="{_f(tall / 2)}" fill="none" stroke="{BLUE}" '
-                    f'stroke-width="{FIGURE["outline"]}"/>'
-                ),
+                box(left, middle - tall / 2, span, tall, radius=tall / 2),
                 text(left + span / 2, middle + 6, words(f"`{raised}`"), "middle", BLUE),
                 arrow(left - gap, middle, left - 4, middle, BLUE),
                 arrow(left + span + 4, middle, remedy_x - 8, middle, BLUE),
@@ -1206,35 +1231,27 @@ def remedies() -> str:
     return svg(width, y + 8, label, "".join(body))
 
 
-def box(x: float, y: float, width: float, height: float, color: str = BLUE) -> str:
-    """A rectangle with the corner radius of the site, outlined in color."""
-    return (
-        f'<rect x="{_f(x)}" y="{_f(y)}" width="{_f(width)}" height="{_f(height)}" rx="10" '
-        f'fill="none" stroke="{color}" stroke-width="{FIGURE["outline"]}"/>'
-    )
-
-
-# V9's steps: the name, two lines of what the step does, and the argument that skips it.
+# V9's steps: the name, two lines of what the step does, and what the arguments change.
 PIPELINE = (
     (
         "1. tuning pilot",
         ("4 adaptive chains of", "max(2000, 200d, 10d²) steps"),
-        ("a kernel with every", "parameter given"),
+        ("skipped by a kernel with", "every parameter given"),
     ),
     (
         "2. meeting-time pilot",
         ("100 pairs with lag 1,", "censored at 100,000"),
-        ("`k` given",),
+        ("skipped by `k` given",),
     ),
     (
         "3. the settings",
-        (f"`k`: 99% quantile of τ {MINUS} 1", "`lag` = `k`, `m` = 10`k`"),
-        ("each of `k`, `lag`", "and `m` given is kept"),
+        (f"`k`: 99% quantile of τ {MINUS} 1;", "`lag` = max(1, `k`), `m` = 10`k`"),
+        ("kept: each of `k`, `lag`", "and `m` given"),
     ),
     (
         "4. the replicates",
         ("`n_replicates` pairs,", "on `pool` when given"),
-        ("always run",),
+        (),
     ),
 )
 
@@ -1243,29 +1260,24 @@ def pipeline() -> str:
     """V9: the steps of an automatic run, top to bottom, each with the argument that
     skips it."""
     name = "pipeline"
+    # The pilot's cap and lag, which a run does not show.
+    check(sampler.PILOT_MAX_ITER == 100_000, name, "the pilot's cap of 100,000")
+    check(sampler.PILOT_SETTINGS.lag == 1, name, "the pilot's lag of 1")
+    # An automatic run tunes on 4 chains, runs 100 pilot pairs and sets lag = max(1, k)
+    # and m = 10 k, with k the 99% quantile of tau - 1; a kernel with every parameter and
+    # a given k skip both pilots.
     rw = telescopic.kernels.RandomWalk
-    # The numbers of the boxes, as the package sets them.
-    check(telescopic.tuning.N_CHAINS == 4, name, "4 tuning chains")
-    source = Path(telescopic.tuning.__file__).read_text()
-    check("max(2000, 200 * d, 10 * d * d)" in source, name, "the tuning pilot's steps")
-    sampler_module = sys.modules["telescopic.sampler"]
-    check(sampler_module.PILOT_REPLICATES == 100, name, "100 pilot pairs")
-    check(sampler_module.PILOT_MAX_ITER == 100_000, name, "the pilot's cap of 100,000")
-    check(sampler_module.PILOT_SETTINGS.lag == 1, name, "the pilot's lag of 1")
-    default = inspect.signature(telescopic.tuning.choose_k).parameters["quantile"].default
-    check(default == 0.99, name, "the 99% quantile")
-    # An automatic run tunes, runs the pilot and sets lag = k and m = 10 k, with k the
-    # quantile of tau - 1; a kernel with every parameter and a given k skip both pilots.
     auto = telescopic.CoupledSampler(log_density, initial(), kernel=rw(), rng=SEED)
     quietly(lambda: auto.run(2))
     k = auto.settings.k
     times = np.sort(auto.pilot) - 1
     check(
         auto.tuning is not None
+        and len(auto.tuning.acceptance) == 4
         and auto.tuning.n_steps == 2000
         and len(auto.pilot) == 100
         and k == int(times[int(np.ceil(0.99 * len(times))) - 1])
-        and (auto.settings.lag, auto.settings.m) == (k, 10 * k),
+        and (auto.settings.lag, auto.settings.m) == (max(1, k), 10 * k),
         name,
         "an automatic run's tuning, pilot and settings",
     )
@@ -1279,30 +1291,25 @@ def pipeline() -> str:
     width, row, tall = 640.0, 112.0, 76.0
     left, span = 20.0, 330.0
     skip_x = left + span + 28
-    body = [text(skip_x, 26, "skipped by", "start", MUTED)]
-    described = []
-    for i, (title, lines, skip) in enumerate(PIPELINE):
-        y = 40.0 + i * row
+    body, described = [], []
+    for i, (title, does, skip) in enumerate(PIPELINE):
+        y = 16.0 + i * row
         middle = y + tall / 2
         body += [
             box(left, y, span, tall),
             text(left + 14, y + 24, title, "start", BLUE),
-            *(text(left + 14, y + 47 + 21 * j, words(s)) for j, s in enumerate(lines)),
-            *(
-                text(skip_x, middle + 6 - 11 * (len(skip) - 1) + 22 * j, words(s), "start", MUTED)
-                for j, s in enumerate(skip)
-            ),
+            *(text(left + 14, y + 47 + 21 * j, words(s)) for j, s in enumerate(does)),
+            *lines(skip_x, middle, skip, color=MUTED),
         ]
         if i < len(PIPELINE) - 1:
             body.append(arrow(left + 40, y + tall + 4, left + 40, y + row - 4, BLUE))
-        described.append(
-            f"{title}: {' '.join(lines)}; skipped by {' '.join(skip)}".replace("`", "")
-        )
+        what = " ".join((*does, *(("; " + " ".join(skip),) if skip else ())))
+        described.append(f"{title}: {what}".replace("`", "").replace(" ;", ";"))
     label = (
-        "Four boxes from top to bottom, joined by arrows, the steps of an automatic run, each "
-        "with what skips it at the right. " + ". ".join(described) + "."
+        "Four boxes from top to bottom, joined by arrows, the steps of an automatic run, with "
+        "what skips or keeps each at the right. " + ". ".join(described) + "."
     )
-    return svg(width, 40.0 + 3 * row + tall + 12, label, "".join(body))
+    return svg(width, 16.0 + 3 * row + tall + 16, label, "".join(body))
 
 
 # V13's groups of a Result's attributes: a heading and its lines, each a line of attributes
@@ -1345,12 +1352,21 @@ def holds() -> str:
     name = "result"
     result = quietly(
         lambda: telescopic.sample(
-            log_density, initial(), 50, kernel=kernel(), k=2, m=12, lag=LAG, rng=SEED
+            log_density,
+            initial(),
+            50,
+            kernel=kernel(),
+            k=2,
+            m=12,
+            lag=LAG,
+            max_iter=13,
+            rng=SEED,
         )
     )
     measure = result.measure
+    check(result.n_censored > 0, name, "a censored pair")
     n_atoms = len(measure.weights)
-    drawn = {a for head, lines, _ in HOLDS for a in "".join((head, *lines)).split("`")[1::2]}
+    drawn = {a for head, rows, _ in HOLDS for a in "".join((head, *rows)).split("`")[1::2]}
     public = {a for a in vars(result) if not a.startswith("_")}
     check(drawn == public | {"atoms", "weights", "replicate"}, name, "every attribute drawn")
     check({"atoms", "weights", "replicate"} <= set(vars(measure)), name, "the measure's arrays")
@@ -1362,25 +1378,28 @@ def holds() -> str:
         "the shapes of the arrays",
     )
     h = measure.per_replicate(lambda x: x[:, 0])
+    met = np.isfinite(result.meeting_times)
+    earliest = np.where(met, result.meeting_times, result.max_iter + 1)
     check(
         np.isclose(result.estimate(lambda x: x[:, 0]).value, h.mean())
         and np.array_equal(
             result.tv_bound(np.arange(20)),
-            telescopic.diagnostics.tv_bound(result.meeting_times, result.lag, np.arange(20)),
+            telescopic.diagnostics.tv_bound(earliest, result.lag, np.arange(20)),
         ),
         name,
-        "estimate reads the measure and tv_bound the meeting times",
+        "estimate reads the measure, and tv_bound the meeting times with censored pairs at "
+        "the cap + 1",
     )
     width, line, gap = 640.0, 24.0, 22.0
     left, span = 20.0, 400.0
     method_x, method_span = left + span + 24, 176.0
     body, described, y = [], [], 14.0
-    for heading, lines, methods in HOLDS:
-        tall = 40 + line * len(lines)
+    for heading, rows, methods in HOLDS:
+        tall = 40 + line * len(rows)
         body += [
             box(left, y, span, tall, MUTED),
             text(left + 14, y + 26, words(heading), "start", MUTED),
-            *(text(left + 14, y + 52 + line * j, words(s)) for j, s in enumerate(lines)),
+            *(text(left + 14, y + 52 + line * j, words(s)) for j, s in enumerate(rows)),
         ]
         for j, method in enumerate(methods):
             middle = y + tall / 2 + (j - (len(methods) - 1) / 2) * 40
@@ -1390,7 +1409,7 @@ def holds() -> str:
                 text(method_x + method_span / 2, middle + 6, words(f"`{method}`"), "middle", BLUE),
             ]
         read = f"; read by {', '.join(methods)}" if methods else ""
-        described.append(f"{heading}: {'; '.join(lines)}{read}".replace("`", ""))
+        described.append(f"{heading}: {'; '.join(rows)}{read}".replace("`", ""))
         y += tall + gap
     label = (
         "Four boxes of a Result's attributes, from top to bottom, with arrows from the first "
@@ -1429,7 +1448,8 @@ def chunks() -> str:
 
     pooled, here = run(Recorder()), run(None)
     count = len(sizes)
-    check(sizes == [n // count] * count, name, f"{count} equal chunks of {n // count}")
+    size = n // count
+    check(count == 8 and sizes == [size] * count, name, "8 equal chunks of 250")
     check(
         np.array_equal(pooled.measure.atoms, here.measure.atoms)
         and np.array_equal(pooled.measure.weights, here.measure.weights)
@@ -1437,7 +1457,6 @@ def chunks() -> str:
         name,
         "the pooled replicates are bitwise those run in this process",
     )
-    size = n // count
     width, left, right = 640.0, 20.0, 620.0
     strip_y, strip_h = 64.0, 40.0
     x = Scale(0.0, n, left, right)
@@ -1505,7 +1524,7 @@ def hmc_meeting() -> str:
         step, leaps, cov=np.eye(2), jitter=0, meeting_weight=0.05, meeting_scale=scale
     )
     choose_leapfrog, choose_meeting = 0.5, 0.99  # below and above 1 - meeting_weight
-    default = inspect.signature(telescopic.kernels.HMC).parameters["meeting_scale"].default
+    default = telescopic.kernels.HMC().meeting_scale
     check(default == 1e-3, name, "the caption's default meeting_scale, 0.001")
     state_x = hmc.init_state(target, np.array([[-2.2, 1.6]]))
     state_y = hmc.init_state(target, np.array([[1.8, -0.6]]))
@@ -1564,11 +1583,7 @@ def hmc_meeting() -> str:
         p = np.atleast_2d(p)
         return np.column_stack([cx0 + p[:, 0] * unit, cy0 - p[:, 1] * unit])
 
-    body = [
-        f'<circle cx="{_f(cx0)}" cy="{_f(cy0)}" r="{_f(r * unit)}" fill="none" '
-        f'stroke="{LINE}" stroke-width="{FIGURE["outline"]}"/>'
-        for r in (1, 2)
-    ]
+    body = [ring(cx0, cy0, r * unit, LINE) for r in (1, 2)]
     body.append(
         text(cx0 + 2 * unit * 0.72, cy0 - 2 * unit * 0.72 - 6, rich(("π", "")), "start", MUTED)
     )
@@ -1590,10 +1605,7 @@ def hmc_meeting() -> str:
     for state, color in ((state_x, CX), (state_y, CY)):
         ((px, py),) = at(state.x[0])
         body += [
-            (
-                f'<circle cx="{_f(px)}" cy="{_f(py)}" r="{_f(scale * unit)}" fill="none" '
-                f'stroke="{color}" stroke-width="{FIGURE["rule"]}" stroke-dasharray="4 4"/>'
-            ),
+            ring(float(px), float(py), scale * unit, color, FIGURE["rule"], "4 4"),
             segment(float(px), float(py), float(mx), float(my), MET, width=FIGURE["outline"]),
         ]
     body += [
@@ -1619,8 +1631,9 @@ def hmc_meeting() -> str:
         + f" and never reaches 0. Then a meeting step, a random-walk step of scale sigma = "
         f"{scale:g} drawn as a dashed circle around each chain, coupled by the "
         f"reflection-maximal coupling, moves both to one point, ({meeting[0]:.2f}, "
-        f"{meeting[1]:.2f}), inside both circles, drawn as a dark ring labeled X = Y; at the distance {gaps[-1]:.2f} it does so "
-        f"with probability {p_meet:.2f}."
+        f"{meeting[1]:.2f}), inside both circles, drawn as a dark ring labeled X = Y. At "
+        f"the distance {gaps[-1]:.2f}, the two proposals of a meeting step coincide with "
+        f"probability {p_meet:.2f}."
     )
     return svg(width, height, label, "".join(body))
 
