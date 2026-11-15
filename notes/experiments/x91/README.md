@@ -21,6 +21,10 @@ their first argument; their outputs here are the `.jsonl` files.
 
 ## The registered runs
 
+The registered records came from commit `3bf5f62`, where the package's `HMC`, the arm P,
+had a fixed step; since issue #91 its default is the arm J5, so rerunning the records
+needs that commit.
+
 The code of the runs, committed before any registered seed runs (section 2, Code):
 
 - `arms.py`: the kernels of the arms. P and MP are the package's `HMC` and `MALA`; G

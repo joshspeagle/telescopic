@@ -409,29 +409,32 @@ repeat: Y ~ q;  u' ~ U(0, 1)  until  log u' + log q(Y) > log p(Y);  return (X, Y
 
 ### 5.5 HMC (R-KER-HMC)
 
-`HMC(step_size=None, n_steps=None, *, cov=None, meeting_weight=0.05, meeting_scale=1e-3)` requires a gradient. It follows Heng & Jacob (2019).
+`HMC(step_size=None, n_steps=None, *, cov=None, jitter=0.5, meeting_weight=0.05, meeting_scale=1e-3)` requires a gradient. It follows Heng & Jacob (2019), with a step jittered at each trajectory (DECISIONS #250).
 
 **Marginal kernel.** With probability $1 - \gamma$ ($\gamma$ = `meeting_weight`, the mixture weight of the meeting component), take a leapfrog step:
+- the step $\epsilon_u = \epsilon(1 + j(2u - 1))$, $u \sim \mathcal U(0, 1)$ drawn afresh for each trajectory, with $j$ = `jitter` in $[0, 1)$ and $\epsilon$ the nominal step; $j = 0$ reads no $u$ and is the fixed-step kernel, bit for bit;
 - whitened momentum $\nu \sim \mathcal N(0, I)$;
-- `n_steps` leapfrog updates of size $\epsilon$: $\nu \leftarrow \nu + \tfrac{\epsilon}{2}C^\top\nabla\log\pi(x)$, then $x \leftarrow x + \epsilon C\nu$, then the half step again;
+- `n_steps` leapfrog updates of size $\epsilon_u$: $\nu \leftarrow \nu + \tfrac{\epsilon_u}{2}C^\top\nabla\log\pi(x)$, then $x \leftarrow x + \epsilon_u C\nu$, then the half step again; `n_steps` is that of the nominal step, so the jitter varies the length of the trajectory between $1 - j$ and $1 + j$ times its nominal value;
 - accept on the change in $\log\pi(x) - \tfrac12\lVert\nu\rVert^2$;
 - a trajectory that reaches a non-finite position or a point with $\log\pi = -\infty$ stops there and is rejected, without raising.
+
+A trajectory at a fixed step leaves $\pi$ invariant, and $u$ does not depend on the state, so the jittered trajectory, a mixture of them, does too. The draws of a step are, in order: the uniform that chooses the component; then, for a trajectory, $u$ (when $j > 0$), $d$ normals and the accept uniform.
 
 With probability $\gamma$, take a RWMH step with proposal covariance $\sigma^2\Sigma$, where $\sigma$ = `meeting_scale`. Heng & Jacob use $\sigma^2 I$; the whitened $\sigma^2\Sigma$ makes the component invariant to the scale of each coordinate (D-24).
 
 **Coupling:**
 - a common uniform chooses the component, so both chains use the same one;
-- the leapfrog component shares $\nu$ and the accept uniform, so the chains contract but do not meet;
+- the leapfrog component shares $u$, $\nu$ and the accept uniform, so the chains contract but do not meet; each chain reads its numbers in the order of the step alone, so its marginal transition is the uncoupled one, and equal chains get identical arithmetic;
 - the RWMH component uses the reflection-maximal coupling of §5.2, so close chains meet exactly.
 
 Heng & Jacob used the rejection maximal coupling for this step. Both couplings are maximal; reflection has deterministic cost (D-11).
 
 **Tuning:**
 - `cov` from the RWMH pilot;
-- $\epsilon$ by dual averaging toward acceptance 0.8 of the trajectories alone, as for MALA but from $\epsilon_0 = d^{-1/4}$ (DECISIONS #13);
-- `n_steps` $= \lceil 1/\epsilon \rceil$, a trajectory of length about 1 in whitened coordinates, as in Heng & Jacob, and at most 1,000 (DECISIONS #17). For a Gaussian direction of whitened frequency $\omega$ the difference between the chains scales by $\cos(\omega\,\epsilon\,n)$, which stays below 1 in magnitude for $\omega < \pi$. A length of $\pi/2$ would contract most at $\omega = 1$ but not at all at $\omega = 2$, a direction whose variance the pilot underestimates fourfold (design review D-R12; D-24). That factor is the limit of small steps: $n$ leapfrog steps scale the difference by $\cos(n\theta)$, $\theta = 2\arcsin(\epsilon\omega/2)$, and where $n\theta$ is near a multiple of $\pi$ the trajectories do not contract along that direction. With the automatic `n_steps` and a tuned `cov` that leaves the frequencies near 1, the tuned step stays away from a resonance (the largest factor was at most 0.45 in every such run of the outputs below); a given `n_steps`, or a given `cov` that leaves frequencies away from 1, can put the tuned step on such a resonance, which the tuning, driven by the acceptance rate, does not see (issue #137, `notes/experiments/i137_baseline.out`, `i137_default_cap.out`, `i137_reproduce_unequal.out`). No remedy is specified yet: the candidates are tested first (DECISIONS #199).
+- $\epsilon$ by dual averaging toward acceptance 0.8 of the jittered trajectories alone, as for MALA but from $\epsilon_0 = d^{-1/4}$ (DECISIONS #13);
+- `n_steps` $= \lceil 1/\epsilon \rceil$, a trajectory of length about 1 in whitened coordinates, as in Heng & Jacob, and at most 1,000 (DECISIONS #17). For a Gaussian direction of whitened frequency $\omega$ the difference between the chains scales by $\cos(\omega\,\epsilon\,n)$, which stays below 1 in magnitude for $\omega < \pi$. A length of $\pi/2$ would contract most at $\omega = 1$ but not at all at $\omega = 2$, a direction whose variance the pilot underestimates fourfold (design review D-R12; D-24). That factor is the limit of small steps: $n$ leapfrog steps scale the difference by $\cos(n\theta)$, $\theta = 2\arcsin(\epsilon\omega/2)$, and where $n\theta$ is near a multiple of $\pi$ the trajectories do not contract along that direction. With the automatic `n_steps` and a tuned `cov` that leaves the frequencies near 1, the tuned fixed step stays away from a resonance (the largest factor was at most 0.45 in every such run of the outputs below); a given `n_steps`, or a given `cov` that leaves frequencies away from 1, can put the tuned fixed step on such a resonance, which the tuning, driven by the acceptance rate, does not see (issue #137, `notes/experiments/i137_baseline.out`, `i137_default_cap.out`, `i137_reproduce_unequal.out`). The jitter is the remedy: it spreads $n\theta$ over a range of phases at each trajectory, so the pair contracts on average along every direction. In the pre-registered test of issue #91 (`notes/experiments/x91/PREREGISTRATION.md`, `score.out`), the jitter at $j = 0.5$ chose `k` at every seed of every resonant Gaussian cell, where the fixed step could not at 2 of 5 seeds of `examples.gaussian(10)` with `n_steps=3` and 2 of 10 with `n_steps=10`, and at 4 of 30 of the Gaussian of unequal scales with `cov=np.eye(10)`; its median meeting cost on the Gaussians without a resonance was at most 1.17 times that of the fixed step (DECISIONS #250). It does not fix the banana from $U[-5, 5]^2$ or the banana curved in 20 dimensions, and nothing above $d = 20$ was tested.
 
-The documentation says that settings optimal for HMC alone can fail to contract when coupled (Heng & Jacob §5), names the resonance and the two settings that expose it, and says that meeting times should be checked.
+The documentation says that settings optimal for HMC alone can fail to contract when coupled (Heng & Jacob §5), names the resonance, the two settings that expose it without the jitter, and that the jitter removes it, and says that meeting times should be checked.
 
 ### 5.6 Independence Metropolis–Hastings (R-KER-IMH)
 

@@ -1,3 +1,6 @@
+from pathlib import Path
+
+import _frozen_kernels
 import numpy as np
 import pytest
 from scipy import integrate, special, stats
@@ -185,6 +188,15 @@ def test_mixture_gives_both_chains_the_component_its_uniform_selects(weights):
 def one_step_law(kernel, x):
     """For a 1-D kernel on N(0, 1): the probability of staying at x, and the CDF of moves."""
 
+    def leapfrog_density(e, n, t):
+        # A leapfrog trajectory of n steps of size e is linear on N(0, 1):
+        # (x', v') = P (x, v), P = M^n; the density of an accepted move from x to t.
+        one = np.array([[1 - e * e / 2, e], [-e * (1 - e * e / 4), 1 - e * e / 2]])
+        (a, b), (c, d) = np.linalg.matrix_power(one, n)
+        v = (t - a * x) / b
+        energy = 0.5 * (x * x + v * v) - 0.5 * (t * t + (c * x + d * v) ** 2)
+        return stats.norm.pdf(v) / abs(b) * np.minimum(1.0, np.exp(energy))
+
     def moved(k, t):
         if isinstance(k, Mixture):  # HMC included: a leapfrog and a random-walk component
             return sum(w * moved(c, t) for w, c in zip(k.weights, k.kernels, strict=True))
@@ -204,13 +216,12 @@ def one_step_law(kernel, x):
             return np.exp(log_q(t - x * (1 - e * e / 2)) + np.minimum(0.0, log_alpha))
         if isinstance(k, Gibbs):
             return stats.norm.pdf(t)
-        # A leapfrog trajectory is linear on N(0, 1): (x', v') = P (x, v), P = M^n.
-        e = k.step_size
-        one = np.array([[1 - e * e / 2, e], [-e * (1 - e * e / 4), 1 - e * e / 2]])
-        (a, b), (c, d) = np.linalg.matrix_power(one, k.n_steps)
-        v = (t - a * x) / b
-        energy = 0.5 * (x * x + v * v) - 0.5 * (t * t + (c * x + d * v) ** 2)
-        return stats.norm.pdf(v) / abs(b) * np.minimum(1.0, np.exp(energy))
+        # The jittered trajectory: the mean over u of trajectories at the step e_u, by the
+        # midpoint rule on 400 values of u, whose error (about 1e-6) is far below the
+        # Monte Carlo error of the tests.
+        u = (np.arange(400) + 0.5) / 400
+        steps = k.step_size * (1 + k.jitter * (2 * u - 1)) if k.jitter else [k.step_size]
+        return np.mean([leapfrog_density(e, k.n_steps, t) for e in steps], axis=0)
 
     # The moved density is negligible beyond 15 units; a fine grid makes the trapezoid
     # error (about 1e-6) far below the Monte Carlo error of the tests.
@@ -904,20 +915,84 @@ def leapfrog_reference(x, momentum, epsilon, n_steps):
 
 
 @pytest.mark.parametrize("u", [0.2, 0.9])
-def test_hmc_trajectories_match_the_reference_and_share_their_momentum(u):
+@pytest.mark.parametrize(
+    ("jitter", "jitter_draws", "epsilon"), [(0.0, [], 0.25), (0.5, [0.3], 0.2)]
+)
+def test_hmc_trajectories_match_the_reference_and_share_their_momentum(
+    u, jitter, jitter_draws, epsilon
+):
+    # With jitter 0.5, the uniform 0.3 gives the step 0.25 (1 + 0.5 (0.6 - 1)) = 0.2, and
+    # the count of leapfrog steps stays the given 5.
     x, y, momentum = np.array([0.5, 0.1]), np.array([-0.3, 0.6]), np.array([0.7, -0.4])
-    kernel = HMC(0.25, 5, cov=CHOL @ CHOL.T)
+    kernel = HMC(0.25, 5, cov=CHOL @ CHOL.T, jitter=jitter)
     # A component uniform of 0.1 < 1 - meeting_weight chooses the trajectory.
-    draws = fixed_draws([momentum], [[0.1, u]])
+    uniforms = [[0.1, *jitter_draws, u]]
+    draws = fixed_draws([momentum], uniforms)
     new_x, new_y = kernel.coupled_step(BANANA, banana_state(x), banana_state(y), draws)
     for start, new in ((x, new_x), (y, new_y)):
-        end, end_momentum = leapfrog_reference(start, momentum, 0.25, 5)
+        end, end_momentum = leapfrog_reference(start, momentum, epsilon, 5)
         log_alpha = banana_log_prob(end) - 0.5 * end_momentum @ end_momentum
         log_alpha -= banana_log_prob(start) - 0.5 * momentum @ momentum
         expected = end if np.log(u) < log_alpha else start
         np.testing.assert_allclose(new.x[0], expected, atol=1e-12)
-    single, _ = kernel.step(BANANA, banana_state(x), fixed_draws([momentum], [[0.1, u]]))
+    single, _ = kernel.step(BANANA, banana_state(x), fixed_draws([momentum], uniforms))
     np.testing.assert_array_equal(single.x, new_x.x)
+
+
+@pytest.mark.parametrize("vectorize", [False, True])
+def test_hmc_without_jitter_reproduces_the_fixed_step_kernel_bitwise(vectorize):
+    # jitter=0 reads no uniform for the step: the states, the acceptance probabilities and
+    # the numbers left to read are those of the leapfrog before the jitter.
+    n, d = 300, 3
+    target = Target(gaussian_log_prob, grad=lambda x: -x, vectorize=vectorize)
+    cov = dense(d)
+    shipped = HMC(0.3, 4, cov=cov, jitter=0, meeting_weight=0.3, meeting_scale=0.5)
+    frozen = Mixture([_frozen_kernels.Leapfrog(0.3, 4, cov), shipped.kernels[1]], [0.7, 0.3])
+    rng = np.random.default_rng(41)
+    points = rng.standard_normal((2, n, d))
+    points[1, : n // 10] = points[0, : n // 10]  # a tenth of the pairs equal
+    x, y = state(points[0], True), state(points[1], True)
+    old_x, old_y = x, y
+    draws, reference = random_draws(n, 42), random_draws(n, 42)
+    for _ in range(3):
+        moved, probability = shipped.step(target, x, draws)
+        expected, expected_probability = frozen.step(target, x, reference)
+        np.testing.assert_array_equal(moved.x, expected.x)
+        np.testing.assert_array_equal(probability, expected_probability)
+        x, y = shipped.coupled_step(target, x, y, draws)
+        old_x, old_y = frozen.coupled_step(target, old_x, old_y, reference)
+        for new, old in ((x, old_x), (y, old_y)):
+            np.testing.assert_array_equal(new.x, old.x)
+            np.testing.assert_array_equal(new.log_prob, old.log_prob)
+            np.testing.assert_array_equal(new.grad, old.grad)
+    np.testing.assert_array_equal(draws.normal(1), reference.normal(1))
+    np.testing.assert_array_equal(draws.uniform(), reference.uniform())
+
+
+def test_hmc_by_default_is_the_registered_jitter_arm_bitwise(monkeypatch):
+    # The default is the arm J5 of issue #91's pre-registered test, as the experiment's
+    # own kernel computes it: the same states, acceptance probabilities and draws.
+    monkeypatch.syspath_prepend(str(Path(__file__).parents[1] / "notes" / "experiments"))
+    from i137_common import JitterHMC
+
+    n, d = 200, 3
+    shipped = HMC(0.3, 4, cov=dense(d), meeting_weight=0.3, meeting_scale=0.5)
+    arm = JitterHMC(0.3, 4, cov=dense(d), meeting_weight=0.3, meeting_scale=0.5)
+    points = np.random.default_rng(43).standard_normal((2, n, d))
+    points[1, : n // 10] = points[0, : n // 10]
+    x, y = state(points[0], True), state(points[1], True)
+    old_x, old_y = x, y
+    draws, reference = random_draws(n, 44), random_draws(n, 44)
+    for _ in range(3):
+        moved, probability = shipped.step(TARGET, x, draws)
+        expected, expected_probability = arm.step(TARGET, x, reference)
+        np.testing.assert_array_equal(moved.x, expected.x)
+        np.testing.assert_array_equal(probability, expected_probability)
+        x, y = shipped.coupled_step(TARGET, x, y, draws)
+        old_x, old_y = arm.coupled_step(TARGET, old_x, old_y, reference)
+        np.testing.assert_array_equal(x.x, old_x.x)
+        np.testing.assert_array_equal(y.x, old_y.x)
+    np.testing.assert_array_equal(draws.uniform(), reference.uniform())
 
 
 def test_shared_momenta_contract_hmc_chains():
@@ -950,6 +1025,9 @@ def test_the_hmc_meeting_step_meets_with_the_reflection_probability():
         ({"meeting_weight": 0.0}, "meeting_weight must be in"),
         ({"meeting_scale": -1.0}, r"meeting_scale must be in \(0, inf\)"),
         ({"meeting_scale": np.inf}, r"meeting_scale must be in \(0, inf\)"),
+        ({"jitter": -0.1}, r"jitter must be in \[0, 1\), not -0.1"),
+        ({"jitter": 1.0}, r"jitter must be in \[0, 1\), not 1.0"),
+        ({"jitter": np.nan}, r"jitter must be in \[0, 1\), not nan"),
     ],
 )
 def test_hmc_rejects_invalid_parameters(kwargs, message):
@@ -966,7 +1044,7 @@ def test_gradient_kernels_enter_the_support_from_a_start_outside_it():
         grad=lambda x: np.where(x > 0, -x, np.nan),
         vectorize=True,
     )
-    for kernel in (MALA(1.0, cov=np.eye(1)), HMC(1.0, 1, cov=np.eye(1))):
+    for kernel in (MALA(1.0, cov=np.eye(1)), HMC(1.0, 1, cov=np.eye(1), jitter=0)):
         start = kernel.init_state(target, np.array([[-0.5], [-0.5]]))
         np.testing.assert_array_equal(start.grad, 0.0)
         # Momenta or normals of 1 and -1 propose 0.5 and -1.5; HMC's first uniform
@@ -986,7 +1064,7 @@ def test_an_hmc_trajectory_that_enters_a_zero_density_gap_stops_and_is_rejected(
         return np.where(inside, 0.0, -np.inf)
 
     target = Target(log_prob, grad=lambda x: np.zeros_like(x), vectorize=True)
-    kernel = HMC(0.5, 2, cov=np.eye(1))
+    kernel = HMC(0.5, 2, cov=np.eye(1), jitter=0)
     start = kernel.init_state(target, np.array([[0.0]]))
     evaluated = target.n_log_prob
     # The first uniform, 0.1, chooses the trajectory component.
@@ -1375,6 +1453,7 @@ def test_gibbs_rejects_invalid_parameters(kwargs, message):
         (lambda: MALA("0.1", cov=np.eye(1)), "step_size must be a real number"),
         (lambda: MALA(0.5, cov=np.eye(1)).with_step_size(np.eye(2)), "step_size must be a real"),
         (lambda: HMC(0.1, 2.0, cov=np.eye(1)), "n_steps must be an integer or None, not 2.0"),
+        (lambda: HMC(0.1, cov=np.eye(1), jitter="0.5"), "jitter must be a real number"),
         (lambda: Gibbs(conditional, [[0], [1]], eta="1"), "eta must be a real number"),
         (lambda: Gibbs(conditional, [[0], [1]], eta=True), "eta must be a real number"),
         (lambda: MultivariateT(np.zeros(2), np.eye(2), df=2.5), "df must be a positive integer"),
@@ -1393,9 +1472,10 @@ def test_kernel_parameters_of_the_wrong_type_raise_type_errors_naming_them(make,
     ("kernel", "step", "coupled"),
     [
         (MALA(0.5, cov=np.eye(2)), (2, 1), (2, 2)),
-        (HMC(0.5, 2, cov=np.eye(2), meeting_weight=0.5), (2, 2), (2, 2)),
+        (HMC(0.5, 2, cov=np.eye(2), meeting_weight=0.5), (2, 3), (2, 3)),
+        (HMC(0.5, 2, cov=np.eye(2), jitter=0, meeting_weight=0.5), (2, 2), (2, 2)),
     ],
-    ids=["mala", "hmc trajectory"],
+    ids=["mala", "hmc trajectory", "hmc trajectory without jitter"],
 )
 def test_kernels_consume_the_draws_they_document(kernel, step, coupled):
     # The first uniform 0.1 chooses HMC's trajectory component.

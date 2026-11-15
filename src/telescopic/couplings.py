@@ -340,7 +340,7 @@ def maximal(
         Draws from ``p`` and ``q`` used by each row.
     """
     # NumPy's log, whose last bit can differ from math.log's.
-    log_eta = float(np.log(real("eta", eta, 0, 1, closed=True)))
+    log_eta = float(np.log(real("eta", eta, 0, 1, closed_high=True)))
     xs, ys, n_draws = [], [], np.ones(len(p), np.intp)
     for row, (p_row, q_row) in enumerate(zip(p, q, strict=True)):
         generator = draws.generator(row)

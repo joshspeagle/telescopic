@@ -108,8 +108,8 @@ class Gibbs(Kernel):
         if (coupling == "two-scale") != (threshold is not None):
             raise ValueError("threshold is required by coupling='two-scale', and only by it")
         if threshold is not None:
-            threshold = real("threshold", threshold, 0, np.inf, closed=True)
-        eta = real("eta", eta, 0, 1, closed=True)
+            threshold = real("threshold", threshold, 0, np.inf, closed_high=True)
+        eta = real("eta", eta, 0, 1, closed_high=True)
         if coupling == "crn" and eta != 1:
             raise ValueError(
                 "eta applies to the maximal coupling, which coupling='crn' never uses"
