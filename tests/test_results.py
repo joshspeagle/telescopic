@@ -591,3 +591,17 @@ def test_summary_with_no_kept_replicate_shows_nan_quantiles():
         result.estimate(np.sin)
     with pytest.raises(ValueError, match="at least 1 kept replicate, not 0"):
         result.w1_bound()
+
+
+def test_chains_are_the_averaged_states_of_the_kept_replicates():
+    replicates = gaussian_run(
+        range(30), k=3, m=15, lag=2, thin=4, max_iter=17, keep=20, keep_paths=True
+    )
+    result = Result(replicates)
+    chains = result.chains()
+    kept = result.index[np.isfinite(result.meeting_times) & (result.index < 20)]
+    assert chains.shape == (len(kept), 4, 2)
+    for chain, index in zip(chains, kept, strict=True):
+        np.testing.assert_array_equal(chain, replicates.paths[index][0][[3, 7, 11, 15]])
+    with pytest.raises(ValueError, match="without the times"):
+        synthetic([1, 2, 3], [0.0, 1.0, 2.0]).chains()

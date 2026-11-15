@@ -25,7 +25,12 @@ from telescopic._types import (
     values_of,
 )
 from telescopic.engine import Replicates
-from telescopic.estimators import unbiased_covariance, unbiased_variance, weighted_quantile
+from telescopic.estimators import (
+    averaging_times,
+    unbiased_covariance,
+    unbiased_variance,
+    weighted_quantile,
+)
 from telescopic.measure import SignedMeasure
 from telescopic.tuning import TuningReport
 from telescopic.warnings import ConvergenceWarning, warn
@@ -711,6 +716,31 @@ class Result:
         from telescopic import _io
 
         return _io.load(path, cls)
+
+    def chains(self) -> FloatArray:
+        r"""The averaged states of the kept replicates that met, as chains of equal length.
+
+        Replicate :math:`r`'s chain is :math:`X_t` for :math:`t \in S = \{k, k + s, \dots\}
+        \cap [k, m]`, ``s`` = ``thin``, in time order: the atoms of the time average,
+        without the bias correction. Shaped as ArviZ takes chains, ``(chain, draw,
+        dim)``, for R-hat and effective sample sizes across replicates.
+
+        Returns
+        -------
+        ndarray, shape (n_kept, len(S), d)
+        """
+        time, owner = self._replicates.time, self._replicates.owner
+        if np.any(time < 0):
+            raise ValueError("these replicates were made without the times of their atoms")
+        averaged = averaging_times(self.k, self.m, self.thin)
+        # At a time of S, the averaged atom is its replicate's first row at that time.
+        first = np.ones(len(time), dtype=bool)
+        first[1:] = (time[1:] != time[:-1]) | (owner[1:] != owner[:-1])
+        rows = first & np.isin(time, averaged)
+        states: FloatArray = self.measure.atoms[rows].reshape(
+            self.n_kept, len(averaged), self.ndim
+        )
+        return states
 
     def plot_meeting_times(self, axes: Sequence[Any] | None = None) -> Any:
         """Plot the meeting times and their survival function (needs matplotlib).
