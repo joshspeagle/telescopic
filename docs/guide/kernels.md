@@ -21,7 +21,7 @@ the draws differ, the offset of the second from its mean mirrors that of the fir
 |---|---|---|---|---|
 | `RandomWalk` | `"auto"`, `"rwmh"` | log-density | reflection-maximal proposals, common uniform | `cov` |
 | `MALA` | `"mala"` | log-density, gradient | reflection-maximal proposals, common uniform | `cov`, `step_size` |
-| `HMC` | `"hmc"` | log-density, gradient | common momentum and uniform; reflection-maximal meeting step | `cov`, `step_size` |
+| `HMC` | `"hmc"` | log-density, gradient | common step, momentum and uniform; reflection-maximal meeting step | `cov`, `step_size` |
 | `Independence` | `"independence"` | log-density | common proposal and uniform | `proposal` |
 | `Gibbs` | none | full conditionals | per block: maximal, common random numbers, or both | nothing |
 | `Mixture` | none | what its components need | common component | its components' parameters |
@@ -128,22 +128,30 @@ Each step applies one of two components,
 chosen by a uniform:
 
 - with probability $1 - \gamma$, $\gamma$ = `meeting_weight`, a leapfrog trajectory of
-  `n_steps` steps of size $\epsilon$ = `step_size`, with `cov` as the inverse mass
-  matrix;
+  `n_steps` steps, with `cov` as the inverse mass matrix. The size of its steps is
+  drawn for each trajectory, uniformly between $(1 - j)\epsilon$ and $(1 + j)\epsilon$,
+  with $\epsilon$ = `step_size` and $j$ = `jitter`, 0.5 by default; `jitter=0` gives
+  the fixed step $\epsilon$;
 - with probability $\gamma$, the meeting step: a random-walk step with proposal
   covariance $\sigma^2\Sigma$, $\sigma$ = `meeting_scale`.
 
-Coupled chains take the same component. Their trajectories share the momentum and the
-uniform, which can bring the chains together but never makes them equal. The meeting
+Coupled chains take the same component. Their trajectories share the step, the
+momentum and the uniform, which can bring the chains together but never makes them
+equal. The jitter keeps a step from staying on a resonance of the leapfrog, where
+trajectories with a fixed step do not bring the chains closer
+([When the automatic step fails](step-size.md#when-the-automatic-step-fails)).
+Each trajectory leaves the target invariant, and the step does not depend on the
+state, so the jittered kernel does too. The meeting
 step couples them by the reflection-maximal coupling, which can make them equal once
 they are within about `meeting_scale` of each other in the coordinates that `cov`
 whitens. This is the construction of Heng & Jacob (2019), whose meeting step is not
 whitened and uses the rejection maximal coupling.
 
 `tune` sets `cov` to the covariance of the pilot chains, then `step_size` by dual
-averaging of the trajectories alone toward an acceptance rate of 0.8. `n_steps` defaults
-to $\lceil 1/\epsilon\rceil$, a trajectory of length about 1 in whitened coordinates,
-and at most 1,000.
+averaging of the jittered trajectories alone toward an acceptance rate of 0.8. `n_steps`
+defaults to $\lceil 1/\epsilon\rceil$, a trajectory of length about 1 in whitened
+coordinates at the step $\epsilon$, and at most 1,000; the jitter leaves it fixed, so
+the length of a trajectory varies between $1 - j$ and $1 + j$ times that.
 
 ## Independence
 

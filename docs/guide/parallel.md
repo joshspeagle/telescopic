@@ -190,8 +190,8 @@ process does only when limited to one, with `threadpoolctl.threadpool_limits(1)`
 Between such runs, as between runs with other numbers of workers or chunks, merged runs
 and a sampler's later calls, a replicate can differ by rounding, and a difference of rounding can change an acceptance or the step at
 which the two chains become equal: the replicate's meeting time, and with it its whole
-output, can then differ. The estimates agree within their error bars. With HMC on a
-Gaussian of 2 dimensions, the same 64 replicates run one at a time and all at once
+output, can then differ. The estimates agree within their error bars. With HMC with a
+fixed step (`jitter=0`) on a Gaussian of 2 dimensions, the same 64 replicates run one at a time and all at once
 differed in 17 meeting times, and the estimates of the mean from all 64 by at most 0.067
 standard errors.
 
