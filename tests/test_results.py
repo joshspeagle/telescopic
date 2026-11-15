@@ -605,3 +605,11 @@ def test_chains_are_the_averaged_states_of_the_kept_replicates():
         np.testing.assert_array_equal(chain, replicates.paths[index][0][[3, 7, 11, 15]])
     with pytest.raises(ValueError, match="without the times"):
         synthetic([1, 2, 3], [0.0, 1.0, 2.0]).chains()
+
+
+def test_writing_to_the_replicates_of_a_reduced_mean_changes_no_later_estimate():
+    result = gaussian_result(keep=5)
+    mean, cov = result.mean(), result.cov()
+    mean.replicates[:] = 0.0
+    np.testing.assert_array_equal(result.mean().value, mean.value)
+    np.testing.assert_array_equal(result.cov(), cov)

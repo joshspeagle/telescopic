@@ -280,7 +280,8 @@ class Result:
         if self.keep is None:
             return self.estimate(lambda x: x)
         self._require(2)
-        return _estimate(self._first, 0.95)
+        # A copy: the cached means feed cov, and a caller may write to the replicates.
+        return _estimate(self._first.copy(), 0.95)
 
     def cov(self) -> FloatArray:
         r"""Unbiased estimate of the covariance matrix of the target.
