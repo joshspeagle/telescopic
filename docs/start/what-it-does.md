@@ -17,7 +17,7 @@ recipe rest on judgment:
   ([Why burn-in biases MCMC](../concepts/burn-in-bias.md)).
 - **The error bar assumes convergence.** It comes from an autocorrelation time estimated
   from the same run, and it holds if the chains converged by the end of the burn-in,
-  which trace plots and $\hat R$ judge but do not show
+  which trace plots and R-hat judge but do not show
   ([Error bars from replicates](../concepts/error-bars.md)).
 
 ## What telescopic does instead
@@ -59,8 +59,8 @@ chooses the burn-in and the length of the chains from pilot runs before the repl
   need no autocorrelation time and no judgment of convergence, and they are valid as the
   number of replicates grows when the estimates have a finite variance
   ([Error bars from replicates](../concepts/error-bars.md)).
-- **Histograms**, unbiased in each bin, and **quantiles and credible intervals**,
-  consistent as the number of replicates grows
+- **Histograms**, unbiased in each bin when the bins are fixed before the run, and
+  **quantiles and credible intervals**, consistent as the number of replicates grows
   ([Estimate anything from a result](../guide/estimates.md)).
 - **Bounds on the distance to the target**, estimated from the meeting times of the
   pairs, on the total variation distance between the law of the chain at each time and
