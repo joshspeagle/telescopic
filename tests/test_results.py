@@ -619,6 +619,28 @@ def test_chains_are_the_averaged_states_of_the_kept_replicates():
         synthetic([1, 2, 3], [0.0, 1.0, 2.0]).chains()
 
 
+def test_inference_data_holds_the_chains_by_name_replicate_and_time():
+    pytest.importorskip("arviz")
+    result = Result(
+        gaussian_run(range(30), k=3, m=15, lag=2, thin=4, max_iter=17, keep=20),
+        names=["a", "b"],
+    )
+    posterior = result.to_inference_data()["posterior"]
+    kept = result.index[np.isfinite(result.meeting_times) & (result.index < 20)]
+    np.testing.assert_array_equal(posterior["chain"], kept)
+    np.testing.assert_array_equal(posterior["draw"], [3, 7, 11, 15])
+    for i, name in enumerate(result.names):
+        assert posterior[name].dims == ("chain", "draw")
+        np.testing.assert_array_equal(posterior[name], result.chains()[..., i])
+    assert set(posterior.data_vars) == {"a", "b"}
+
+
+def test_without_arviz_inference_data_names_the_extra_to_install(monkeypatch):
+    monkeypatch.setitem(sys.modules, "arviz", None)  # import arviz then fails
+    with pytest.raises(ImportError, match=r"telescopic\[arviz\]"):
+        RESULT.to_inference_data()
+
+
 def test_writing_to_the_replicates_of_a_reduced_mean_changes_no_later_estimate():
     result = gaussian_result(keep=5)
     mean, cov = result.mean(), result.cov()

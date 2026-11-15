@@ -463,6 +463,9 @@ All notable changes to this project are documented here. The format follows
   `Result.chains()` returns the averaged states of each kept replicate as chains of equal
   length. `max_iter` must be at most 2**31 - 1 where times are stored, and a stored atom
   costs 8d + 20 bytes instead of 8d + 16.
+- `Result.to_inference_data()` returns the chains of `Result.chains()` as ArviZ data, one
+  variable per parameter name with the replicate indices and times as coordinates, without
+  the bias correction; it needs the new extra `telescopic[arviz]`.
 - `keep` on `CoupledSampler.run`, `sample` and `engine.run` (and `engine.Settings.keep`)
   stores the signed measures and distances of the replicates of index below `keep` only,
   and the moments of every replicate (`Replicates.center` and `Replicates.moments`), from

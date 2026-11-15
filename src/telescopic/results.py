@@ -7,6 +7,7 @@ import html
 import os
 import re
 import textwrap
+import warnings
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import IO, Any
@@ -730,7 +731,7 @@ class Result:
         Replicate :math:`r`'s chain is :math:`X_t` for :math:`t \in S = \{k, k + s, \dots\}
         \cap [k, m]`, ``s`` = ``thin``, in time order: the atoms of the time average,
         without the bias correction. Shaped as ArviZ takes chains, ``(chain, draw,
-        dim)``, for R-hat and effective sample sizes across replicates.
+        dim)``; :meth:`to_inference_data` passes them to ArviZ.
 
         Returns
         -------
@@ -748,6 +749,47 @@ class Result:
             self.n_kept, len(averaged), self.ndim
         )
         return states
+
+    def to_inference_data(self) -> Any:
+        r"""The chains of :meth:`chains` as ArviZ data, without the bias correction (needs arviz).
+
+        The ``posterior`` group holds one variable per coordinate, named by ``names``, of
+        dimensions ``(chain, draw)``: a chain for each kept replicate that met, whose
+        coordinate is the replicate's index, and a draw for each time :math:`t \in S`, whose
+        coordinate is :math:`t`. The values are those of :meth:`chains`. There is no
+        ``sample_stats`` group, since a result stores no log-density values.
+
+        These draws carry no bias correction: they are the ordinary MCMC chains after a
+        burn-in of ``k`` steps. ArviZ's summaries of them, its :math:`\hat R` and effective
+        sample sizes included, describe those chains, not the unbiased estimates of this
+        result, whose error bars come from the spread of the replicates (What replaces a
+        judgment of convergence, in :doc:`/concepts/error-bars`).
+
+        Returns
+        -------
+        arviz.InferenceData or xarray.DataTree
+            An ``InferenceData`` with ArviZ before 1.0, a ``DataTree`` from 1.0 on.
+        """
+        try:
+            import arviz
+        except ImportError as error:
+            raise ImportError(
+                "to_inference_data needs arviz: pip install 'telescopic[arviz]'"
+            ) from error
+        chains = self.chains()
+        posterior = {name: chains[..., i] for i, name in enumerate(self.names)}
+        # Atoms are sorted by owner, so these are the replicates of the chains, in order.
+        coords = {
+            "chain": np.unique(self._replicates.owner),
+            "draw": averaging_times(self.k, self.m, self.thin),
+        }
+        with warnings.catch_warnings():
+            # ArviZ warns of more chains than draws, the usual shape of many replicates.
+            warnings.filterwarnings("ignore", "More chains|Found chain", UserWarning)
+            # ArviZ 1.0 takes the groups as one dict and returns a DataTree.
+            if int(arviz.__version__.split(".")[0]) >= 1:
+                return arviz.from_dict({"posterior": posterior}, coords=coords)
+            return arviz.from_dict(posterior=posterior, coords=coords)
 
     def plot_meeting_times(self, axes: Sequence[Any] | None = None) -> Any:
         """Plot the meeting times and their survival function (needs matplotlib).
