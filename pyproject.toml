@@ -74,6 +74,8 @@ docs = [
     "ipykernel",
     # The tutorial telescopic beside emcee runs both.
     "emcee==3.1.6",
+    # The gallery page Gradients from JAX runs JAX on the CPU.
+    "jax==0.12.0.1",
     # docs/_scripts/brand.py reads the wordmark's outlines from the served woff2 font.
     "fonttools==4.68.0",
     "brotli==1.2.1",
