@@ -1,6 +1,7 @@
 import itertools
 import sys
 from dataclasses import replace
+from types import SimpleNamespace
 from xml.etree import ElementTree
 
 import numpy as np
@@ -635,9 +636,11 @@ def test_inference_data_holds_the_chains_by_name_replicate_and_time():
     assert set(posterior.data_vars) == {"a", "b"}
 
 
-def test_without_arviz_inference_data_names_the_extra_to_install(monkeypatch):
-    monkeypatch.setitem(sys.modules, "arviz", None)  # import arviz then fails
-    with pytest.raises(ImportError, match=r"telescopic\[arviz\]"):
+@pytest.mark.parametrize("arviz", [None, SimpleNamespace(__version__="0.23.4")])
+def test_without_arviz_1_inference_data_names_the_extra_to_install(monkeypatch, arviz):
+    # None makes import arviz fail; the namespace stands for an ArviZ before 1.0.
+    monkeypatch.setitem(sys.modules, "arviz", arviz)
+    with pytest.raises(ImportError, match=r"ArviZ 1\.0 or later.*telescopic\[arviz\]"):
         RESULT.to_inference_data()
 
 

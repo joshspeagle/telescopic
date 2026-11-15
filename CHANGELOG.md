@@ -465,7 +465,8 @@ All notable changes to this project are documented here. The format follows
   costs 8d + 20 bytes instead of 8d + 16.
 - `Result.to_inference_data()` returns the chains of `Result.chains()` as ArviZ data, one
   variable per parameter name with the replicate indices and times as coordinates, without
-  the bias correction; it needs the new extra `telescopic[arviz]`.
+  the bias correction, as an `xarray.DataTree`; it needs ArviZ 1.0 or newer, on Python 3.12 or
+  newer, through the new extra `telescopic[arviz]`.
 - `keep` on `CoupledSampler.run`, `sample` and `engine.run` (and `engine.Settings.keep`)
   stores the signed measures and distances of the replicates of index below `keep` only,
   and the moments of every replicate (`Replicates.center` and `Replicates.moments`), from

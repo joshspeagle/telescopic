@@ -767,15 +767,20 @@ class Result:
 
         Returns
         -------
-        arviz.InferenceData or xarray.DataTree
-            An ``InferenceData`` with ArviZ before 1.0, a ``DataTree`` from 1.0 on.
+        xarray.DataTree
+            The data structure of ArviZ 1.0 and later, which needs Python 3.12 or newer.
         """
         try:
             import arviz
-        except ImportError as error:
+
+            too_old = int(arviz.__version__.split(".")[0]) < 1
+        except ImportError:
+            too_old = True
+        if too_old:
             raise ImportError(
-                "to_inference_data needs arviz: pip install 'telescopic[arviz]'"
-            ) from error
+                "to_inference_data needs ArviZ 1.0 or later, which needs Python 3.12 or "
+                "newer: pip install 'telescopic[arviz]'"
+            )
         chains = self.chains()
         posterior = {name: chains[..., i] for i, name in enumerate(self.names)}
         # Atoms are sorted by owner, so these are the replicates of the chains, in order.
@@ -785,11 +790,8 @@ class Result:
         }
         with warnings.catch_warnings():
             # ArviZ warns of more chains than draws, the usual shape of many replicates.
-            warnings.filterwarnings("ignore", "More chains|Found chain", UserWarning)
-            # ArviZ 1.0 takes the groups as one dict and returns a DataTree.
-            if int(arviz.__version__.split(".")[0]) >= 1:
-                return arviz.from_dict({"posterior": posterior}, coords=coords)
-            return arviz.from_dict(posterior=posterior, coords=coords)
+            warnings.filterwarnings("ignore", "Found chain dimension", UserWarning)
+            return arviz.from_dict({"posterior": posterior}, coords=coords)
 
     def plot_meeting_times(self, axes: Sequence[Any] | None = None) -> Any:
         """Plot the meeting times and their survival function (needs matplotlib).

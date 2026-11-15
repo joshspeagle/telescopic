@@ -35,8 +35,8 @@ progress = ["tqdm>=4.66"]
 # Ships functions defined in notebooks and scripts to worker processes.
 parallel = ["cloudpickle>=3.0"]
 pandas = ["pandas>=2.1"]
-# 0.22, the oldest that imports beside matplotlib 3.11; ArviZ 1.0 needs Python 3.12.
-arviz = ["arviz>=0.22"]
+# ArviZ 1.0, whose data structure is xarray's DataTree, needs Python 3.12.
+arviz = ["arviz>=1.0; python_version >= '3.12'"]
 all = ["telescopic[plot,progress,parallel,pandas,arviz]"]
 
 [project.urls]
@@ -54,8 +54,7 @@ test = [
     "tqdm>=4.66",
     "matplotlib>=3.8",
     "pandas>=2.1",
-    # ArviZ 0.23, the newest on Python 3.11, warns and writes to the user's cache directory
-    # on import, so the tests of the export run on Python 3.12 and newer only.
+    # ArviZ 1.0 needs Python 3.12, so the tests of the export skip on Python 3.11.
     "arviz>=1.0; python_version >= '3.12'",
 ]
 dev = [

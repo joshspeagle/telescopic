@@ -23,8 +23,8 @@ pip install .            # or pip install ".[all]" for every extra
 It needs Python 3.11 or newer, NumPy 1.26 or newer, SciPy 1.12 or newer and
 threadpoolctl 3.1 or newer. The extras are `plot` (matplotlib), `progress` (tqdm),
 `parallel` (cloudpickle, which sends functions defined in notebooks to worker
-processes), `pandas` (summaries as data frames), `arviz` (chains exported to ArviZ)
-and `all`.
+processes), `pandas` (summaries as data frames), `arviz` (chains exported to
+ArviZ 1.0 or newer, on Python 3.12 or newer) and `all`.
 
 ## Example
 
