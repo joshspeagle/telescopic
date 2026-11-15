@@ -86,17 +86,25 @@ funnel_tau = {
 ```{code-cell} python
 :tags: [remove-cell]
 
-# The claims of the next paragraph.
+from IPython.display import Markdown
+
+# The claims of the next paragraph, from this run; HMC's failure with a wide margin.
 walk_tau, hmc_tau = funnel_tau["random walk"], funnel_tau["HMC"]
-assert np.isfinite(walk_tau).all()
-assert walk_tau.max() > 10_000
-assert np.median(walk_tau) < 1000
-assert np.isinf(hmc_tau).mean() > 0.5
+assert np.isinf(hmc_tau).sum() >= 10
+walk_met = walk_tau[np.isfinite(walk_tau)]
+glue(
+    "walk_text",
+    Markdown(
+        f"Of the 200 pairs of the random walk, {np.isinf(walk_tau).sum()} were unmet at the"
+        f" cap; the others met after a median of {np.median(walk_met):,.0f} iterations,"
+        f" and the slowest after {walk_met.max():,.0f}."
+    ),
+    display=False,
+)
 glue("hmc_unmet", int(np.isinf(hmc_tau).sum()), display=False)
 ```
 
-Every pair of the random walk met, most of them within a few hundred iterations, but the
-slowest took more than 10,000, and the `slow` warning above says so as it happens
+{glue:md}`walk_text` A pair slow to meet emits the `slow` warning as it runs
 ([Slow pairs](../reference/warnings.md#slow-pairs-slow)). HMC, with the step size that its
 tuning chose, left {glue:text}`hmc_unmet` of 50 pairs unmet at the cap. Its step was
 tuned toward an acceptance rate on chains in the bulk of the target, which is no
@@ -121,18 +129,29 @@ for name, tau in funnel_tau.items():
 ```{code-cell} python
 :tags: [remove-cell]
 
-# The claims of the next paragraph.
-walk_k = telescopic.tuning.choose_k(walk_tau)
-assert walk_k > 1000
-glue("walk_k", walk_k, display=False)
-glue("walk_m", 10 * walk_k, display=False)
+def recipe_text(name, tau):
+    try:
+        k = telescopic.tuning.choose_k(tau)
+    except ValueError:
+        return (
+            f"For {name}, `k` cannot be chosen, and `telescopic.sample` would raise this"
+            " error after its pilot"
+        )
+    return (
+        f"For {name}, the recipe sets $k$ = {k:,} and $m$ = {10 * k:,}, so that each"
+        f" replicate would run at least {10 * k:,} iterations"
+    )
+
+
+glue(
+    "recipe_text",
+    Markdown(f"{recipe_text('the random walk', walk_tau)}. {recipe_text('HMC', hmc_tau)}."),
+    display=False,
+)
 ```
 
-For the random walk, the recipe sets $k$ = {glue:text}`walk_k` and $m$ =
-{glue:text}`walk_m`, so that each {term}`replicate` would run at least
-{glue:text}`walk_m` iterations: a run of 1,000 replicates is far beyond the time of this
-page. For HMC, `k` cannot be chosen, and {func}`telescopic.sample` would raise this error
-after its pilot ([k cannot be chosen](../guide/troubleshooting.md#k-cannot-be-chosen)). A
+{glue:md}`recipe_text` A {term}`replicate` runs at least $m$ iterations, and
+[k cannot be chosen](../guide/troubleshooting.md#k-cannot-be-chosen) explains the error. A
 step size checked on pilot pairs is the usual remedy
 ([Checking a step size](../guide/step-size.md#checking-a-step-size)), but on the funnel any
 fixed step is too large in the neck or too small in the mouth.
@@ -158,29 +177,33 @@ print("warnings:", [issue.kind for issue in telescopic.diagnostics.issues(budget
 ```{code-cell} python
 :tags: [remove-cell]
 
-# The claims of the next paragraph.
-budget_kinds = {issue.kind for issue in telescopic.diagnostics.issues(budget)}
-assert {"censored", "late", "variance", "slow"} <= budget_kinds
-assert estimate.value[2] == 0 and estimate.standard_error[2] == 0
-assert abs(estimate.value[0]) > 3 * estimate.standard_error[0]
-assert budget.n_censored >= 1
-assert budget.diagnostics()["late_fraction"] > 0.5
-assert budget.measure.atoms[:, 0].min() > -3
+from run_text import warnings_text
+
+in_neck = int(np.sum(budget.measure.atoms[:, 0] < -3))
+neck = (
+    "no atom of any replicate lies below $v = -3$, so the probability of the neck is"
+    " estimated as 0, with a standard error of 0"
+    if in_neck == 0
+    else f"{in_neck} atoms lie below $v = -3$, and the probability of the neck is"
+    f" estimated as {estimate.value[2]:.4f} ± {estimate.standard_error[2]:.4f}, against"
+    f" the exact {truth[2]:.4f}"
+)
+z = estimate.value[0] / estimate.standard_error[0]
+glue(
+    "budget_text",
+    Markdown(
+        f"The estimate of $E[v]$ is {z:.1f} standard errors from 0, and {neck}."
+        f" {warnings_text(budget)} Pairs that reached the cap, left out of the"
+        f" estimates: {budget.n_censored}."
+    ),
+    display=False,
+)
 ```
 
-The estimate of $E[v]$ is more than three standard errors from 0, and the probability of
-the neck is estimated as 0, with a standard error of 0: no {term}`atom` of any replicate
-lies below $v = -3$. The run says that its error bars cannot be trusted, in four
-warnings:
-
-- [`censored`](../reference/warnings.md#censored-pairs-censored);
-- [`late`](../reference/warnings.md#late-pairs-late);
-- [`variance`](../reference/warnings.md#one-replicate-dominating-the-variance-variance);
-- [`slow`](../reference/warnings.md#slow-pairs-slow).
-
-The pair left out by the cap is the slowest of the run, and no state that the other
-pairs recorded lies in the neck. The warnings name these symptoms; the cause is a kernel
-whose single scale cannot serve both ends of the funnel.
+{glue:md}`budget_text` Each warning's entry in
+[Warnings and errors](../reference/warnings.md#warnings) gives its meaning and remedy.
+The warnings name symptoms; the cause here is a kernel whose single scale cannot serve
+both ends of the funnel.
 
 ## A change of coordinates
 
@@ -214,12 +237,14 @@ noncentered_tau = {
 ```{code-cell} python
 :tags: [remove-cell]
 
-# The claims of the next paragraph.
-for tau in noncentered_tau.values():
-    assert np.isfinite(tau).all() and tau.max() < 1000
+# The claim of the next paragraph.
+assert all(np.isfinite(tau).all() for tau in noncentered_tau.values())
+slowest = max(tau.max() for tau in noncentered_tau.values())
+glue("slowest_new", float(slowest), display=False)
 ```
 
-Every pair of both kernels met within a few hundred iterations. The survival functions of
+Every pair of both kernels met, the slowest after {glue:text}`slowest_new:.0f`
+iterations. The survival functions of
 the meeting times, the fraction of pairs not yet met at each time
 ([Meeting times and distance to stationarity](../concepts/meeting-times.md)), put the four
 pilots side by side:
@@ -230,9 +255,9 @@ mystnb:
   image:
     alt: >-
       Four survival curves of meeting times on logarithmic axes. In the new
-      coordinates, the curves of the random walk and of HMC fall to zero before
-      1,000 iterations. On the funnel, the random walk's curve has a long tail past
-      10,000, and HMC's curve stays above one half.
+      coordinates, the curves of the random walk and of HMC fall to zero early. On
+      the funnel, the random walk's curve has a long tail, and HMC's curve ends well
+      above zero, at the fraction of its pairs unmet at the cap.
   figure:
     caption: >-
       The fraction of pilot pairs not yet met, $P(\tau > t)$, against $t$, for the random
@@ -273,13 +298,13 @@ result.summary()
 ```{code-cell} python
 :tags: [remove-cell]
 
-# The claims of the next paragraphs.
+# The claim of the next paragraph, with a margin.
 assert np.all(np.abs(noncentered.value - truth) < 3 * noncentered.standard_error)
-assert not telescopic.diagnostics.issues(result)
+glue("new_warnings", Markdown(warnings_text(result)), display=False)
 ```
 
-All three estimates lie within three standard errors of the exact values, and the summary
-lists no warning. {meth}`~telescopic.Result.plot_marginals` draws the marginal of $v$ from
+All three estimates lie within three standard errors of the exact values.
+{glue:md}`new_warnings` {meth}`~telescopic.Result.plot_marginals` draws the marginal of $v$ from
 each run as a signed histogram with boxes of two standard errors
 ([Plot a result](../guide/plots.md)), here against its exact density:
 
@@ -289,9 +314,8 @@ mystnb:
   image:
     alt: >-
       Two panels, each a histogram of v with boxes of two standard errors over the
-      exact normal density of standard deviation 3. Left, the histogram of the
-      random walk on the funnel has no mass below about -3 and too much above 0.
-      Right, the histogram from the new coordinates follows the curve.
+      exact normal density of standard deviation 3: left, from the random walk on
+      the funnel within a budget; right, from the new coordinates.
   figure:
     caption: >-
       The marginal of $v$ estimated by the random walk on the funnel within a budget
@@ -307,9 +331,7 @@ for ax, (title, run) in zip(axes, (("funnel, budget run", budget), ("new coordin
 axes[1].legend(fontsize=9);
 ```
 
-The warnings, read together: the budget run on the funnel emitted four, and its marginal
-of $v$ misses the neck; the run in the new coordinates emitted none, and its marginal
-agrees with the exact density. No warning names the funnel's changing scale as the cause.
-They report long meeting times, censored pairs and a dominant replicate, which here
-pointed to the kernel. An empty list of warnings means only that none of their conditions
-holds ([Warnings and errors](../reference/warnings.md#warnings)).
+No warning names the funnel's changing scale as the cause: the warnings report
+symptoms, such as long meeting times, censored pairs or a dominant replicate, and here
+those of the budget run pointed to the kernel. An empty list of warnings means only that
+none of their conditions holds ([Warnings and errors](../reference/warnings.md#warnings)).
