@@ -175,6 +175,7 @@ class _Leapfrog(GradientKernel):
     # The trajectory component of HMC. Coupled chains share the jitter's uniform, the
     # momentum and the acceptance uniform.
     target_acceptance = 0.8
+    _untuned = "HMC needs step_size and cov; give them, or tune the kernel on a pilot run"
 
     def __init__(
         self,
@@ -198,9 +199,10 @@ class _Leapfrog(GradientKernel):
         return math.ceil(1 / max(self.step_size, 1 / MAX_STEPS))
 
     def step(self, target: Target, state: State, draws: Draws) -> tuple[State, FloatArray]:
-        epsilon = self._step_sizes(draws, 1)
+        chol, step_size = self._ready()
+        epsilon = self._step_sizes(step_size, draws, 1)
         momentum = draws.normal(state.x.shape[1])
-        end, log_alpha = self._trajectory(target, state, momentum, epsilon, 1)
+        end, log_alpha = self._trajectory(target, state, momentum, chol, epsilon, 1)
         accepted = draws.log_uniform() < log_alpha
         return select(accepted, end, state), acceptance(log_alpha)
 
@@ -209,7 +211,8 @@ class _Leapfrog(GradientKernel):
     ) -> tuple[State, State]:
         # Both chains in one batch, so that each leapfrog step calls the target once.
         n = len(state_x)
-        epsilon = self._step_sizes(draws, 2)
+        chol, step_size = self._ready()
+        epsilon = self._step_sizes(step_size, draws, 2)
         momentum = draws.normal(state_x.x.shape[1])
         both = State(
             np.concatenate([state_x.x, state_y.x]),
@@ -217,7 +220,7 @@ class _Leapfrog(GradientKernel):
             np.concatenate([cast(FloatArray, state_x.grad), cast(FloatArray, state_y.grad)]),
         )
         end, log_alpha = self._trajectory(
-            target, both, np.concatenate([momentum, momentum]), epsilon, 2
+            target, both, np.concatenate([momentum, momentum]), chol, epsilon, 2
         )
         log_u = draws.log_uniform()
         moved = select(np.concatenate([log_u, log_u]) < log_alpha, end, both)
@@ -231,17 +234,18 @@ class _Leapfrog(GradientKernel):
     def _first_step_size(self, d: int) -> float:
         return float(d**-0.25)
 
-    def _step_sizes(self, draws: Draws, chains: int) -> float | FloatArray:
+    def _ready(self) -> tuple[FloatArray, float]:
+        if self._chol is None or self.step_size is None:
+            raise ValueError(self._untuned)
+        return self._chol, self.step_size
+
+    def _step_sizes(self, step_size: float, draws: Draws, chains: int) -> float | FloatArray:
         # The step of each trajectory: eps, or eps (1 + j (2u - 1)) with one uniform u per
         # row, read before the momentum, as a column repeated for each of `chains` chains.
         # The count of leapfrog steps stays that of eps (issue #91's arm J5).
-        if self._chol is None or self.step_size is None:
-            raise ValueError(
-                "HMC needs step_size and cov; give them, or tune the kernel on a pilot run"
-            )
         if not self.jitter:
-            return self.step_size
-        steps = self.step_size * (1 + self.jitter * (2 * draws.uniform() - 1))
+            return step_size
+        steps = step_size * (1 + self.jitter * (2 * draws.uniform() - 1))
         return np.tile(steps, chains)[:, None]
 
     def _trajectory(
@@ -249,6 +253,7 @@ class _Leapfrog(GradientKernel):
         target: Target,
         state: State,
         momentum: FloatArray,
+        chol: FloatArray,
         epsilon: float | FloatArray,
         chains: int,
     ) -> tuple[State, FloatArray]:
@@ -258,7 +263,7 @@ class _Leapfrog(GradientKernel):
         # products are a separate BLAS call of the same shape, since two equal rows of one
         # call can get different bits. Equal chains then stay equal if the target gives
         # equal rows of its batch equal values.
-        chol, length = cast(FloatArray, self._chol), cast(int, self.n_steps)
+        length = cast(int, self.n_steps)
         x, grad = state.x, cast(FloatArray, state.grad)
 
         def product(matrix: FloatArray, vectors: FloatArray) -> FloatArray:
