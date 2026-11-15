@@ -94,6 +94,7 @@ tutorials/failure-modes
 :caption: Gallery
 
 gallery/radial-velocity
+gallery/hierarchical-gibbs
 ```
 
 ```{toctree}
