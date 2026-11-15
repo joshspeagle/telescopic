@@ -79,7 +79,7 @@ def pilot(log_prob, grad, initial, kernel, n, cap):
 
 funnel_tau = {
     "random walk": pilot(funnel.log_prob, funnel.grad, funnel.initial, "rwmh", 200, 20_000),
-    "HMC": pilot(funnel.log_prob, funnel.grad, funnel.initial, "hmc", 100, 5_000),
+    "HMC": pilot(funnel.log_prob, funnel.grad, funnel.initial, "hmc", 50, 2_000),
 }
 ```
 
@@ -98,7 +98,7 @@ glue("hmc_unmet", int(np.isinf(hmc_tau).sum()), display=False)
 Every pair of the random walk met, most of them within a few hundred iterations, but the
 slowest took more than 10,000, and the `slow` warning above says so as it happens
 ([Slow pairs](../reference/warnings.md#slow-pairs-slow)). HMC, with the step size that its
-tuning chose, left {glue:text}`hmc_unmet` of 100 pairs unmet at the cap. Its step was
+tuning chose, left {glue:text}`hmc_unmet` of 50 pairs unmet at the cap. Its step was
 tuned toward an acceptance rate on chains in the bulk of the target, which is no
 guarantee that coupled chains come together
 ([When the automatic step fails](../guide/step-size.md#when-the-automatic-step-fails)).
@@ -173,14 +173,10 @@ the neck is estimated as 0, with a standard error of 0: no {term}`atom` of any r
 lies below $v = -3$. The run says that its error bars cannot be trusted, in four
 warnings:
 
-- `censored`: a pair reached the cap and is left out, which biases the estimates
-  ([Censored pairs](../reference/warnings.md#censored-pairs-censored));
-- `late`: most pairs met after $k + L$, so `k` may be too small for this kernel
-  ([Late pairs](../reference/warnings.md#late-pairs-late));
-- `variance`: one replicate holds more than half the variance of an estimate
-  ([One replicate dominating the variance](../reference/warnings.md#one-replicate-dominating-the-variance-variance));
-- `slow`: a pair was still unmet after 20,000 iterations, the threshold at these
-  settings ([Slow pairs](../reference/warnings.md#slow-pairs-slow)).
+- [`censored`](../reference/warnings.md#censored-pairs-censored);
+- [`late`](../reference/warnings.md#late-pairs-late);
+- [`variance`](../reference/warnings.md#one-replicate-dominating-the-variance-variance);
+- [`slow`](../reference/warnings.md#slow-pairs-slow).
 
 The pair left out by the cap is the slowest of the run, and no state that the other
 pairs recorded lies in the neck. The warnings name these symptoms; the cause is a kernel
@@ -283,39 +279,32 @@ assert not telescopic.diagnostics.issues(result)
 ```
 
 All three estimates lie within three standard errors of the exact values, and the summary
-lists no warning. The marginal of $v$ from each run, as a signed histogram with error bars
-([Plot a result](../guide/plots.md)), against its exact density:
+lists no warning. {meth}`~telescopic.Result.plot_marginals` draws the marginal of $v$ from
+each run as a signed histogram with boxes of two standard errors
+([Plot a result](../guide/plots.md)), here against its exact density:
 
 ```{code-cell} python
 ---
 mystnb:
   image:
     alt: >-
-      Two histograms of v with error bars over the exact normal density of standard
-      deviation 3. The histogram from the new coordinates follows the curve. The
-      histogram of the random walk on the funnel has no mass below about -3 and too
-      much above 0.
+      Two panels, each a histogram of v with boxes of two standard errors over the
+      exact normal density of standard deviation 3. Left, the histogram of the
+      random walk on the funnel has no mass below about -3 and too much above 0.
+      Right, the histogram from the new coordinates follows the curve.
   figure:
     caption: >-
-      The marginal of $v$ estimated by the random walk on the funnel within a budget,
-      and by the run in the new coordinates, as signed histograms with two standard
-      errors, against the exact $\mathcal N(0, 9)$.
+      The marginal of $v$ estimated by the random walk on the funnel within a budget
+      (left) and by the run in the new coordinates (right), as signed histograms with
+      boxes of two standard errors, against the exact $\mathcal N(0, 9)$.
 ---
-edges_range = (-10.0, 10.0)
-grid = np.linspace(*edges_range, 400)
-fig, ax = plt.subplots(figsize=(6, 3.8))
-ax.plot(grid, stats.norm.pdf(grid, scale=3), color="0.45", label="exact $N(0, 9)$")
-for offset, (label, run) in zip(
-    (-0.15, 0.15), (("funnel, budget run", budget), ("new coordinates", result))
-):
-    mass, error, edges = run.histogram(0, bins=25, range=edges_range)
-    width = np.diff(edges)
-    centers = edges[:-1] + width / 2
-    ax.errorbar(
-        centers + offset, mass / width, yerr=2 * error / width, fmt="o", ms=3, label=label
-    )
-ax.set(xlabel="$v$", ylabel="density")
-ax.legend(fontsize=9);
+grid = np.linspace(-10, 10, 400)
+fig, axes = plt.subplots(1, 2, figsize=(8, 3.5), sharey=True)
+for ax, (title, run) in zip(axes, (("funnel, budget run", budget), ("new coordinates", result))):
+    run.plot_marginals(0, bins=25, axes=[ax])
+    ax.plot(grid, stats.norm.pdf(grid, scale=3), color="0.45", label="exact $N(0, 9)$")
+    ax.set(title=title, xlim=(-10, 10))
+axes[1].legend(fontsize=9);
 ```
 
 The warnings, read together: the budget run on the funnel emitted four, and its marginal
