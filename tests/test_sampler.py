@@ -7,6 +7,7 @@ import os
 import pkgutil
 import re
 import runpy
+import stat
 import subprocess
 import sys
 import tempfile
@@ -138,7 +139,7 @@ def test_resumed_run_from_a_loaded_result_equals_the_uninterrupted_run(first_run
 
 def test_resume_warns_when_retuning_differs_from_the_results_tuning(first_run):
     sampler = CoupledSampler(lambda x: log_prob(x / 2), INIT)
-    with pytest.warns(InputWarning, match="the sampler's kernel differs from the result's"):
+    with pytest.warns(InputWarning, match="the sampler's kernel differs from that of the result"):
         sampler.resume(first_run[0])
     assert not np.array_equal(sampler.tuning.cov, first_run[0].tuning.cov)
 
@@ -162,7 +163,7 @@ def test_a_resume_whose_tuning_raises_leaves_the_sampler_unchanged(first_run):
 
 def test_resume_warns_when_a_given_kernel_differs_from_the_results(first_run):
     kernel = RandomWalk(cov=first_run[0].tuning.cov, coupling="maximal")
-    with pytest.warns(InputWarning, match="the sampler's kernel differs from the result's"):
+    with pytest.warns(InputWarning, match="the sampler's kernel differs from that of the result"):
         resumed(first_run[0], kernel=kernel)
 
 
@@ -1368,7 +1369,7 @@ def test_parts_tuned_apart_from_the_plan_warn_when_loaded(tmp_path):
         # Tunes to other numbers, as another type of CPU can.
         return 1.01 * log_prob(x)
 
-    with pytest.warns(InputWarning, match="kernel differs from the plan of checkpoint"):
+    with pytest.warns(InputWarning, match="kernel differs from that of the plan of checkpoint"):
         CoupledSampler(other_cpu, INIT).run(5, start=5, checkpoint=tmp_path)
     with pytest.warns(InputWarning, match="1 of the parts of checkpoint .* tuned differently"):
         loaded = Result.load(tmp_path)
@@ -1402,3 +1403,53 @@ def test_a_killed_sample_with_a_checkpoint_rerun_equals_the_plain_sample(uninter
     plain = sample(log_prob, INIT, N_CHECKPOINTED, kernel=KERNEL, rng=6, **CHECKPOINTED)
     assert_same_outputs(rerun._replicates, plain._replicates)
     assert_same_outputs(plain._replicates, uninterrupted._replicates)
+
+
+def test_checkpoint_files_have_the_permissions_of_new_files(tmp_path):
+    mask = _io.umask()
+    CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3).run(5, k=40, checkpoint=tmp_path)
+    for path in tmp_path.glob("*.npz"):
+        assert stat.S_IMODE(path.stat().st_mode) == 0o666 & ~mask, path.name
+
+
+def test_a_checkpoint_without_hard_links_raises_before_tuning(tmp_path, monkeypatch):
+    def no_links(source, target):
+        raise PermissionError("operation not permitted")
+
+    monkeypatch.setattr(os, "link", no_links)
+    sampler = CoupledSampler(log_prob, INIT, rng=3)
+    with pytest.raises(ValueError, match=r"checkpoint .* is on a filesystem without hard links"):
+        sampler.run(5, checkpoint=tmp_path)
+    assert sampler.tuning is None
+    assert not list(tmp_path.iterdir())
+
+
+def test_a_refused_adoption_leaves_no_request(tmp_path):
+    CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3).plan(k=40, checkpoint=tmp_path)
+    with pytest.raises(ValueError, match="rng was given, but the plan of"):
+        CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=4).run(5, checkpoint=tmp_path)
+    tuned = CoupledSampler(log_prob, INIT, rng=3)
+    tuned.tune()
+    with pytest.raises(ValueError, match="adopting it needs a new sampler"):
+        tuned.run(5, checkpoint=tmp_path)
+    assert not list(tmp_path.glob("request-*"))
+
+
+def test_a_plan_of_another_total_raises_naming_the_checkpoint(tmp_path):
+    CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3).plan(15, k=40, checkpoint=tmp_path)
+    assert CoupledSampler(log_prob, INIT, kernel=KERNEL).plan(15, checkpoint=tmp_path)
+    with pytest.raises(ValueError, match=r"checkpoint .* holds a plan of 15 replicates, not 20"):
+        CoupledSampler(log_prob, INIT, kernel=KERNEL).plan(20, checkpoint=tmp_path)
+
+
+def test_parts_of_another_version_warn_when_loaded(tmp_path, monkeypatch):
+    CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3).plan(k=40, checkpoint=tmp_path)
+    CoupledSampler(log_prob, INIT, kernel=KERNEL).run(5, start=0, checkpoint=tmp_path)
+    assert Result.load(tmp_path)._versions_apart == 0
+    monkeypatch.setattr(_io, "version", lambda: "9.9")
+    with pytest.warns(InputWarning, match="written by telescopic"):
+        CoupledSampler(log_prob, INIT, kernel=KERNEL).run(5, start=5, checkpoint=tmp_path)
+    monkeypatch.undo()
+    with pytest.warns(InputWarning, match="1 of the parts of checkpoint .* another version"):
+        loaded = Result.load(tmp_path)
+    assert loaded._versions_apart == 1

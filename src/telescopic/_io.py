@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import os
@@ -269,11 +270,42 @@ def write_record(directory: Path, record: Record) -> None:
 def write_temporary(directory: Path, record: Record) -> str:
     # A synced file of a unique name in the directory, hidden from its records.
     handle, name = tempfile.mkstemp(dir=directory, prefix=".", suffix=".tmp")
+    if os.name == "posix":
+        # mkstemp makes the file private; a record gets the permissions of a new file.
+        os.fchmod(handle, 0o666 & ~umask())
     with os.fdopen(handle, "wb") as file:
         write(file, record)
         file.flush()
         os.fsync(file.fileno())
     return name
+
+
+@functools.cache
+def umask() -> int:
+    # The process's umask, which can only be read by setting it, once.
+    mask = os.umask(0)
+    os.umask(mask)
+    return mask
+
+
+def check_links(directory: Path) -> None:
+    # The plan is created by a hard link, which some filesystems lack.
+    directory.mkdir(parents=True, exist_ok=True)
+    handle, name = tempfile.mkstemp(dir=directory, prefix=".", suffix=".tmp")
+    os.close(handle)
+    link = f"{name}.link"
+    try:
+        os.link(name, link)
+    except OSError as error:
+        raise ValueError(
+            f"checkpoint {directory} is on a filesystem without hard links ({error}), with "
+            "which a plan is created by one process only: use a directory on another "
+            "filesystem"
+        ) from error
+    else:
+        os.unlink(link)
+    finally:
+        os.unlink(name)
 
 
 def sync(directory: Path) -> None:
@@ -331,6 +363,19 @@ def load_checkpoint(directory: Path, cls: type[Result]) -> Result:
         record for record in records if len(record.replicates.index) and record.tuned != plan.tuned
     ]
     result._tuned_apart = len(tuned_apart)
+    versions = [
+        record
+        for record in records
+        if len(record.replicates.index) and record.version != plan.version
+    ]
+    result._versions_apart = len(versions)
+    if versions:
+        warn(
+            f"{len(versions)} of the parts of checkpoint {directory} ran under another "
+            f"version of telescopic than the plan's {plan.version}: their replicates can "
+            "differ from those of the plan's version, so the run does not repeat bit for bit",
+            InputWarning,
+        )
     if tuned_apart:
         warn(
             f"{len(tuned_apart)} of the parts of checkpoint {directory} ran with a kernel tuned "

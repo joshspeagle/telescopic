@@ -219,6 +219,8 @@ class Result:
         # The parts of a loaded checkpoint that ran under another tuning than its plan's
         # (DECISIONS #267); 0 otherwise.
         self._tuned_apart = 0
+        # Those that ran under another version of telescopic than the plan's.
+        self._versions_apart = 0
         # The engine runs only requested indices, so missing ones make index shorter.
         self.interrupted = len(replicates.index) < len(replicates.requested)
         self.abandoned = np.setdiff1d(replicates.abandoned, replicates.index)

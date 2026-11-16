@@ -261,12 +261,14 @@ class CoupledSampler:
         """
         if not isinstance(result, Result):
             raise TypeError(f"result must be a telescopic.Result, not {type(result).__name__}")
-        self._adopt(_io.record_of(result), result.ndim, "the result", "resume")
+        record = _io.record_of(result)
+        self._check_adoption(record, result.ndim, "the result", "resume")
+        self._adopt(record, "the result")
 
-    def _adopt(self, record: _io.Record, ndim: int, source: str, action: str) -> None:
-        # Adopts a result's or a plan's seed, settings, replicates, tuning, pilot and names,
-        # as resume describes; source names it in errors and the warning, and action what
-        # needs a new sampler.
+    def _check_adoption(self, record: _io.Record, ndim: int, source: str, action: str) -> None:
+        # Whether the sampler can adopt a result's or a plan's run, as resume describes,
+        # before it changes anything; source names it in errors, and action what needs a
+        # new sampler.
         for used, done in (
             ("run replicates", self._replicates is not None),
             ("fixed its settings", self._settings is not None),
@@ -302,6 +304,11 @@ class CoupledSampler:
                 f"{source} holds no tuning report, so the sampler's kernel must have every "
                 f"parameter set; pass the kernel {source} was run with"
             )
+
+    def _adopt(self, record: _io.Record, source: str) -> None:
+        # Adopts a checked result's or plan's seed, settings, replicates, tuning, pilot and
+        # names, tuning an untuned kernel again; source names it in the warning.
+        replicates = record.replicates
         seed, kernel, report = root_seed(replicates.seed), self.kernel, record.tuning
         if not kernel.is_tuned:
             # From the tuning namespace of the run's seed, as the run tuned it (spec
@@ -324,10 +331,10 @@ class CoupledSampler:
             )
         if differs or (record.kernel is not None and str(kernel) != str(record.kernel)):
             warn(
-                f"the sampler's kernel differs from {source}'s: the target, the initial "
-                "distribution or the kernel differ from the run's, or the kernel was tuned "
-                "again on another machine, library version or number of BLAS threads; the "
-                "resumed run keeps the sampler's kernel",
+                f"the sampler's kernel differs from that of {source}: the target, the "
+                "initial distribution or the kernel differ from the run's, or the kernel was "
+                "tuned again on another machine, library version or number of BLAS threads; "
+                "the run keeps the sampler's kernel",
                 InputWarning,
             )
 
@@ -430,7 +437,7 @@ class CoupledSampler:
             With ``checkpoint``: the replicates the run will hold, the indices 0 to
             ``n_replicates - 1``, so that the result loaded from the directory is
             ``interrupted`` until all of them have finished, even those of a task that
-            never started.
+            never started. A checkpoint that already holds a plan of another total raises.
         k, m, lag, thin, max_iter, keep
             As for :meth:`run`.
         checkpoint : str or path-like, optional
@@ -657,18 +664,23 @@ class CoupledSampler:
                     "versions can differ, so the run need not repeat bit for bit",
                     InputWarning,
                 )
+            _check_planned(plan, planned, directory)
             if self._settings is None:
+                # Every check before the request, and the request before the tuning.
+                source = f"the plan of checkpoint {directory}"
                 self._compare(given, plan.replicates.settings, directory)
+                self._check_adoption(plan, plan.replicates.atoms.shape[1], source, "adopting it")
                 if n is not None:
                     indices = self._next_indices(n, start)
                     _io.write_request(cast(Path, directory), plan, indices)
-                source = f"the plan of checkpoint {directory}"
-                self._adopt(plan, plan.replicates.atoms.shape[1], source, "adopting it")
+                self._adopt(plan, source)
         elif directory is not None and start is not None:
             raise ValueError(
                 f"checkpoint {directory} holds no plan: a run with start runs a range of "
                 "the plan that CoupledSampler.plan writes there first"
             )
+        elif directory is not None:
+            _io.check_links(directory)  # before the tuning and the pilot
         settings = self.settings or self._configure(given, pool, progress)
         if directory is not None:
             if plan is None:
@@ -680,6 +692,7 @@ class CoupledSampler:
                 )
                 mine = self._record(nothing)._replace(tuning=self.tuning, pilot=self.pilot)
                 plan = _io.write_plan(directory, mine)
+                _check_planned(plan, planned, directory)
             planned_run = plan.replicates
             if planned_run.settings != settings or engine._seed_key(
                 planned_run.seed
@@ -1243,6 +1256,19 @@ def _settings(given: dict[str, int]) -> engine.Settings:
             keep=given.get("keep"),
         )
     )
+
+
+def _check_planned(plan: _io.Record, planned: IntArray | None, directory: Any) -> None:
+    # A total given to plan must be the one the checkpoint's plan holds.
+    if (
+        planned is not None
+        and len(planned)
+        and not np.array_equal(planned, plan.replicates.requested)
+    ):
+        raise ValueError(
+            f"checkpoint {directory} holds a plan of {len(plan.replicates.requested)} "
+            f"replicates, not {len(planned)}; its plan cannot change"
+        )
 
 
 def _directory(checkpoint: Any) -> Path | None:

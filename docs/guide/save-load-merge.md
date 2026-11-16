@@ -234,7 +234,9 @@ pilot and fixes the settings, without running replicates, and writes the plan to
 checkpoint directory, with the number of replicates planned; each task adopts it and
 runs its own range with `start=i`, the indices `i` to `i + n - 1`; and `Result.load` of
 the directory merges every task's replicates. A task with `start` never writes the
-plan: it raises when the directory holds none. The model lives in code that each script
+plan: it raises when the directory holds none. A plan never changes: `plan` with another
+number of replicates raises. The directory's filesystem must support hard links, with
+which one process creates the plan; on one without them the call raises before tuning. The model lives in code that each script
 imports, here a file `model.py` that defines `log_prob` and `init`. The plan, once:
 
 ```python
@@ -287,7 +289,8 @@ from its own files. Until every planned replicate has finished, the merged resul
 planned. Every task tunes an untuned kernel again from the plan's seed, which takes a
 small part of a task and gives the plan's kernel on machines with the same type of CPU,
 BLAS and library versions; on others it can differ by rounding, which the task warns
-about, and `Result.load` warns again for the parts it concerns. Each replicate stays
+about, and `Result.load` warns again for the parts it concerns, as it does for parts
+run under another version of telescopic than the plan's. Each replicate stays
 unbiased whatever its kernel, so the estimates stay unbiased, but they no longer repeat
 bit for bit. To tune once, pass every task the tuned kernel by pickle
 ([Tuning](parallel.md#tuning), in Run in parallel). Do not run two tasks on overlapping
