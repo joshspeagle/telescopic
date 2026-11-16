@@ -83,7 +83,7 @@ Ordinary MCMC starts a chain from $\pi_0$, discards a burn-in by eye or heuristi
 - **Documentation:** a theory page, a user guide, executed tutorials, and an API reference.
 
 **Should (v0.1 if time allows, otherwise v0.2):**
-- Budget mode with the Glynn–Heidelberger per-lane estimator (§3.7; deferred beyond v0.1, DECISIONS #22).
+- Budget mode with the Glynn–Heidelberger per-lane estimator (§3.7): not built, on the evidence of the experiment of issue #79 (DECISIONS #22, #271).
 - Resume a returned or loaded result (`CoupledSampler.resume`, §8.1), and checkpoints at replicate granularity written to a directory during a run, from which a killed run completes and the tasks of a cluster job run ranges of one plan (§6.7; issue #79, DECISIONS #265 to #270). Snapshots within a replicate stay on the roadmap (§12).
 - 1-Wasserstein bounds (§3.6).
 - Rank-normalised $\hat R$ and effective sample size across the replicates' X-chains, the averaged atoms from $k$ to $m$: computed by ArviZ from the export below, not by telescopic (DECISIONS #38, #261). Also a relative inefficiency against an autocorrelation-based MCMC baseline (deferred beyond v0.1, DECISIONS #76).
@@ -235,7 +235,7 @@ $$d_{TV}(\pi_t, \pi) \le \mathbb E\big[\max(0, \lceil (\tau - L - t)/L \rceil)\b
 
   It needs the Euclidean distance $\lVert X_s - Y_{s-L}\rVert$ for $L \le s < \tau$, which the engine records. Its value depends on the parametrisation; the documentation says so.
 
-### 3.7 Budgets (should; deferred beyond v0.1, DECISIONS #22)
+### 3.7 Budgets (should; not built, DECISIONS #22, #271)
 
 Averaging only the replicates completed by a deadline is biased by $-\mathbb E[H\,\mathbb 1(C > t)]$ (Glynn & Heidelberger 1990). The exactly unbiased per-lane estimator (GH91 $\bar\mu_1$, JOA20 §3.3) works as follows:
 1. Each lane runs replicates in sequence.
