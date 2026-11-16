@@ -805,3 +805,29 @@ def test_the_chunks_of_a_broken_pool_count_as_one_error():
     assert isinstance(error, BrokenProcessPool)
     assert others == 0
     np.testing.assert_array_equal(replicates.index, np.arange(200))
+
+
+@pytest.mark.parametrize("pool", ["threads", "map"])
+def test_a_sink_gets_each_chunk_of_a_pool_as_it_returns(pool):
+    handed = []
+    indices = np.arange(40)
+    with ThreadPoolExecutor(2) as threads:
+        given = threads if pool == "threads" else Serial()
+        replicates = executed(job(), indices, given, never, 4, sink=handed.append)
+    assert len(handed) == 4
+    assert_same_outputs(engine.merge(handed), replicates)
+
+
+def test_an_error_of_the_sink_on_a_pool_stops_the_run_and_keeps_every_chunk():
+    full = OSError("disk full")
+
+    def sink(part):
+        raise full
+
+    # Three chunks of 200 on two workers: two waves.
+    serial = Serial()
+    replicates, error, _ = execute(job(), np.arange(600), serial, never, 2, sink=sink)
+    # Both chunks of the first wave are kept; the second wave never started.
+    assert error is full
+    assert serial.waves == [2]
+    np.testing.assert_array_equal(replicates.index, np.arange(400))

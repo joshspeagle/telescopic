@@ -45,6 +45,7 @@ POLL = 0.1
 
 Job = Callable[..., engine._Outcome]
 Monitor = Callable[[engine.Status], bool]
+Sink = Callable[[engine.Replicates], None]
 
 
 class Interrupt:
@@ -148,7 +149,12 @@ def opened(pool: Any) -> Iterator[Any]:
 
 
 def execute(
-    job: Job, indices: IntArray, pool: Any, monitor: Monitor, n_workers: int | None = None
+    job: Job,
+    indices: IntArray,
+    pool: Any,
+    monitor: Monitor,
+    n_workers: int | None = None,
+    sink: Sink | None = None,
 ) -> engine._Outcome:
     # The job on sorted indices, here or on an opened pool, whose workers n_workers counts
     # when given. Here the monitor sees every iteration; on a pool, the finished
@@ -158,9 +164,11 @@ def execute(
     # that it can still cancel (spec sections 6.4 and 6.5). An error stops the run in the
     # same way, and is returned with the replicates finished: the error raised in this
     # process if one was, else that of the lowest-indexed chunk that failed, with the
-    # number of the other chunks' errors.
+    # number of the other chunks' errors. A sink is handed records of finished replicates
+    # as they come: here, the engine's; on a pool, each chunk's in this process as it
+    # returns, and an error of the sink stops the run as the monitor's does.
     if pool is None:
-        return job(indices, monitor=monitor)
+        return job(indices, monitor=monitor, sink=sink)
     start = time.perf_counter()
     workers = _workers(pool, n_workers)
     # Chunks of at most a full set of lanes, where four per worker allow (DECISIONS #52),
@@ -170,11 +178,11 @@ def execute(
     pieces = np.array_split(indices, max(count, math.ceil(n / MAX_CHUNK)))
     task = functools.partial(_task, _dumps(job), os.getpid())
     if isinstance(pool, Workers):
-        outcomes, error = _gather(pool.executor, task, pieces, monitor, pool.stop)
+        outcomes, error = _gather(pool.executor, task, pieces, monitor, pool.stop, sink)
     elif hasattr(pool, "submit"):
-        outcomes, error = _gather(pool, task, pieces, monitor, None)
+        outcomes, error = _gather(pool, task, pieces, monitor, None, sink)
     else:
-        outcomes, error = _waves(pool, task, pieces, workers, monitor)
+        outcomes, error = _waves(pool, task, pieces, workers, monitor, sink)
     outcomes.sort(key=lambda pair: pair[0])
     failures = [outcome.error for _, outcome in outcomes if outcome.error is not None]
     if error is None and failures:
@@ -212,6 +220,7 @@ def _gather(
     pieces: list[IntArray],
     monitor: Monitor,
     stop: Any,
+    sink: Sink | None,
 ) -> tuple[list[tuple[int, engine._Outcome]], Exception | None]:
     # Every chunk is submitted at once, in index order. Once the monitor asks to stop,
     # the chunks not started are canceled, except the first, so that a run returns a
@@ -253,6 +262,7 @@ def _gather(
                     outcomes.append((position[future], outcome))
                     if outcome.replicates is not None:
                         finished += len(outcome.replicates.index)
+                        error = _sink(sink, outcome.replicates, error)
                     failed = failed or outcome.error is not None
             if not failed:
                 stopping, error = _ask(monitor, finished, stopping, error)
@@ -294,18 +304,31 @@ def _ask(
     return stopping, caught.error
 
 
+def _sink(
+    sink: Sink | None, replicates: engine.Replicates, error: Exception | None
+) -> Exception | None:
+    # Hands a chunk's record to the sink, unless an error already stops the run; the error
+    # it raises stops the run as the monitor's does.
+    if sink is None or error is not None:
+        return error
+    with engine._Caught() as caught:
+        sink(replicates)
+    return caught.error
+
+
 def _waves(
     pool: Any,
     task: Callable[..., engine._Outcome | None],
     pieces: list[IntArray],
     workers: int,
     monitor: Monitor,
+    sink: Sink | None,
 ) -> tuple[list[tuple[int, engine._Outcome]], Exception | None]:
     # A pool with only map runs waves of one chunk per worker; once the monitor asks to
     # stop, or an error stops the run, no further wave starts. An error of map itself
     # loses the other outcomes of its wave.
     outcomes: list[tuple[int, engine._Outcome]] = []
-    finished = 0
+    finished, error = 0, None
     for start in range(0, len(pieces), workers):
         with engine._Caught() as caught:
             wave = list(pool.map(task, pieces[start : start + workers]))
@@ -318,6 +341,9 @@ def _waves(
             outcomes.append((start + offset, outcome))
             if outcome.replicates is not None:
                 finished += len(outcome.replicates.index)
+                error = _sink(sink, outcome.replicates, error)
+        if error is not None:
+            return outcomes, error
         if any(outcome is not None and outcome.error is not None for outcome in wave):
             break
         stopping, error = _ask(monitor, finished, False, None)

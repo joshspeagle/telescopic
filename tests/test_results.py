@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from scipy import stats
 
-from references import gaussian_log_prob, synthetic
+from references import assert_same_outputs, assert_same_replicates, gaussian_log_prob, synthetic
 from telescopic import examples, results, sample
 from telescopic.diagnostics import w1_bound
 from telescopic.engine import run
@@ -472,11 +472,32 @@ def test_a_merge_keeps_this_results_records_and_fills_the_missing_ones_from_the_
     bare = Result(gaussian_run(range(3), **SETTINGS))
     full = Result(gaussian_run(range(3, 5), **SETTINGS), kernel=kernel, pilot=pilot)
     other = Result(gaussian_run(range(5, 7), **SETTINGS), kernel=RandomWalk(), initial=initial)
-    merged = bare.merge(full).merge(other)
-    assert merged.kernel is kernel
-    assert merged.initial is initial
-    assert merged.pilot is pilot
-    assert merged.tuning is None
+    for merged in (bare.merge(full).merge(other), bare.merge(full, other)):
+        assert merged.kernel is kernel
+        assert merged.initial is initial
+        assert merged.pilot is pilot
+        assert merged.tuning is None
+
+
+def test_a_merge_of_many_results_equals_the_merges_of_pairs_and_one_run():
+    parts = [
+        Result(gaussian_run(indices, **SETTINGS))
+        for indices in (range(3), range(6, 9), range(3, 6))
+    ]
+    parts[1]._k_rule = 4
+    merged = parts[0].merge(*parts[1:])
+    assert_same_replicates(
+        merged._replicates, parts[0].merge(parts[1]).merge(parts[2])._replicates
+    )
+    assert_same_outputs(merged._replicates, gaussian_run(range(9), **SETTINGS))
+    assert merged._k_rule == 4
+
+
+def test_a_merge_needs_another_result():
+    with pytest.raises(TypeError, match="at least one other Result"):
+        RESULT.merge()
+    with pytest.raises(TypeError, match=r"others must be telescopic\.Result objects, not list"):
+        RESULT.merge([RESULT])
 
 
 @pytest.mark.parametrize(

@@ -7,7 +7,7 @@ short list of decisions follows.
 | Your problem | Fit, and why |
 |---|---|
 | A posterior with one mode, and a log-density that is cheap or takes a batch of points | **Good.** Each {term}`replicate` is a full MCMC run with its {term}`burn-in`, so a run evaluates the log-density many times; with `vectorize=True` a step of many chains costs one call ([The log-density](../guide/log-density.md#the-log-density)). |
-| Many processor cores, or several machines | **Good.** The replicates are independent and run in parallel without communicating ([Run in parallel](../guide/parallel.md)), and runs made apart can be merged ([Merging runs](../guide/save-load-merge.md#merging-runs)). |
+| Many processor cores, or several machines | **Good.** The replicates are independent and run in parallel without communicating ([Run in parallel](../guide/parallel.md)), and runs made apart can be merged ([Merging runs](../guide/save-load-merge.md#merging-runs)), as the tasks of a cluster job are ([Run on a cluster](../guide/save-load-merge.md#run-on-a-cluster)). |
 | Error bars to report without judging convergence | **Good.** The error bar is the standard error of independent, {term}`unbiased` replicates, with no autocorrelation time and no R-hat behind it ([Error bars from replicates](../concepts/error-bars.md)). |
 | A gradient of the log-density | **Good.** MALA and HMC use it, and on a Gaussian in 50 dimensions they reach the same error bars with fewer evaluations than the random walk ([Gradients](../tutorials/gradients.md)). |
 | Full conditionals that can be drawn from, as in conjugate hierarchical models | **Good.** Gibbs kernels come with three {term}`couplings <coupling>` ([Gibbs couplings](../tutorials/gibbs.md)). |

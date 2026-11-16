@@ -1,3 +1,5 @@
+import dataclasses
+
 import numpy as np
 import pytest
 from scipy import stats
@@ -11,7 +13,7 @@ from references import (
 )
 from telescopic._io import record_times
 from telescopic._random import MAIN, replicate_generator
-from telescopic.engine import Settings, Status, _Batch, merge, run, stored_bytes
+from telescopic.engine import FLUSH, Settings, Status, _Batch, _run, merge, run, stored_bytes
 from telescopic.estimators import averaging_times, correction_coefficients
 from telescopic.initial import Empirical, Normal
 from telescopic.kernels import MALA, Gibbs, RandomWalk, State
@@ -709,3 +711,90 @@ def test_a_kernel_whose_init_extra_lacks_a_markov_field_raises_at_the_start():
     # The lanes would not hold the field, and a later step would fail with a KeyError.
     with pytest.raises(ValueError, match=r"no initial value for its Markov fields \['momentum'\]"):
         simulate(Unstarted(np.eye(2)), n=2, max_iter=20)
+
+
+@pytest.mark.parametrize("keep", [None, 300], ids=["every atom", "kept subset"])
+def test_records_handed_to_a_sink_merge_bitwise_to_the_run_without_one(keep):
+    # More replicates than FLUSH finish, so the run hands records over while lanes run.
+    options = {"n": 2 * FLUSH + 100, "lanes": 64, "keep": keep, "keep_paths": True}
+    parts = []
+    replicates, error, _ = _run(
+        TARGET,
+        RandomWalk(np.eye(2), scale=1.0),
+        FAR,
+        range(options.pop("n")),
+        k=2,
+        m=10,
+        lag=1,
+        rng=1,
+        sink=parts.append,
+        **options,
+    )
+    assert error is None
+    assert len(parts) == 3
+    whole = simulate(n=2 * FLUSH + 100, lanes=64, keep=keep, keep_paths=True)
+    for paths in (whole.paths, replicates.paths, *(part.paths for part in parts)):
+        for i, (x, y) in paths.items():
+            np.testing.assert_array_equal(x, whole.paths[i][0])
+            np.testing.assert_array_equal(y, whole.paths[i][1])
+    assert replicates.paths.keys() == whole.paths.keys()
+    without_paths = [dataclasses.replace(r, paths={}) for r in (whole, replicates, merge(parts))]
+    assert_same_replicates(*without_paths[:2])
+    assert_same_replicates(*without_paths[1:])
+    for part in parts:
+        # Each record holds whole replicates, and requests its own.
+        np.testing.assert_array_equal(
+            np.unique(part.owner), np.intersect1d(part.index, part.owner)
+        )
+        assert set(part.paths) == set(part.index.tolist())
+    np.testing.assert_array_equal(parts[0].requested, parts[0].index)
+    np.testing.assert_array_equal(parts[-1].requested, np.arange(2 * FLUSH + 100))
+
+
+def test_a_sink_gets_every_replicate_finished_before_an_error():
+    parts = []
+    replicates, error, _ = _run(
+        Target(Failing(6000)),
+        RandomWalk(np.eye(2), scale=1.0),
+        FAR,
+        range(2 * FLUSH),
+        k=2,
+        m=10,
+        lag=1,
+        rng=1,
+        lanes=64,
+        sink=parts.append,
+    )
+    assert isinstance(error, ValueError)
+    assert len(replicates.abandoned)
+    assert len(parts) > 1  # a record during the run, then the rest
+    assert_same_replicates(replicates, merge(parts))
+
+
+def test_an_error_of_the_sink_stops_the_run_and_keeps_its_records():
+    full = OSError("disk full")
+    handed = []
+
+    def sink(part):
+        handed.append(part)
+        raise full
+
+    replicates, error, _ = _run(
+        TARGET,
+        RandomWalk(np.eye(2), scale=1.0),
+        FAR,
+        range(2 * FLUSH),
+        k=2,
+        m=10,
+        lag=1,
+        rng=1,
+        lanes=64,
+        sink=sink,
+    )
+    # The error stopped the run at the first record, as any error does: the lanes
+    # running were abandoned, and the sink was still handed the rest.
+    assert error is full
+    assert len(handed) == 2
+    assert len(replicates.abandoned) == 64
+    assert len(replicates.index) + 64 < 2 * FLUSH
+    assert_same_replicates(replicates, merge(handed))

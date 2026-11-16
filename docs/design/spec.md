@@ -83,8 +83,8 @@ Ordinary MCMC starts a chain from $\pi_0$, discards a burn-in by eye or heuristi
 - **Documentation:** a theory page, a user guide, executed tutorials, and an API reference.
 
 **Should (v0.1 if time allows, otherwise v0.2):**
-- Budget mode with the Glynn–Heidelberger per-lane estimator (§3.7; deferred beyond v0.1, DECISIONS #22).
-- Resume a returned or loaded result (`CoupledSampler.resume`, §8.1). Checkpoints written to a file during a run are deferred beyond v0.1 (DECISIONS #76, issue #79).
+- Budget mode with the Glynn–Heidelberger per-lane estimator (§3.7): not built, on the evidence of the experiment of issue #79 (DECISIONS #22, #271).
+- Resume a returned or loaded result (`CoupledSampler.resume`, §8.1), and checkpoints at replicate granularity written to a directory during a run, from which a killed run completes and the tasks of a cluster job run ranges of one plan (§6.7; issue #79, DECISIONS #265 to #270). Snapshots within a replicate stay on the roadmap (§12).
 - 1-Wasserstein bounds (§3.6).
 - Rank-normalised $\hat R$ and effective sample size across the replicates' X-chains, the averaged atoms from $k$ to $m$: computed by ArviZ from the export below, not by telescopic (DECISIONS #38, #261). Also a relative inefficiency against an autocorrelation-based MCMC baseline (deferred beyond v0.1, DECISIONS #76).
 - Export of the replicates' X-chains to ArviZ: `Result.to_datatree()` (§7.1; DECISIONS #261).
@@ -235,7 +235,7 @@ $$d_{TV}(\pi_t, \pi) \le \mathbb E\big[\max(0, \lceil (\tau - L - t)/L \rceil)\b
 
   It needs the Euclidean distance $\lVert X_s - Y_{s-L}\rVert$ for $L \le s < \tau$, which the engine records. Its value depends on the parametrisation; the documentation says so.
 
-### 3.7 Budgets (should; deferred beyond v0.1, DECISIONS #22)
+### 3.7 Budgets (should; not built, DECISIONS #22, #271)
 
 Averaging only the replicates completed by a deadline is biased by $-\mathbb E[H\,\mathbb 1(C > t)]$ (Glynn & Heidelberger 1990). The exactly unbiased per-lane estimator (GH91 $\bar\mu_1$, JOA20 §3.3) works as follows:
 1. Each lane runs replicates in sequence.
@@ -545,6 +545,25 @@ The engine runs replicates in **lanes**: a lockstep batch of `B` slots, each hol
 - **Pools:** a worker holds the replicates of one chunk, at most 1,024 (§6.4), until it sends them back; the parent holds every chunk's replicates and then their merge, so its memory grows with $R$ as in a run in-process (DECISIONS #179).
 - **Streaming:** a streaming mode with a fixed `h` and constant memory is on the roadmap.
 
+### 6.7 Plans and checkpoints (R-EXEC-8)
+
+Part B of issue #79 (Josh, 2026-11-13: plans, a run store, checkpoints at replicate granularity, merging many parts), as `design-delta.md` in `notes/experiments/i79_partB/` reconciles it with the code; Josh accepted this narrower surface on 2026-11-16 (DECISIONS #264 to #270).
+
+- **Plan:** what fixes a run apart from its replicates: the root seed, the settings, the tuning report, the pilot meeting times, the names, the pilot rule's $k$, the descriptions of the kernel and the initial distribution, the version of telescopic, and optionally the planned indices. `CoupledSampler.plan(n_replicates=None, ...)` fixes the settings as a first `run` would, without running replicates, and returns them; with `checkpoint`, `n_replicates` plans the indices $0, \dots, n - 1$, which makes a loaded checkpoint `interrupted` until all have finished; without `checkpoint`, or for a checkpoint whose plan holds other planned indices, `n_replicates` raises `ValueError` naming the checkpoint, since a plan never changes. A plan is not a class: it is the file `plan.npz` of a checkpoint directory, a schema-2 record (§7.1) with no replicate whose `requested` holds the planned indices (DECISIONS #268).
+- **Kernels are not saved by their parameters** (DECISIONS #267): a sampler that adopts a plan is built with the target, the initial distribution and the kernel in code, as for `resume`, and an untuned kernel is tuned again from the plan's seed, with the `InputWarning` of `resume` when its report differs bitwise from the plan's (DECISIONS #221). Tuning repeats bitwise only on the same type of CPU with the same BLAS and library versions: OpenBLAS's kernels for two CPU types tuned seed 7 differently, point by point and vectorized (review of 2026-11-16). Each part records the digest of the tuning report it ran under (the bytes of its mean and covariance), and `Result.load` of a directory warns when a part's digest differs from the plan's. A Gibbs kernel needs nothing more.
+- **`checkpoint=directory`** on `CoupledSampler.run` and `plan`, and on `sample`, which passes it and `start` to its sampler's `run`, so that rerunning the same call with the same `rng` restarts a one-call run (DECISIONS #269, #272):
+  - the directory is made if missing; a path that is a file raises `ValueError`, and one that is not a string or path-like `TypeError`;
+  - a plan written by another version of telescopic warns (`InputWarning`);
+  - a directory that holds no plan is first probed for hard links, which create the plan, before any tuning; a filesystem without them raises `ValueError` naming the checkpoint and the cause, with no fallback;
+  - a sampler without settings adopts the directory's plan, as `resume` adopts a result (§8.1), with its checks and errors naming the plan. Settings given to the call are compared with the plan's first, then every check of the adoption runs (dimension, kernel class, `rng`, names, a sampler already tuned or piloted), so a refusal (`ValueError` naming the checkpoint) leaves the sampler and the checkpoint untouched; then the call's request record is written, before any tuning, and the plan is adopted. A sampler with settings whose seed or settings differ from the plan's raises `ValueError`;
+  - without a plan, a call with `start` raises `ValueError`: a range task never makes the plan. Otherwise the sampler's plan is made once its tuning and pilot have finished, created exclusively (a hard link of a synced temporary file), so that of two processes the first keeps it; the other re-reads it and raises if its seed or settings differ. It fixes the sampler's settings;
+  - `run` then reads the parts of the directory that hold replicates of the call's indices, which must hold no others and be of the plan's seed and settings (`ValueError` naming the checkpoint otherwise), runs the other indices, and returns the result of all of them, as without a checkpoint;
+  - the engine hands the records of finished replicates to a sink every 256 finished replicates in this process (`engine.FLUSH`), and a pool's parent each chunk's record as it returns (DECISIONS #266). Each record is written to a temporary file of a unique name (`tempfile.mkstemp`) in the directory, given the permissions of a new file under the process's umask on POSIX, synced, renamed, and the directory synced on POSIX, so a killed process leaves whole files only. An error of the sink stops the run as any error does (§6.5);
+  - the files: `plan.npz`; `request-<first>-<last>-<n>.npz`, the indices a call requested; `part-<first>-<last>.npz`, finished replicates; `abandoned-<first>-<last>.npz`, the replicates an error abandoned when none finished. Only the plan holds the tuning report and the pilot; a part loads alone with `Result.load`;
+  - with a log-density evaluated point by point, on the same type of CPU with the same BLAS and library versions, the replicates of a checkpointed run, of one completed after its process was killed, and of the ranges of a cluster job are bitwise those of one run without a checkpoint (R-EXEC-2); otherwise they agree within their error bars.
+- **`Result.load(directory)`** merges the plan and every record into one `Result`, which is `interrupted` while an index planned or requested has not finished, and warns, keeping each count, when parts ran under another tuning than the plan's or under another version of telescopic (DECISIONS #270).
+- **Range jobs:** `run(n, start=s)` runs the indices $s, \dots, s + n - 1$ (§8.1; DECISIONS #265).
+
 ---
 
 ## 7. Outputs
@@ -572,9 +591,9 @@ Methods:
 - **Reporting:** `summary()` returns a `Summary` table (DECISIONS #40). The repr is one line of stored fields, `Result(R=100, d=2, k=63, m=630, lag=63, censored=0, interrupted=False)`, and computes no diagnostics (DECISIONS #102). `check(strict=False)` emits the warnings of §7.4, or raises if strict.
 - **Plots:** `plot_meeting_times(axes=None)`, `plot_tv_bound(ax=None)`, `plot_marginals(dims=None, bins=20, axes=None)` and `plot_corner(dims=None, bins=20)` (signed 2-D histograms); the first three draw on given axes (DECISIONS #30).
 - **Persistence and merging:**
-  - `save(path)` and `Result.load(path)` use a versioned `.npz` schema, with no pickle: arrays, and the settings, names, seed state and descriptions as JSON (DECISIONS #26, #29). The engine's paths are not saved;
+  - `save(path)` and `Result.load(path)` use a versioned `.npz` schema, with no pickle: arrays, and the settings, names, seed state and descriptions as JSON (DECISIONS #26, #29). The engine's paths are not saved. `Result.load` of a directory reads a checkpoint (§6.7);
   - schema 2 (issue #79, DECISIONS #243): the metadata holds `"schema": 2` and `"family": "coupled"`, and its settings `keep`; the arrays common to every estimator family are saved as `replicates.index`, `.requested`, `.abandoned`, `.atoms`, `.weights`, `.owner`, `.time`, `.center` and `.moments`, and those of the coupled family as `coupled.meeting_time`, `.distance_owner`, `.distance_time`, `.distance` and `.zero_density`. A new family adds its name and its arrays, not a schema; loading a file of a family this version does not know raises `ValueError` naming it. A schema-1 file loads with `keep` `None`, no columns of moments, no abandoned replicates, and the times rebuilt exactly from its settings and meeting times, in $O(N)$: for each replicate that met, $t$ for each $t \in S$ and $t$ twice for each $t \in [L, \tau)$ with $c_t > 0$, by $t$ with the averaged atom first; a file whose atoms do not follow that order raises `ValueError`. The tuning metadata holds `initial_width` (`None` when a file lacks it), and the metadata holds the private `k_rule`, the pilot rule's $k$ when the run's settings were fixed (`None` without a pilot then, and when a file lacks it; DECISIONS #259). A result loaded from a file, or attached to an error, carries what `resume` needs: the seed, the settings with `keep`, `requested`, `abandoned` and `index`; centers belong to replicates, so `resume` and `merge` need no check of them;
-  - `merge(other)` joins runs with the same seed, settings and dimension and disjoint replicate indices. It does not compare kernels or initial distributions, whose descriptions omit parameters and can hold addresses (DECISIONS #53). The merged result takes the first result's names, kernel, initial distribution, tuning report and pilot meeting times, each of the last four from `other` where the first has none (DECISIONS #121);
+  - `merge(*others)` joins any number of runs, at least two, with the same seed, settings and dimension and disjoint replicate indices, in one `engine.merge` (DECISIONS #264). It does not compare kernels or initial distributions, whose descriptions omit parameters and can hold addresses (DECISIONS #53). The merged result takes the first result's names, kernel, initial distribution, tuning report and pilot meeting times, each of the last four from the first of the others that has one where the first has none (DECISIONS #121);
   - `CoupledSampler.resume(result)` continues a result (§8.1); it checks the dimension and the kernel's class, not the target or the kernel's parameters (DECISIONS #53, #222).
 
 ### 7.2 `SignedMeasure` and `Estimate` (R-OUT-2)
@@ -651,8 +670,9 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
    ```python
    telescopic.sample(log_prob, init, n_replicates=100, *, args=(), kwargs=None, grad=None,
                      log_prob_and_grad=None, vectorize=False, kernel="auto", k="auto",
-                     m="auto", lag="auto", thin=None, max_iter=None, names=None, pool=None,
-                     n_workers=None, progress=False, check_grad=True, rng=None) -> Result
+                     m="auto", lag="auto", thin=None, max_iter=None, keep=None, start=None,
+                     checkpoint=None, names=None, pool=None, n_workers=None, progress=False,
+                     check_grad=True, rng=None) -> Result
    ```
 
    `n_replicates` is at least 2, checked before any work, since the estimates need two replicates that met; `CoupledSampler.run`, whose runs accumulate, takes 1 (DECISIONS #92). `kernel` is a `Kernel` or one of the strings `"auto"`, `"rwmh"`, `"mala"`, `"hmc"` and `"independence"`. `"auto"` means RWMH, with or without a gradient; gradient kernels are requested by name (D-3).
@@ -670,10 +690,13 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
                         progress=None)             # None: the sampler's setting
    result = sampler.run(500)                       # 500 more replicates, same k, m, lag
    sampler.resume(result)                          # on a new sampler: continue a result
+   sampler.plan(n=None, k="auto", ..., checkpoint=None)  # fix the settings; write them as a plan
+   sampler.run(500, start=None, checkpoint=None)   # a range; a checkpoint directory (§6.7)
    ```
 
    - `run` tunes and runs the pilot if they have not been done.
    - Each call continues the replicate indices and returns the cumulative result.
+   - `run(n, start=s)` runs the indices $s, \dots, s + n - 1$ instead, none of which the sampler may have requested (`ValueError` naming `start` otherwise), so that separate samplers with one seed and the same settings run the ranges of one run, as the tasks of a cluster job; a later call without `start` continues above the highest index requested (DECISIONS #265).
    - The first call fixes `k`, `m`, `lag`, `thin` and `max_iter` (DECISIONS #4). On the first call `"auto"` derives a value, `thin=None` means 1 and `max_iter=None` no cap; on later calls `"auto"` and `None` keep the first call's values, and any other change raises `ValueError` (DECISIONS #8). A setting that is not an integer raises `TypeError` on any call, before tuning, and a broken bound `ValueError`, before tuning too, except the bounds that depend on an automatic `k`, $m \ge k$ and `max_iter` $> \max(L, m)$, which are checked once the pilot has chosen it; the check before tuning takes k = 0 (DECISIONS #44). A run completes a pilot of fewer than 100 pairs before choosing `k` (DECISIONS #46).
    - Each call ends by emitting the warnings of §7.4 that apply to the cumulative result, except slow pairs, disagreeing tuning chains and a start far wider than the target, which are emitted as they happen, or for slow pairs on a pool as each run ends (§6.3, DECISIONS #8).
    - `resume(result)`, on a sampler that has not tuned, run pilot pairs or run replicates, adopts the result's root seed, replicates and requested indices (so its settings), pilot meeting times and tuning report, and its names when the sampler has none; it returns `None` and does not modify the result. The next `run` first runs the requested replicates the result lacks (§6.5), then indices above the highest it requested, so gaps between the parts of a merged result stay free; censored replicates are never rerun (DECISIONS #219). Before adopting anything it raises `TypeError` for an argument that is not a `Result`, and `ValueError` for a sampler already used, another dimension, another kernel class (that of a kernel object, or a loaded description's text before `(`; DECISIONS #222), an `rng` given to the constructor whose seed differs from the result's (DECISIONS #220), names that differ, or a kernel with unset parameters for a result whose kernel had none. A tuned kernel is used as given; an untuned one, as a loaded result needs, since its description does not hold the tuned parameters, is tuned at once from the adopted seed (namespace 1), and if the report's `mean` or `cov` differ bitwise from the result's, `resume` emits an `InputWarning` and keeps the new kernel and report (DECISIONS #221). That the target, the initial distribution and the kernel's parameters are the run's cannot be checked (DECISIONS #53). With these and the same versions and machine, a resumed run's replicates are bitwise those of one uninterrupted run for a log-density evaluated point by point; for a vectorized one, `run(n)` is bitwise the original sampler's next `run(n)` under the same `pool`, `n_workers`, BLAS build and BLAS thread count, and statistically equal to one longer run (R-EXEC-2).
@@ -801,7 +824,7 @@ These targets are measured by `benchmarks/` and are not gating.
 5. **Outputs:**
    - budgets: the per-lane estimator of §3.7 (DECISIONS #22);
    - streaming estimators with constant memory;
-   - HDF5/Zarr checkpoints with mid-replicate snapshots;
+   - HDF5/Zarr checkpoints with mid-replicate snapshots (checkpoints at replicate granularity are in §6.7);
    - nonlinear functionals by randomised multilevel Monte Carlo.
 
 ---
