@@ -496,6 +496,8 @@ def test_a_merge_of_many_results_equals_the_merges_of_pairs_and_one_run():
 def test_a_merge_needs_another_result():
     with pytest.raises(TypeError, match="at least one other Result"):
         RESULT.merge()
+    with pytest.raises(TypeError, match=r"others must be telescopic\.Result objects, not list"):
+        RESULT.merge([RESULT])
 
 
 @pytest.mark.parametrize(

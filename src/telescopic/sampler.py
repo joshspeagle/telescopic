@@ -261,23 +261,12 @@ class CoupledSampler:
         """
         if not isinstance(result, Result):
             raise TypeError(f"result must be a telescopic.Result, not {type(result).__name__}")
-        self._adopt(
-            _io.Record(
-                result._replicates,
-                result.names,
-                result.kernel,
-                None,
-                result.tuning,
-                result.pilot,
-                result._k_rule,
-            ),
-            result.ndim,
-            "the result",
-        )
+        self._adopt(_io.record_of(result), result.ndim, "the result", "resume")
 
-    def _adopt(self, record: _io.Record, ndim: int, source: str) -> None:
+    def _adopt(self, record: _io.Record, ndim: int, source: str, action: str) -> None:
         # Adopts a result's or a plan's seed, settings, replicates, tuning, pilot and names,
-        # as resume describes; source names it in errors and the warning.
+        # as resume describes; source names it in errors and the warning, and action what
+        # needs a new sampler.
         for used, done in (
             ("run replicates", self._replicates is not None),
             ("fixed its settings", self._settings is not None),
@@ -285,7 +274,7 @@ class CoupledSampler:
             ("tuned its kernel", self.tuning is not None),
         ):
             if done:
-                raise ValueError(f"resume needs a new sampler: this one has already {used}")
+                raise ValueError(f"{action} needs a new sampler: this one has already {used}")
         if ndim != self.ndim:
             raise ValueError(
                 f"{source} has dimension {ndim}, but the initial distribution "
@@ -417,6 +406,7 @@ class CoupledSampler:
     # Spec sections 6.7 and 8.1.
     def plan(
         self,
+        n_replicates: int | None = None,
         *,
         k: int | str = "auto",
         m: int | str = "auto",
@@ -431,18 +421,20 @@ class CoupledSampler:
 
         As the first :meth:`run` would, it tunes the kernel and, for an automatic ``k``,
         completes the pilot to 100 pairs; the runs then keep these settings. With
-        ``checkpoint``, it writes the plan, the seed, the settings, the tuning report and
-        the pilot, to that directory, from which the samplers of the tasks of a cluster
-        job, built with the same target, initial distribution and kernel, adopt it
-        (:meth:`run`). A sampler whose settings are fixed returns them, and writes them.
+        ``checkpoint``, it writes them as the plan of that directory, which the tasks of
+        a cluster job adopt. A sampler whose settings are fixed returns them.
 
         Parameters
         ----------
+        n_replicates : int, optional
+            With ``checkpoint``: the replicates the run will hold, the indices 0 to
+            ``n_replicates - 1``, so that the result loaded from the directory is
+            ``interrupted`` until all of them have finished, even those of a task that
+            never started.
         k, m, lag, thin, max_iter, keep
             As for :meth:`run`.
         checkpoint : str or path-like, optional
-            A directory, made if missing. A new sampler adopts the plan it holds, as
-            :meth:`run` does; a plan of another seed or other settings raises.
+            As for :meth:`run`.
         progress : bool, optional
             Show the progress of the tuning and the pilot; ``None`` takes the sampler's
             setting.
@@ -451,12 +443,20 @@ class CoupledSampler:
         -------
         telescopic.engine.Settings
         """
+        planned = np.zeros(0, dtype=np.int64)
+        if n_replicates is not None:
+            planned = np.arange(integer("n_replicates", n_replicates, minimum=1))
         given = self._check(k, m, lag, thin, max_iter, keep)
         directory = _directory(checkpoint)
+        if directory is None and n_replicates is not None:
+            raise ValueError(
+                "n_replicates is the total a checkpoint's plan holds: give checkpoint"
+            )
         show = self.progress if progress is None else flag("progress", progress)
         with opened(self.pool) as pool:
-            self._settings = self._fix(given, directory, pool, show)
-        return self._settings
+            settings, _, _ = self._fix(given, directory, pool, show, planned=planned)
+        self._settings = settings
+        return settings
 
     # Spec R-TUNE-2 and D-21, sections 3.3, 6.5 and 7.4, R-EST-5.
     def run(
@@ -516,13 +516,16 @@ class CoupledSampler:
             into ranges of indices. ``None`` runs first the requested replicates that
             have not run, then indices above the highest requested so far.
         checkpoint : str or path-like, optional
-            A directory, made if missing, to which the run writes its finished
-            replicates as they finish: every 256 in this process, each chunk on a pool.
-            A new sampler adopts the plan the directory holds, as :meth:`resume` adopts a
-            result, without a pilot; otherwise the sampler's plan is written there, and a
-            plan of another seed or other settings raises. Replicates of this call's
-            indices that the directory holds are read from it, not run again, so the
-            same call completes a run that a killed process left unfinished;
+            A directory, made if missing, to which the run writes its replicates as they
+            finish: every 256 in this process, each chunk on a pool. A sampler without
+            settings adopts the plan the directory holds, as :meth:`resume` adopts a
+            result, without a pilot, and settings given must be the plan's; a sampler
+            with settings must have the plan's seed and settings. Without a plan, the
+            sampler's is written there once its tuning and pilot have finished, except
+            with ``start``, which needs the plan of :meth:`plan`. A plan written by
+            another version of telescopic warns. Replicates of this call's indices that
+            the directory holds are read from it, not run again, so the same call
+            completes a run that a killed process left unfinished;
             :meth:`Result.load <telescopic.Result.load>` of the directory returns the
             result of every replicate it holds.
         progress : bool, optional
@@ -554,21 +557,27 @@ class CoupledSampler:
         directory = _directory(checkpoint)
         if start is not None:
             start = integer("start", start, "None or an integer >= 0", minimum=0)
-            self._check_start(start, n_replicates)
         show = self.progress if progress is None else flag("progress", progress)
         interrupt = Interrupt()
         with ExitStack() as catching:
             # Worker processes start before tuning, which runs here meanwhile, and serve
             # the pilot and the run (DECISIONS #23).
             with opened(self.pool) as pool:
-                settings = self._fix(given, directory, pool, show)
+                settings, indices, plan = self._fix(
+                    given, directory, pool, show, n_replicates, start
+                )
                 done = 0 if self._replicates is None else len(self._replicates.index)
                 self._check_memory(settings, done + n_replicates)
-                indices = self._next_indices(n_replicates, start)
-                stored, sink = None, None
+                indices = cast(IntArray, indices)
+                stored: list[engine.Replicates] = []
+                sink = None
                 if directory is not None:
-                    stored, sink = self._checkpoint(directory, settings, indices)
-                running = indices if stored is None else np.setdiff1d(indices, stored.index)
+                    stored = _io.stored(directory, cast(_io.Record, plan), indices)
+                    sink = functools.partial(self._write_part, directory)
+                running = indices
+                if stored:
+                    held = np.concatenate([part.index for part in stored])
+                    running = np.setdiff1d(indices, held)
                 # From the start of the replicates until the result returns, the first
                 # Ctrl-C lets the run finish (spec section 6.5): after the replicates,
                 # while the workers stop and the result is built, it would lose them.
@@ -578,19 +587,22 @@ class CoupledSampler:
                     part, error, others = self._run(
                         MAIN, running, settings, pool, show, interrupt, sink
                     )
-            if stored is not None:
-                # The checkpoint's replicates of this call join those it ran.
-                joined = engine.merge([stored] if part is None else [stored, part])
-                part = replace(joined, requested=np.sort(indices))
             # The finished replicates are kept before anything can raise, so that an error,
             # or a warning made one, leaves them in the sampler (spec section 6.5).
-            if part is not None and len(part.index):
-                self._replicates = (
-                    part if self._replicates is None else engine.merge([self._replicates, part])
-                )
-                self._settings = settings
+            # With a checkpoint, its replicates of this call join them in the one merge.
+            records = [*stored, *([] if part is None else [part])]
+            if any(len(record.index) for record in records):
+                before = 0 if self._replicates is None else len(self._replicates.index)
+                if self._replicates is not None:
+                    records.insert(0, self._replicates)
+                merged = records[0] if len(records) == 1 else engine.merge(records)
+                if part is None:  # the call's indices, of which none ran or was recorded
+                    merged = replace(merged, requested=np.union1d(merged.requested, indices))
+                self._replicates, self._settings = merged, settings
                 if error is not None:
-                    note = self._stopped(part, len(indices), others)
+                    abandoned = np.zeros(0, dtype=np.int64) if part is None else part.abandoned
+                    finished = len(merged.index) - before
+                    note = self._stopped(finished, abandoned, len(indices), others)
                     engine._attach(error, "telescopic_result", self._result(), note)
             elif error is not None:
                 # The engine's note when it recorded nothing, else none had finished.
@@ -621,68 +633,93 @@ class CoupledSampler:
         return result
 
     def _fix(
-        self, given: dict[str, int], directory: Path | None, pool: Any, progress: bool
-    ) -> engine.Settings:
-        # The settings of a run: the sampler's, or a checkpoint's plan, which a new sampler
-        # adopts, or the first run's, which a checkpoint then holds as its plan (spec
-        # section 6.7). A plan fixes the sampler's settings.
-        plan = None if directory is None else directory / _io.PLAN
-        new = self._settings is None and self.pilot is None and self.tuning is None
-        if plan is not None and plan.is_file() and new:
-            record = _io.read(plan)
-            self._adopt(record, record.replicates.atoms.shape[1], f"the plan of {directory}")
-            self._compare(given)
+        self,
+        given: dict[str, int],
+        directory: Path | None,
+        pool: Any,
+        progress: bool,
+        n: int | None = None,
+        start: int | None = None,
+        planned: IntArray | None = None,
+    ) -> tuple[engine.Settings, IntArray | None, _io.Record | None]:
+        # The settings of a run, the indices of a call of n replicates, and a checkpoint's
+        # plan (spec section 6.7). Without settings, the sampler adopts the directory's
+        # plan, and writes its call's request before tuning; otherwise its settings are
+        # its own or the first run's, which a directory without a plan gets as its plan,
+        # made with the planned indices. A plan fixes the sampler's settings.
+        plan = None if directory is None else _io.read_plan(directory)
+        indices = None
+        if plan is not None:
+            if plan.version != _io.version():
+                warn(
+                    f"the plan of checkpoint {directory} was written by telescopic "
+                    f"{plan.version}, and this is {_io.version()}: replicates of other "
+                    "versions can differ, so the run need not repeat bit for bit",
+                    InputWarning,
+                )
+            if self._settings is None:
+                self._compare(given, plan.replicates.settings, directory)
+                if n is not None:
+                    indices = self._next_indices(n, start)
+                    _io.write_request(cast(Path, directory), plan, indices)
+                source = f"the plan of checkpoint {directory}"
+                self._adopt(plan, plan.replicates.atoms.shape[1], source, "adopting it")
+        elif directory is not None and start is not None:
+            raise ValueError(
+                f"checkpoint {directory} holds no plan: a run with start runs a range of "
+                "the plan that CoupledSampler.plan writes there first"
+            )
         settings = self.settings or self._configure(given, pool, progress)
-        if plan is None:
-            return settings
-        if plan.is_file():
-            planned = _io.read(plan).replicates
-            if planned.settings != settings or engine._seed_key(planned.seed) != engine._seed_key(
-                self.seed
-            ):
+        if directory is not None:
+            if plan is None:
+                nothing = engine._empty(
+                    self.seed,
+                    settings,
+                    self.ndim,
+                    np.zeros(0, dtype=np.int64) if planned is None else planned,
+                )
+                mine = self._record(nothing)._replace(tuning=self.tuning, pilot=self.pilot)
+                plan = _io.write_plan(directory, mine)
+            planned_run = plan.replicates
+            if planned_run.settings != settings or engine._seed_key(
+                planned_run.seed
+            ) != engine._seed_key(self.seed):
                 raise ValueError(
                     f"checkpoint {directory} holds the plan of another run: its seed or its "
-                    f"settings, {planned.settings}, differ from this sampler's, {settings}"
+                    f"settings, {planned_run.settings}, differ from this sampler's, {settings}"
                 )
-        else:
-            directory = cast(Path, directory)
-            directory.mkdir(parents=True, exist_ok=True)
-            nothing = _io.empty(self.seed, settings, self.ndim, np.zeros(0, dtype=np.int64))
-            _io.write_atomic(
-                plan, self._record(nothing)._replace(tuning=self.tuning, pilot=self.pilot)
-            )
-        self._settings = settings
-        return settings
+            self._settings = settings
+        if n is not None and indices is None:
+            indices = self._next_indices(n, start)
+            if directory is not None:
+                _io.write_request(directory, cast(_io.Record, plan), indices)
+        return settings, indices, plan
 
-    def _checkpoint(
-        self, directory: Path, settings: engine.Settings, indices: IntArray
-    ) -> tuple[engine.Replicates | None, Callable[[engine.Replicates], None]]:
-        # The checkpoint's replicates of these indices, None without any, and the sink
-        # that writes the run's records there, once the call's request is written.
-        parts = _io.stored(directory, indices)
-        request = _io.empty(self.seed, settings, self.ndim, np.sort(indices))
-        _io.write_record(directory, self._record(request))
-
-        def sink(part: engine.Replicates) -> None:
-            _io.write_record(directory, self._record(part))
-
-        return (engine.merge(parts) if parts else None), sink
+    def _write_part(self, directory: Path, part: engine.Replicates) -> None:
+        # The sink of a checkpointed run.
+        _io.write_record(directory, self._record(part))
 
     def _record(self, replicates: engine.Replicates) -> _io.Record:
-        # A record of the sampler's replicates, without its tuning and pilot.
+        # A record of the sampler's replicates, with the digest of its tuning report and
+        # without the report and the pilot.
         return _io.Record(
-            replicates, self.names, str(self.kernel), str(self.initial), None, None, self._k_rule
+            replicates,
+            self.names,
+            self.kernel,
+            self.initial,
+            None,
+            None,
+            self._k_rule,
+            _io.version(),
+            _io.digest(self.tuning),
         )
 
-    def _stopped(self, part: engine.Replicates, n: int, others: int) -> str:
-        # The note on an error that stopped a run of n replicates, of which part finished,
-        # once the sampler keeps them.
+    def _stopped(self, finished: int, abandoned: IntArray, n: int, others: int) -> str:
+        # The note on an error that stopped a run of n replicates, of which finished
+        # finished and abandoned were abandoned, once the sampler keeps them.
         replicates = cast(engine.Replicates, self._replicates)
         missing = len(np.setdiff1d(replicates.requested, replicates.index))
-        abandoned = part.abandoned
-        lines = [
-            f"{engine._STOPPED} the run with {len(part.index):,} of its {n:,} replicates finished"
-        ]
+        lines = [f"{engine._STOPPED} the run with {finished:,} of its {n:,} replicates finished"]
         if len(abandoned):
             lines[0] += (
                 f"; the {len(abandoned):,} in progress (indices {abandoned[0]:,} to "
@@ -704,29 +741,26 @@ class CoupledSampler:
             lines.append(f"Errors stopped {others:,} other chunks of the run too.")
         return f"{lines[0]}. {' '.join(lines[1:])}"
 
-    def _check_start(self, start: int, n: int) -> None:
-        # The range from start must be new to the sampler (spec section 8.1).
-        if self._replicates is None:
-            return
-        requested = self._replicates.requested
-        overlap = requested[(requested >= start) & (requested < start + n)]
-        if len(overlap):
-            raise ValueError(
-                f"start={start} runs the indices {start} to {start + n - 1}, of which "
-                f"{len(overlap)} were requested before, the first {overlap[0]}; each replicate "
-                "runs once, so choose a range this sampler has not run"
-            )
-
     def _next_indices(self, n: int, start: int | None = None) -> IntArray:
-        # The given range, or the requested replicates that an interrupted run never
-        # started first, then new indices, so that a run completes an interrupted one
-        # (spec section 6.5).
+        # The given range, which must be new to the sampler (spec section 8.1), or the
+        # requested replicates that an interrupted run never started first, then new
+        # indices, so that a run completes an interrupted one (spec section 6.5).
+        requested = None if self._replicates is None else self._replicates.requested
         if start is not None:
+            if requested is not None:
+                overlap = requested[(requested >= start) & (requested < start + n)]
+                if len(overlap):
+                    raise ValueError(
+                        f"start={start} runs the indices {start} to {start + n - 1}, of "
+                        f"which {len(overlap)} were requested before, the first "
+                        f"{overlap[0]}; each replicate runs once, so choose a range this "
+                        "sampler has not run"
+                    )
             return np.arange(start, start + n)
-        if self._replicates is None:
+        if requested is None:
             return np.arange(n)
-        requested = self._replicates.requested
-        missing = np.setdiff1d(requested, self._replicates.index, assume_unique=True)
+        replicates = cast(engine.Replicates, self._replicates)
+        missing = np.setdiff1d(requested, replicates.index, assume_unique=True)
         top = int(requested[-1]) + 1
         return np.concatenate([missing, np.arange(top, top + n)])[:n]
 
@@ -802,15 +836,23 @@ class CoupledSampler:
         if keep is not None:
             given["keep"] = integer("keep", keep, "None or an integer >= 0", minimum=0)
         if self.settings is not None:
-            self._compare(given)
+            self._compare(given, self.settings)
         else:
             _settings({"k": 0} | given)
         return given
 
-    def _compare(self, given: dict[str, int]) -> None:
-        # The settings given must be the sampler's.
+    def _compare(
+        self, given: dict[str, int], settings: engine.Settings, checkpoint: Path | None = None
+    ) -> None:
+        # The settings given must be the sampler's, or those of a checkpoint's plan.
         for name, value in given.items():
-            kept = getattr(self.settings, name)
+            kept = getattr(settings, name)
+            if value != kept and checkpoint is not None:
+                raise ValueError(
+                    f"{name} is {kept} in the plan of checkpoint {checkpoint}, which fixes "
+                    f"the settings of its runs: omit {name}, or use another checkpoint for "
+                    f"{name}={value}"
+                )
             if value != kept:
                 raise ValueError(
                     f"{name} was {kept} in the earlier runs; a sampler keeps its "

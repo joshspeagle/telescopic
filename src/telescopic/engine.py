@@ -666,6 +666,29 @@ def stored_bytes(settings: Settings, ndim: int, coupled: npt.ArrayLike) -> float
     return float(atoms * (8 * ndim + 20) + 24 * c.sum() + moments)
 
 
+def _empty(seed: SeedSequence, settings: Settings, ndim: int, requested: IntArray) -> Replicates:
+    # A record of no replicate, with the shapes of a run's: a checkpoint's plan and requests.
+    width = 0 if settings.keep is None else ndim
+    columns = 0 if settings.keep is None else ndim + len(_pairs(ndim)[0])
+    integers = np.zeros(0, dtype=np.int64)
+    return Replicates(
+        seed=seed,
+        settings=settings,
+        index=integers,
+        meeting_time=np.zeros(0),
+        atoms=np.zeros((0, ndim)),
+        weights=np.zeros(0),
+        owner=integers,
+        distance_owner=integers,
+        distance_time=integers,
+        distance=np.zeros(0),
+        zero_density=integers,
+        requested=np.asarray(requested, dtype=np.int64),
+        center=np.zeros((0, width)),
+        moments=np.zeros((0, columns)),
+    )
+
+
 class _Batch:
     # The lanes of a lockstep batch, and the outputs of the replicates they have run.
     def __init__(
@@ -839,6 +862,11 @@ class _Batch:
         )
         zero_density = np.array(self.zero_density, dtype=np.int64)
         counts = {name: getattr(self.target, name) for name in COUNTS}
+        paths = {}
+        for i in index.tolist():
+            if i in self.paths:
+                x, y = self.paths.pop(i)
+                paths[i] = (np.array(x), np.array(y))
         now = time.perf_counter()
         replicates = Replicates(
             seed=seed,
@@ -859,12 +887,7 @@ class _Batch:
             moments=moments,
             **{name: counts[name] - n for name, n in self.counts.items()},
             seconds=now - self.since,
-            paths={
-                i: (np.array(x), np.array(y))
-                for i, (x, y) in (
-                    (i, self.paths.pop(i)) for i in index.tolist() if i in self.paths
-                )
-            },
+            paths=paths,
         )
         self.counts, self.since, self.unflushed = counts, now, 0
         return replicates

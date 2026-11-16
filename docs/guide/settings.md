@@ -93,11 +93,21 @@ compares the gradient with differences of the log-density, `grad` with those of
   `ValueError`, before any tuning; the bounds that depend on an automatic `k`, `m` at
   least `k` and `max_iter` above `lag` and `m`, are checked once the pilot has chosen it.
   [Parallel runs](parallel.md#interrupting-a-run) describes what Ctrl-C does during a
-  run.
+  run. `start=i` runs the indices `i` to `i + n_replicates - 1` instead, as a task of a
+  run split into ranges, and `checkpoint=directory` writes the replicates there as they
+  finish ([Checkpoints](save-load-merge.md#checkpoints)).
+- {meth}`~telescopic.CoupledSampler.plan` fixes the settings as the first run would,
+  tuning and running the pilot, without running replicates, and returns them; with
+  `checkpoint` it writes them as the plan of that directory
+  ([Run on a cluster](save-load-merge.md#run-on-a-cluster)).
 - {meth}`~telescopic.CoupledSampler.resume` makes a new sampler continue a returned or
   loaded result: it takes the result's settings, which its runs then keep as a
   sampler's later calls do, with its seed, replicates, pilot and tuning
   ([Continuing a run](save-load-merge.md#continuing-a-run)).
+
+The settings are fixed by the first run, by `plan`, by `resume`, or by adopting the plan
+of a checkpoint directory, which a sampler without settings does in its first `run` or
+`plan` with that `checkpoint`.
 
 [Choosing k, m and the lag](../tutorials/choosing-settings.md) runs these steps one by
 one, and compares other settings with the recipe's.

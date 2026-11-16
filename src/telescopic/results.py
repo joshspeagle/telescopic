@@ -216,6 +216,9 @@ class Result:
         # pilot then: issues() lists a wide start only for a k at most this (DECISIONS
         # #259). The sampler sets it.
         self._k_rule: int | None = None
+        # The parts of a loaded checkpoint that ran under another tuning than its plan's
+        # (DECISIONS #267); 0 otherwise.
+        self._retuned = 0
         # The engine runs only requested indices, so missing ones make index shorter.
         self.interrupted = len(replicates.index) < len(replicates.requested)
         self.abandoned = np.setdiff1d(replicates.abandoned, replicates.index)
@@ -692,6 +695,11 @@ class Result:
         """
         if not others:
             raise TypeError("merge needs at least one other Result")
+        for other in others:
+            if not isinstance(other, Result):
+                raise TypeError(
+                    f"others must be telescopic.Result objects, not {type(other).__name__}"
+                )
         results = (self, *others)
 
         def first(name: str) -> Any:

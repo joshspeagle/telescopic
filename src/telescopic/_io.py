@@ -2,20 +2,23 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import tempfile
 from pathlib import Path
-from typing import IO, Any, NamedTuple
+from typing import IO, Any, NamedTuple, cast
 
 import numpy as np
 import numpy.typing as npt
 from numpy.random import SeedSequence
 
 from telescopic._types import FloatArray, IntArray
-from telescopic.engine import COUNTS, Replicates, Settings, _pairs, merge
+from telescopic.engine import COUNTS, Replicates, Settings, _empty, _seed_key, merge
 from telescopic.estimators import averaging_times, correction_coefficients
 from telescopic.results import Result
 from telescopic.tuning import TuningReport
+from telescopic.warnings import InputWarning, warn
 
 # The file layout's version; a file of a later version raises on loading.
 SCHEMA = 2
@@ -58,29 +61,35 @@ PLAN = "plan.npz"
 
 class Record(NamedTuple):
     # What a file holds: replicates of a run, none or more, and what a result holds beside
-    # them, the kernel and the initial distribution as their descriptions.
+    # them, the kernel and the initial distribution as their descriptions. A checkpoint's
+    # records also hold the version of telescopic that wrote them and the digest of the
+    # tuning report under which their replicates ran.
     replicates: Replicates
     names: list[str] | None
-    kernel: str | None
-    initial: str | None
+    kernel: Any  # an object, or its description as read
+    initial: Any
     tuning: TuningReport | None
     pilot: FloatArray | None
     k_rule: int | None
+    version: str | None = None
+    tuned: str | None = None
+
+
+def record_of(result: Result) -> Record:
+    # A result's record, its kernel and initial distribution kept as they are.
+    return Record(
+        result._replicates,
+        result.names,
+        result.kernel,
+        result.initial,
+        result.tuning,
+        result.pilot,
+        result._k_rule,
+    )
 
 
 def save(result: Result, path: str | os.PathLike[str] | IO[bytes]) -> None:
-    write(
-        path,
-        Record(
-            result._replicates,
-            result.names,
-            None if result.kernel is None else str(result.kernel),
-            None if result.initial is None else str(result.initial),
-            result.tuning,
-            result.pilot,
-            result._k_rule,
-        ),
-    )
+    write(path, record_of(result))
 
 
 def write(path: str | os.PathLike[str] | IO[bytes], record: Record) -> None:
@@ -97,8 +106,8 @@ def write(path: str | os.PathLike[str] | IO[bytes], record: Record) -> None:
         "settings": replicates.settings._asdict(),
         "seed": replicates.seed.state,
         "names": record.names,
-        "kernel": record.kernel,
-        "initial": record.initial,
+        "kernel": None if record.kernel is None else str(record.kernel),
+        "initial": None if record.initial is None else str(record.initial),
         "counts": {name: getattr(replicates, name) for name in (*COUNTS, "seconds")},
         "k_rule": record.k_rule,
         "tuning": None
@@ -108,6 +117,8 @@ def write(path: str | os.PathLike[str] | IO[bytes], record: Record) -> None:
             "max_weight_ratio": tuning.max_weight_ratio,
             "initial_width": tuning.initial_width,
         },
+        "version": record.version,
+        "tuned": record.tuned,
     }
     # NumPy numbers and arrays in the metadata become Python ones, which JSON writes;
     # Python integers keep a seed's entropy of any size exactly.
@@ -182,36 +193,59 @@ def read(path: str | os.PathLike[str] | IO[bytes]) -> Record:
             tuning,
             data.get("pilot"),
             metadata.get("k_rule"),
+            metadata.get("version"),
+            metadata.get("tuned"),
         )
 
 
 # Spec section 6.7. A checkpoint is a directory of records, each written to a temporary
 # file and renamed, so that a killed process leaves whole files only: PLAN, the run's
-# seed, settings, tuning and pilot; request-<first>-<last>-<n>.npz, the indices a call
-# requested; part-<first>-<last>.npz, finished replicates; abandoned-<first>-<last>.npz,
-# the replicates an error abandoned when none finished. Only the plan holds the tuning
-# and the pilot.
-def empty(seed: SeedSequence, settings: Settings, ndim: int, requested: IntArray) -> Replicates:
-    # A record of no replicate, with the shapes of the run's.
-    width = 0 if settings.keep is None else ndim
-    columns = 0 if settings.keep is None else ndim + len(_pairs(ndim)[0])
-    integers = np.zeros(0, dtype=np.int64)
-    return Replicates(
-        seed=seed,
-        settings=settings,
-        index=integers,
-        meeting_time=np.zeros(0),
-        atoms=np.zeros((0, ndim)),
-        weights=np.zeros(0),
-        owner=integers,
-        distance_owner=integers,
-        distance_time=integers,
-        distance=np.zeros(0),
-        zero_density=integers,
-        requested=np.asarray(requested, dtype=np.int64),
-        center=np.zeros((0, width)),
-        moments=np.zeros((0, columns)),
-    )
+# seed, settings, tuning and pilot, and the indices planned; request-<first>-<last>-<n>.npz,
+# the indices a call requested; part-<first>-<last>.npz, finished replicates;
+# abandoned-<first>-<last>.npz, the replicates an error abandoned when none finished. Only
+# the plan holds the tuning and the pilot.
+def digest(tuning: TuningReport | None) -> str | None:
+    # The tuning report's mean and covariance, which fix a tuned kernel's numbers.
+    if tuning is None:
+        return None
+    sha = hashlib.sha256(np.ascontiguousarray(tuning.mean).tobytes())
+    sha.update(np.ascontiguousarray(tuning.cov).tobytes())
+    return sha.hexdigest()[:16]
+
+
+def version() -> str:
+    # Imported here: telescopic imports this module before it sets its version.
+    import telescopic
+
+    return telescopic.__version__
+
+
+def read_plan(directory: Path) -> Record | None:
+    path = directory / PLAN
+    return read(path) if path.is_file() else None
+
+
+def write_plan(directory: Path, plan: Record) -> Record:
+    # Creates the plan unless the directory holds one already, as when another process
+    # made it first, and returns the plan the directory then holds.
+    directory.mkdir(parents=True, exist_ok=True)
+    temporary = write_temporary(directory, plan._replace(version=version()))
+    try:
+        os.link(temporary, directory / PLAN)
+    except FileExistsError:
+        pass
+    else:
+        sync(directory)
+    finally:
+        os.unlink(temporary)
+    return cast(Record, read_plan(directory))
+
+
+def write_request(directory: Path, plan: Record, indices: IntArray) -> None:
+    # The record of the indices a call requested, written before it runs any.
+    ndim = plan.replicates.atoms.shape[1]
+    request = _empty(plan.replicates.seed, plan.replicates.settings, ndim, np.sort(indices))
+    write_record(directory, Record(request, None, None, None, None, None, None))
 
 
 def write_record(directory: Path, record: Record) -> None:
@@ -227,49 +261,84 @@ def write_record(directory: Path, record: Record) -> None:
             name = f"{kind}-{indices[0]}-{indices[-1]}"
             if kind == "request":
                 name += f"-{len(indices)}"
-            write_atomic(directory / f"{name}.npz", record)
+            os.replace(write_temporary(directory, record), directory / f"{name}.npz")
+            sync(directory)
             return
 
 
-def write_atomic(path: Path, record: Record) -> None:
-    # Through a temporary file beside it, synced, then renamed over the name.
-    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-    with open(temporary, "wb") as file:
+def write_temporary(directory: Path, record: Record) -> str:
+    # A synced file of a unique name in the directory, hidden from its records.
+    handle, name = tempfile.mkstemp(dir=directory, prefix=".", suffix=".tmp")
+    with os.fdopen(handle, "wb") as file:
         write(file, record)
         file.flush()
         os.fsync(file.fileno())
-    os.replace(temporary, path)
+    return name
 
 
-def stored(directory: Path, indices: IntArray) -> list[Replicates]:
-    # The parts that hold replicates of these indices, each of which must hold only them.
+def sync(directory: Path) -> None:
+    # The directory's entries, so that a renamed record survives a crash of the machine;
+    # a no-op where directories cannot be opened, as on Windows.
+    if os.name == "posix":
+        handle = os.open(directory, os.O_RDONLY)
+        try:
+            os.fsync(handle)
+        finally:
+            os.close(handle)
+
+
+def stored(directory: Path, plan: Record, indices: IntArray) -> list[Replicates]:
+    # The parts that hold replicates of these indices, each of the plan's run and holding
+    # only them.
     parts = []
     for path in sorted(directory.glob("part-*.npz")):
         with np.load(path, allow_pickle=False) as data:
             index = data["replicates.index"]
         inside = np.isin(index, indices)
-        if inside.all():
-            parts.append(read(path).replicates)
-        elif inside.any():
+        if not inside.any():
+            continue
+        if not inside.all():
             raise ValueError(
-                f"the checkpoint's {path.name} holds replicates both inside and outside the "
-                f"indices of this call, {indices[0]} to {indices[-1]}: run the ranges that "
-                "wrote it"
+                f"checkpoint {directory}: {path.name} holds replicates both inside and "
+                f"outside the indices of this call, {indices[0]} to {indices[-1]}; run the "
+                "ranges that wrote it"
             )
+        part = read(path).replicates
+        if not same_run(part, plan.replicates):
+            raise ValueError(
+                f"checkpoint {directory}: {path.name} holds replicates of another run, whose "
+                "seed or settings differ from the plan's"
+            )
+        parts.append(part)
     return parts
 
 
+def same_run(a: Replicates, b: Replicates) -> bool:
+    return a.settings == b.settings and _seed_key(a.seed) == _seed_key(b.seed)
+
+
 def load_checkpoint(directory: Path, cls: type[Result]) -> Result:
-    if not (directory / PLAN).is_file():
+    plan = read_plan(directory)
+    if plan is None:
         raise ValueError(f"the directory {directory} holds no {PLAN}, so it is no checkpoint")
-    plan = read(directory / PLAN)
-    records = [
-        read(path).replicates for path in sorted(directory.glob("[!.]*.npz")) if path.name != PLAN
-    ]
-    replicates = merge([plan.replicates, *records])
+    records = [read(path) for path in sorted(directory.glob("[!.]*.npz")) if path.name != PLAN]
+    replicates = merge([plan.replicates, *(record.replicates for record in records)])
     if not len(replicates.index):
         raise ValueError(f"the checkpoint {directory} holds no finished replicate yet")
-    return result_of(plan._replace(replicates=replicates), cls)
+    result = result_of(plan._replace(replicates=replicates), cls)
+    # Parts whose replicates ran under another tuning than the plan's (DECISIONS #267).
+    retuned = [
+        record for record in records if len(record.replicates.index) and record.tuned != plan.tuned
+    ]
+    result._retuned = len(retuned)
+    if retuned:
+        warn(
+            f"{len(retuned)} of the parts of checkpoint {directory} ran with a kernel tuned "
+            "differently from the plan's, as on another type of CPU, BLAS or library "
+            "version: each replicate stays unbiased, but the run does not repeat bit for bit",
+            InputWarning,
+        )
+    return result
 
 
 def record_times(

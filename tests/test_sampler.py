@@ -30,7 +30,7 @@ from references import (
     synthetic,
 )
 from references import Normal as Conditional
-from telescopic import CoupledSampler, Result, __version__, engine, sample, tuning
+from telescopic import CoupledSampler, Result, __version__, _io, engine, sample, tuning
 from telescopic._parallel import Interrupt
 from telescopic.engine import Settings, Status
 from telescopic.initial import Empirical, Normal
@@ -1279,9 +1279,15 @@ def test_a_used_sampler_refuses_the_plan_of_another_run(tmp_path, rng, k):
 
 
 def test_a_new_sampler_refuses_settings_or_an_rng_that_differ_from_the_plan(tmp_path):
-    CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3).plan(k=40, checkpoint=tmp_path)
-    with pytest.raises(ValueError, match="k was 40"):
-        CoupledSampler(log_prob, INIT, kernel=KERNEL).run(5, k=20, checkpoint=tmp_path)
+    CoupledSampler(log_prob, INIT, rng=3).plan(k=40, checkpoint=tmp_path)
+    # The refusal comes before the plan is adopted: nothing tuned, nothing fixed, and no
+    # request written.
+    sampler = CoupledSampler(log_prob, INIT)
+    with pytest.raises(ValueError, match="k is 40 in the plan of checkpoint"):
+        sampler.run(5, k=20, checkpoint=tmp_path)
+    assert sampler.tuning is None
+    assert sampler.settings is None
+    assert not list(tmp_path.glob("request-*"))
     with pytest.raises(ValueError, match="rng was given, but the plan of"):
         CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=4).run(5, checkpoint=tmp_path)
 
@@ -1306,3 +1312,82 @@ def test_invalid_checkpoints_raise(tmp_path):
     sampler.plan(k=40, checkpoint=tmp_path / "run")
     with pytest.raises(ValueError, match="holds no finished replicate yet"):
         Result.load(tmp_path / "run")
+
+
+def test_a_range_task_needs_the_plan_and_never_writes_one(tmp_path):
+    task = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3)
+    with pytest.raises(ValueError, match="holds no plan: a run with start"):
+        task.run(5, k=40, start=5, checkpoint=tmp_path)
+    assert not (tmp_path / "plan.npz").exists()
+
+
+def test_a_plan_made_meanwhile_by_another_process_is_kept(tmp_path):
+    first = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3)
+    first.plan(k=40, checkpoint=tmp_path)
+    kept = (tmp_path / "plan.npz").read_bytes()
+    # A second process that found no plan writes its own: the first stays, and the
+    # second, of another seed, raises.
+    second = CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=4)
+    settings = second.plan(k=40)
+    plan = _io.read_plan(tmp_path)
+    mine = _io.Record(
+        engine._empty(second.seed, settings, 2, []), None, None, None, None, None, None
+    )
+    assert _io.write_plan(tmp_path, mine).replicates.seed.entropy == plan.replicates.seed.entropy
+    assert (tmp_path / "plan.npz").read_bytes() == kept
+    assert not list(tmp_path.glob(".*"))
+
+
+def test_a_part_of_another_run_in_the_checkpoint_raises_naming_it(tmp_path):
+    other = tmp_path / "other"
+    CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=4).run(5, k=40, checkpoint=other)
+    CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3).plan(k=40, checkpoint=tmp_path / "run")
+    for path in other.glob("part-*.npz"):
+        (tmp_path / "run" / path.name).write_bytes(path.read_bytes())
+    task = CoupledSampler(log_prob, INIT, kernel=KERNEL)
+    with pytest.raises(
+        ValueError, match=r"checkpoint .*run: part-0-4\.npz holds replicates of another"
+    ):
+        task.run(5, checkpoint=tmp_path / "run")
+
+
+def test_a_plan_of_another_version_warns(tmp_path, monkeypatch):
+    CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3).plan(k=40, checkpoint=tmp_path)
+    monkeypatch.setattr(_io, "version", lambda: "9.9")
+    with pytest.warns(InputWarning, match="written by telescopic .*, and this is 9.9"):
+        CoupledSampler(log_prob, INIT, kernel=KERNEL).run(5, checkpoint=tmp_path)
+
+
+def test_parts_tuned_apart_from_the_plan_warn_when_loaded(tmp_path):
+    CoupledSampler(log_prob, INIT, rng=3).plan(k=40, checkpoint=tmp_path)
+    CoupledSampler(log_prob, INIT).run(5, start=0, checkpoint=tmp_path)
+    loaded = Result.load(tmp_path)
+    assert loaded._retuned == 0
+
+    def other_cpu(x):
+        # Tunes to other numbers, as another type of CPU can.
+        return 1.01 * log_prob(x)
+
+    with pytest.warns(InputWarning, match="kernel differs from the plan of checkpoint"):
+        CoupledSampler(other_cpu, INIT).run(5, start=5, checkpoint=tmp_path)
+    with pytest.warns(InputWarning, match="1 of the parts of checkpoint .* tuned differently"):
+        loaded = Result.load(tmp_path)
+    assert loaded._retuned == 1
+
+
+def test_a_planned_total_flags_a_task_that_never_ran(tmp_path):
+    CoupledSampler(log_prob, INIT, kernel=KERNEL, rng=3).plan(15, k=40, checkpoint=tmp_path)
+    CoupledSampler(log_prob, INIT, kernel=KERNEL).run(5, start=0, checkpoint=tmp_path)
+    loaded = Result.load(tmp_path)
+    assert loaded.interrupted
+    np.testing.assert_array_equal(loaded._replicates.requested, np.arange(15))
+    with pytest.raises(ValueError, match="n_replicates is the total a checkpoint's plan holds"):
+        CoupledSampler(log_prob, INIT, kernel=KERNEL).plan(15, k=40)
+
+
+def test_a_task_writes_its_request_before_it_tunes(tmp_path):
+    CoupledSampler(log_prob, INIT, rng=3).plan(k=40, checkpoint=tmp_path)
+    failing = Failing(1, RuntimeError("the tuning failed"))
+    with pytest.raises(RuntimeError, match="the tuning failed"):
+        CoupledSampler(failing, INIT).run(5, start=5, checkpoint=tmp_path)
+    assert (tmp_path / "request-5-9-5.npz").is_file()
