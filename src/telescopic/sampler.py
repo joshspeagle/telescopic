@@ -956,6 +956,8 @@ def sample(
     thin: int | None = None,
     max_iter: int | None = None,
     keep: int | None = None,
+    start: int | None = None,
+    checkpoint: str | os.PathLike[str] | None = None,
     names: Sequence[str] | None = None,
     pool: Any = None,
     n_workers: int | None = None,
@@ -1013,6 +1015,14 @@ def sample(
         Store the signed measures of the replicates of index below ``keep`` only, and the
         moments of every replicate; see :meth:`CoupledSampler.run`. ``None`` stores every
         replicate's signed measure.
+    start : int, optional
+        Run the replicates of indices ``start`` to ``start + n_replicates - 1``, as a task
+        of a run split into ranges; with a ``checkpoint``, its plan must exist. See
+        :meth:`CoupledSampler.run`.
+    checkpoint : str or path-like, optional
+        A directory to which the run writes its plan and its replicates as they finish, so
+        that the same call, with the same ``rng``, completes a run whose process was
+        killed; see :meth:`CoupledSampler.run`.
     names : sequence of str, optional
         Parameter names for summaries.
     pool : None, int, executor or pool
@@ -1076,7 +1086,17 @@ def sample(
         check_grad=check_grad,
         rng=rng,
     )
-    return sampler.run(n_replicates, k=k, m=m, lag=lag, thin=thin, max_iter=max_iter, keep=keep)
+    return sampler.run(
+        n_replicates,
+        k=k,
+        m=m,
+        lag=lag,
+        thin=thin,
+        max_iter=max_iter,
+        keep=keep,
+        start=start,
+        checkpoint=checkpoint,
+    )
 
 
 def _checked(

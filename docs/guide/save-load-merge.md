@@ -180,60 +180,62 @@ replicates are bitwise those of a run that did not fail.
 
 A run that a process kill would lose, from a cluster's time limit, the out-of-memory
 killer or a node that fails, can write its replicates to a directory as they finish.
-`run(n, checkpoint=directory)` makes the directory if needed and writes there the
-sampler's plan, its seed, settings, tuning report and pilot meeting times, then the
-replicates as they finish: every 256 in this process, and each chunk on a pool. Each
-file is written under a temporary name and then renamed, so a killed process leaves
-whole files only. A killed run has nothing to catch; running the same call again, on a
-new sampler built with the same target, initial distribution and kernel, adopts the
-plan, reads the replicates the directory holds, runs the others, and returns the result
-of all of them. {meth}`telescopic.Result.load` of the directory returns the result of
-every replicate it holds:
+`checkpoint=directory` makes the directory if needed, writes there the run's plan, its
+seed, settings, tuning report and pilot meeting times, once the tuning and the pilot
+have finished, then the replicates as they finish (the {meth}`~telescopic.CoupledSampler.run`
+reference says how often). Each file is written under a temporary name and then renamed,
+so a killed process leaves whole files only. A killed run has nothing to catch: run the
+same script again, with the same `rng`. The call adopts the plan, reads the replicates
+the directory holds, runs the others, and returns the result of all of them. With
+{func}`telescopic.sample`, the common case, the script is one call:
 
 ```{code-cell} python
 with tempfile.TemporaryDirectory() as directory:
-    sampler = telescopic.CoupledSampler(
-        gaussian.log_prob, gaussian.initial, vectorize=True, rng=11
+    first = telescopic.sample(
+        gaussian.log_prob, gaussian.initial, 600, vectorize=True, rng=11,
+        checkpoint=directory,
     )
-    first = sampler.run(600, checkpoint=directory)
     files = sorted(path.name for path in Path(directory).iterdir())
-    # The same call after a crash: a new sampler, which reads all 600 and runs none.
-    again = telescopic.CoupledSampler(
-        gaussian.log_prob, gaussian.initial, vectorize=True, kernel=first.kernel
+    # The same call after a crash, which reads all 600 replicates and runs none.
+    rerun = telescopic.sample(
+        gaussian.log_prob, gaussian.initial, 600, vectorize=True, rng=11,
+        checkpoint=directory,
     )
-    rerun = again.run(600, checkpoint=directory)
     stored = telescopic.Result.load(directory)
-files, again.target.n_log_prob, stored.n_replicates
+files, stored.n_replicates
 ```
 
 ```{code-cell} python
 :tags: [remove-cell]
 
 # The claims of the next paragraph.
-assert again.target.n_log_prob == 0
 assert stored.n_replicates == rerun.n_replicates == 600
+assert rerun.n_log_prob == first.n_log_prob
 assert np.array_equal(rerun.mean().value, first.mean().value)
 ```
 
 `plan.npz` holds the plan, `request-0-599-600.npz` the indices the call requested, and
 each `part-<first>-<last>.npz` a set of finished replicates, which
-{meth}`~telescopic.Result.load` also reads alone. The result loaded from the directory is
-`interrupted` until every requested replicate has finished. The new sampler checks the
-plan as `resume` checks a result ([Continuing a run](#continuing-a-run)): an untuned
-kernel is tuned again from the plan's seed, with a warning if its tuning differs, and a
-sampler that has already fixed other settings or another seed raises. With a
-log-density evaluated point by point, the completed run's replicates are bitwise those
-of one run without a checkpoint.
+{meth}`telescopic.Result.load` also reads alone; `Result.load` of the directory returns
+the result of every replicate it holds, `interrupted` until every requested replicate
+has finished. A {class}`~telescopic.CoupledSampler` takes the same argument on
+`run(n, checkpoint=directory)`. The new sampler checks the plan as `resume` checks a
+result ([Continuing a run](#continuing-a-run)): an untuned kernel is tuned again from
+the plan's seed, with a warning if its tuning differs, and settings or an `rng` that
+differ from the plan's raise. With a log-density evaluated point by point, on the same
+type of CPU with the same BLAS and library versions, the completed run's replicates are
+bitwise those of one run without a checkpoint.
 
 ## Run on a cluster
 
 A cluster job splits one run into tasks that run separate ranges of its replicate
 indices with one plan. `CoupledSampler.plan` tunes the kernel, runs the meeting-time
 pilot and fixes the settings, without running replicates, and writes the plan to the
-checkpoint directory; each task's sampler adopts it and runs its own range with
-`run(n, start=i)`, the indices `i` to `i + n - 1`; and `Result.load` of the directory
-merges every task's replicates. The model lives in code that each script imports, here
-a file `model.py` that defines `log_prob` and `init`. The plan, once:
+checkpoint directory, with the number of replicates planned; each task adopts it and
+runs its own range with `start=i`, the indices `i` to `i + n - 1`; and `Result.load` of
+the directory merges every task's replicates. A task with `start` never writes the
+plan: it raises when the directory holds none. The model lives in code that each script
+imports, here a file `model.py` that defines `log_prob` and `init`. The plan, once:
 
 ```python
 # plan.py
@@ -241,7 +243,7 @@ import telescopic
 from model import init, log_prob
 
 sampler = telescopic.CoupledSampler(log_prob, init, rng=2026)
-print(sampler.plan(checkpoint="run"))
+print(sampler.plan(100_000, checkpoint="run"))
 ```
 
 Each task of a Slurm job array, 1,000 replicates each:
@@ -254,8 +256,7 @@ import telescopic
 from model import init, log_prob
 
 task = int(os.environ["SLURM_ARRAY_TASK_ID"])
-sampler = telescopic.CoupledSampler(log_prob, init)
-sampler.run(1000, start=1000 * task, checkpoint="run")
+telescopic.sample(log_prob, init, 1000, start=1000 * task, checkpoint="run")
 ```
 
 And the merge, once every task has ended:
@@ -265,6 +266,8 @@ And the merge, once every task has ended:
 import telescopic
 
 result = telescopic.Result.load("run")
+if result.interrupted:
+    print("some tasks have not finished: run them again before using the estimates")
 print(result.summary())
 result.save("result")
 ```
@@ -279,12 +282,14 @@ sbatch --dependency=afterany:$tasks --wrap "python merge.py"
 ```
 
 A task that was killed, or requeued, runs the same call again and completes its range
-from its own files. Until it does, the merged result is `interrupted`, since the task
-recorded the indices it requested before its first replicate finished. Every task tunes
-an untuned kernel again from the plan's seed, which takes a small part of a task and
-gives the plan's kernel on machines with the same libraries; on others it can differ by
-rounding, which the task warns about. Each replicate stays unbiased whatever its kernel,
-so the estimates stay unbiased, but they no longer repeat bitwise. To tune once, pass
-every task the tuned kernel by pickle ([Tuning](parallel.md#tuning), in Run in
-parallel). Do not run two tasks on overlapping ranges: the merge raises when two files
-hold one replicate.
+from its own files. Until every planned replicate has finished, the merged result is
+`interrupted`, even when a task never started, since the plan holds the 100,000 indices
+planned. Every task tunes an untuned kernel again from the plan's seed, which takes a
+small part of a task and gives the plan's kernel on machines with the same type of CPU,
+BLAS and library versions; on others it can differ by rounding, which the task warns
+about, and `Result.load` warns again for the parts it concerns. Each replicate stays
+unbiased whatever its kernel, so the estimates stay unbiased, but they no longer repeat
+bit for bit. To tune once, pass every task the tuned kernel by pickle
+([Tuning](parallel.md#tuning), in Run in parallel). Do not run two tasks on overlapping
+ranges: a task raises when the directory holds a part that its range cuts, and the merge
+when two files hold one replicate.

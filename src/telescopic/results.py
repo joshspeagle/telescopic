@@ -218,7 +218,7 @@ class Result:
         self._k_rule: int | None = None
         # The parts of a loaded checkpoint that ran under another tuning than its plan's
         # (DECISIONS #267); 0 otherwise.
-        self._retuned = 0
+        self._tuned_apart = 0
         # The engine runs only requested indices, so missing ones make index shorter.
         self.interrupted = len(replicates.index) < len(replicates.requested)
         self.abandoned = np.setdiff1d(replicates.abandoned, replicates.index)

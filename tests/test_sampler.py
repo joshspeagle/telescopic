@@ -1362,7 +1362,7 @@ def test_parts_tuned_apart_from_the_plan_warn_when_loaded(tmp_path):
     CoupledSampler(log_prob, INIT, rng=3).plan(k=40, checkpoint=tmp_path)
     CoupledSampler(log_prob, INIT).run(5, start=0, checkpoint=tmp_path)
     loaded = Result.load(tmp_path)
-    assert loaded._retuned == 0
+    assert loaded._tuned_apart == 0
 
     def other_cpu(x):
         # Tunes to other numbers, as another type of CPU can.
@@ -1372,7 +1372,7 @@ def test_parts_tuned_apart_from_the_plan_warn_when_loaded(tmp_path):
         CoupledSampler(other_cpu, INIT).run(5, start=5, checkpoint=tmp_path)
     with pytest.warns(InputWarning, match="1 of the parts of checkpoint .* tuned differently"):
         loaded = Result.load(tmp_path)
-    assert loaded._retuned == 1
+    assert loaded._tuned_apart == 1
 
 
 def test_a_planned_total_flags_a_task_that_never_ran(tmp_path):
@@ -1391,3 +1391,14 @@ def test_a_task_writes_its_request_before_it_tunes(tmp_path):
     with pytest.raises(RuntimeError, match="the tuning failed"):
         CoupledSampler(failing, INIT).run(5, start=5, checkpoint=tmp_path)
     assert (tmp_path / "request-5-9-5.npz").is_file()
+
+
+def test_a_killed_sample_with_a_checkpoint_rerun_equals_the_plain_sample(uninterrupted, tmp_path):
+    options = {"kernel": KERNEL, "rng": 6, "checkpoint": tmp_path} | CHECKPOINTED
+    with pytest.raises(SystemExit):
+        sample(Failing(15_000, SystemExit(1)), INIT, N_CHECKPOINTED, **options)
+    assert list(tmp_path.glob("part-*.npz"))
+    rerun = sample(log_prob, INIT, N_CHECKPOINTED, **options)
+    plain = sample(log_prob, INIT, N_CHECKPOINTED, kernel=KERNEL, rng=6, **CHECKPOINTED)
+    assert_same_outputs(rerun._replicates, plain._replicates)
+    assert_same_outputs(plain._replicates, uninterrupted._replicates)

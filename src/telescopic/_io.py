@@ -327,13 +327,13 @@ def load_checkpoint(directory: Path, cls: type[Result]) -> Result:
         raise ValueError(f"the checkpoint {directory} holds no finished replicate yet")
     result = result_of(plan._replace(replicates=replicates), cls)
     # Parts whose replicates ran under another tuning than the plan's (DECISIONS #267).
-    retuned = [
+    tuned_apart = [
         record for record in records if len(record.replicates.index) and record.tuned != plan.tuned
     ]
-    result._retuned = len(retuned)
-    if retuned:
+    result._tuned_apart = len(tuned_apart)
+    if tuned_apart:
         warn(
-            f"{len(retuned)} of the parts of checkpoint {directory} ran with a kernel tuned "
+            f"{len(tuned_apart)} of the parts of checkpoint {directory} ran with a kernel tuned "
             "differently from the plan's, as on another type of CPU, BLAS or library "
             "version: each replicate stays unbiased, but the run does not repeat bit for bit",
             InputWarning,

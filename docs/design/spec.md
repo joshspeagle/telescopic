@@ -551,7 +551,7 @@ Part B of issue #79 (Josh, 2026-11-13: plans, a run store, checkpoints at replic
 
 - **Plan:** what fixes a run apart from its replicates: the root seed, the settings, the tuning report, the pilot meeting times, the names, the pilot rule's $k$, the descriptions of the kernel and the initial distribution, the version of telescopic, and optionally the planned indices. `CoupledSampler.plan(n_replicates=None, ...)` fixes the settings as a first `run` would, without running replicates, and returns them; with `checkpoint`, `n_replicates` plans the indices $0, \dots, n - 1$, which makes a loaded checkpoint `interrupted` until all have finished, and without it `n_replicates` raises `ValueError`. A plan is not a class: it is the file `plan.npz` of a checkpoint directory, a schema-2 record (§7.1) with no replicate whose `requested` holds the planned indices (DECISIONS #268).
 - **Kernels are not saved by their parameters** (DECISIONS #267): a sampler that adopts a plan is built with the target, the initial distribution and the kernel in code, as for `resume`, and an untuned kernel is tuned again from the plan's seed, with the `InputWarning` of `resume` when its report differs bitwise from the plan's (DECISIONS #221). Tuning repeats bitwise only on the same type of CPU with the same BLAS and library versions: OpenBLAS's kernels for two CPU types tuned seed 7 differently, point by point and vectorized (review of 2026-11-16). Each part records the digest of the tuning report it ran under (the bytes of its mean and covariance), and `Result.load` of a directory warns when a part's digest differs from the plan's. A Gibbs kernel needs nothing more.
-- **`checkpoint=directory`** on `CoupledSampler.run` and `plan` (DECISIONS #269):
+- **`checkpoint=directory`** on `CoupledSampler.run` and `plan`, and on `sample`, which passes it and `start` to its sampler's `run`, so that rerunning the same call with the same `rng` restarts a one-call run (DECISIONS #269, #272):
   - the directory is made if missing; a path that is a file raises `ValueError`, and one that is not a string or path-like `TypeError`;
   - a plan written by another version of telescopic warns (`InputWarning`);
   - a sampler without settings adopts the directory's plan, as `resume` adopts a result (§8.1), with its checks and errors naming the plan. Settings given to the call are compared with the plan's first, so a refusal (`ValueError` naming the checkpoint) leaves the sampler untouched; then the call's request record is written, before any tuning, and the plan is adopted. A sampler with settings whose seed or settings differ from the plan's raises `ValueError`;
@@ -669,8 +669,9 @@ The documentation explains each, with the failure cases of JOA20 §5.1, and says
    ```python
    telescopic.sample(log_prob, init, n_replicates=100, *, args=(), kwargs=None, grad=None,
                      log_prob_and_grad=None, vectorize=False, kernel="auto", k="auto",
-                     m="auto", lag="auto", thin=None, max_iter=None, names=None, pool=None,
-                     n_workers=None, progress=False, check_grad=True, rng=None) -> Result
+                     m="auto", lag="auto", thin=None, max_iter=None, keep=None, start=None,
+                     checkpoint=None, names=None, pool=None, n_workers=None, progress=False,
+                     check_grad=True, rng=None) -> Result
    ```
 
    `n_replicates` is at least 2, checked before any work, since the estimates need two replicates that met; `CoupledSampler.run`, whose runs accumulate, takes 1 (DECISIONS #92). `kernel` is a `Kernel` or one of the strings `"auto"`, `"rwmh"`, `"mala"`, `"hmc"` and `"independence"`. `"auto"` means RWMH, with or without a gradient; gradient kernels are requested by name (D-3).
