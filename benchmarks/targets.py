@@ -8,6 +8,7 @@ from numpy.typing import NDArray
 from scipy.special import logsumexp, ndtr
 
 from telescopic import examples
+from telescopic._types import integer, real
 from telescopic.initial import Normal
 
 Array = NDArray[np.float64]
@@ -64,6 +65,7 @@ def _case(
 
 def rotated_gaussian(dimension: int, *, seed: int = 91) -> BenchmarkCase:
     """Build a rotated Gaussian with covariance condition number 10,000."""
+    dimension = integer("dimension", dimension, minimum=2)
     rng = np.random.default_rng(seed)
     basis, _ = np.linalg.qr(rng.standard_normal((dimension, dimension)))
     eigenvalues = np.geomspace(1.0, 1e-4, dimension)
@@ -99,6 +101,8 @@ def rotated_gaussian(dimension: int, *, seed: int = 91) -> BenchmarkCase:
 def banana(dimension: int) -> BenchmarkCase:
     """Build the quadratic banana with conditionally independent coordinates."""
 
+    dimension = integer("dimension", dimension, minimum=2)
+
     def log_prob(points: Array) -> Array:
         first = points[..., 0]
         residual = points[..., 1:] - first[..., None] ** 2
@@ -129,8 +133,12 @@ def banana(dimension: int) -> BenchmarkCase:
         mean,
         cov,
         (
-            Estimand("first_mean", lambda points: points[..., 0], 1.0, 0.5),
-            Estimand("second_mean", lambda points: points[..., 1], 1.5, 2.55),
+            Estimand(
+                "first_mean", lambda points: points[..., 0], float(mean[0]), float(cov[0, 0])
+            ),
+            Estimand(
+                "second_mean", lambda points: points[..., 1], float(mean[1]), float(cov[1, 1])
+            ),
         ),
     )
 
@@ -162,6 +170,9 @@ def mixture(
     dimension: int, *, separation: float = 12.0, narrow_scale: float = 0.1
 ) -> BenchmarkCase:
     """Build a two-mode Gaussian mixture with one spherical component per mode."""
+    dimension = integer("dimension", dimension, minimum=2)
+    separation = real("separation", separation, 0, np.inf)
+    narrow_scale = real("narrow_scale", narrow_scale, 0, np.inf)
     weights = np.array([0.7, 0.3])
     scales = np.array([1.0, narrow_scale])
     centers = np.zeros((2, dimension))

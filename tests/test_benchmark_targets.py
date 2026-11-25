@@ -2,6 +2,7 @@
 
 import numpy as np
 import pytest
+from scipy import stats
 
 from benchmarks import targets
 
@@ -43,3 +44,23 @@ def test_single_component_draws_fail_mixture_region_oracle() -> None:
     draws[:, 0] -= 3.0
     assert region.mean != pytest.approx(0.7)
     assert region.function(draws).mean() - region.mean > 5 * np.sqrt(region.variance / size)
+
+
+@pytest.mark.parametrize(
+    "constructor", [targets.rotated_gaussian, targets.banana, targets.mixture]
+)
+def test_targets_with_two_estimands_require_two_dimensions(constructor) -> None:
+    with pytest.raises(ValueError, match="dimension"):
+        constructor(1)
+
+
+def test_mixture_density_preserves_the_narrow_components_mass() -> None:
+    case = targets.mixture(10)
+    points = np.zeros((3, 10))
+    points[:, 0] = [-6.0, 0.0, 6.0]
+    center = points[0]
+    left = np.log(0.7) + stats.multivariate_normal.logpdf(points, mean=center)
+    right = np.log(0.3) + stats.multivariate_normal.logpdf(points, mean=-center, cov=0.01)
+    expected = np.logaddexp(left, right)
+    actual = case.log_prob(points)
+    np.testing.assert_allclose(actual - actual[0], expected - expected[0], atol=1e-10, rtol=0)

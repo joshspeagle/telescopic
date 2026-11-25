@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Exact synthetic benchmark references for the rotated Gaussian, banana, funnel, and
+  two-mode Gaussian mixture (#90).
+
 - Per-replicate random streams keyed by the root seed, a namespace and the replicate
   index. Each replicate reads its normals and uniforms in order from two child generators,
   buffered for lockstep batches, so no batch layout or buffer width changes a number.
