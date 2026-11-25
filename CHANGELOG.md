@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Six- and 300-parameter logistic benchmarks with independent Pólya-Gamma reference
+  moments and Monte Carlo standard errors (#90).
+
 - Centered normal-means benchmark with one-dimensional quadrature and exact posterior
   draws at the eight- and hundred-group sizes (#90).
 
