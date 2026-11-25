@@ -8,6 +8,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Four-mode benchmark with a curved component and exact quadrant probabilities (#90).
+
 - Fixed-replicate coverage, warnings, and cost-normalized variance summaries for the
   frozen random-walk benchmark (#90).
 

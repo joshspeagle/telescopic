@@ -31,6 +31,7 @@ TARGETS = {
     "banana": targets.banana,
     "funnel": targets.funnel,
     "mixture": targets.mixture,
+    "four_mode": targets.four_mode,
 }
 
 
