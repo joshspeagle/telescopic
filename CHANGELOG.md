@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Fixed-replicate coverage, warnings, and cost-normalized variance summaries for the
+  frozen random-walk benchmark (#90).
+
 - Evaluation-capped benchmark pilot for the frozen random walk, including raw pair
   records and censoring-aware meeting-cost quantiles (#90).
 
