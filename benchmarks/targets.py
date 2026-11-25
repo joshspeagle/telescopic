@@ -221,3 +221,79 @@ def mixture(
             ),
         ),
     )
+
+
+def four_mode(dimension: int) -> BenchmarkCase:
+    """Build a four-quadrant mixture with a curved upper-right component.
+
+    The curved component scales its second Gaussian coordinate by
+    exp(0.1 * z**2), where z is the first centered coordinate. This bends
+    the conditional mean while preserving the sign of the second coordinate.
+    """
+    dimension = integer("dimension", dimension, minimum=2)
+    weights = np.array([0.4, 0.3, 0.2, 0.1])
+    centers = np.zeros((4, dimension))
+    centers[:, :2] = [[-4.0, -4.0], [4.0, -4.0], [-4.0, 4.0], [4.0, 4.0]]
+    curvature = np.array([0.0, 0.0, 0.0, 0.1])
+
+    def terms(points: Array) -> tuple[Array, Array, Array, Array]:
+        residual = points[..., None, :] - centers
+        first = residual[..., 0]
+        log_scale = curvature * first**2
+        inverse_scale = np.exp(-log_scale)
+        latent_second = points[..., 1, None] * inverse_scale
+        residual[..., 1] = latent_second - centers[:, 1]
+        component = np.log(weights) - log_scale - 0.5 * np.sum(residual**2, axis=-1)
+        return component, residual, inverse_scale, latent_second
+
+    def log_prob(points: Array) -> Array:
+        component, _, _, _ = terms(points)
+        return np.asarray(logsumexp(component, axis=-1), dtype=np.float64)
+
+    def grad(points: Array) -> Array:
+        component, residual, inverse_scale, latent_second = terms(points)
+        responsibilities = np.exp(component - logsumexp(component, axis=-1, keepdims=True))
+        scores = -residual
+        scores[..., 0] += 2 * curvature * residual[..., 0] * (residual[..., 1] * latent_second - 1)
+        scores[..., 1] *= inverse_scale
+        return np.sum(responsibilities[..., None] * scores, axis=-2)
+
+    def draw_exact(rng: np.random.Generator, size: int) -> Array:
+        component = rng.choice(4, size=size, p=weights)
+        residual = rng.standard_normal((size, dimension))
+        points = centers[component] + residual
+        points[:, 1] *= np.exp(curvature[component] * residual[:, 0] ** 2)
+        return points
+
+    component_means = centers.copy()
+    component_means[:, 1] /= np.sqrt(1 - 2 * curvature)
+    second_moment = (1 + centers[:, 1] ** 2) / np.sqrt(1 - 4 * curvature)
+    second_variance = second_moment - component_means[:, 1] ** 2
+    mean = weights @ component_means
+    offset = component_means - mean
+    cov = np.eye(dimension) + (offset.T * weights) @ offset
+    cov[1, 1] += float(weights @ second_variance) - 1
+    lower_left = float(weights @ np.prod(ndtr(-centers[:, :2]), axis=1))
+    upper_right = float(weights @ np.prod(ndtr(centers[:, :2]), axis=1))
+    return _case(
+        "four_mode",
+        log_prob,
+        grad,
+        draw_exact,
+        mean,
+        cov,
+        (
+            Estimand(
+                "lower_left_probability",
+                lambda points: np.all(points[..., :2] < 0, axis=-1).astype(np.float64),
+                lower_left,
+                lower_left * (1 - lower_left),
+            ),
+            Estimand(
+                "upper_right_probability",
+                lambda points: np.all(points[..., :2] > 0, axis=-1).astype(np.float64),
+                upper_right,
+                upper_right * (1 - upper_right),
+            ),
+        ),
+    )

@@ -7,7 +7,7 @@ from scipy import stats
 from benchmarks import targets
 
 
-@pytest.fixture(params=["rotated_gaussian", "banana", "funnel", "mixture"])
+@pytest.fixture(params=["rotated_gaussian", "banana", "funnel", "mixture", "four_mode"])
 def case(request: pytest.FixtureRequest) -> targets.BenchmarkCase:
     return getattr(targets, request.param)(10)
 
@@ -62,5 +62,22 @@ def test_mixture_density_preserves_the_narrow_components_mass() -> None:
     left = np.log(0.7) + stats.multivariate_normal.logpdf(points, mean=center)
     right = np.log(0.3) + stats.multivariate_normal.logpdf(points, mean=-center, cov=0.01)
     expected = np.logaddexp(left, right)
+    actual = case.log_prob(points)
+    np.testing.assert_allclose(actual - actual[0], expected - expected[0], atol=1e-10, rtol=0)
+
+
+def test_four_mode_curved_density_includes_the_jacobian() -> None:
+    case = targets.four_mode(2)
+    points = np.array([[-2.0, -3.0], [2.0, 4.0], [6.0, 5.0]])
+    linear = np.array(
+        [
+            np.log(weight) + stats.multivariate_normal.logpdf(points, mean=[first, second])
+            for weight, first, second in [(0.4, -4, -4), (0.3, 4, -4), (0.2, -4, 4)]
+        ]
+    )
+    scale = np.exp(0.1 * (points[:, 0] - 4) ** 2)
+    unbent = np.column_stack([points[:, 0], points[:, 1] / scale])
+    bent = np.log(0.1) + stats.multivariate_normal.logpdf(unbent, mean=[4, 4]) - np.log(scale)
+    expected = np.logaddexp.reduce(np.vstack([linear, bent]), axis=0)
     actual = case.log_prob(points)
     np.testing.assert_allclose(actual - actual[0], expected - expected[0], atol=1e-10, rtol=0)
