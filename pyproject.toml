@@ -89,7 +89,16 @@ docs = [
 path = "src/telescopic/__init__.py"
 
 [tool.hatch.build.targets.sdist]
-include = ["/src", "/tests", "/README.md", "/CHANGELOG.md", "/CITATION.cff", "/LICENSE"]
+include = [
+    "/src",
+    "/tests",
+    "/benchmarks/__init__.py",
+    "/benchmarks/targets.py",
+    "/README.md",
+    "/CHANGELOG.md",
+    "/CITATION.cff",
+    "/LICENSE",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
