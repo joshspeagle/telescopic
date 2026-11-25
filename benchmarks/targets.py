@@ -232,6 +232,7 @@ def four_mode(dimension: int) -> BenchmarkCase:
     """
     dimension = integer("dimension", dimension, minimum=2)
     weights = np.array([0.4, 0.3, 0.2, 0.1])
+    log_weights = np.log(weights)
     centers = np.zeros((4, dimension))
     centers[:, :2] = [[-4.0, -4.0], [4.0, -4.0], [-4.0, 4.0], [4.0, 4.0]]
     curvature = np.array([0.0, 0.0, 0.0, 0.1])
@@ -243,7 +244,7 @@ def four_mode(dimension: int) -> BenchmarkCase:
         inverse_scale = np.exp(-log_scale)
         latent_second = points[..., 1, None] * inverse_scale
         residual[..., 1] = latent_second - centers[:, 1]
-        component = np.log(weights) - log_scale - 0.5 * np.sum(residual**2, axis=-1)
+        component = log_weights - log_scale - 0.5 * np.sum(residual**2, axis=-1)
         return component, residual, inverse_scale, latent_second
 
     def log_prob(points: Array) -> Array:
@@ -265,6 +266,7 @@ def four_mode(dimension: int) -> BenchmarkCase:
         points[:, 1] *= np.exp(curvature[component] * residual[:, 0] ** 2)
         return points
 
+    # E[exp(a Z**2)] = (1 - 2a)**(-1/2) for a standard normal Z.
     component_means = centers.copy()
     component_means[:, 1] /= np.sqrt(1 - 2 * curvature)
     second_moment = (1 + centers[:, 1] ** 2) / np.sqrt(1 - 4 * curvature)
