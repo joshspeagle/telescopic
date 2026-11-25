@@ -1,6 +1,6 @@
 """Run an evaluation-capped #90 smoke pilot with a frozen random-walk kernel.
 
-Run from the checkout root with python -m benchmarks.research. A null meeting
+Run from the checkout root with PYTHONPATH=src python -m benchmarks.research. A null meeting
 cost means the pair was censored. Cost is measured in pointwise log-density
 evaluations, including initial states. A pair is censored when its next
 log-density request would exceed its allowance.
@@ -10,10 +10,12 @@ import argparse
 import importlib
 import json
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Literal
 
 import numpy as np
 
+import telescopic
 from benchmarks import targets
 from benchmarks.run import setup
 from telescopic._types import FloatArray, integer
@@ -114,6 +116,13 @@ def summarize_pilot(records: list[PairRecord]) -> dict[str, float | int | None]:
     }
 
 
+def require_source_checkout() -> None:
+    """Ensure the benchmark metadata identifies the sampling code being run."""
+    source = Path(__file__).resolve().parents[1] / "src" / "telescopic" / "__init__.py"
+    if Path(telescopic.__file__).resolve() != source:
+        raise RuntimeError("Run with PYTHONPATH=src so the benchmark uses this checkout")
+
+
 def main() -> None:
     """Print a JSON record for one seed and benchmark configuration."""
     constructors = {
@@ -131,6 +140,7 @@ def main() -> None:
     parser.add_argument("--budget", type=int, required=True, help="evaluation ceiling per pair")
     parser.add_argument("--seed", type=int, required=True)
     args = parser.parse_args()
+    require_source_checkout()
     with threadpoolctl.threadpool_limits(limits=1):
         case = constructors[args.target](args.dimension)
         records = random_walk_pilot(

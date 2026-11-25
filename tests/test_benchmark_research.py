@@ -2,6 +2,8 @@
 
 from typing import Literal
 
+import pytest
+
 from benchmarks import research, targets
 
 
@@ -42,3 +44,9 @@ def test_pair_can_meet_after_the_conservative_iteration_cap() -> None:
         case, start="matched", proposal="oracle", pairs=23, budget=15, seed=702
     )
     assert records[22] == research.PairRecord(10, 10, 8)
+
+
+def test_recorded_cli_rejects_an_installed_copy(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(research.telescopic, "__file__", str(tmp_path / "__init__.py"))
+    with pytest.raises(RuntimeError, match="PYTHONPATH=src"):
+        research.require_source_checkout()
