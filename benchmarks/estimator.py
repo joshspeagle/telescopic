@@ -204,6 +204,7 @@ def main() -> None:
     parser.add_argument("--reference-batches", type=int, default=100)
     parser.add_argument("--reference-batch-size", type=int, default=1000)
     args = parser.parse_args()
+    research.require_source_checkout()
     if args.reference_seed == args.seed:
         parser.error("reference and estimator seeds must differ")
     settings = Settings(args.k, args.m, args.lag, 1, args.max_iter, True)
