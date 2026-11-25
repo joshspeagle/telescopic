@@ -16,12 +16,13 @@ Array = NDArray[np.float64]
 
 @dataclass(frozen=True)
 class Estimand:
-    """A function on unitless points of shape (..., d) and its exact moments."""
+    """A function on unitless points of shape (..., d) and its reference moments."""
 
     name: str
     function: Callable[[Array], Array]
     mean: float
     variance: float
+    mean_standard_error: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -36,20 +37,23 @@ class BenchmarkCase:
     dimension: int
     log_prob: Callable[[Array], Array]
     grad: Callable[[Array], Array]
-    draw_exact: Callable[[np.random.Generator, int], Array]
+    draw_exact: Callable[[np.random.Generator, int], Array] | None
     matched: Normal
     wide: Normal
     estimands: tuple[Estimand, Estimand]
+    covariance_source: str = "reference_moments"
 
 
 def _case(
     name: str,
     log_prob: Callable[[Array], Array],
     grad: Callable[[Array], Array],
-    draw_exact: Callable[[np.random.Generator, int], Array],
+    draw_exact: Callable[[np.random.Generator, int], Array] | None,
     mean: Array,
     cov: Array,
     estimands: tuple[Estimand, Estimand],
+    *,
+    covariance_source: str = "reference_moments",
 ) -> BenchmarkCase:
     return BenchmarkCase(
         name,
@@ -60,6 +64,7 @@ def _case(
         Normal(mean, cov),
         Normal(mean, 100.0 * cov),
         estimands,
+        covariance_source,
     )
 
 

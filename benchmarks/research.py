@@ -16,7 +16,7 @@ from typing import Literal
 import numpy as np
 
 import telescopic
-from benchmarks import hierarchical, targets
+from benchmarks import hierarchical, logistic, targets
 from benchmarks.run import setup
 from telescopic._types import FloatArray, integer
 from telescopic.engine import run
@@ -33,6 +33,7 @@ TARGETS = {
     "mixture": targets.mixture,
     "four_mode": targets.four_mode,
     "normal_means": hierarchical.normal_means,
+    "logistic": logistic.logistic,
 }
 
 
@@ -87,7 +88,7 @@ def random_walk_pilot(
     """Run lag-one random-walk pairs with a pointwise evaluation allowance.
 
     Each pair stops at meeting or before its first unaffordable density
-    request. With an oracle proposal the covariance is known analytically.
+    request. With an oracle proposal the benchmark reference supplies the covariance.
     """
     pairs = integer("pairs", pairs, minimum=1)
     budget = integer("budget", budget, minimum=5)
@@ -169,6 +170,7 @@ def main() -> None:
             **vars(args),
             "method": "random_walk",
             "setup_evaluations": 0,
+            "matched_covariance_source": case.covariance_source,
             "summary": summarize_pilot(records),
             "records": [asdict(record) for record in records],
         }

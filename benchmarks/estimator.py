@@ -3,7 +3,7 @@
 Run with PYTHONPATH=src python -m benchmarks.estimator. Fix the averaging
 window and iteration cap before evaluation. When any pair is censored, retain
 its cost and warnings and withhold the affected run's intervals. Reference
-chains start at stationarity using the benchmark's exact draws.
+chains start at stationarity when the benchmark supplies exact draws.
 """
 
 import argparse
@@ -113,6 +113,8 @@ def batch_means_reference(
     batch_size = integer("batch_size", batch_size, minimum=1)
     rng = np.random.default_rng(seed)
     target = Target(case.log_prob, vectorize=True)
+    if case.draw_exact is None:
+        raise ValueError("stationary batch means require a target with exact draws")
     point = case.draw_exact(rng, 1)
     state = State(point, target.log_prob(point))
     draws = testing.random_draws(1, rng)
@@ -158,6 +160,8 @@ def summarize(
         "censored_runs": len(records) - len(intervals),
         "censored_pairs": sum(record.censored for record in records),
         "target_mean": estimand.mean,
+        "target_mean_standard_error": estimand.mean_standard_error,
+        "coverage_target": "reference_center" if estimand.mean_standard_error else "exact_mean",
         "target_variance": estimand.variance,
         "covered_intervals": covered,
         "sampling_evaluations": total_evaluations,
@@ -179,14 +183,15 @@ def summarize(
         variance = float(values.var(ddof=1))
         standard_error = float(np.sqrt(variance / len(values)))
         cost_times_variance = total_evaluations / len(values) * variance
+        combined_error = np.hypot(standard_error, estimand.mean_standard_error)
         coverage = covered / len(records)
         report.update(
             coverage=coverage,
             coverage_standard_error=float(np.sqrt(coverage * (1 - coverage) / len(records))),
             pooled_mean=float(values.mean()),
             pooled_standard_error=standard_error,
-            pooled_z=float((values.mean() - estimand.mean) / standard_error)
-            if standard_error > 0
+            pooled_z=float((values.mean() - estimand.mean) / combined_error)
+            if combined_error > 0
             else None,
             inefficiency_over_asymptotic_variance=(
                 cost_times_variance / asymptotic_variance
@@ -222,6 +227,8 @@ def main() -> None:
     settings = Settings(args.k, args.m, args.lag, 1, args.max_iter, True)
     with research.threadpoolctl.threadpool_limits(limits=1):
         case = research.TARGETS[args.target](args.dimension)
+        if args.reference_seed is not None and case.draw_exact is None:
+            parser.error("reference-seed requires a benchmark with exact stationary draws")
         records = random_walk_runs(
             case,
             settings,
@@ -247,6 +254,7 @@ def main() -> None:
             **vars(args),
             "method": "random_walk",
             "setup_evaluations": 0,
+            "matched_covariance_source": case.covariance_source,
             "reference_asymptotic_variance": reference,
             "reference_evaluations": reference_cost,
             "summary": {
