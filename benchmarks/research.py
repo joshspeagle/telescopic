@@ -16,7 +16,7 @@ from typing import Literal
 import numpy as np
 
 import telescopic
-from benchmarks import targets
+from benchmarks import hierarchical, targets
 from benchmarks.run import setup
 from telescopic._types import FloatArray, integer
 from telescopic.engine import run
@@ -32,6 +32,7 @@ TARGETS = {
     "funnel": targets.funnel,
     "mixture": targets.mixture,
     "four_mode": targets.four_mode,
+    "normal_means": hierarchical.normal_means,
 }
 
 
