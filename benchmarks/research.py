@@ -20,10 +20,18 @@ from benchmarks import targets
 from benchmarks.run import setup
 from telescopic._types import FloatArray, integer
 from telescopic.engine import run
+from telescopic.initial import Normal
 from telescopic.kernels import RandomWalk
 from telescopic.target import Target
 
 threadpoolctl = importlib.import_module("threadpoolctl")
+
+TARGETS = {
+    "rotated_gaussian": targets.rotated_gaussian,
+    "banana": targets.banana,
+    "funnel": targets.funnel,
+    "mixture": targets.mixture,
+}
 
 
 @dataclass(frozen=True)
@@ -50,6 +58,21 @@ class _BudgetTarget(Target):
         return super().log_prob(x)
 
 
+def random_walk_setup(
+    case: targets.BenchmarkCase,
+    start: Literal["matched", "wide"],
+    proposal: Literal["oracle", "identity"],
+) -> tuple[Normal, RandomWalk]:
+    """Build a matched or wide start and a frozen random-walk kernel."""
+    if start not in ("matched", "wide"):
+        raise ValueError("start must be 'matched' or 'wide'")
+    if proposal not in ("oracle", "identity"):
+        raise ValueError("proposal must be 'oracle' or 'identity'")
+    initial = case.matched if start == "matched" else case.wide
+    covariance = case.matched.cov if proposal == "oracle" else np.eye(case.dimension)
+    return initial, RandomWalk(covariance)
+
+
 def random_walk_pilot(
     case: targets.BenchmarkCase,
     *,
@@ -66,13 +89,7 @@ def random_walk_pilot(
     """
     pairs = integer("pairs", pairs, minimum=1)
     budget = integer("budget", budget, minimum=5)
-    if start not in ("matched", "wide"):
-        raise ValueError("start must be 'matched' or 'wide'")
-    if proposal not in ("oracle", "identity"):
-        raise ValueError("proposal must be 'oracle' or 'identity'")
-    initial = case.matched if start == "matched" else case.wide
-    covariance = case.matched.cov if proposal == "oracle" else np.eye(case.dimension)
-    kernel = RandomWalk(covariance)
+    initial, kernel = random_walk_setup(case, start, proposal)
     records = []
     for index in range(pairs):
         target = _BudgetTarget(case, budget)
@@ -125,14 +142,8 @@ def require_source_checkout() -> None:
 
 def main() -> None:
     """Print a JSON record for one seed and benchmark configuration."""
-    constructors = {
-        "rotated_gaussian": targets.rotated_gaussian,
-        "banana": targets.banana,
-        "funnel": targets.funnel,
-        "mixture": targets.mixture,
-    }
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("target", choices=constructors)
+    parser.add_argument("target", choices=TARGETS)
     parser.add_argument("dimension", type=int)
     parser.add_argument("--start", choices=("matched", "wide"), default="matched")
     parser.add_argument("--proposal", choices=("oracle", "identity"), default="oracle")
@@ -142,7 +153,7 @@ def main() -> None:
     args = parser.parse_args()
     require_source_checkout()
     with threadpoolctl.threadpool_limits(limits=1):
-        case = constructors[args.target](args.dimension)
+        case = TARGETS[args.target](args.dimension)
         records = random_walk_pilot(
             case,
             start=args.start,
