@@ -94,6 +94,8 @@ include = [
     "/tests",
     "/benchmarks/__init__.py",
     "/benchmarks/targets.py",
+    "/benchmarks/research.py",
+    "/benchmarks/run.py",
     "/README.md",
     "/CHANGELOG.md",
     "/CITATION.cff",
