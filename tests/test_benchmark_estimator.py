@@ -14,6 +14,7 @@ def test_complete_intervals_use_all_replicates_for_cost_and_standard_error() -> 
             12,
             0,
             ["variance"],
+            ["variance"],
             {
                 estimand.name: estimator.IntervalRecord([-1.0, 1.0], True),
             },
@@ -21,6 +22,7 @@ def test_complete_intervals_use_all_replicates_for_cost_and_standard_error() -> 
         estimator.RunRecord(
             20,
             0,
+            ["tail"],
             ["tail"],
             {
                 estimand.name: estimator.IntervalRecord([2.0, 2.0], False),
@@ -35,6 +37,7 @@ def test_complete_intervals_use_all_replicates_for_cost_and_standard_error() -> 
     assert summary["pooled_z"] == pytest.approx(np.sqrt(2))
     assert summary["inefficiency_over_target_variance"] == 16.0
     assert summary["inefficiency_over_asymptotic_variance"] == 4.0
+    assert summary["warning_eligible_runs"] == {"variance": 1, "tail": 1}
     assert summary["warning_counts_by_interval_outcome"] == {
         "variance": {"covered": 1, "missed": 0, "unavailable": 0},
         "tail": {"covered": 0, "missed": 1, "unavailable": 0},
@@ -48,11 +51,12 @@ def test_censored_run_retains_cost_and_suppresses_aggregate_metrics() -> None:
             12,
             0,
             [],
+            [],
             {
                 estimand.name: estimator.IntervalRecord([-1.0, 1.0], True),
             },
         ),
-        estimator.RunRecord(20, 1, ["variance", "censored"], {}),
+        estimator.RunRecord(20, 1, ["variance", "censored"], ["variance"], {}),
     ]
     summary = estimator.summarize(records, estimand)
     assert summary["runs"] == 2
@@ -71,6 +75,7 @@ def test_frozen_random_walk_runner_scores_deterministic_independent_runs() -> No
     records = estimator.random_walk_runs(case, settings, **kwargs)
     assert records == estimator.random_walk_runs(case, settings, **kwargs)
     assert all(record.evaluations > 0 and record.censored == 0 for record in records)
+    assert all(not record.assessed_warnings for record in records)
     for estimand in case.estimands:
         values = [record.estimates[estimand.name].replicates for record in records]
         assert all(len(row) == 15 for row in values)

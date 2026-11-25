@@ -38,6 +38,7 @@ class RunRecord:
     evaluations: int
     censored: int
     warnings: list[str]
+    assessed_warnings: list[str]
     estimates: dict[str, IntervalRecord]
 
 
@@ -76,6 +77,11 @@ def random_walk_runs(
         )
         result = Result(output, kernel=kernel, initial=initial)
         warnings = [issue.kind for issue in diagnostics.issues(result)]
+        assessed_warnings = []
+        if result.n_replicates >= 100:
+            assessed_warnings.append("variance")
+        if result.n_replicates >= 500 and not np.isnan(result.diagnostics()["tail_index"]):
+            assessed_warnings.append("tail")
         estimates = {}
         if not result.n_censored:
             for estimand in case.estimands:
@@ -84,7 +90,9 @@ def random_walk_runs(
                 estimates[estimand.name] = IntervalRecord(
                     estimate.replicates.tolist(), bool(lower <= estimand.mean <= upper)
                 )
-        records.append(RunRecord(result.n_log_prob, result.n_censored, warnings, estimates))
+        records.append(
+            RunRecord(result.n_log_prob, result.n_censored, warnings, assessed_warnings, estimates)
+        )
     return records
 
 
@@ -154,6 +162,10 @@ def summarize(
         "covered_intervals": covered,
         "sampling_evaluations": total_evaluations,
         "warning_counts_by_interval_outcome": warning_tables,
+        "warning_eligible_runs": {
+            warning: sum(warning in record.assessed_warnings for record in records)
+            for warning in warning_tables
+        },
         "coverage": None,
         "coverage_standard_error": None,
         "pooled_mean": None,
