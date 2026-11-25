@@ -39,7 +39,7 @@ MAIN_RUN = {"k": 141, "m": 1410, "lag": 141}
 PILOT = {"k": 0, "m": 0, "lag": 1, "store": False}
 
 
-def cpu_model():
+def cpu_model() -> str:
     cpuinfo = Path("/proc/cpuinfo")
     if cpuinfo.exists():
         for line in cpuinfo.read_text().splitlines():
@@ -48,7 +48,7 @@ def cpu_model():
     return platform.processor()
 
 
-def setup():
+def setup() -> dict[str, object]:
     commit = subprocess.run(
         ["git", "describe", "--always", "--dirty"],
         cwd=ROOT,

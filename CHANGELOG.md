@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Evaluation-capped benchmark pilot for the frozen random walk, including raw pair
+  records and censoring-aware meeting-cost quantiles (#90).
+
 - Exact synthetic benchmark references for the rotated Gaussian, banana, funnel, and
   two-mode Gaussian mixture (#90).
 
