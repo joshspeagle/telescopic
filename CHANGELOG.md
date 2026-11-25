@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Centered normal-means benchmark with one-dimensional quadrature and exact posterior
+  draws at the eight- and hundred-group sizes (#90).
+
 - Four-mode benchmark with a curved component and exact quadrant probabilities (#90).
 
 - Fixed-replicate coverage, warnings, and cost-normalized variance summaries for the
