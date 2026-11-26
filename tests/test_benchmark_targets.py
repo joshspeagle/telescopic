@@ -81,3 +81,17 @@ def test_four_mode_curved_density_includes_the_jacobian() -> None:
     expected = np.logaddexp.reduce(np.vstack([linear, bent]), axis=0)
     actual = case.log_prob(points)
     np.testing.assert_allclose(actual - actual[0], expected - expected[0], atol=1e-10, rtol=0)
+
+
+@pytest.mark.parametrize("constructor", [targets.mixture, targets.four_mode])
+def test_all_mode_regions_partition_points_and_match_exact_draws(constructor) -> None:
+    case = constructor(10)
+    draws = case.draw_exact(np.random.default_rng(702), 20_000)
+    points = np.concatenate([np.zeros((1, 10)), draws])
+    membership = np.stack([mode.function(points) for mode in case.mode_probabilities], axis=1)
+    np.testing.assert_array_equal(membership.sum(axis=1), 1)
+    assert sum(mode.mean for mode in case.mode_probabilities) == pytest.approx(1.0)
+    for index, mode in enumerate(case.mode_probabilities):
+        error = abs(membership[1:, index].mean() - mode.mean)
+        assert error < 5 * np.sqrt(mode.variance / len(draws))
+    assert len({item.name for item in case.scored_estimands}) == len(case.scored_estimands)

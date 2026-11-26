@@ -42,6 +42,15 @@ class BenchmarkCase:
     wide: Normal
     estimands: tuple[Estimand, Estimand]
     covariance_source: str = "reference_moments"
+    mode_probabilities: tuple[Estimand, ...] = ()
+
+    @property
+    def scored_estimands(self) -> tuple[Estimand, ...]:
+        """Include every mode region while scoring shared estimands once."""
+        names = {item.name for item in self.estimands}
+        return self.estimands + tuple(
+            item for item in self.mode_probabilities if item.name not in names
+        )
 
 
 def _case(
@@ -54,6 +63,7 @@ def _case(
     estimands: tuple[Estimand, Estimand],
     *,
     covariance_source: str = "reference_moments",
+    mode_probabilities: tuple[Estimand, ...] = (),
 ) -> BenchmarkCase:
     return BenchmarkCase(
         name,
@@ -65,6 +75,7 @@ def _case(
         Normal(mean, 100.0 * cov),
         estimands,
         covariance_source,
+        mode_probabilities,
     )
 
 
@@ -207,6 +218,21 @@ def mixture(
     residual = centers - mean
     cov = (weights @ scales**2) * np.eye(dimension) + (residual.T * weights) @ residual
     left_probability = float(weights @ ndtr(-centers[:, 0] / scales))
+    right_probability = 1 - left_probability
+    bernoulli_variance = left_probability * right_probability
+    left = Estimand(
+        "left_probability",
+        lambda points: (points[..., 0] < 0).astype(np.float64),
+        left_probability,
+        bernoulli_variance,
+    )
+    right = Estimand(
+        "right_probability",
+        lambda points: (points[..., 0] >= 0).astype(np.float64),
+        right_probability,
+        bernoulli_variance,
+    )
+    first = Estimand("first_mean", lambda points: points[..., 0], float(mean[0]), float(cov[0, 0]))
     return _case(
         "mixture",
         log_prob,
@@ -214,17 +240,8 @@ def mixture(
         draw_exact,
         mean,
         cov,
-        (
-            Estimand(
-                "first_mean", lambda points: points[..., 0], float(mean[0]), float(cov[0, 0])
-            ),
-            Estimand(
-                "left_probability",
-                lambda points: (points[..., 0] < 0).astype(np.float64),
-                left_probability,
-                left_probability * (1 - left_probability),
-            ),
-        ),
+        (first, left),
+        mode_probabilities=(left, right),
     )
 
 
@@ -280,8 +297,24 @@ def four_mode(dimension: int) -> BenchmarkCase:
     offset = component_means - mean
     cov = np.eye(dimension) + (offset.T * weights) @ offset
     cov[1, 1] += float(weights @ second_variance) - 1
-    lower_left = float(weights @ np.prod(ndtr(-centers[:, :2]), axis=1))
-    upper_right = float(weights @ np.prod(ndtr(centers[:, :2]), axis=1))
+    modes = []
+    for name, positive in (
+        ("lower_left", (False, False)),
+        ("lower_right", (True, False)),
+        ("upper_left", (False, True)),
+        ("upper_right", (True, True)),
+    ):
+        signs = np.where(positive, 1, -1)
+        probability = float(weights @ np.prod(ndtr(centers[:, :2] * signs), axis=1))
+
+        def membership(points: Array, positive: tuple[bool, bool] = positive) -> Array:
+            return np.all((points[..., :2] >= 0) == positive, axis=-1).astype(np.float64)
+
+        modes.append(
+            Estimand(
+                f"{name}_probability", membership, probability, probability * (1 - probability)
+            )
+        )
     return _case(
         "four_mode",
         log_prob,
@@ -289,18 +322,6 @@ def four_mode(dimension: int) -> BenchmarkCase:
         draw_exact,
         mean,
         cov,
-        (
-            Estimand(
-                "lower_left_probability",
-                lambda points: np.all(points[..., :2] < 0, axis=-1).astype(np.float64),
-                lower_left,
-                lower_left * (1 - lower_left),
-            ),
-            Estimand(
-                "upper_right_probability",
-                lambda points: np.all(points[..., :2] > 0, axis=-1).astype(np.float64),
-                upper_right,
-                upper_right * (1 - upper_right),
-            ),
-        ),
+        (modes[0], modes[3]),
+        mode_probabilities=tuple(modes),
     )

@@ -102,7 +102,7 @@ def run_frozen(
             assessed_warnings.append("tail")
         estimates = {}
         if not result.n_censored:
-            for estimand in case.estimands:
+            for estimand in case.scored_estimands:
                 estimate = result.estimate(estimand.function)
                 lower, upper = estimate.interval
                 estimates[estimand.name] = IntervalRecord(
@@ -302,6 +302,9 @@ def main() -> None:
                     records, estimand, asymptotic_variance=reference.get(estimand.name)
                 )
                 for estimand in case.estimands
+            },
+            "mode_probabilities": {
+                item.name: summarize(records, item) for item in case.mode_probabilities
             },
             "records": [asdict(record) for record in records],
         }
