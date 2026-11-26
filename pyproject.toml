@@ -96,6 +96,7 @@ include = [
     "/benchmarks/targets.py",
     "/benchmarks/research.py",
     "/benchmarks/estimator.py",
+    "/benchmarks/compare.py",
     "/benchmarks/hierarchical.py",
     "/benchmarks/logistic.py",
     "/benchmarks/logistic_reference.py",
