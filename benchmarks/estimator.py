@@ -132,7 +132,7 @@ def batch_means_reference(
     """Estimate asymptotic variances from an independently seeded stationary chain.
 
     Each batch consists of consecutive uncoupled transitions. The returned
-    cost is the number of density evaluations for this reference calculation.
+    cost is the number of density and gradient evaluations for this reference calculation.
     """
     batches = integer("batches", batches, minimum=2)
     batch_size = integer("batch_size", batch_size, minimum=1)
