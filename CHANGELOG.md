@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Synthetic supernova and parallax benchmarks with independent quadrature references
+  (#90).
+
 - Six- and 300-parameter logistic benchmarks with independent Pólya-Gamma reference
   moments and Monte Carlo standard errors (#90).
 
