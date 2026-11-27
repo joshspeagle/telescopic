@@ -36,8 +36,8 @@ estimator settings in these files exercised the comparison driver.
 
 ## HMC timing
 
-The default covariance pilot uses 900,000 transitions for logistic
-and 2,510,010 for parallax. Extrapolation from separate 5,000-transition
+The default covariance pilot uses 900,000 transitions per chain for
+logistic and 2,510,010 per chain for parallax. Extrapolation from separate 5,000-transition
 timing probes gave 7.6 and 15.8 minutes, respectively, for covariance
 tuning alone. Both probes used tuning seed 20261101 and one BLAS thread.
 
