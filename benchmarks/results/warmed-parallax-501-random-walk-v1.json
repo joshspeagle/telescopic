@@ -1,0 +1,87 @@
+{
+  "commit": "5d63348",
+  "machine": "AMD Ryzen 7 9800X3D 8-Core Processor, 16 CPUs, Linux",
+  "available CPUs": 16,
+  "blas": [
+    {
+      "internal_api": "openblas",
+      "version": "0.3.34.237.2",
+      "num_threads": 1
+    },
+    {
+      "internal_api": "openblas",
+      "version": "0.3.31.dev",
+      "num_threads": 1
+    }
+  ],
+  "python": "3.14.0",
+  "numpy": "2.5.5",
+  "scipy": "1.18.1",
+  "telescopic": "0.1.0.dev0",
+  "cases": [
+    "parallax:501"
+  ],
+  "method": [
+    "random_walk"
+  ],
+  "start": "matched",
+  "pairs": 1,
+  "budget": 500,
+  "seed": [
+    702
+  ],
+  "tuning_seed": 20261101,
+  "runs": 1,
+  "replicates": 4,
+  "k": 10,
+  "m": 20,
+  "lag": 10,
+  "max_iter": 100,
+  "estimator_seed": 703,
+  "reference_seed": 20261207,
+  "reference_batches": 100,
+  "reference_batch_size": 1024,
+  "reference_warmup": 20000,
+  "reference_chains": 4,
+  "reference_start_scale": 2.0,
+  "cost_unit": "pointwise_density_plus_gradient",
+  "comparisons": [
+    {
+      "target": "parallax",
+      "dimension": 501,
+      "start": "matched",
+      "matched_covariance_source": "nested_quadrature_marginal_variances",
+      "methods": {
+        "random_walk": {
+          "kernel": "RandomWalk(cov=<501x501>, scale=None, coupling='reflection')",
+          "kernel_covariance_source": "nested_quadrature_marginal_variances",
+          "setup_density_evaluations": 0,
+          "setup_gradient_evaluations": 0,
+          "setup_warnings": [],
+          "reference_checks": {
+            "variances": {},
+            "evaluations": 489604,
+            "gradient_evaluations": 0,
+            "max_rhat": 1.0694028576128596,
+            "min_bulk_ess": 53.65620550068823,
+            "min_tail_ess": 69.7280110748155,
+            "estimand_z": {
+              "population_scale_kpc": -5.135782899334535,
+              "first_distance_kpc": -2.613709798857284
+            },
+            "batch_variance_ratio": {
+              "population_scale_kpc": 1.786576569434783,
+              "first_distance_kpc": 1.6451249414541904
+            },
+            "passed": false,
+            "diagnostics_version": "1.3.0",
+            "start_scale": 2.0
+          }
+        }
+      },
+      "case": "parallax:501"
+    }
+  ],
+  "elapsed_seconds": 159.63,
+  "peak_rss_kib": 3599156
+}

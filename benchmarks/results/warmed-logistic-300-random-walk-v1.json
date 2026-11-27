@@ -1,0 +1,87 @@
+{
+  "commit": "5d63348",
+  "machine": "AMD Ryzen 7 9800X3D 8-Core Processor, 16 CPUs, Linux",
+  "available CPUs": 16,
+  "blas": [
+    {
+      "internal_api": "openblas",
+      "version": "0.3.34.237.2",
+      "num_threads": 1
+    },
+    {
+      "internal_api": "openblas",
+      "version": "0.3.31.dev",
+      "num_threads": 1
+    }
+  ],
+  "python": "3.14.0",
+  "numpy": "2.5.5",
+  "scipy": "1.18.1",
+  "telescopic": "0.1.0.dev0",
+  "cases": [
+    "logistic:300"
+  ],
+  "method": [
+    "random_walk"
+  ],
+  "start": "matched",
+  "pairs": 1,
+  "budget": 500,
+  "seed": [
+    702
+  ],
+  "tuning_seed": 20261101,
+  "runs": 1,
+  "replicates": 4,
+  "k": 10,
+  "m": 20,
+  "lag": 10,
+  "max_iter": 100,
+  "estimator_seed": 703,
+  "reference_seed": 20261206,
+  "reference_batches": 100,
+  "reference_batch_size": 1024,
+  "reference_warmup": 20000,
+  "reference_chains": 4,
+  "reference_start_scale": 2.0,
+  "cost_unit": "pointwise_density_plus_gradient",
+  "comparisons": [
+    {
+      "target": "logistic",
+      "dimension": 300,
+      "start": "matched",
+      "matched_covariance_source": "independent_gibbs_marginal_variances",
+      "methods": {
+        "random_walk": {
+          "kernel": "RandomWalk(cov=<300x300>, scale=None, coupling='reflection')",
+          "kernel_covariance_source": "independent_gibbs_marginal_variances",
+          "setup_density_evaluations": 0,
+          "setup_gradient_evaluations": 0,
+          "setup_warnings": [],
+          "reference_checks": {
+            "variances": {},
+            "evaluations": 489604,
+            "gradient_evaluations": 0,
+            "max_rhat": 1.092300329372808,
+            "min_bulk_ess": 39.188680318264346,
+            "min_tail_ess": 142.45019124813186,
+            "estimand_z": {
+              "intercept_mean": -1.0628339986227793,
+              "last_signal_mean": 0.3250686954512258
+            },
+            "batch_variance_ratio": {
+              "intercept_mean": 1.7649126088943476,
+              "last_signal_mean": 1.8475961674691306
+            },
+            "passed": false,
+            "diagnostics_version": "1.3.0",
+            "start_scale": 2.0
+          }
+        }
+      },
+      "case": "logistic:300"
+    }
+  ],
+  "elapsed_seconds": 131.07,
+  "peak_rss_kib": 2301484
+}
