@@ -9,6 +9,7 @@ All notable changes to this project are documented here. The format follows
 ### Added
 
 - Convergence-gated uncoupled variance references for benchmarks without exact draws
+  (#90).
 - Complete half-space and quadrant probability reporting for the mixture benchmarks
   (#90).
 
