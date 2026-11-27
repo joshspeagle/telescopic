@@ -99,6 +99,8 @@ include = [
     "/benchmarks/compare.py",
     "/benchmarks/hierarchical.py",
     "/benchmarks/logistic.py",
+    "/benchmarks/supernova.py",
+    "/benchmarks/parallax.py",
     "/benchmarks/logistic_reference.py",
     "/benchmarks/results/logistic-6.json",
     "/benchmarks/results/logistic-300.json",

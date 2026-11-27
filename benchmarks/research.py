@@ -16,7 +16,7 @@ from typing import Literal
 import numpy as np
 
 import telescopic
-from benchmarks import hierarchical, logistic, targets
+from benchmarks import hierarchical, logistic, parallax, supernova, targets
 from benchmarks.run import setup
 from telescopic._types import FloatArray, integer
 from telescopic.engine import run
@@ -34,6 +34,8 @@ TARGETS = {
     "four_mode": targets.four_mode,
     "normal_means": hierarchical.normal_means,
     "logistic": logistic.logistic,
+    "supernova": supernova.supernova,
+    "parallax": parallax.parallax,
 }
 
 
