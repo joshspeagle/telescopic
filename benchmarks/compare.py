@@ -15,6 +15,7 @@ from typing import Literal
 from benchmarks import estimator, research, targets, uncoupled
 from benchmarks.run import setup
 from telescopic import CoupledSampler, TelescopicWarning
+from telescopic._types import real
 from telescopic.engine import Settings
 from telescopic.kernels import HMC, Kernel
 
@@ -70,6 +71,8 @@ def compare_case(
             raise ValueError("batch-means comparison requires estimator settings")
         if reference.start_scale is not None and reference.warmup <= 0:
             raise ValueError("a reference start scale requires positive warmup")
+        if reference.start_scale is not None:
+            real("start_scale", reference.start_scale, 0, float("inf"))
         if case.draw_exact is None and reference.warmup <= 0:
             raise ValueError("a reference without exact draws requires positive warmup")
         if reference.seed in (*meeting_seeds, tuning_seed, estimation.seed):
@@ -214,7 +217,11 @@ def main() -> None:
     parser.add_argument("--reference-batch-size", type=int, default=1000)
     parser.add_argument("--reference-warmup", type=int, default=0)
     parser.add_argument("--reference-chains", type=int, default=4)
-    parser.add_argument("--reference-start-scale", type=float)
+    parser.add_argument(
+        "--reference-start-scale",
+        type=float,
+        help="multiplier on matched start standard deviations",
+    )
     args = parser.parse_args()
     if args.reference_start_scale is not None and args.reference_seed is None:
         parser.error("--reference-start-scale requires --reference-seed")

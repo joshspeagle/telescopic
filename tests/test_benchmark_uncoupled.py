@@ -120,3 +120,29 @@ def test_reference_start_scale_applies_to_independent_matched_draws(monkeypatch)
     ]
     np.testing.assert_allclose(evaluated[0], expected)
     assert ref.start_scale == 2.0
+
+
+def test_invalid_start_width_is_rejected_before_running_any_comparison(monkeypatch) -> None:
+    import pytest
+
+    from benchmarks import compare
+    from telescopic.engine import Settings
+
+    case = targets.rotated_gaussian(2)
+
+    def fail(*args, **kwargs):
+        pytest.fail("comparison started before validating the reference width")
+
+    monkeypatch.setattr(research, "random_walk_setup", fail)
+    with pytest.raises(ValueError, match="start_scale"):
+        compare.compare_case(
+            case,
+            methods=["random_walk"],
+            start="matched",
+            pairs=2,
+            budget=200,
+            tuning_seed=701,
+            seed=702,
+            estimation=compare.EstimatorPlan(Settings(5, 10, 5, 1, 100, True), 2, 8, 703),
+            reference=compare.ReferencePlan(20, 10, 704, warmup=3, start_scale=0),
+        )
