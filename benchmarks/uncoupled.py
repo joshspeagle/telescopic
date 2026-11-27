@@ -10,7 +10,8 @@ import numpy as np
 
 from benchmarks import targets
 from telescopic._random import Streams
-from telescopic._types import integer
+from telescopic._types import integer, real
+from telescopic.initial import Normal
 from telescopic.kernels import Kernel
 from telescopic.target import Target
 
@@ -29,6 +30,7 @@ class Reference:
     batch_variance_ratio: dict[str, float | None]
     passed: bool
     diagnostics_version: str
+    start_scale: float | None = None
 
 
 def _finite(value: float) -> float | None:
@@ -46,6 +48,7 @@ def diagnose(
     batch_size: int,
     density_evaluations: int,
     gradient_evaluations: int,
+    start_scale: float | None = None,
 ) -> Reference:
     """Gate asymptotic variances from arrays of shape (chains, draws, dimension)."""
     arviz_stats = import_module("arviz_stats")
@@ -89,6 +92,7 @@ def diagnose(
         ratios,
         passed,
         getattr(arviz_stats, "__version__", "unknown"),
+        start_scale,
     )
 
 
@@ -101,8 +105,9 @@ def run(
     batch_size: int,
     seed: int,
     chains: int = 4,
+    start_scale: float | None = None,
 ) -> Reference:
-    """Run independent uncoupled chains from wide starts before scoring batch means."""
+    """Warm independent chains from the wide start or a scaled matched covariance."""
     warmup = integer("warmup", warmup, minimum=1)
     batches = integer("batches", batches, minimum=20)
     batch_size = integer("batch_size", batch_size, minimum=2)
@@ -113,11 +118,15 @@ def run(
         raise ValueError("uncoupled reference requires a frozen kernel")
     # Fail before transitions if the diagnostics dependency is unavailable.
     import_module("arviz_stats")
+    initial = case.wide
+    if start_scale is not None:
+        start_scale = real("start_scale", start_scale, 0, np.inf)
+        initial = Normal(case.matched.mean, start_scale**2 * case.matched.cov)
     streams = Streams(chains)
     positions = []
     for lane, lineage in enumerate(np.random.SeedSequence(seed).spawn(chains)):
         start, transitions = lineage.spawn(2)
-        positions.append(case.wide.rvs(random_state=np.random.default_rng(start)))
+        positions.append(initial.rvs(random_state=np.random.default_rng(start)))
         streams.assign(lane, np.random.default_rng(transitions))
     draws = streams.view(np.arange(chains))
     target = Target(case.log_prob, grad=case.grad, vectorize=True)
@@ -128,4 +137,4 @@ def run(
     for index in range(samples.shape[1]):
         state, _ = kernel.step(target, state, draws)
         samples[:, index] = state.x
-    return diagnose(case, samples, batch_size, target.n_log_prob, target.n_grad)
+    return diagnose(case, samples, batch_size, target.n_log_prob, target.n_grad, start_scale)

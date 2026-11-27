@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Configurable warmed-reference starting width and validated variance references
+  for the 51-dimensional parallax case (#90).
+
 - Registered meeting launcher for all benchmark dimensions and mixture variants (#90).
 
 - Convergence-gated uncoupled variance references for benchmarks without exact draws
