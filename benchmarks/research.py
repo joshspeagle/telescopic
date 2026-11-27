@@ -9,6 +9,7 @@ log-density request would exceed its allowance.
 import argparse
 import importlib
 import json
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from functools import partial
 from pathlib import Path
@@ -27,7 +28,7 @@ from telescopic.target import Target
 
 threadpoolctl = importlib.import_module("threadpoolctl")
 
-TARGETS = {
+TARGETS: dict[str, Callable[[int], targets.BenchmarkCase]] = {
     "rotated_gaussian": targets.rotated_gaussian,
     "banana": targets.banana,
     "funnel": targets.funnel,

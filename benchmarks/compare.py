@@ -12,13 +12,16 @@ import warnings
 from dataclasses import asdict, dataclass
 from typing import Literal
 
+import numpy as np
+
 from benchmarks import estimator, research, targets, uncoupled
 from benchmarks.run import setup
 from telescopic import CoupledSampler, TelescopicWarning
 from telescopic.engine import Settings
 from telescopic.kernels import HMC, Kernel
 
-Method = Literal["random_walk", "hmc"]
+Method = Literal["random_walk", "hmc", "hmc_identity"]
+METHODS = ("random_walk", "hmc", "hmc_identity")
 Start = Literal["matched", "wide"]
 
 
@@ -74,18 +77,21 @@ def compare_case(
     initial, walk = research.random_walk_setup(case, start, "oracle")
     comparisons = {}
     for method in methods:
-        if method not in ("random_walk", "hmc"):
+        if method not in METHODS:
             raise ValueError(f"unknown benchmark method: {method}")
         kernel: Kernel = walk
         density_setup = grad_setup = 0
         messages = []
-        if method == "hmc":
+        covariance_source = case.covariance_source
+        if method in ("hmc", "hmc_identity"):
+            identity = method == "hmc_identity"
+            covariance_source = "identity" if identity else "tuning_pilot"
             sampler = CoupledSampler(
                 case.log_prob,
                 initial,
                 grad=case.grad,
                 vectorize=True,
-                kernel=HMC(),
+                kernel=HMC(cov=np.eye(case.dimension) if identity else None),
                 rng=tuning_seed,
                 check_grad=False,
             )
@@ -115,6 +121,7 @@ def compare_case(
         gradient_count = sum(row.gradient_evaluations for row in records)
         comparison: dict[str, object] = {
             "kernel": repr(kernel),
+            "kernel_covariance_source": covariance_source,
             "setup_density_evaluations": density_setup,
             "setup_gradient_evaluations": grad_setup,
             "setup_warnings": messages,
@@ -195,7 +202,7 @@ def main() -> None:
     """Compare selected methods across one or more named benchmark cases."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("cases", nargs="+", metavar="TARGET:DIMENSION")
-    parser.add_argument("--method", action="append", choices=("random_walk", "hmc"))
+    parser.add_argument("--method", action="append", choices=METHODS)
     parser.add_argument("--start", choices=("matched", "wide"), default="matched")
     parser.add_argument("--pairs", type=int, default=100)
     parser.add_argument("--budget", type=int, required=True)

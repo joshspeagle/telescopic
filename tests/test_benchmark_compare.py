@@ -192,3 +192,30 @@ def test_primary_mode_reuses_the_reference_normalized_summary(monkeypatch) -> No
         report["summary"]["left_probability"] == report["mode_probabilities"]["left_probability"]
     )
     assert set(report["mode_probabilities"]) == {"left_probability", "right_probability"}
+
+
+def test_identity_hmc_tunes_with_the_identity_covariance(monkeypatch) -> None:
+    import numpy as np
+
+    original = compare.HMC
+    received = []
+
+    def capture(**kwargs):
+        received.append(kwargs["cov"])
+        return original(**kwargs)
+
+    monkeypatch.setattr(compare, "HMC", capture)
+    case = targets.rotated_gaussian(2)
+    result = compare.compare_case(
+        case,
+        methods=["hmc_identity"],
+        start="matched",
+        pairs=1,
+        budget=500,
+        tuning_seed=701,
+        seed=702,
+    )["methods"]["hmc_identity"]
+    np.testing.assert_array_equal(received[0], np.eye(2))
+    assert result["kernel_covariance_source"] == "identity"
+    assert result["setup_gradient_evaluations"] > 0
+    assert "jitter=0.5" in result["kernel"]

@@ -98,6 +98,7 @@ include = [
     "/benchmarks/estimator.py",
     "/benchmarks/compare.py",
     "/benchmarks/uncoupled.py",
+    "/benchmarks/registered.py",
     "/benchmarks/hierarchical.py",
     "/benchmarks/logistic.py",
     "/benchmarks/supernova.py",
