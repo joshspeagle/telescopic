@@ -41,11 +41,31 @@ and 2,510,010 for parallax. Extrapolation from separate 5,000-transition
 timing probes gave 7.6 and 15.8 minutes, respectively, for covariance
 tuning alone. Both probes used tuning seed 20261101 and one BLAS thread.
 
+
+## Logistic HMC reference
+
+The reference used tuning seed 20261101 and independent reference seed
+20261208. Each chain ran 10,000 warmup transitions and retained 50
+batches of 512 draws. The shipped tuner selected four leapfrog steps
+and a nominal step size of 0.32513.
+
+All gates passed. The maximum R-hat was 1.00049, minimum bulk ESS was
+21,815, and minimum tail ESS was 36,084. Batch-length ratios were
+1.106 and 1.047, and combined z-scores were 0.632 and −0.266, in
+estimand order. The estimated transition asymptotic variances were
+0.08511 for the intercept and 0.35378 for the last signal coefficient.
+
+Tuning used 3,629,316 density and gradient evaluations. The reference
+used 1,095,858 more. The [logistic HMC archive](results/warmed-logistic-300-hmc-v1.json)
+records the kernel, diagnostics, and costs. The full comparison driver
+took 464 seconds, including tuning, reference diagnostics, and the
+short meeting and estimator runs.
+
 ## Meeting-cost sizing
 
 Five matched-start random-walk pairs for each case used sizing seed
 20261102 and the registered ceiling of 200,000 evaluations per pair.
-All ten pairs were censored. Each method and case incurred 999,995
+All ten pairs were censored. Each case incurred 999,995
 density evaluations across its five pairs. The logistic check took
 162 seconds and the parallax check took 112 seconds with one BLAS
 thread per run. If the evaluation cap continues to bind, extrapolating
