@@ -1,0 +1,188 @@
+{
+  "commit": "ec98174",
+  "machine": "AMD Ryzen 7 9800X3D 8-Core Processor, 16 CPUs, Linux",
+  "available_CPUs": 16,
+  "blas": [
+    {
+      "internal_api": "openblas",
+      "version": "0.3.34.237.2",
+      "num_threads": 1
+    },
+    {
+      "internal_api": "openblas",
+      "version": "0.3.31.dev",
+      "num_threads": 1
+    }
+  ],
+  "python": "3.14.0",
+  "numpy": "2.5.5",
+  "scipy": "1.18.1",
+  "telescopic": "0.1.0.dev0",
+  "tuning_seed": 701,
+  "reference_seed": 704,
+  "reference_chains": 4,
+  "reference_warmup": 3000,
+  "reference_batches": 60,
+  "reference_batch_size": 200,
+  "comparisons": [
+    {
+      "target": "logistic",
+      "dimension": 6,
+      "start": "matched",
+      "methods": {
+        "random_walk": {
+          "kernel": "RandomWalk(cov=<6x6>, scale=None, coupling='reflection')",
+          "reference_checks": {
+            "variances": {
+              "intercept_mean": 1.4497586862710174,
+              "last_signal_mean": 6.7838369664043885
+            },
+            "evaluations": 60004,
+            "gradient_evaluations": 0,
+            "max_rhat": 1.0039761945254582,
+            "min_bulk_ess": 1478.6298635973926,
+            "min_tail_ess": 2213.9868506626854,
+            "estimand_z": {
+              "intercept_mean": 0.9868654160232817,
+              "last_signal_mean": -1.9976585326056764
+            },
+            "batch_variance_ratio": {
+              "intercept_mean": 1.1537716188765532,
+              "last_signal_mean": 1.2100469989858844
+            },
+            "passed": true,
+            "diagnostics_version": "1.3.0"
+          }
+        },
+        "hmc": {
+          "kernel": "HMC(step_size=0.8882765236131507, n_steps=2, cov=<6x6>, jitter=0.5, meeting_weight=0.05, meeting_scale=0.001)",
+          "reference_checks": {
+            "variances": {
+              "intercept_mean": 0.08911614804277691,
+              "last_signal_mean": 0.3475495672220843
+            },
+            "evaluations": 233948,
+            "gradient_evaluations": 116974,
+            "max_rhat": 1.0002883777051614,
+            "min_bulk_ess": 32391.167623713874,
+            "min_tail_ess": 26417.003228330504,
+            "estimand_z": {
+              "intercept_mean": 0.7417945051143889,
+              "last_signal_mean": -1.0178366418584937
+            },
+            "batch_variance_ratio": {
+              "intercept_mean": 1.1580995204327396,
+              "last_signal_mean": 1.0625254040109349
+            },
+            "passed": true,
+            "diagnostics_version": "1.3.0"
+          }
+        }
+      }
+    },
+    {
+      "target": "supernova",
+      "dimension": 4,
+      "start": "matched",
+      "methods": {
+        "random_walk": {
+          "kernel": "RandomWalk(cov=<4x4>, scale=None, coupling='reflection')",
+          "reference_checks": {
+            "variances": {
+              "omega_m": 0.2367586860442419,
+              "w": 2.7734230695227455
+            },
+            "evaluations": 60004,
+            "gradient_evaluations": 0,
+            "max_rhat": 1.0021092579852977,
+            "min_bulk_ess": 2022.622953268945,
+            "min_tail_ess": 1855.716204066796,
+            "estimand_z": {
+              "omega_m": 0.2904249278261788,
+              "w": 0.47236559941325446
+            },
+            "batch_variance_ratio": {
+              "omega_m": 1.1005091465942334,
+              "w": 1.1233446029659895
+            },
+            "passed": true,
+            "diagnostics_version": "1.3.0"
+          }
+        },
+        "hmc": {
+          "kernel": "HMC(step_size=0.48732944120927124, n_steps=3, cov=<4x4>, jitter=0.5, meeting_weight=0.05, meeting_scale=0.001)",
+          "reference_checks": {
+            "variances": {
+              "omega_m": 0.06863101383025792,
+              "w": 0.8113854719210926
+            },
+            "evaluations": 347888,
+            "gradient_evaluations": 173944,
+            "max_rhat": 1.000600774303201,
+            "min_bulk_ess": 7931.110100397873,
+            "min_tail_ess": 5322.113053955906,
+            "estimand_z": {
+              "omega_m": 2.027480253111226,
+              "w": -1.5201827250260616
+            },
+            "batch_variance_ratio": {
+              "omega_m": 1.1020641771755424,
+              "w": 1.0660431112527546
+            },
+            "passed": true,
+            "diagnostics_version": "1.3.0"
+          }
+        }
+      }
+    },
+    {
+      "target": "parallax",
+      "dimension": 51,
+      "start": "matched",
+      "methods": {
+        "random_walk": {
+          "kernel": "RandomWalk(cov=<51x51>, scale=None, coupling='reflection')",
+          "reference_checks": {
+            "variances": {},
+            "evaluations": 60004,
+            "gradient_evaluations": 0,
+            "max_rhat": 1.0422414951236025,
+            "min_bulk_ess": 139.8086885613033,
+            "min_tail_ess": 117.7495398253843,
+            "estimand_z": {
+              "population_scale_kpc": -4.2481284743177445,
+              "first_distance_kpc": -4.358400425203367
+            },
+            "batch_variance_ratio": {
+              "population_scale_kpc": 1.7075372469545205,
+              "first_distance_kpc": 1.444564428793085
+            },
+            "passed": false,
+            "diagnostics_version": "1.3.0"
+          }
+        },
+        "hmc": {
+          "kernel": "HMC(step_size=0.46629085233031886, n_steps=3, cov=<51x51>, jitter=0.5, meeting_weight=0.05, meeting_scale=0.001)",
+          "reference_checks": {
+            "variances": {},
+            "evaluations": 63038,
+            "gradient_evaluations": 3034,
+            "max_rhat": 4.408093326607119,
+            "min_bulk_ess": 4.23413100766322,
+            "min_tail_ess": 10.615941968499731,
+            "estimand_z": {
+              "population_scale_kpc": 6.339406503758197,
+              "first_distance_kpc": 8.964707492415647
+            },
+            "batch_variance_ratio": {
+              "population_scale_kpc": 2.0041840855550177,
+              "first_distance_kpc": 2.004183963984037
+            },
+            "passed": false,
+            "diagnostics_version": "1.3.0"
+          }
+        }
+      }
+    }
+  ]
+}

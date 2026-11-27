@@ -12,7 +12,7 @@ import warnings
 from dataclasses import asdict, dataclass
 from typing import Literal
 
-from benchmarks import estimator, research, targets
+from benchmarks import estimator, research, targets, uncoupled
 from benchmarks.run import setup
 from telescopic import CoupledSampler, TelescopicWarning
 from telescopic.engine import Settings
@@ -39,6 +39,8 @@ class ReferencePlan:
     batches: int
     batch_size: int
     seed: int
+    warmup: int = 0
+    chains: int = 4
 
 
 def compare_case(
@@ -63,8 +65,10 @@ def compare_case(
     if estimation is not None and estimation.seed in (*meeting_seeds, tuning_seed):
         raise ValueError("estimator, meeting and tuning seeds must differ")
     if reference is not None:
-        if estimation is None or case.draw_exact is None:
-            raise ValueError("batch-means comparison requires estimator settings and exact draws")
+        if estimation is None:
+            raise ValueError("batch-means comparison requires estimator settings")
+        if case.draw_exact is None and reference.warmup <= 0:
+            raise ValueError("a reference without exact draws requires positive warmup")
         if reference.seed in (*meeting_seeds, tuning_seed, estimation.seed):
             raise ValueError("the uncoupled reference seed must be distinct")
     initial, walk = research.random_walk_setup(case, start, "oracle")
@@ -130,7 +134,20 @@ def compare_case(
             )
             variances: dict[str, float] = {}
             reference_cost = 0
-            if reference is not None:
+            reference_checks = None
+            if reference is not None and reference.warmup:
+                measured = uncoupled.run(
+                    case,
+                    kernel,
+                    warmup=reference.warmup,
+                    batches=reference.batches,
+                    batch_size=reference.batch_size,
+                    seed=reference.seed,
+                    chains=reference.chains,
+                )
+                variances, reference_cost = measured.variances, measured.evaluations
+                reference_checks = asdict(measured)
+            elif reference is not None:
                 variances, reference_cost = estimator.batch_means_reference(
                     case,
                     kernel,
@@ -150,6 +167,7 @@ def compare_case(
             comparison["estimation"] = {
                 "reference_asymptotic_variance": variances,
                 "reference_evaluations": reference_cost,
+                "reference_checks": reference_checks,
                 "summary": {item.name: scores[item.name] for item in case.estimands},
                 "mode_probabilities": {
                     item.name: scores[item.name] for item in case.mode_probabilities
@@ -190,9 +208,17 @@ def main() -> None:
     parser.add_argument("--reference-seed", type=int)
     parser.add_argument("--reference-batches", type=int, default=100)
     parser.add_argument("--reference-batch-size", type=int, default=1000)
+    parser.add_argument("--reference-warmup", type=int, default=0)
+    parser.add_argument("--reference-chains", type=int, default=4)
     args = parser.parse_args()
     reference = (
-        ReferencePlan(args.reference_batches, args.reference_batch_size, args.reference_seed)
+        ReferencePlan(
+            args.reference_batches,
+            args.reference_batch_size,
+            args.reference_seed,
+            args.reference_warmup,
+            args.reference_chains,
+        )
         if args.reference_seed is not None
         else None
     )

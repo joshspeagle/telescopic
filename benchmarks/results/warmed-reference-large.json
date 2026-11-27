@@ -1,0 +1,85 @@
+{
+  "commit": "ec98174",
+  "machine": "AMD Ryzen 7 9800X3D 8-Core Processor, 16 CPUs, Linux",
+  "available_CPUs": 16,
+  "blas": [
+    {
+      "internal_api": "openblas",
+      "version": "0.3.34.237.2",
+      "num_threads": 1
+    },
+    {
+      "internal_api": "openblas",
+      "version": "0.3.31.dev",
+      "num_threads": 1
+    }
+  ],
+  "python": "3.14.0",
+  "numpy": "2.5.5",
+  "scipy": "1.18.1",
+  "telescopic": "0.1.0.dev0",
+  "tuning_seed": 701,
+  "reference_seed": 704,
+  "reference_chains": 4,
+  "reference_warmup": 3000,
+  "reference_batches": 60,
+  "reference_batch_size": 200,
+  "comparisons": [
+    {
+      "target": "logistic",
+      "dimension": 300,
+      "start": "matched",
+      "methods": {
+        "random_walk": {
+          "kernel": "RandomWalk(cov=<300x300>, scale=None, coupling='reflection')",
+          "reference_checks": {
+            "variances": {},
+            "evaluations": 60004,
+            "gradient_evaluations": 0,
+            "max_rhat": 2.053928749125733,
+            "min_bulk_ess": 5.327462505139256,
+            "min_tail_ess": 10.667940908589161,
+            "estimand_z": {
+              "intercept_mean": -21.892836086133087,
+              "last_signal_mean": 24.909166839496713
+            },
+            "batch_variance_ratio": {
+              "intercept_mean": 1.997168682457976,
+              "last_signal_mean": 2.001910007258207
+            },
+            "passed": false,
+            "diagnostics_version": "1.3.0"
+          }
+        }
+      }
+    },
+    {
+      "target": "parallax",
+      "dimension": 501,
+      "start": "matched",
+      "methods": {
+        "random_walk": {
+          "kernel": "RandomWalk(cov=<501x501>, scale=None, coupling='reflection')",
+          "reference_checks": {
+            "variances": {},
+            "evaluations": 60004,
+            "gradient_evaluations": 0,
+            "max_rhat": 2.9725928183043804,
+            "min_bulk_ess": 4.526108097456736,
+            "min_tail_ess": 10.59392806221425,
+            "estimand_z": {
+              "population_scale_kpc": 18.604841944169078,
+              "first_distance_kpc": 4.903786780036055
+            },
+            "batch_variance_ratio": {
+              "population_scale_kpc": 2.0015956808369273,
+              "first_distance_kpc": 1.9961727335200028
+            },
+            "passed": false,
+            "diagnostics_version": "1.3.0"
+          }
+        }
+      }
+    }
+  ]
+}
