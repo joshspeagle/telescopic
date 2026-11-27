@@ -138,23 +138,21 @@ def compare_case(
                     batch_size=reference.batch_size,
                     seed=reference.seed,
                 )
+            scores = {
+                item.name: estimator.summarize(
+                    runs,
+                    item,
+                    setup_evaluations=density_setup + grad_setup,
+                    asymptotic_variance=variances.get(item.name),
+                )
+                for item in case.scored_estimands
+            }
             comparison["estimation"] = {
                 "reference_asymptotic_variance": variances,
                 "reference_evaluations": reference_cost,
-                "summary": {
-                    item.name: estimator.summarize(
-                        runs,
-                        item,
-                        setup_evaluations=density_setup + grad_setup,
-                        asymptotic_variance=variances.get(item.name),
-                    )
-                    for item in case.estimands
-                },
+                "summary": {item.name: scores[item.name] for item in case.estimands},
                 "mode_probabilities": {
-                    item.name: estimator.summarize(
-                        runs, item, setup_evaluations=density_setup + grad_setup
-                    )
-                    for item in case.mode_probabilities
+                    item.name: scores[item.name] for item in case.mode_probabilities
                 },
                 "records": [asdict(row) for row in runs],
             }
