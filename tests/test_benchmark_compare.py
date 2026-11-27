@@ -156,3 +156,39 @@ def test_additional_meeting_seeds_share_one_setup() -> None:
     assert two["records"][:2] == one["records"]
     assert two["summary"]["pairs"] == 4
     assert [row["seed"] for row in two["meeting_summary_by_seed"]] == [702, 705]
+
+
+def test_primary_mode_reuses_the_reference_normalized_summary(monkeypatch) -> None:
+    from benchmarks import estimator
+    from telescopic.engine import Settings
+
+    case = targets.mixture(2, separation=6.0, narrow_scale=1.0)
+    record = estimator.RunRecord(
+        100,
+        0,
+        [],
+        [],
+        {item.name: estimator.IntervalRecord([0.0, 1.0], True) for item in case.scored_estimands},
+    )
+    monkeypatch.setattr(estimator, "run_frozen", lambda *args, **kwargs: [record])
+    monkeypatch.setattr(
+        estimator,
+        "batch_means_reference",
+        lambda *args, **kwargs: ({"left_probability": 0.5}, 101),
+    )
+    report = compare.compare_case(
+        case,
+        methods=["random_walk"],
+        start="matched",
+        pairs=1,
+        budget=500,
+        tuning_seed=701,
+        seed=702,
+        estimation=compare.EstimatorPlan(Settings(20, 100, 20, 1, 600, True), 1, 2, 703),
+        reference=compare.ReferencePlan(4, 25, 704),
+    )["methods"]["random_walk"]["estimation"]
+    assert report["summary"]["left_probability"]["inefficiency_over_asymptotic_variance"] > 0
+    assert (
+        report["summary"]["left_probability"] == report["mode_probabilities"]["left_probability"]
+    )
+    assert set(report["mode_probabilities"]) == {"left_probability", "right_probability"}

@@ -138,17 +138,21 @@ def compare_case(
                     batch_size=reference.batch_size,
                     seed=reference.seed,
                 )
+            scores = {
+                item.name: estimator.summarize(
+                    runs,
+                    item,
+                    setup_evaluations=density_setup + grad_setup,
+                    asymptotic_variance=variances.get(item.name),
+                )
+                for item in case.scored_estimands
+            }
             comparison["estimation"] = {
                 "reference_asymptotic_variance": variances,
                 "reference_evaluations": reference_cost,
-                "summary": {
-                    item.name: estimator.summarize(
-                        runs,
-                        item,
-                        setup_evaluations=density_setup + grad_setup,
-                        asymptotic_variance=variances.get(item.name),
-                    )
-                    for item in case.estimands
+                "summary": {item.name: scores[item.name] for item in case.estimands},
+                "mode_probabilities": {
+                    item.name: scores[item.name] for item in case.mode_probabilities
                 },
                 "records": [asdict(row) for row in runs],
             }
@@ -215,20 +219,20 @@ def main() -> None:
             if name not in research.TARGETS or not raw_dimension.isdecimal():
                 parser.error(f"invalid case {item!r}; expected a known target and its dimension")
             case = research.TARGETS[name](int(raw_dimension))
-            cases.append(
-                compare_case(
-                    case,
-                    methods=methods,
-                    start=args.start,
-                    pairs=args.pairs,
-                    budget=args.budget,
-                    tuning_seed=args.tuning_seed,
-                    seed=args.seed[0],
-                    additional_meeting_seeds=tuple(args.seed[1:]),
-                    estimation=estimation,
-                    reference=reference,
-                )
+            result = compare_case(
+                case,
+                methods=methods,
+                start=args.start,
+                pairs=args.pairs,
+                budget=args.budget,
+                tuning_seed=args.tuning_seed,
+                seed=args.seed[0],
+                additional_meeting_seeds=tuple(args.seed[1:]),
+                estimation=estimation,
+                reference=reference,
             )
+            result["case"] = item
+            cases.append(result)
     print(
         json.dumps(
             {

@@ -102,7 +102,7 @@ def run_frozen(
             assessed_warnings.append("tail")
         estimates = {}
         if not result.n_censored:
-            for estimand in case.estimands:
+            for estimand in case.scored_estimands:
                 estimate = result.estimate(estimand.function)
                 lower, upper = estimate.interval
                 estimates[estimand.name] = IntervalRecord(
@@ -289,6 +289,10 @@ def main() -> None:
                 batch_size=args.reference_batch_size,
                 seed=args.reference_seed,
             )
+        scores = {
+            item.name: summarize(records, item, asymptotic_variance=reference.get(item.name))
+            for item in case.scored_estimands
+        }
         report = {
             **setup(),
             **vars(args),
@@ -297,11 +301,9 @@ def main() -> None:
             "matched_covariance_source": case.covariance_source,
             "reference_asymptotic_variance": reference,
             "reference_evaluations": reference_cost,
-            "summary": {
-                estimand.name: summarize(
-                    records, estimand, asymptotic_variance=reference.get(estimand.name)
-                )
-                for estimand in case.estimands
+            "summary": {item.name: scores[item.name] for item in case.estimands},
+            "mode_probabilities": {
+                item.name: scores[item.name] for item in case.mode_probabilities
             },
             "records": [asdict(record) for record in records],
         }

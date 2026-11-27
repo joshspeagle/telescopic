@@ -10,6 +10,7 @@ import argparse
 import importlib
 import json
 from dataclasses import asdict, dataclass
+from functools import partial
 from pathlib import Path
 from typing import Literal
 
@@ -31,6 +32,8 @@ TARGETS = {
     "banana": targets.banana,
     "funnel": targets.funnel,
     "mixture": targets.mixture,
+    "mixture_equal_6": partial(targets.mixture, separation=6.0, narrow_scale=1.0),
+    "mixture_equal_12": partial(targets.mixture, separation=12.0, narrow_scale=1.0),
     "four_mode": targets.four_mode,
     "normal_means": hierarchical.normal_means,
     "logistic": logistic.logistic,
