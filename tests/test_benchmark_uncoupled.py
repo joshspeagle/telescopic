@@ -82,3 +82,41 @@ def test_undefined_chain_diagnostics_withhold_the_denominator(monkeypatch) -> No
     assert not result.passed
     assert not result.variances
     assert result.max_rhat is None
+
+
+def test_reference_start_scale_applies_to_independent_matched_draws(monkeypatch) -> None:
+    monkeypatch.setattr(
+        uncoupled,
+        "import_module",
+        lambda name: SimpleNamespace(
+            rhat=lambda *args, **kwargs: 1.0, ess=lambda *args, **kwargs: 1000
+        ),
+    )
+    case = targets.rotated_gaussian(2)
+    evaluated = []
+
+    def log_prob(points):
+        evaluated.append(points.copy())
+        return case.log_prob(points)
+
+    _, kernel = research.random_walk_setup(case, "matched", "oracle")
+    ref = uncoupled.run(
+        replace(case, log_prob=log_prob),
+        kernel,
+        warmup=3,
+        batches=20,
+        batch_size=10,
+        seed=702,
+        start_scale=2.0,
+    )
+    expected = [
+        case.matched.mean
+        + 2
+        * (
+            case.matched.rvs(random_state=np.random.default_rng(lineage.spawn(2)[0]))
+            - case.matched.mean
+        )
+        for lineage in np.random.SeedSequence(702).spawn(4)
+    ]
+    np.testing.assert_allclose(evaluated[0], expected)
+    assert ref.start_scale == 2.0

@@ -41,6 +41,7 @@ class ReferencePlan:
     seed: int
     warmup: int = 0
     chains: int = 4
+    start_scale: float | None = None
 
 
 def compare_case(
@@ -67,6 +68,8 @@ def compare_case(
     if reference is not None:
         if estimation is None:
             raise ValueError("batch-means comparison requires estimator settings")
+        if reference.start_scale is not None and reference.warmup <= 0:
+            raise ValueError("a reference start scale requires positive warmup")
         if case.draw_exact is None and reference.warmup <= 0:
             raise ValueError("a reference without exact draws requires positive warmup")
         if reference.seed in (*meeting_seeds, tuning_seed, estimation.seed):
@@ -144,6 +147,7 @@ def compare_case(
                     batch_size=reference.batch_size,
                     seed=reference.seed,
                     chains=reference.chains,
+                    start_scale=reference.start_scale,
                 )
                 variances, reference_cost = measured.variances, measured.evaluations
                 reference_checks = asdict(measured)
@@ -210,7 +214,10 @@ def main() -> None:
     parser.add_argument("--reference-batch-size", type=int, default=1000)
     parser.add_argument("--reference-warmup", type=int, default=0)
     parser.add_argument("--reference-chains", type=int, default=4)
+    parser.add_argument("--reference-start-scale", type=float)
     args = parser.parse_args()
+    if args.reference_start_scale is not None and args.reference_seed is None:
+        parser.error("--reference-start-scale requires --reference-seed")
     reference = (
         ReferencePlan(
             args.reference_batches,
@@ -218,6 +225,7 @@ def main() -> None:
             args.reference_seed,
             args.reference_warmup,
             args.reference_chains,
+            args.reference_start_scale,
         )
         if args.reference_seed is not None
         else None
