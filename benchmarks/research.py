@@ -21,7 +21,7 @@ from benchmarks.run import setup
 from telescopic._types import FloatArray, integer
 from telescopic.engine import run
 from telescopic.initial import Normal
-from telescopic.kernels import RandomWalk
+from telescopic.kernels import Kernel, RandomWalk
 from telescopic.target import Target
 
 threadpoolctl = importlib.import_module("threadpoolctl")
@@ -41,11 +41,12 @@ TARGETS = {
 
 @dataclass(frozen=True)
 class PairRecord:
-    """Actual log-density evaluations and the cost at meeting, if observed."""
+    """Pointwise density plus gradient evaluations and meeting cost, if observed."""
 
     evaluations: int
     meeting_cost: int | None
     meeting_iteration: int | None
+    gradient_evaluations: int = 0
 
 
 class _BudgetExhausted(Exception):
@@ -54,12 +55,20 @@ class _BudgetExhausted(Exception):
 
 class _BudgetTarget(Target):
     def __init__(self, case: targets.BenchmarkCase, budget: int) -> None:
-        super().__init__(case.log_prob, vectorize=True)
         self.budget = budget
+        self.score = case.grad
+        super().__init__(case.log_prob, grad=self._budgeted_grad, vectorize=True)
+
+    def _budgeted_grad(self, x: FloatArray) -> FloatArray:
+        self._check_budget(len(x))
+        return self.score(x)
+
+    def _check_budget(self, requested: int) -> None:
+        if self.n_log_prob + self.n_grad + requested > self.budget:
+            raise _BudgetExhausted
 
     def log_prob(self, x: FloatArray) -> FloatArray:
-        if self.n_log_prob + len(x) > self.budget:
-            raise _BudgetExhausted
+        self._check_budget(len(x))
         return super().log_prob(x)
 
 
@@ -92,9 +101,22 @@ def random_walk_pilot(
     Each pair stops at meeting or before its first unaffordable density
     request. With an oracle proposal the benchmark reference supplies the covariance.
     """
+    initial, kernel = random_walk_setup(case, start, proposal)
+    return meeting_pilot(case, initial, kernel, pairs=pairs, budget=budget, seed=seed)
+
+
+def meeting_pilot(
+    case: targets.BenchmarkCase,
+    initial: Normal,
+    kernel: Kernel,
+    *,
+    pairs: int,
+    budget: int,
+    seed: int,
+) -> list[PairRecord]:
+    """Measure lag-one meetings at a cap on total pointwise evaluations."""
     pairs = integer("pairs", pairs, minimum=1)
     budget = integer("budget", budget, minimum=5)
-    initial, kernel = random_walk_setup(case, start, proposal)
     records = []
     for index in range(pairs):
         target = _BudgetTarget(case, budget)
@@ -112,10 +134,12 @@ def random_walk_pilot(
                 lanes=1,
             )
         except _BudgetExhausted:
-            records.append(PairRecord(target.n_log_prob, None, None))
+            records.append(
+                PairRecord(target.n_log_prob + target.n_grad, None, None, target.n_grad)
+            )
         else:
-            cost = result.n_log_prob
-            records.append(PairRecord(cost, cost, int(result.meeting_time[0])))
+            cost = result.n_log_prob + result.n_grad
+            records.append(PairRecord(cost, cost, int(result.meeting_time[0]), result.n_grad))
     return records
 
 

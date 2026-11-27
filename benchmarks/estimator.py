@@ -18,7 +18,8 @@ from benchmarks.run import setup
 from telescopic import diagnostics, testing
 from telescopic._types import integer
 from telescopic.engine import Settings, check_settings, run
-from telescopic.kernels import RandomWalk, State
+from telescopic.initial import Normal
+from telescopic.kernels import Kernel
 from telescopic.results import Result
 from telescopic.target import Target
 
@@ -40,6 +41,7 @@ class RunRecord:
     warnings: list[str]
     assessed_warnings: list[str]
     estimates: dict[str, IntervalRecord]
+    gradient_evaluations: int = 0
 
 
 def random_walk_runs(
@@ -52,14 +54,30 @@ def random_walk_runs(
     replicates: int,
     seed: int,
 ) -> list[RunRecord]:
+    """Run independent fixed-size experiments with the frozen random walk."""
+    initial, kernel = research.random_walk_setup(case, start, proposal)
+    return run_frozen(case, settings, initial, kernel, runs=runs, replicates=replicates, seed=seed)
+
+
+def run_frozen(
+    case: targets.BenchmarkCase,
+    settings: Settings,
+    initial: Normal,
+    kernel: Kernel,
+    *,
+    runs: int,
+    replicates: int,
+    seed: int,
+) -> list[RunRecord]:
     """Run independent fixed-size experiments with an explicit iteration cap."""
+    if not kernel.is_tuned:
+        raise ValueError("estimator benchmarks require a frozen kernel")
     runs = integer("runs", runs, minimum=1)
     replicates = integer("replicates", replicates, minimum=2)
     settings = check_settings(settings)
     if settings.keep is not None or not settings.store or settings.max_iter is None:
         raise ValueError("estimator benchmarks require full storage and an iteration cap")
-    initial, kernel = research.random_walk_setup(case, start, proposal)
-    target = Target(case.log_prob, vectorize=True)
+    target = Target(case.log_prob, grad=case.grad, vectorize=True)
     indices = np.arange(replicates)
     records = []
     for child in np.random.SeedSequence(seed).spawn(runs):
@@ -91,14 +109,21 @@ def random_walk_runs(
                     estimate.replicates.tolist(), bool(lower <= estimand.mean <= upper)
                 )
         records.append(
-            RunRecord(result.n_log_prob, result.n_censored, warnings, assessed_warnings, estimates)
+            RunRecord(
+                result.n_log_prob + result.n_grad,
+                result.n_censored,
+                warnings,
+                assessed_warnings,
+                estimates,
+                result.n_grad,
+            )
         )
     return records
 
 
 def batch_means_reference(
     case: targets.BenchmarkCase,
-    kernel: RandomWalk,
+    kernel: Kernel,
     *,
     batches: int,
     batch_size: int,
@@ -107,16 +132,16 @@ def batch_means_reference(
     """Estimate asymptotic variances from an independently seeded stationary chain.
 
     Each batch consists of consecutive uncoupled transitions. The returned
-    cost is the number of density evaluations for this reference calculation.
+    cost is the number of density and gradient evaluations for this reference calculation.
     """
     batches = integer("batches", batches, minimum=2)
     batch_size = integer("batch_size", batch_size, minimum=1)
     rng = np.random.default_rng(seed)
-    target = Target(case.log_prob, vectorize=True)
+    target = Target(case.log_prob, grad=case.grad, vectorize=True)
     if case.draw_exact is None:
         raise ValueError("stationary batch means require a target with exact draws")
     point = case.draw_exact(rng, 1)
-    state = State(point, target.log_prob(point))
+    state = kernel.init_state(target, point)
     draws = testing.random_draws(1, rng)
     block = np.empty((batch_size, case.dimension))
     means = np.empty((batches, len(case.estimands)))
@@ -128,7 +153,7 @@ def batch_means_reference(
     variance = batch_size * means.var(axis=0, ddof=1)
     return dict(
         zip((e.name for e in case.estimands), variance.tolist(), strict=True)
-    ), target.n_log_prob
+    ), target.n_log_prob + target.n_grad
 
 
 def summarize(
@@ -136,6 +161,7 @@ def summarize(
     estimand: targets.Estimand,
     *,
     asymptotic_variance: float | None = None,
+    setup_evaluations: int = 0,
 ) -> dict[str, object]:
     """Score available intervals and report full-experiment metrics if all runs completed."""
     if not records:
@@ -154,7 +180,7 @@ def summarize(
                     outcome = "covered" if record.estimates[estimand.name].covered else "missed"
                     table[outcome] += 1
         warning_tables[warning] = table
-    report = {
+    report: dict[str, object] = {
         "runs": len(records),
         "available_intervals": len(intervals),
         "censored_runs": len(records) - len(intervals),
@@ -165,6 +191,9 @@ def summarize(
         "target_variance": estimand.variance,
         "covered_intervals": covered,
         "sampling_evaluations": total_evaluations,
+        "sampling_gradient_evaluations": sum(record.gradient_evaluations for record in records),
+        "setup_evaluations": setup_evaluations,
+        "total_evaluations": total_evaluations + setup_evaluations,
         "warning_counts_by_interval_outcome": warning_tables,
         "warning_eligible_runs": {
             warning: sum(warning in record.assessed_warnings for record in records)
@@ -177,12 +206,15 @@ def summarize(
         "pooled_z": None,
         "inefficiency_over_target_variance": None,
         "inefficiency_over_asymptotic_variance": None,
+        "inefficiency_over_target_variance_without_setup": None,
+        "inefficiency_over_asymptotic_variance_without_setup": None,
     }
     if len(intervals) == len(records):
         values = np.concatenate([interval.replicates for interval in intervals])
         variance = float(values.var(ddof=1))
         standard_error = float(np.sqrt(variance / len(values)))
-        cost_times_variance = total_evaluations / len(values) * variance
+        sampling_times_variance = total_evaluations / len(values) * variance
+        cost_times_variance = (total_evaluations + setup_evaluations) / len(values) * variance
         combined_error = np.hypot(standard_error, estimand.mean_standard_error)
         coverage = covered / len(records)
         report.update(
@@ -193,6 +225,14 @@ def summarize(
             pooled_z=float((values.mean() - estimand.mean) / combined_error)
             if combined_error > 0
             else None,
+            inefficiency_over_target_variance_without_setup=(
+                sampling_times_variance / estimand.variance if estimand.variance > 0 else None
+            ),
+            inefficiency_over_asymptotic_variance_without_setup=(
+                sampling_times_variance / asymptotic_variance
+                if asymptotic_variance is not None and asymptotic_variance > 0
+                else None
+            ),
             inefficiency_over_asymptotic_variance=(
                 cost_times_variance / asymptotic_variance
                 if asymptotic_variance is not None and asymptotic_variance > 0
