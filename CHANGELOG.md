@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Complete half-space and quadrant probability reporting for the mixture benchmarks
+  (#90).
+
 - Multi-case comparison of frozen random walk and tuned jittered HMC with separate
   setup and sampling evaluation counts (#90).
 - Synthetic supernova and parallax benchmarks with independent quadrature references
