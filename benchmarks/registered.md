@@ -19,3 +19,8 @@ target IDs. Select the matched or tenfold-wide initial distribution with
 `--start`. Meeting measurements and fixed-window estimator coverage use
 separate runs. Use the comparison runner with explicit averaging settings
 for coverage experiments, following the saved registrations.
+
+For the rotated Gaussian, select `--method hmc_identity` to keep an identity
+preconditioner while tuning the HMC step. Select `--method hmc` for the
+pilot covariance. With no method flags, the launcher runs the frozen
+random walk and pilot-covariance HMC used in the archived baseline.

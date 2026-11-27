@@ -55,7 +55,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--case", action="append", choices=cases)
     parser.add_argument("--start", choices=("matched", "wide"), default="matched")
-    parser.add_argument("--method", action="append", choices=("random_walk", "hmc"))
+    parser.add_argument("--method", action="append", choices=compare.METHODS)
     args = parser.parse_args()
     if args.case is None:
         print(
