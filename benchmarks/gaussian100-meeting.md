@@ -35,3 +35,24 @@ metadata.
 
 HMC used fewer evaluations per meeting. Its one-time tuning cost brought the
 total above the frozen random walk for these 500 pairs.
+
+## Identity-covariance HMC comparison
+
+The identity arm uses the same Gaussian, start, tuning and evaluation
+seeds, pair count, and evaluation ceiling. It freezes the identity
+covariance while the shipped jittered HMC tuner chooses the step size
+and trajectory length. A separate sizing run used tuning-side seed
+20261102 before the five evaluation seeds were run.
+
+```bash
+PYTHONPATH=src python -m benchmarks.registered \
+  --case rotated_gaussian:100 --start matched --method hmc_identity
+```
+
+At runner revision `272f64d`, all 500 pairs met. The median of 16,534
+evaluations was 39.4 times the pilot-covariance HMC median. The 90th and
+99th percentiles were 32,442 and 45,096, and the maximum was 63,456.
+Tuning used 1,244,076 evaluations and sampling used 9,708,670, for
+10,952,746 total. The
+[identity archive](results/gaussian100-identity-meeting-v1.json.gz)
+contains the per-seed summaries and all 500 pair records.
