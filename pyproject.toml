@@ -97,6 +97,7 @@ include = [
     "/benchmarks/research.py",
     "/benchmarks/estimator.py",
     "/benchmarks/compare.py",
+    "/benchmarks/uncoupled.py",
     "/benchmarks/hierarchical.py",
     "/benchmarks/logistic.py",
     "/benchmarks/supernova.py",
