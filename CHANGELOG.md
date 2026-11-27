@@ -8,6 +8,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Registered meeting launcher for all benchmark dimensions and mixture variants (#90).
+
 - Convergence-gated uncoupled variance references for benchmarks without exact draws
   (#90).
 - Complete half-space and quadrant probability reporting for the mixture benchmarks
