@@ -1,4 +1,7 @@
-"""Independent-chain checks for batch means without exact stationary draws."""
+"""Independent-chain checks for batch means without exact stationary draws.
+
+The warmed reference path uses the optional arviz-stats dependency.
+"""
 
 from dataclasses import dataclass
 from importlib import import_module
@@ -46,9 +49,11 @@ def diagnose(
 ) -> Reference:
     """Gate asymptotic variances from arrays of shape (chains, draws, dimension)."""
     arviz_stats = import_module("arviz_stats")
-    rhat = _finite(np.max(arviz_stats.rhat(samples, method="rank")))
-    bulk = _finite(np.min(arviz_stats.ess(samples, method="bulk")))
-    tail = _finite(np.min(arviz_stats.ess(samples, method="tail", prob=(0.05, 0.95))))
+    # Constant chains can yield undefined diagnostics. The gate rejects them.
+    with np.errstate(divide="ignore", invalid="ignore"):
+        rhat = _finite(np.max(arviz_stats.rhat(samples, method="rank")))
+        bulk = _finite(np.min(arviz_stats.ess(samples, method="bulk")))
+        tail = _finite(np.min(arviz_stats.ess(samples, method="tail", prob=(0.05, 0.95))))
     variances = {}
     z_scores = {}
     ratios = {}

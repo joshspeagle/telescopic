@@ -66,3 +66,19 @@ def test_diagnostic_gate_withholds_failed_variance_candidates(monkeypatch) -> No
     assert result.max_rhat == 1.4
     assert result.evaluations == 2500
     assert result.gradient_evaluations == 800
+
+
+def test_undefined_chain_diagnostics_withhold_the_denominator(monkeypatch) -> None:
+    monkeypatch.setattr(
+        uncoupled,
+        "import_module",
+        lambda name: SimpleNamespace(
+            rhat=lambda samples, **kwargs: np.divide(0.0, 0.0),
+            ess=lambda samples, **kwargs: 1500,
+        ),
+    )
+    case = targets.rotated_gaussian(2)
+    result = uncoupled.diagnose(case, np.zeros((4, 400, 2)), 20, 1600, 0)
+    assert not result.passed
+    assert not result.variances
+    assert result.max_rhat is None
