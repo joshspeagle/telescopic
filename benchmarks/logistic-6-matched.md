@@ -43,9 +43,19 @@ summaries, and the variance-reference diagnostics.
 All 200 intervals were available per method and estimand. For HMC,
 estimated coverage was 90.5% and 84.5%, with binomial standard errors of
 2.1 and 2.6 percentage points. Absolute pooled z-scores were below 1
-for both methods and estimands. HMC issued no variance or tail warnings.
-Random walk issued variance warnings on 39 of 200 runs and no tail
-warnings. The archive reports how often the flagged intervals covered.
+for both methods and estimands. HMC issued no variance warnings and
+random walk issued them on 39 of 200 runs. The archive reports how often
+the flagged intervals covered. Tail assessment requires at least 500
+replicates per run and was unavailable for the 100-replicate runs.
+
+A post hoc sensitivity check rescored the same Student-t intervals
+against the independent one-million-proposal importance-sampling means
+from the [logistic reference test](../tests/test_benchmark_logistic.py).
+Their Monte Carlo standard errors are 0.00030 and 0.00059. In the same
+estimand order, random-walk coverage was 189 and 192 of 200, and HMC
+coverage was 188 and 196 of 200. The registered coverage counts use
+the Pólya-Gamma means. The sensitivity check shows that uncertainty
+in those means materially affects the HMC coverage comparison.
 
 Both uncoupled references passed every gate. Random walk used 142,404
 reference evaluations and had a maximum R-hat of 1.00189 and minimum bulk
