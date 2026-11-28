@@ -24,3 +24,12 @@ For the rotated Gaussian, select `--method hmc_identity` to keep an identity
 preconditioner while tuning the HMC step. Select `--method hmc` for the
 pilot covariance. With no method flags, the launcher runs the frozen
 random walk and pilot-covariance HMC used in the archived baseline.
+
+## Archived registered comparisons
+
+| Case | Start | Registered results |
+| --- | --- | --- |
+| Rotated Gaussian, dimension 100 | Matched | [Meetings for random walk, pilot-covariance HMC, and identity HMC](gaussian100-meeting.md) |
+| Banana, dimension 2 | Matched | [Meetings and estimator coverage](banana-coverage.md) |
+| Equal-width mixture, separation 6, dimension 2 | Matched | [Meetings, estimator coverage, and mode probabilities](mixture-equal-6.md) |
+| Logistic, dimension 6 | Matched | [Meetings, estimator coverage, and variance references](logistic-6-matched.md) |
