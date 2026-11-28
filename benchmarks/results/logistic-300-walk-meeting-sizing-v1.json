@@ -1,0 +1,124 @@
+{
+  "commit": "5d63348",
+  "machine": "AMD Ryzen 7 9800X3D 8-Core Processor, 16 CPUs, Linux",
+  "available CPUs": 16,
+  "blas": [
+    {
+      "internal_api": "openblas",
+      "version": "0.3.34.237.2",
+      "num_threads": 1
+    },
+    {
+      "internal_api": "openblas",
+      "version": "0.3.31.dev",
+      "num_threads": 1
+    }
+  ],
+  "python": "3.14.0",
+  "numpy": "2.5.5",
+  "scipy": "1.18.1",
+  "telescopic": "0.1.0.dev0",
+  "cases": [
+    "logistic:300"
+  ],
+  "method": [
+    "random_walk"
+  ],
+  "start": "matched",
+  "pairs": 5,
+  "budget": 200000,
+  "seed": [
+    20261102
+  ],
+  "tuning_seed": 20261101,
+  "runs": null,
+  "replicates": 100,
+  "k": null,
+  "m": null,
+  "lag": null,
+  "max_iter": null,
+  "estimator_seed": null,
+  "reference_seed": null,
+  "reference_batches": 100,
+  "reference_batch_size": 1000,
+  "reference_warmup": 0,
+  "reference_chains": 4,
+  "reference_start_scale": null,
+  "cost_unit": "pointwise_density_plus_gradient",
+  "comparisons": [
+    {
+      "target": "logistic",
+      "dimension": 300,
+      "start": "matched",
+      "matched_covariance_source": "independent_gibbs_marginal_variances",
+      "methods": {
+        "random_walk": {
+          "kernel": "RandomWalk(cov=<300x300>, scale=None, coupling='reflection')",
+          "kernel_covariance_source": "independent_gibbs_marginal_variances",
+          "setup_density_evaluations": 0,
+          "setup_gradient_evaluations": 0,
+          "setup_warnings": [],
+          "summary": {
+            "pairs": 5,
+            "censored_fraction": 1.0,
+            "evaluations": 999995,
+            "q50": null,
+            "q90": null,
+            "q99": null,
+            "max": null
+          },
+          "meeting_summary_by_seed": [
+            {
+              "seed": 20261102,
+              "pairs": 5,
+              "censored_fraction": 1.0,
+              "evaluations": 999995,
+              "q50": null,
+              "q90": null,
+              "q99": null,
+              "max": null
+            }
+          ],
+          "records": [
+            {
+              "evaluations": 199999,
+              "meeting_cost": null,
+              "meeting_iteration": null,
+              "gradient_evaluations": 0
+            },
+            {
+              "evaluations": 199999,
+              "meeting_cost": null,
+              "meeting_iteration": null,
+              "gradient_evaluations": 0
+            },
+            {
+              "evaluations": 199999,
+              "meeting_cost": null,
+              "meeting_iteration": null,
+              "gradient_evaluations": 0
+            },
+            {
+              "evaluations": 199999,
+              "meeting_cost": null,
+              "meeting_iteration": null,
+              "gradient_evaluations": 0
+            },
+            {
+              "evaluations": 199999,
+              "meeting_cost": null,
+              "meeting_iteration": null,
+              "gradient_evaluations": 0
+            }
+          ],
+          "sampling_density_evaluations": 999995,
+          "sampling_gradient_evaluations": 0,
+          "total_evaluations": 999995
+        }
+      },
+      "case": "logistic:300"
+    }
+  ],
+  "elapsed_seconds": 162.29,
+  "peak_rss_kib": 96968
+}
