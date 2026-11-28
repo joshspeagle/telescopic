@@ -1,0 +1,94 @@
+{
+  "commit": "681f72b",
+  "machine": "AMD Ryzen 7 9800X3D 8-Core Processor, 16 CPUs, Linux",
+  "available CPUs": 16,
+  "blas": [
+    {
+      "internal_api": "openblas",
+      "version": "0.3.34.237.2",
+      "num_threads": 1
+    },
+    {
+      "internal_api": "openblas",
+      "version": "0.3.31.dev",
+      "num_threads": 1
+    }
+  ],
+  "python": "3.14.0",
+  "numpy": "2.5.5",
+  "scipy": "1.18.1",
+  "telescopic": "0.1.0.dev0",
+  "cases": [
+    "parallax:501"
+  ],
+  "method": [
+    "hmc"
+  ],
+  "start": "matched",
+  "pairs": 1,
+  "budget": 500,
+  "seed": [
+    702
+  ],
+  "tuning_seed": 20261101,
+  "runs": 1,
+  "replicates": 4,
+  "k": 10,
+  "m": 20,
+  "lag": 10,
+  "max_iter": 100,
+  "estimator_seed": 703,
+  "reference_seed": 20261209,
+  "reference_batches": 50,
+  "reference_batch_size": 512,
+  "reference_warmup": 10000,
+  "reference_chains": 4,
+  "reference_start_scale": 2.0,
+  "cost_unit": "pointwise_density_plus_gradient",
+  "comparisons": [
+    {
+      "target": "parallax",
+      "dimension": 501,
+      "start": "matched",
+      "matched_covariance_source": "nested_quadrature_marginal_variances",
+      "methods": {
+        "hmc": {
+          "kernel": "HMC(step_size=0.29032711826496427, n_steps=4, cov=<501x501>, jitter=0.5, meeting_weight=0.05, meeting_scale=0.001)",
+          "kernel_covariance_source": "tuning_pilot",
+          "setup_density_evaluations": 10056492,
+          "setup_gradient_evaluations": 16448,
+          "setup_warnings": [],
+          "reference_checks": {
+            "variances": {
+              "population_scale_kpc": 0.0121342990722213,
+              "first_distance_kpc": 21.035807095453986
+            },
+            "evaluations": 1096344,
+            "gradient_evaluations": 548172,
+            "max_rhat": 1.0007219197814838,
+            "min_bulk_ess": 18399.22348099394,
+            "min_tail_ess": 15258.622682528416,
+            "estimand_z": {
+              "population_scale_kpc": -0.0425614622185091,
+              "first_distance_kpc": 0.18227410669883093
+            },
+            "batch_variance_ratio": {
+              "population_scale_kpc": 0.8302512906915992,
+              "first_distance_kpc": 1.0653841973299558
+            },
+            "passed": true,
+            "diagnostics_version": "1.3.0",
+            "start_scale": 2.0
+          },
+          "driver_meeting_evaluations": 500,
+          "driver_estimator_evaluations": 4476
+        }
+      },
+      "case": "parallax:501"
+    }
+  ],
+  "elapsed_seconds": 840.84,
+  "setup_seconds": 769.4,
+  "reference_seconds": 62.2,
+  "peak_rss_kib": 1597936
+}

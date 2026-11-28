@@ -61,6 +61,43 @@ records the kernel, diagnostics, and costs. The full comparison driver
 took 464 seconds, including tuning, reference diagnostics, and the
 short meeting and estimator runs.
 
+## Parallax HMC reference
+
+Four independent reference chains started at twice the matched marginal
+standard deviations. Each ran 10,000 warmup transitions and retained 50
+batches of 512 draws. The comparison start was matched. The shipped
+jittered HMC used its default covariance pilot and tuning seed 20261101.
+The uncoupled chains used independent reference seed 20261209.
+
+```bash
+PYTHONPATH=src python -m benchmarks.compare parallax:501 \
+  --method hmc --start matched --pairs 1 --budget 500 --seed 702 \
+  --tuning-seed 20261101 --runs 1 --replicates 4 --k 10 --m 20 \
+  --lag 10 --max-iter 100 --estimator-seed 703 \
+  --reference-seed 20261209 --reference-warmup 10000 \
+  --reference-batches 50 --reference-batch-size 512 \
+  --reference-chains 4 --reference-start-scale 2
+```
+
+All gates passed. The maximum split R-hat was 1.00072, minimum bulk
+ESS was 18,399, and minimum tail ESS was 15,259.
+
+| Estimand | Transition asymptotic variance (kpc²) | Batch ratio | Combined z-score |
+| --- | ---: | ---: | ---: |
+| Population scale | 0.0121343 | 0.830 | −0.043 |
+| First stellar distance | 21.03581 | 1.065 | 0.182 |
+
+Tuning selected four leapfrog steps and a nominal step size of 0.29033.
+It took 769.4 seconds and used 10,072,940 density and gradient evaluations.
+The uncoupled reference took 62.2 seconds and used 1,096,344 evaluations.
+The comparison driver took 840.84 seconds overall, with a peak resident
+set of 1,597,936 KiB. Its short meeting and estimator runs used another
+500 and 4,476 evaluations, respectively. The five registered meeting
+seeds remain held out.
+
+The [parallax HMC archive](results/warmed-parallax-501-hmc-v1.json) records
+the kernel, diagnostics, settings, timing, and costs.
+
 ## Meeting-cost sizing
 
 Five matched-start random-walk pairs for each case used sizing seed
